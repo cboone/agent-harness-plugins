@@ -7,10 +7,6 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
-# The names gh pr merge takes, in the order they are listed, which matches the
-# allow_merge_commit, allow_squash_merge, allow_rebase_merge flags by position.
-readonly METHOD_ORDER='["merge", "squash", "rebase"]'
-
 # Separates the watch's parsed fields. Unlike a space or a tab, it is not IFS
 # whitespace, so an empty field stays in place instead of collapsing.
 readonly FIELD_SEPARATOR=$'\x1f'
@@ -19,7 +15,10 @@ readonly FIELD_SEPARATOR=$'\x1f'
 # the watch reports the merge anyway.
 readonly MERGED_WITHOUT_COMMIT_READS=5
 
-ERR_FILE=""
+ERR_FILE="$(mktemp)" || {
+  echo "${SCRIPT_NAME}: mktemp failed" >&2
+  exit 1
+}
 trap 'rm -f "${ERR_FILE}"' EXIT
 
 function usage() {
@@ -32,6 +31,7 @@ it merges, and bring the base branch up to date afterward.
 Commands:
   policy <owner> <repo> <base>                  Print allowed merge methods and required approvals
   watch <owner> <repo> <pr_number> <head_sha> [--awaited <decision>]
+        [--once [--failures <n>] [--merged-reads <n>] [--started <epoch>]]
                                                 Poll the PR until something changes, then print it
   sync <owner> <repo> <base> <merge_sha>        Fast-forward the local base branch to the merge
   panes                                         List tmux panes inside this repository's worktrees
@@ -63,6 +63,11 @@ MERGE_FLOW_INTERVAL (seconds, default 60), MERGE_FLOW_MAX_FAILURES (default 8)
 and MERGE_FLOW_LIFETIME (seconds, default 86400) tune it. After each failed
 read it waits the interval times the failure count, at most 15 minutes.
 
+--once makes one read instead of polling, for a caller that schedules its own
+reads. It prints an event, or a pending event carrying the failures and
+mergedReads counts to pass back on the next read, and reports expired once
+--started (the Unix time of the first read) is a lifetime ago.
+
 sync: fetches <base> from the remote whose URL names <owner>/<repo>, checks
 that it contains <merge_sha>, then fast-forwards the worktree that has <base>
 checked out, or the branch ref when none does. It never stashes, resets or
@@ -72,6 +77,7 @@ contains <merge_sha>.
 Examples:
   ${SCRIPT_NAME} policy octocat hello-world main
   ${SCRIPT_NAME} watch octocat hello-world 42 0123456789abcdef0123456789abcdef01234567 --awaited REVIEW_REQUIRED
+  ${SCRIPT_NAME} watch octocat hello-world 42 0123456789abcdef0123456789abcdef01234567 --once --failures 1 --started 1791590400
   ${SCRIPT_NAME} sync octocat hello-world main 89abcdef0123456789abcdef0123456789abcdef
   ${SCRIPT_NAME} panes
 USAGE_TEXT
@@ -88,51 +94,44 @@ function usage_error() {
   exit 2
 }
 
-# Runs a command, storing its stdout in CAPTURED_OUT and its stderr, squeezed
-# to one line, in CAPTURED_ERR. Returns the command's exit status. Call it as
-# an if condition, so that errexit does not stop the script on a failure.
+# Runs a command, storing its stdout in CAPTURED_OUT and, when it fails, its
+# stderr squeezed to one line in CAPTURED_ERR. Returns the command's exit
+# status. Call it as an if condition, so that errexit does not stop the script
+# on a failure.
 function capture() {
   local status=0
-  CAPTURED_OUT=""
   CAPTURED_ERR=""
-  if [[ -z "${ERR_FILE}" ]] && ! ERR_FILE="$(mktemp)"; then
-    ERR_FILE=""
-    CAPTURED_ERR="mktemp failed, so ${1} was not run"
-    return 1
-  fi
   CAPTURED_OUT="$("$@" 2> "${ERR_FILE}")" || status=$?
-  CAPTURED_ERR="$(tr '\n' ' ' < "${ERR_FILE}" | sed 's/[[:space:]]*$//')"
+  if ((status != 0)); then
+    CAPTURED_ERR="$(tr '\n' ' ' < "${ERR_FILE}" | sed 's/[[:space:]]*$//')"
+  fi
   return "${status}"
-}
-
-# Prints a JSON string for a note, from its text.
-function note() {
-  jq -Rc . <<< "${1}"
 }
 
 function cmd_policy() {
   [[ $# -eq 3 ]] || usage_error "policy needs <owner> <repo> <base>"
   local owner="${1}" repo="${2}" base="${3}"
-  local settings="null" settings_note="null" rules="null" rules_note="null" approvals="null" queue="null"
-  local parsed
+  local settings="null" settings_note="" rules_json="null" rules_note=""
 
   if ! capture gh api "repos/${owner}/${repo}"; then
-    settings_note="$(note "reading the repository settings failed: ${CAPTURED_ERR}")"
-  elif ! settings="$(jq -c --argjson order "${METHOD_ORDER}" '
-    [.allow_merge_commit, .allow_squash_merge, .allow_rebase_merge] as $flags
-    | if ($flags | all(.[]; . == null)) then null
-      else [range(3) | select($flags[.] == true) | $order[.]] end' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+    settings_note="reading the repository settings failed: ${CAPTURED_ERR}"
+  elif ! settings="$(jq -c '
+    {merge: .allow_merge_commit, squash: .allow_squash_merge, rebase: .allow_rebase_merge}
+    | if all(.[]; . == null) then null else to_entries | map(select(.value == true).key) end' \
+    <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
     settings="null"
-    settings_note="$(note "the repository settings response could not be parsed")"
+    settings_note="the repository settings response could not be parsed"
   elif [[ "${settings}" == "null" ]]; then
-    settings_note="$(note "the repository merge settings are not visible to this account, which usually means it lacks admin access")"
+    settings_note="the repository merge settings are not visible to this account, which usually means it lacks admin access"
   fi
 
+  # GitHub answers a branch that does not exist with the repository-wide rules,
+  # so the branch is read first to tell a wrong name from a branch's own rules.
   if ! capture gh api "repos/${owner}/${repo}/branches/${base}"; then
-    rules_note="$(note "reading base branch ${base} failed, so its rules were not read: ${CAPTURED_ERR}")"
+    rules_note="reading base branch ${base} failed, so its rules were not read: ${CAPTURED_ERR}"
   elif ! capture gh api --paginate --slurp "repos/${owner}/${repo}/rules/branches/${base}"; then
-    rules_note="$(note "reading the base branch rules failed: ${CAPTURED_ERR}")"
-  elif ! parsed="$(jq -c '
+    rules_note="reading the base branch rules failed: ${CAPTURED_ERR}"
+  elif ! rules_json="$(jq -c '
     [.[][]] as $all
     | [$all[] | select(.type == "pull_request") | .parameters] as $prs
     | {
@@ -141,38 +140,93 @@ function cmd_policy() {
         approvals: ([$prs[] | .required_approving_review_count // 0] | max // 0),
         queue: any($all[]; .type == "merge_queue")
       }' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
-    rules_note="$(note "the base branch rules response could not be parsed")"
-  else
-    rules="$(jq -c '.rules' <<< "${parsed}")"
-    approvals="$(jq -c '.approvals' <<< "${parsed}")"
-    queue="$(jq -c '.queue' <<< "${parsed}")"
+    rules_json="null"
+    rules_note="the base branch rules response could not be parsed"
   fi
 
-  jq -nc \
-    --argjson settings "${settings}" --argjson settingsNote "${settings_note}" \
-    --argjson rules "${rules}" --argjson rulesNote "${rules_note}" \
-    --argjson approvals "${approvals}" --argjson queue "${queue}" \
-    --argjson order "${METHOD_ORDER}" '
-    ([if $settings != null then $settings else empty end] + ($rules // [])) as $lists
+  jq -nc --argjson settings "${settings}" --arg settingsNote "${settings_note}" \
+    --argjson parsed "${rules_json}" --arg rulesNote "${rules_note}" '
+    def nullable: if . == "" then null else . end;
+    ([if $settings != null then $settings else empty end] + ($parsed.rules // [])) as $lists
     | {
         allowed: (if ($lists | length) == 0 then null
-                  else [$order[] as $m | select($lists | all(index($m) != null)) | $m] end),
-        approvals: $approvals,
-        mergeQueue: $queue,
+                  else [("merge", "squash", "rebase") as $m | select($lists | all(index($m) != null)) | $m] end),
+        approvals: $parsed.approvals,
+        mergeQueue: $parsed.queue,
         settings: $settings,
-        settingsNote: $settingsNote,
-        rules: $rules,
-        rulesNote: $rulesNote
+        settingsNote: ($settingsNote | nullable),
+        rules: $parsed.rules,
+        rulesNote: ($rulesNote | nullable)
       }'
 }
 
-function watch_event() {
-  local event="${1}" state="${2:-}" decision="${3:-}" head="${4:-}" merge="${5:-}" error="${6:-}"
+# The watch helpers share cmd_watch's locals through bash's dynamic scoping:
+# state, decision, head and merge from the latest read, the failures and
+# merged_reads counters, and the event and error a poll produced.
+
+# Reads the PR once into state, decision, head and merge. Returns 1, with the
+# reason in CAPTURED_ERR, when the read fails or its output cannot be used.
+function read_pr() {
+  local line
+  state="" decision="" head="" merge=""
+  capture gh pr view "${pr}" --repo "${owner}/${repo}" --json state,reviewDecision,headRefOid,mergeCommit || return 1
+  if ! line="$(jq -r --arg sep "${FIELD_SEPARATOR}" '
+    [(.state // ""), (if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end),
+     (.headRefOid // ""), (.mergeCommit.oid // "")] | join($sep)' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+    CAPTURED_ERR="gh pr view returned output that is not JSON"
+    return 1
+  fi
+  IFS="${FIELD_SEPARATOR}" read -r state decision head merge <<< "${line}"
+  if [[ -z "${state}" || -z "${head}" ]]; then
+    CAPTURED_ERR="gh pr view returned no state or head"
+    return 1
+  fi
+}
+
+# Makes one read and sets event, and error where one applies, or leaves event
+# empty when nothing has changed yet.
+function poll_once() {
+  event="" error=""
+  if ! read_pr; then
+    failures=$((failures + 1))
+    if ((failures >= max_failures)); then
+      event="failed"
+      error="${failures} consecutive reads failed; last error: ${CAPTURED_ERR}"
+    fi
+    return 0
+  fi
+
+  failures=0
+  case "${state}" in
+    MERGED)
+      merged_reads=$((merged_reads + 1))
+      if [[ -n "${merge}" ]]; then
+        event="merged"
+      elif ((merged_reads >= MERGED_WITHOUT_COMMIT_READS)); then
+        event="merged"
+        error="GitHub reports the PR merged but names no merge commit after ${merged_reads} reads"
+      fi
+      ;;
+    CLOSED) event="closed" ;;
+    *)
+      merged_reads=0
+      if [[ "${head}" != "${expected_head}" ]]; then
+        event="head"
+      elif [[ -n "${awaited}" && "${decision}" != "${awaited}" ]]; then
+        event="decision"
+      fi
+      ;;
+  esac
+}
+
+function emit_event() {
   jq -nc --arg event "${event}" --arg state "${state}" --arg decision "${decision}" \
-    --arg head "${head}" --arg merge "${merge}" --arg error "${error}" '
+    --arg head "${head}" --arg merge "${merge}" --arg error "${error}" \
+    --argjson failures "${failures}" --argjson mergedReads "${merged_reads}" '
     {event: $event}
     + (if $state == "" then {} else {state: $state, reviewDecision: $decision, headRefOid: $head,
         mergeCommit: (if $merge == "" then null else $merge end)} end)
+    + (if $event == "pending" then {failures: $failures, mergedReads: $mergedReads} else {} end)
     + (if $error == "" then {} else {error: $error} end)'
 }
 
@@ -180,109 +234,90 @@ function cmd_watch() {
   [[ $# -ge 4 ]] || usage_error "watch needs <owner> <repo> <pr_number> <head_sha>"
   local owner="${1}" repo="${2}" pr="${3}" expected_head="${4}"
   shift 4
-  local awaited=""
+  local awaited="" once=false failures=0 merged_reads=0 first_read=""
   while [[ $# -gt 0 ]]; do
     case "${1}" in
-      --awaited)
-        [[ $# -ge 2 ]] || usage_error "--awaited needs a decision"
-        awaited="${2}"
+      --once)
+        once=true
+        shift
+        ;;
+      --awaited | --failures | --merged-reads | --started)
+        [[ $# -ge 2 ]] || usage_error "${1} needs a value"
+        case "${1}" in
+          --awaited) awaited="${2}" ;;
+          --failures) failures="${2}" ;;
+          --merged-reads) merged_reads="${2}" ;;
+          --started) first_read="${2}" ;;
+          *) ;;
+        esac
         shift 2
         ;;
       *) usage_error "unexpected watch argument ${1}" ;;
     esac
   done
+  [[ "${failures}" =~ ^[0-9]+$ && "${merged_reads}" =~ ^[0-9]+$ ]] \
+    || usage_error "--failures and --merged-reads need whole numbers"
+  [[ -z "${first_read}" || "${first_read}" =~ ^[0-9]+$ ]] || usage_error "--started needs a Unix time"
 
   local interval="${MERGE_FLOW_INTERVAL:-60}"
   local max_failures="${MERGE_FLOW_MAX_FAILURES:-8}"
   local lifetime="${MERGE_FLOW_LIFETIME:-86400}"
-  local failures=0 merged_reads=0 started="${SECONDS}" wait_for line read_ok
-  local state decision head merge
+  local state="" decision="" head="" merge="" event="" error="" wait_for
 
-  while ((SECONDS - started < lifetime)); do
-    read_ok=false
-    if capture gh pr view "${pr}" --repo "${owner}/${repo}" --json state,reviewDecision,headRefOid,mergeCommit; then
-      if line="$(jq -r --arg sep "${FIELD_SEPARATOR}" '
-        [(.state // ""), (if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end),
-         (.headRefOid // ""), (.mergeCommit.oid // "")] | join($sep)' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
-        IFS="${FIELD_SEPARATOR}" read -r state decision head merge <<< "${line}"
-        if [[ -n "${state}" && -n "${head}" ]]; then
-          read_ok=true
-        else
-          CAPTURED_ERR="gh pr view returned no state or head"
-        fi
-      else
-        CAPTURED_ERR="gh pr view returned output that is not JSON"
-      fi
-    fi
-
-    if [[ "${read_ok}" == "true" ]]; then
-      failures=0
-      case "${state}" in
-        MERGED)
-          merged_reads=$((merged_reads + 1))
-          if [[ -n "${merge}" ]]; then
-            watch_event merged "${state}" "${decision}" "${head}" "${merge}"
-            return 0
-          fi
-          if ((merged_reads >= MERGED_WITHOUT_COMMIT_READS)); then
-            watch_event merged "${state}" "${decision}" "${head}" "" "GitHub reports the PR merged but names no merge commit after ${merged_reads} reads"
-            return 0
-          fi
-          ;;
-        CLOSED)
-          watch_event closed "${state}" "${decision}" "${head}" ""
-          return 0
-          ;;
-        *)
-          if [[ "${head}" != "${expected_head}" ]]; then
-            watch_event head "${state}" "${decision}" "${head}" ""
-            return 0
-          fi
-          if [[ -n "${awaited}" && "${decision}" != "${awaited}" ]]; then
-            watch_event decision "${state}" "${decision}" "${head}" ""
-            return 0
-          fi
-          ;;
-      esac
-      wait_for="${interval}"
+  if [[ "${once}" == "true" ]]; then
+    if [[ -n "${first_read}" ]] && (($(date +%s) - first_read >= lifetime)); then
+      event="expired"
+      error="no merge within ${lifetime} seconds"
     else
-      failures=$((failures + 1))
-      if ((failures >= max_failures)); then
-        watch_event failed "" "" "" "" "${failures} consecutive reads failed; last error: ${CAPTURED_ERR}"
-        return 0
-      fi
+      poll_once
+      [[ -n "${event}" ]] || event="pending"
+    fi
+    emit_event
+    return 0
+  fi
+
+  local started="${SECONDS}"
+  while ((SECONDS - started < lifetime)); do
+    poll_once
+    if [[ -n "${event}" ]]; then
+      emit_event
+      return 0
+    fi
+    if ((failures > 0)); then
       wait_for=$((interval * failures))
       ((wait_for <= 900)) || wait_for=900
+    else
+      wait_for="${interval}"
     fi
     sleep "${wait_for}"
   done
-  watch_event expired "" "" "" "" "no merge within ${lifetime} seconds"
+  state="" event="expired" error="no merge within ${lifetime} seconds"
+  emit_event
 }
 
+# Prints the sync result from cmd_sync's remote and worktree locals.
 function sync_result() {
-  local synced="${1}" remote="${2}" worktree="${3}" before="${4}" after="${5}" reason="${6}"
-  jq -nc --argjson synced "${synced}" --arg remote "${remote}" --arg worktree "${worktree}" \
-    --arg before "${before}" --arg after "${after}" --arg reason "${reason}" '
+  local synced="${1}" reason="${2:-}"
+  jq -nc --argjson synced "${synced}" --arg remote "${remote}" --arg worktree "${worktree}" --arg reason "${reason}" '
     def nullable: if . == "" then null else . end;
-    {synced: $synced, remote: ($remote | nullable), worktree: ($worktree | nullable),
-     before: ($before | nullable), after: ($after | nullable), reason: ($reason | nullable)}'
+    {synced: $synced, remote: ($remote | nullable), worktree: ($worktree | nullable), reason: ($reason | nullable)}'
 }
 
-# Prints the name of the remote whose URL names OWNER/REPO, ignoring case, a
-# trailing slash and a .git suffix, in https, ssh or scp-like form.
+# Prints the name of the remote whose fetch URL names OWNER/REPO, ignoring
+# case, a trailing slash and a .git suffix, in https, ssh or scp-like form.
 function find_remote() {
-  local owner="${1}" repo="${2}" name url wanted
-  wanted="$(printf '%s/%s' "${owner}" "${repo}" | tr '[:upper:]' '[:lower:]')"
-  while IFS= read -r name; do
-    [[ -n "${name}" ]] || continue
-    url="$(git remote get-url "${name}" 2> /dev/null | tr '[:upper:]' '[:lower:]')" || continue
+  local wanted name url kind
+  wanted="$(printf '%s/%s' "${1}" "${2}" | tr '[:upper:]' '[:lower:]')"
+  while read -r name url kind; do
+    [[ "${kind}" == "(fetch)" ]] || continue
+    url="$(printf '%s' "${url}" | tr '[:upper:]' '[:lower:]')"
     url="${url%/}"
     url="${url%.git}"
     if [[ "${url}" == *"/${wanted}" || "${url}" == *":${wanted}" ]]; then
       printf '%s\n' "${name}"
       return 0
     fi
-  done <<< "$(git remote)"
+  done <<< "$(git remote -v)"
   return 1
 }
 
@@ -305,51 +340,47 @@ function worktree_for_branch() {
 function cmd_sync() {
   [[ $# -eq 4 ]] || usage_error "sync needs <owner> <repo> <base> <merge_sha>"
   local owner="${1}" repo="${2}" base="${3}" merge_sha="${4}"
-  local remote worktree="" before="" after="" tracking
+  local remote="" worktree="" before tracking
 
   git rev-parse --git-dir > /dev/null 2>&1 || die "not inside a git repository"
 
   if ! remote="$(find_remote "${owner}" "${repo}")"; then
-    sync_result false "" "" "" "" "no remote points at ${owner}/${repo}"
+    sync_result false "no remote points at ${owner}/${repo}"
     return 0
   fi
   tracking="refs/remotes/${remote}/${base}"
 
   # The + updates only the remote-tracking ref, as git's default refspec does.
   if ! capture git fetch --quiet "${remote}" "+refs/heads/${base}:${tracking}"; then
-    sync_result false "${remote}" "" "" "" "fetching ${base} from ${remote} failed: ${CAPTURED_ERR}"
+    sync_result false "fetching ${base} from ${remote} failed: ${CAPTURED_ERR}"
     return 0
   fi
   if ! git merge-base --is-ancestor "${merge_sha}" "${tracking}" 2> /dev/null; then
-    sync_result false "${remote}" "" "" "" "${remote}/${base} does not contain ${merge_sha}"
+    sync_result false "${remote}/${base} does not contain ${merge_sha}"
     return 0
   fi
 
+  worktree="$(worktree_for_branch "${base}" || true)"
   before="$(git rev-parse --verify --quiet "refs/heads/${base}" || true)"
   if [[ -n "${before}" ]] && ! git merge-base --is-ancestor "${before}" "${tracking}"; then
-    worktree="$(worktree_for_branch "${base}" || true)"
-    sync_result false "${remote}" "${worktree}" "${before}" "${before}" "local ${base} has commits that ${remote}/${base} does not, so it cannot be fast-forwarded"
+    sync_result false "local ${base} has commits that ${remote}/${base} does not, so it cannot be fast-forwarded"
     return 0
   fi
 
-  if worktree="$(worktree_for_branch "${base}")"; then
+  if [[ -n "${worktree}" ]]; then
     if ! capture git -c advice.diverging=false -C "${worktree}" merge --ff-only --quiet "${tracking}"; then
-      sync_result false "${remote}" "${worktree}" "${before}" "${before}" "fast-forwarding ${base} in ${worktree} failed: ${CAPTURED_ERR}"
+      sync_result false "fast-forwarding ${base} in ${worktree} failed: ${CAPTURED_ERR}"
       return 0
     fi
-  else
-    worktree=""
-    if ! capture git fetch . "${tracking}:refs/heads/${base}"; then
-      sync_result false "${remote}" "" "${before}" "${before}" "updating ${base} failed: ${CAPTURED_ERR}"
-      return 0
-    fi
+  elif ! capture git fetch . "${tracking}:refs/heads/${base}"; then
+    sync_result false "updating ${base} failed: ${CAPTURED_ERR}"
+    return 0
   fi
 
-  after="$(git rev-parse --verify --quiet "refs/heads/${base}" || true)"
   if git merge-base --is-ancestor "${merge_sha}" "refs/heads/${base}" 2> /dev/null; then
-    sync_result true "${remote}" "${worktree}" "${before}" "${after}" ""
+    sync_result true
   else
-    sync_result false "${remote}" "${worktree}" "${before}" "${after}" "${base} does not contain ${merge_sha} after the update"
+    sync_result false "${base} does not contain ${merge_sha} after the update"
   fi
 }
 
@@ -360,16 +391,16 @@ function cmd_panes() {
 
   local worktrees
   worktrees="$(git worktree list --porcelain | sed -n 's/^worktree //p')"
-  if ! capture tmux list-panes -a -F '#{pane_id} #{pane_current_path}'; then
+  if ! capture tmux list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}'; then
     die "listing tmux panes failed: ${CAPTURED_ERR}"
   fi
 
   jq -Rn --arg worktrees "${worktrees}" '
     ($worktrees | split("\n") | map(select(. != ""))) as $trees
-    | [inputs | select(. != "") | capture("^(?<pane>%[0-9]+) (?<path>.*)$")
+    | [inputs | select(. != "") | capture("^(?<pane>%[0-9]+)\\|[^|]*\\|(?<path>.*)$")
        | . as $p
        | ([$trees[] | . as $t | select($p.path == $t or ($p.path | startswith($t + "/")))] | max_by(length)) as $tree
-       | select($tree != null) | . + {worktree: $tree}]' <<< "${CAPTURED_OUT}"
+       | select($tree != null) | {pane, worktree: $tree}]' <<< "${CAPTURED_OUT}"
 }
 
 function main() {

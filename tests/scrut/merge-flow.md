@@ -1,10 +1,10 @@
 # Merge flow
 
-Tests for the `merge-flow` script that `monitor-pr` bundles for its merge step. `policy` and `watch` run against `tests/fixtures/gh-stub`, answering from `tests/data/merge-flow/`. `sync` runs against real repositories built in a temporary directory, and `panes` against a `tmux` shim that prints a fixed pane list.
+Tests for the `merge-flow` script that `monitor-pr` bundles for its merge step. `policy` and `watch` run against `tests/fixtures/gh-stub`, answering from `tests/data/merge-flow/`. `sync` runs against real repositories built in a temporary directory, and `panes` against `tests/fixtures/tmux-stub`.
 
 ## Setup
 
-`flow` runs the script with the stub `gh` first on `PATH`, answering from `stub_dir` when a case sets it. `watch` takes a response sequence name and polls with no delay. `clone` builds a fresh local clone of a bare `acme/widgets` remote, set back one commit so that the remote's newest commit stands for a merge the clone has not fetched yet, and prints its path.
+`flow` runs the script with the stub `gh` first on `PATH`, answering from `stub_dir` when a case sets it. `watch` takes a response sequence name and polls with no delay. `clone` builds a fresh local clone of a bare `acme/widgets` remote, set back one commit so that the remote's newest commit stands for a merge the clone has not fetched yet, and prints its path. `shared` is one such clone for the cases that stop before changing anything.
 
 ```scrut {fail_fast: true}
 $ work="$(cd -P "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && pwd)" \
@@ -18,6 +18,7 @@ $ work="$(cd -P "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && pwd)" \
 >   && function clone() { local dir; dir="$(mktemp -d "${work}/clone.XXXXXX")"; git_quiet clone "${work}/remote/acme/widgets.git" "${dir}" && git_quiet -C "${dir}" reset --hard HEAD~1 && git -C "${dir}" update-ref refs/remotes/origin/main HEAD && printf '%s\n' "${dir}"; } \
 >   && echo merged > "${work}/seed/merged.txt" && git_quiet -C "${work}/seed" add merged.txt && git_quiet -C "${work}/seed" commit -m merged && git_quiet -C "${work}/seed" push origin main \
 >   && merge_sha="$(git -C "${work}/seed" rev-parse HEAD)" \
+>   && shared="$(clone)" \
 >   && function sync() { local dir="${1}"; shift; (cd "${dir}" && "${MERGE_FLOW_BIN}" sync "$@"); } \
 >   && echo ready
 ready
@@ -211,11 +212,56 @@ $ MERGE_FLOW_LIFETIME=0 watch merged
 {"event":"expired","error":"no merge within 0 seconds"}
 ```
 
+## Watch: one read at a time
+
+`--once` makes a single read for a caller that schedules its own. With nothing changed it reports `pending` with the counts to pass back.
+
+```scrut
+$ watch closed --once | jq -c '{event, failures, mergedReads}'
+{"event":"pending","failures":0,"mergedReads":0}
+```
+
+A failed read is counted, and the count passed back ends the watch once it reaches the limit.
+
+```scrut
+$ watch offline --once --failures 2 | jq -c '{event, failures}'
+{"event":"pending","failures":3}
+```
+
+```scrut
+$ watch offline --once --failures 7 | jq -c '{event, error}'
+{"event":"failed","error":"8 consecutive reads failed; last error: error connecting to api.github.com"}
+```
+
+Reads of a merge with no merge commit carry over the same way.
+
+```scrut
+$ watch merged-no-commit --once --merged-reads 4 | jq -c '{event, mergeCommit}'
+{"event":"merged","mergeCommit":null}
+```
+
+A first read a lifetime ago ends the watch without reading.
+
+```scrut
+$ watch merged --once --started 0
+{"event":"expired","error":"no merge within 86400 seconds"}
+```
+
+Counts must be whole numbers.
+
+```scrut
+$ watch merged --once --failures many 2>&1
+merge-flow: --failures and --merged-reads need whole numbers
+Run 'merge-flow --help' for usage.
+[2]
+```
+
 ## Sync: the base branch checked out in the main worktree
 
 ```scrut
-$ dir="$(clone)" && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg dir "${dir}" '{synced, remote, here: (.worktree == $dir), moved: (.before != .after), reason}'
-{"synced":true,"remote":"origin","here":true,"moved":true,"reason":null}
+$ dir="$(clone)" && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg dir "${dir}" '{synced, remote, here: (.worktree == $dir), reason}' && test "$(git -C "${dir}" rev-parse main)" = "${merge_sha}" && echo moved
+{"synced":true,"remote":"origin","here":true,"reason":null}
+moved
 ```
 
 ## Sync: the base branch checked out in another worktree
@@ -256,14 +302,14 @@ $ dir="$(clone)" && git_quiet -C "${dir}" remote remove origin && git_quiet -C "
 No remote naming the repository is reported.
 
 ```scrut
-$ dir="$(clone)" && sync "${dir}" acme gadgets main "${merge_sha}" | jq -c '{synced, reason}'
+$ sync "${shared}" acme gadgets main "${merge_sha}" | jq -c '{synced, reason}'
 {"synced":false,"reason":"no remote points at acme/gadgets"}
 ```
 
 ## Sync: a fetched base without the merge is not synced
 
 ```scrut
-$ dir="$(clone)" && sync "${dir}" acme widgets main 4444444444444444444444444444444444444444 | jq -c '{synced, reason}'
+$ sync "${shared}" acme widgets main 4444444444444444444444444444444444444444 | jq -c '{synced, reason}'
 {"synced":false,"reason":"origin/main does not contain 4444444444444444444444444444444444444444"}
 ```
 
@@ -273,8 +319,9 @@ A local commit on the base branch makes it diverge, so it cannot be fast-forward
 
 ```scrut
 $ dir="$(clone)" && git_quiet -C "${dir}" commit --allow-empty -m local && before="$(git -C "${dir}" rev-parse HEAD)" \
->   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg before "${before}" '{synced, kept: (.after == $before), reason}'
-{"synced":false,"kept":true,"reason":"local main has commits that origin/main does not, so it cannot be fast-forwarded"}
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, reason}' && test "$(git -C "${dir}" rev-parse main)" = "${before}" && echo kept
+{"synced":false,"reason":"local main has commits that origin/main does not, so it cannot be fast-forwarded"}
+kept
 ```
 
 The same holds when no worktree has the branch checked out.
@@ -291,8 +338,9 @@ An untracked file the merge would overwrite makes git refuse, and its message is
 
 ```scrut
 $ dir="$(clone)" && echo local > "${dir}/merged.txt" && before="$(git -C "${dir}" rev-parse HEAD)" \
->   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg before "${before}" '{synced, kept: (.after == $before), reason: (.reason | test("^fast-forwarding main in .* failed: .*merged.txt"))}'
-{"synced":false,"kept":true,"reason":true}
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, reason: (.reason | test("^fast-forwarding main in .* failed: .*merged.txt"))}' && test "$(git -C "${dir}" rev-parse main)" = "${before}" && echo kept
+{"synced":false,"reason":true}
+kept
 ```
 
 ## Panes: matched by whole path component
@@ -302,7 +350,8 @@ Panes in a worktree or below one match, and the deepest worktree wins. A sibling
 ```scrut
 $ repo="${work}/panes/repo" && mkdir -p "${repo}" && git_quiet -C "${repo}" init && git_quiet -C "${repo}" commit --allow-empty -m base \
 >   && git_quiet -C "${repo}" worktree add "${work}/panes/repo__worktrees/topic" -b topic \
->   && printf '#!/bin/sh\nprintf "%%s\\n" "%%1 %s" "%%2 %s/src" "%%3 %s" "%%4 %s" "%%5 %s"\n' "${repo}" "${repo}" "${work}/panes/repo__worktrees/topic" "${work}/panes/repo-old" "${work}" > "${work}/bin/tmux" && chmod +x "${work}/bin/tmux" \
->   && (cd "${repo}" && PATH="${work}/bin:${PATH}" "${MERGE_FLOW_BIN}" panes) | jq -c --arg root "${work}/panes/" '[.[] | [.pane, (.worktree | ltrimstr($root))]]'
+>   && ln -s "${TMUX_STUB_BIN}" "${work}/bin/tmux" \
+>   && panes="$(printf 's|%s|claude|%s|1\n' %1 "${repo}" %2 "${repo}/src" %3 "${work}/panes/repo__worktrees/topic" %4 "${work}/panes/repo-old" %5 "${work}")" \
+>   && (cd "${repo}" && PATH="${work}/bin:${PATH}" STUB_TMUX_PANES="${panes}" "${MERGE_FLOW_BIN}" panes) | jq -c --arg root "${work}/panes/" '[.[] | [.pane, (.worktree | ltrimstr($root))]]'
 [["%1","repo"],["%2","repo"],["%3","repo__worktrees/topic"]]
 ```
