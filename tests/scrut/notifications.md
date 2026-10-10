@@ -375,6 +375,79 @@ Tink
 claude-code.png
 ```
 
+## Slash-command turn does not borrow an earlier reply
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" stop-slash-command
+Done
+sample-repo · Sample task
+Task completed
+Glass
+claude-code.png
+```
+
+## Status line marked only by separators
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" status-dots
+Done
+sample-repo · Sample task
+Ready to merge.
+Glass
+codex.png
+```
+
+## Interactive prompt skips older question and plan calls
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-skip-interactive
+Approve Bash?
+sample-repo · Sample task
+make test
+Funk
+claude-code.png
+```
+
+## Meta records do not end the turn
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-meta
+Approve Bash?
+sample-repo · Sample task
+make test
+Funk
+claude-code.png
+```
+
+## MCP display name matched by tool name
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-mcp-display
+Approve create_issue?
+sample-repo · Sample task
+github MCP tool
+Funk
+claude-code.png
+```
+
+## Plan approval before the plan is in the transcript
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" plan-pending
+Plan ready for review
+sample-repo · Sample task
+Review the proposed plan
+Tink
+claude-code.png
+```
+
+## New Claude Code prompt
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" claude-reset
+Next user prompt allows another completion
+```
+
 ## Repeated completion
 
 ```scrut
