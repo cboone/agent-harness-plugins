@@ -38,14 +38,14 @@ Both themes are defined as tokens. Light values sit on `:root`; dark values sit 
 
 Every board names the filled block `--primary` and the accent `--accent`, whatever the lead tier is called on the page, such as Critical or Start now. Blue is reserved for focus, except in the dark theme, where the filled block takes the same light blue as the focus ring.
 
-Every text pair a board sets, and the focus ring against the ground, passes 4.5:1 in both themes. The tightest are the focus ring on `--ground` and `--accent` text on `--hit`, both in the light theme. Check a new pairing before using it.
+Every text pair a board sets passes 4.5:1 in both themes; the tightest is `--accent` text on `--hit` in the light theme. The focus ring passes 4.5:1 against `--ground`, and at least 4:1 against `--hit` and `--fix-ground`, above the 3:1 a non-text indicator needs. Check a new pairing before using it.
 
 Never add a series hue or another semantic color. `--aging` and the `--bar-*` tokens name roles for colors already in the palette, not new hues. Red (`--stale`) and green (`--fix`) already carry fixed meanings and always appear with words.
 
 ## Type
 
 - **IBM Plex Sans for text and IBM Plex Mono for numbers and labels.** Count values, ranks, issue numbers in rows and tables, the sync line, column heads, and the eyebrow and divider labels are mono; headings, count labels, prose, and titles are sans. Digits that align are set in mono, whose figures are all one width.
-- **Sizes step down by importance.** The repository heading is fluid from 40 to 64 pixels and the summary from 19 to 23, at most 62 characters wide. Section titles are 28 pixels for the lead section, in the filled block's color, 24 for the others above the divider, and 20 below it. A ranked row's headline is 21 pixels and its detail 16; a second-tier row's are 17 and 15, under a 22-pixel rank. Body text is 15, supporting lines 14 and 13. Mono figures are 40 pixels in the count strip, 24 for a fact cell, and 30 for a lead rank, zero-padded. Below 480 pixels the count figures, ranks, and headlines step down: 32, 22, and 18.
+- **Sizes step down by importance.** The repository heading is fluid from 40 to 64 pixels and the summary from 19 to 23, at most 62 characters wide. Section titles are 28 pixels for the lead section, in the filled block's color, 24 for the others above the divider, and 20 below it. A ranked row's headline is 21 pixels and its detail 16; a second-tier row's are 17 and 15, under a 22-pixel rank. Body text is 15, supporting lines 14 and 13. Mono figures are 40 pixels in the count strip, 24 for a fact cell, and 30 for a lead rank, zero-padded. At 480 pixels and below, count figures, fact cells, lead ranks, and headlines step down to 32, 20, 22, and 18.
 - **Sentence case** for titles and section names. Uppercase appears only in mono labels, column heads, tags, and count labels, which the styles set, with letter-spacing between 0.05em and 0.1em.
 
 ## Layout
@@ -57,7 +57,7 @@ Never add a series hue or another semantic color. `--aging` and the `--bar-*` to
 - **Rows, not cards.** What to act on is a list of numbered rows separated by rules, with the row's main claim as its headline and its supporting facts in a narrow column beside it: the next action on a bugs board, the reasons for the pick on a backlog board. On a bugs board, grouped lists such as Ready to go sit in columns.
 - **A double rule labeled Report** divides what to act on from the reference material below it. The sections sit in a `main` landmark between the header, which holds the masthead, count strip, and summary, and the footer, and the divider carries its label for screen readers, since a separator's own text is not read. A narrative report where nothing ranks, such as an incident brief, drops the filled block and the divider and keeps the rest.
 - **One column of content**, at most 1200 pixels wide with a side gutter of `clamp(16px, 4vw, 48px)`, that reflows to narrower grids at tablet and phone widths: rows stack their side columns beneath them, and the count strip wraps to three columns. Wide tables scroll inside their own container, so the page never scrolls sideways.
-- **Square everything.** No rounded corners, no drop shadows, and no gradients except the hatch. An inset edge, such as the outline of a queued segment, is an inset `box-shadow` with no blur and no offset, which draws as a stroke inside the shape's own box.
+- **Square everything.** No rounded corners, no drop shadows, and no gradients except the hatch. An inset edge is an inset `box-shadow` with no blur, which draws as a stroke inside the shape's own box: a zero offset with a spread for a full outline, such as a queued segment, or a one-axis offset for a single edge, such as a contended cell's accent edge.
 
 ## State in Form as Well as Color
 
@@ -66,8 +66,8 @@ Every state a reader acts on has a shape as well as a hue, so it survives a colo
 | Shape                          | Means                                                        |
 | ------------------------------ | ------------------------------------------------------------ |
 | Filled with `--primary`        | The lead tier: the filled count, a Critical or Start now tag |
-| Outlined in `--accent`         | The second tier: a High priority or In progress tag          |
-| Solid `--accent`               | Can run now: a lane segment ready to start                   |
+| Outlined in `--accent`         | The second tier: a High priority, In progress, or verify tag |
+| Solid `--bar-now`              | Can run now: a lane segment ready to start                   |
 | Outlined in `--bar-edge`       | Queued or planned: will happen, not started                  |
 | Hatched                        | Waiting on something, or not yet final                       |
 | Dashed                         | Not settled: nothing exists yet, or nobody has confirmed     |

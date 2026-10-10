@@ -178,7 +178,7 @@ a:focus-visible {
   color: var(--muted);
 }
 
-/* Outlined, so the filled count stays the one filled block in the strip. */
+/* Outlined, not filled, so a lane key never reads as the filled block. */
 .badge {
   display: inline-block;
   flex: none;
