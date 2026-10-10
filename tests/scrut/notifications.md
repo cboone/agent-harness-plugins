@@ -132,7 +132,7 @@ claude-code.png
 $ "${CHECK_NOTIFICATIONS_BIN}" stop-transcript
 Done
 sample-repo · Sample task
-Task completed
+Current turn reply.
 Glass
 claude-code.png
 ```

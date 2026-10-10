@@ -195,7 +195,9 @@ function main() {
     permission-mcp)
       action="cc-permission"
       message="Claude needs your permission to use github - create_issue (MCP)"
-      write_transcript "${transcript}" mcp__github__create_issue '{"title":"Sample"}'
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 mcp__srv__issue '{"title":"Older"}'
+      transcript_tool_use "${transcript}" tool-2 mcp__github__create_issue '{"title":"Sample"}'
       ;;
     permission-stale-question)
       action="cc-permission"
