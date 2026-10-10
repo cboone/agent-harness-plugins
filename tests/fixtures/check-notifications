@@ -188,6 +188,9 @@ function main() {
     json-summary)
       payload='{"session_id":"session-one","last_assistant_message":"{\"verdict\":\"needs-attention\",\"summary\":\"Do not implement this plan unchanged.\"}"}'
       ;;
+    long-json-summary)
+      payload="$(jq -nc '{session_id: "session-one", last_assistant_message: ({summary: "Short JSON summary.", details: ("x" * 25000)} | tojson)}')"
+      ;;
     generic-title) export NOTIFY_TEST_TITLE="user@host:~/sample-repo" ;;
     worktree)
       git -c user.name=Sample -c user.email=sample@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m sample

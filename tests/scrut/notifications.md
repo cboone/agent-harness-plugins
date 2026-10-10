@@ -115,6 +115,17 @@ Glass
 codex.png
 ```
 
+## Long JSON reply summarized from its field
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" long-json-summary
+Done
+sample-repo · Sample task
+Short JSON summary.
+Glass
+codex.png
+```
+
 ## Empty reply does not borrow other text
 
 ```scrut
