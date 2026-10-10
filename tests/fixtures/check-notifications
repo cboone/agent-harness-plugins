@@ -332,8 +332,8 @@ function main() {
   case "${scenario}" in
     duplicate)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
-      # Gives a detached duplicate alerter time to log before asserting none did.
-      sleep 0.2
+      # Polls for up to 3 seconds for a detached duplicate before asserting none came.
+      wait_for_alerts 2
       [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 1 ]]
       echo "One completion alert per turn"
       ;;
