@@ -42,7 +42,7 @@ The outcome: both boards share one progress model derived in code from gathered 
 - **Provenance (#551):** every stage names the signal that produced it, and is re-derived on each sync from that sync's gather. Previous board data never supplies a stage. Inferred statuses, such as a long-running routine, are recorded as blockers or left off.
 - **Scheduling:** display plus flags. Every stage from `started` to `ready-to-merge` holds its lane slot as today; `quiet`, `stale`, and `ready-to-merge` are flagged in the lane so a held slot explains itself. `close-out` does not hold a slot.
 - **Affinity** replaces assignment as a progress signal. It is a separate dimension saying how much an issue is already someone's:
-  - Explicit: assigned, or claimed through a label in `claimLabels` or a ZenHub pipeline in `claimPipelines`. Both default to empty. Claim settings are separate from `progressLabels` and `progressPipelines`, and a label or pipeline in both lists is a configuration error, so a progress label marks work started without also counting as ownership.
+  - Explicit: assigned, or claimed through a label in `claimLabels` or a ZenHub pipeline in `claimPipelines`. Both default to empty; pipelines apply only to the bugs board, which reads ZenHub. A claim is owned by the issue's assignees, and by an `unknown` owner when it has none. Claim settings are separate from `progressLabels` and `progressPipelines`, and a label or pipeline in both lists is a configuration error, so a progress label marks work started without also counting as ownership.
   - Implicit, for the current user, in three tiers, strongest first:
     1. Active work overlap: the paths of the issue's areas overlap files changed on the user's open branches or pull requests. No window, since an open branch is current by definition.
     2. Recent work in the area: the user committed to those paths, or merged pull requests touching them, within 30 days (`affinityWorkDays`). The point is an area the user is in now; a longer window would mark most areas in a repository the user works in heavily.
@@ -50,10 +50,10 @@ The outcome: both boards share one progress model derived in code from gathered 
   - Uniformity, applied to each signal separately: when one owner holds a signal on at least 90% of open issues (`uniformityShare`), and the repository has at least five open issues (`uniformityMinimum`), that signal is ignored for the repository. Only open issues count, since closed ones say nothing about the current backlog. This drops assignment, claims, and "filed it" in single-maintainer repositories without a per-repository switch, keeps them in `swing-left` repositories, where they vary, and leaves whichever signals still tell issues apart.
   - Effect: a small boost to picks and ranks for the current user, none for unowned issues, and a large penalty, never exclusion, for issues owned by someone else. Shown as context on every row: "affinity: you (recent commits in `bin/`)", "affinity: @someone (assigned)".
   - Affinity is a weak factor because issue state is not reliable. It never holds a slot and never marks progress.
-- **Bugs board groups** map to the shared stages: Ready to go groups become `ready-to-merge`, `needs-author`, `awaiting-review`, `draft`, `branch`, `started`, and `ready-to-fix`. Critical and High rows keep their tier, since urgency wins over readiness, and show the same stage tag and flags in place of the current one-line fix state.
+- **Bugs board groups** map to the shared stages: Ready to go groups become `ready-to-merge`, `needs-author`, `awaiting-review`, `draft`, `branch`, `started`, `close-out`, and `ready-to-fix`. Critical and High rows keep their tier, since urgency wins over readiness, and show the same stage tag and flags in place of the current one-line fix state.
 - **Areas, tagged by the analysis and matched in code:** the user's side of tiers 1 and 2 (changed files, commits, merged pull requests) is gathered in code, but only reading an issue says what part of the code it concerns. So the analysis tags each open issue or bug with one or more areas, and a deterministic step matches paths afterward:
   - An area is `{ "name", "paths" }`, with `paths` as glob patterns relative to the repository root, such as `{ "name": "parser", "paths": ["src/parser/**"] }`. Board data carries the area list, and each issue or bug lists area names. An issue whose area cannot be told from reading it gets none, and gets no tier 1 or 2 affinity.
-  - Backlog triage: the analysis writes areas in the same pass that reads issues for lanes, and `contention.claims` is derived from them, as the areas two or more issues share, rather than written separately. A new `backlog-gather affinity` step reads the gather and the analysis data and writes each issue's `affinity`, so every tier names the commit, branch, or pull request behind it.
+  - Backlog triage: the analysis writes areas in the same pass that reads issues for lanes, and `contention.claims` is derived from them, as the areas two or more issues share, rather than written separately. A `backlog-gather finish` step reads the gather and the analysis data and writes each issue's `progress` and `affinity`, the derived claims, and `schemaVersion`, so every tier names the commit, branch, or pull request behind it.
   - Bugs: each assessment carries area names, and the area list is saved in the cache beside the assessments, so names stay stable across syncs and an unchanged bug is not read again. `bugs-gather score` matches paths and computes affinity alongside the rank.
 - **Gathering:** a new deterministic `backlog-gather` script, modeled on `bugs-gather`, derives stages and flags in code, and gathers the user's side of affinity; tiers 1 and 2 are computed after the analysis tags areas. Shared jq definitions for stages and flags are copied between the two gather scripts with comments naming each other, matching the template convention, until a shared layer is justified.
 - **Page:** a header strip of per-stage counts, across every section, linking to the rows; stage-specific inline tags with a legend; and a short next action on each in-progress row ("merge it", "answer review", "fix checks", "resolve conflict", "push it", "resume or drop", "close or split").
@@ -69,7 +69,7 @@ The outcome: both boards share one progress model derived in code from gathered 
 ### 1. Shared progress contract
 
 - Define the `progress` object in `references/board-types/` prose and in `report-board` validation: `stage`, `carrier` (`{ "branch": ... }`, `{ "pr": N }`, `{ "label": ... }`, `{ "pipeline": ... }`), `signal` (provenance text), `since`, `lastActivity`, `nextMove`, `nextAction`, `flags`, and optional `host` (with the `local` flag) and `extraCarriers`.
-- Define the `affinity` object: `owner` (`you`, a login, or null), `kind` (`explicit` or `implicit`), `tier` for implicit affinity, `reasons`, and `ignored`, listing the signals uniformity dropped for the repository.
+- Define the `affinity` object: `owner` (`you`, a login, `unknown`, or null), `kind` (`explicit` or `implicit`), `tier` for implicit affinity, and `reasons`; and a top-level `affinityIgnored`, listing the signal kinds uniformity dropped for the repository.
 - Add `schemaVersion: 2` to both board types' data.
 - Add a shared reference, `references/progress-model.md`, owning the stage table, flags, thresholds, provenance rule, and affinity rules; both board-type references link to it, and the build copies it to `suggest-next-issue`.
 
@@ -77,8 +77,8 @@ The outcome: both boards share one progress model derived in code from gathered 
 
 - Gather open issues, open pull requests with `isDraft`, `reviewDecision`, `statusCheckRollup`, `mergeable`, `updatedAt`, and latest review times, remote and local branches with committer dates and ahead/behind counts against the default branch, worktrees, each open issue's timeline cross-references to merged pull requests, and the current user's recent commits and merged pull requests within a configurable window.
 - Derive `progress` and the explicit and tier 3 affinity signals per issue; detect uniformity; gather the user's changed files on open branches and pull requests, and the paths of the user's commits and merged pull requests within `affinityWorkDays`; write one normalized file the analysis reads.
-- Add an `affinity` subcommand that reads the gather and the analysis data, matches area paths against the gathered files, and writes the final `affinity` per issue, refusing an area with no paths or an issue naming an undefined area. Fail rather than shrink the board on truncated lists, as `bugs-gather` does.
-- Config keys: `progressLabels`, `progressPipelines`, `claimLabels`, `claimPipelines`, `quietDays`, `staleDays`, `affinityWorkDays`, `affinityCommentDays`, `uniformityShare`, `uniformityMinimum`.
+- Add a `finish` subcommand that reads the gather and the analysis data, matches area paths against the gathered files, and writes the final `progress` and `affinity` per issue, the derived claims, and `schemaVersion`, refusing an area with no paths, an issue naming an undefined area, a derived field the analysis wrote itself, or an issue set that differs from the gather. Fail rather than shrink the board on truncated lists, as `bugs-gather` does.
+- Config keys: `progressLabels`, `claimLabels`, `quietDays`, `staleDays`, `affinityWorkDays`, `affinityCommentDays`, `uniformityShare`, `uniformityMinimum`.
 
 ### 3. `scripts/bugs-gather`
 
@@ -89,7 +89,7 @@ The outcome: both boards share one progress model derived in code from gathered 
 ### 4. `scripts/report-board`
 
 - Validate `progress` and `affinity` on both board types, replacing the `inProgress` text check and the `ready_groups` list.
-- Update capacity and pick checks: `close-out` does not hold a slot; picks avoid issues owned by someone else unless the analysis gives a reason.
+- Update capacity and pick checks: `close-out` does not hold a slot; a pick owned by someone else needs a `despiteOwner` reason.
 - `compare`: report stage moves ("draft to awaiting review"), flags raised and cleared, and affinity changes, replacing the current Started, Progress moved, and No longer in progress entries. When the previous board has no `schemaVersion`, skip the progress entries and print the one-line model-change notice instead.
 - Validate that no label or pipeline is in both a progress list and a claim list.
 
@@ -101,7 +101,7 @@ The outcome: both boards share one progress model derived in code from gathered 
 
 ### 6. References and skill prose
 
-- `board-types/backlog-triage.md`: replace Analyze step 1 with a pointer to `backlog-gather` and `progress-model.md`; remove assignment as a progress signal; add area tagging, derive the contention claims from areas, run `backlog-gather affinity` after the analysis, and describe affinity in picks.
+- `board-types/backlog-triage.md`: replace Analyze step 1 with a pointer to `backlog-gather` and `progress-model.md`; remove assignment as a progress signal; add area tagging, derive the contention claims from areas, run `backlog-gather finish` after the analysis, and describe affinity in picks.
 - `board-types/bugs.md`: new Ready to go groups, flags, the `areas` field in the assessment shape the subagents return, and the affinity weight.
 - `design-conventions.md`: stage colors, and the In flight section on the backlog board.
 - `SKILL.md` and the plugin README: mention the gather script and the new sections.
