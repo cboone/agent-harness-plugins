@@ -199,7 +199,7 @@ Two orderings are deliberate:
 - **Sync the branch before diagnosing check failures**, because a stale branch is a common cause of them.
 - **Act on Copilot findings without waiting for in-flight checks**, because that work is durable: the fixes land whatever the checks go on to do. Requesting a review is perishable by comparison, so both request paths keep a passing-checks precondition. Every push invalidates a review rendered against the old head, which makes a review requested mid-check one that a check fix would throw away, and it spends a round against the step 7c budget either way.
 
-1. **PR is `MERGED`**: go to step 8f with `mergeCommit.oid` from the snapshot, whoever merged it and whether or not the watch reached step 8; the step 8f guard makes a merge already handled a no-op. A merge seen before readiness is reported as such. A snapshot with no merge commit yet is re-read on the next tick rather than sent to step 8f.
+1. **PR is `MERGED`**: go to step 8f with `mergeCommit.oid` from the snapshot, whoever merged it and whether or not the watch reached step 8; the step 8f guard makes a merge already handled a no-op. A merge seen before readiness is reported as such. A snapshot with no merge commit yet is re-read on the next tick rather than sent to step 8f; after 5 consecutive such snapshots, counted in the watch state, handle it as a `merged` event with a null `mergeCommit`, per step 8c.
 1. **PR is `CLOSED`**: terminal. Report that it was closed without merging, and stop.
 1. **`mergeStateStatus` is `DIRTY`**: conflicts with the base branch. Go to step 5.
 1. **`mergeStateStatus` is `BEHIND`**: go to step 5.
@@ -453,7 +453,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" watch OWNER REPO PR_NUMBER READY
 
 During an approval wait, step 8d adds `--awaited DECISION`, the `reviewDecision` it is waiting to change, with `NONE` standing for an empty decision. The watch polls every 60 seconds. After each failed read it waits the interval times the failure count, at most 15 minutes, and after 8 consecutive failures it exits with a `failed` event. It exits with `expired` after 24 hours, and prints one JSON line when it exits. Record its task ID in the watch state.
 
-On Codex with scheduled tasks, create a task that resumes this conversation at the 2-to-5-minute interval. On each tick it runs one read, `gh pr view PR_NUMBER --repo OWNER/REPO --json state,reviewDecision,headRefOid,mergeCommit`, and applies the same events the script reports: `merged` only once `mergeCommit` is set, `closed`, `head` when `headRefOid` differs from `READY_HEAD`, and `decision` when an awaited `reviewDecision` changed. It also counts consecutive failed reads and reports `failed` after 8, and reports `expired` 24 hours after the watch started; record the start time and the failure count in the watch state so the bounds hold across ticks. On any event, stop the task and handle the event below.
+On Codex with scheduled tasks, create a task that resumes this conversation at the 2-to-5-minute interval. On each tick it runs one read, `gh pr view PR_NUMBER --repo OWNER/REPO --json state,reviewDecision,headRefOid,mergeCommit`, and applies the same events the script reports: `merged` once `mergeCommit` is set, or with a null `mergeCommit` after 5 consecutive reads without one, `closed`, `head` when `headRefOid` differs from `READY_HEAD`, and `decision` when an awaited `reviewDecision` changed. It also counts consecutive failed reads and reports `failed` after 8, and reports `expired` 24 hours after the watch started; record the start time and the failure count in the watch state so the bounds hold across ticks. On any event, stop the task and handle the event below.
 
 On the foreground path, a harness with neither a background task nor a scheduled task, no watch can run alongside an open question. Claude Code always has the background task, even when `ScheduleWakeup` was unavailable, so this path is for the others. Make the offer per step 8e, or during an approval wait report "Ready, awaiting approval" per step 8d, then end the turn with a resumable checkpoint carrying the step 8 fields, per [Checkpoint and Resume](./references/checkpoint.md). Say that a merge made elsewhere is picked up when `/monitor-pr` next runs, since step 4 sends a merged PR to step 8f.
 
@@ -498,7 +498,7 @@ On a no, leave the watch running and say so: a merge made later still triggers s
 
 #### 8f. After the Merge
 
-Run this once per merge commit SHA, whichever path observed the merge, and record the SHA in the watch state. Never run it with an empty SHA: a `MERGED` state without a merge commit is re-read, never recorded.
+Run this once per merge commit SHA, whichever path observed the merge, and record the SHA in the watch state. Never run the sync with an empty SHA. A `merged` event with a null `mergeCommit` runs only the notification, recorded under the PR number in the watch state so it runs once.
 
 1. **Fast-forward the base branch.** From this repository's worktree, run:
 
