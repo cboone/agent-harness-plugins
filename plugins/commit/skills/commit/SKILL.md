@@ -44,6 +44,11 @@ The user may provide these options inline:
 - **--plan**: Commit only the plan file
 - **--all**: Stage and commit all changes (including untracked files)
 
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `trim-text`
+
 ## Workflow
 
 ### 1. Check for Changes
@@ -138,6 +143,19 @@ Analyze the diff to generate a commit message:
    - `style`: Formatting, whitespace, or cosmetic changes
 1. **Write the description**: A concise summary (under 72 characters, unless a project convention detected above sets a different limit) focused on _why_ the change was made, not _what_ files changed.
 1. **Add context when relevant**: Reference issue numbers if they appear in branch names (e.g., branch `fix/issue-42-login-bug` suggests `fixes #42`).
+
+#### Trim the body
+
+When the message has a body, invoke the `trim-text` skill on the body alone, passing this continuation block after it:
+
+```text
+Parent continuation:
+- Caller: commit
+- Resume target: Step 6, create the commit
+- Profile: none
+```
+
+Use the returned `Trimmed text` as the body when `Status` is `success`, and the draft otherwise. The subject keeps the rules above, and trailers and issue references stay exactly as drafted. If the `trim-text` skill is not installed, use the draft and say so when reporting the commit.
 
 ### 6. Create the Commit
 
