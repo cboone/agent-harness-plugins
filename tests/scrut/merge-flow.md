@@ -4,19 +4,19 @@ Tests for the `merge-flow` script that `monitor-pr` bundles for its merge step. 
 
 ## Setup
 
-`flow` runs the script with the stub `gh` first on `PATH`. `watch` takes a response sequence name and polls with no delay. `clone` builds a fresh local clone of a bare `acme/widgets` remote, set back one commit so that the remote's newest commit stands for a merge the clone has not fetched yet, and prints its path.
+`flow` runs the script with the stub `gh` first on `PATH`, answering from `stub_dir` when a case sets it. `watch` takes a response sequence name and polls with no delay. `clone` builds a fresh local clone of a bare `acme/widgets` remote, set back one commit so that the remote's newest commit stands for a merge the clone has not fetched yet, and prints its path.
 
 ```scrut {fail_fast: true}
 $ work="$(cd -P "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && pwd)" \
 >   && mkdir "${work}/bin" && ln -s "${GH_STUB_BIN}" "${work}/bin/gh" \
->   && function flow() { PATH="${work}/bin:${PATH}" STUB_GH_DIR="${MERGE_FLOW_DATA_DIR}" "${MERGE_FLOW_BIN}" "$@"; } \
+>   && function flow() { PATH="${work}/bin:${PATH}" STUB_GH_DIR="${stub_dir:-${MERGE_FLOW_DATA_DIR}}" "${MERGE_FLOW_BIN}" "$@"; } \
 >   && function watch() { local sequence="${1}"; shift; STUB_GH_PR_VIEW="pr-view/${sequence}.txt" STUB_GH_PR_VIEW_STATE="$(mktemp "${work}/state.XXXXXX")" MERGE_FLOW_INTERVAL=0 flow watch acme widgets 7 1111111111111111111111111111111111111111 "$@"; } \
 >   && function git_quiet() { git -c init.defaultBranch=main -c user.name=Test -c user.email=test@example.com "$@" > /dev/null 2>&1; } \
 >   && mkdir -p "${work}/remote/acme" && git_quiet init --bare "${work}/remote/acme/widgets.git" \
 >   && git_quiet clone "${work}/remote/acme/widgets.git" "${work}/seed" \
 >   && git_quiet -C "${work}/seed" commit --allow-empty -m base && git_quiet -C "${work}/seed" push origin main \
 >   && function clone() { local dir; dir="$(mktemp -d "${work}/clone.XXXXXX")"; git_quiet clone "${work}/remote/acme/widgets.git" "${dir}" && git_quiet -C "${dir}" reset --hard HEAD~1 && git -C "${dir}" update-ref refs/remotes/origin/main HEAD && printf '%s\n' "${dir}"; } \
->   && git_quiet -C "${work}/seed" commit --allow-empty -m merged && git_quiet -C "${work}/seed" push origin main \
+>   && echo merged > "${work}/seed/merged.txt" && git_quiet -C "${work}/seed" add merged.txt && git_quiet -C "${work}/seed" commit -m merged && git_quiet -C "${work}/seed" push origin main \
 >   && merge_sha="$(git -C "${work}/seed" rev-parse HEAD)" \
 >   && function sync() { local dir="${1}"; shift; (cd "${dir}" && "${MERGE_FLOW_BIN}" sync "$@"); } \
 >   && echo ready
@@ -57,7 +57,7 @@ $ flow policy acme widgets dev | jq -c '{allowed, approvals}'
 
 ## Policy: hidden settings are unknown, not empty
 
-Without admin access, GitHub reports every merge setting as null. That reads as unknown, so the rules decide alone.
+Without admin access, GitHub omits the merge settings, which read as null. That reads as unknown, so the rules decide alone.
 
 ```scrut
 $ flow policy acme hidden main | jq -c '{allowed, settings, settingsNote}'
@@ -69,6 +69,29 @@ With no rules either, nothing is known about the methods.
 ```scrut
 $ flow policy acme hidden dev | jq -c '{allowed, approvals}'
 {"allowed":null,"approvals":0}
+```
+
+## Policy: every limiting rule narrows the methods
+
+Two `pull_request` rules both limit the methods, so only the method both allow is left, and the higher approval count applies.
+
+```scrut
+$ flow policy acme open multi | jq -c '{allowed, approvals, rules}'
+{"allowed":["squash"],"approvals":2,"rules":[["merge","squash"],["squash","rebase"]]}
+```
+
+A linear-history rule rules out merge commits.
+
+```scrut
+$ flow policy acme open linear | jq -c '{allowed, approvals}'
+{"allowed":["squash","rebase"],"approvals":0}
+```
+
+A merge queue is reported, since the queue then merges the PR.
+
+```scrut
+$ flow policy acme open queue | jq -c '{allowed, mergeQueue}'
+{"allowed":["merge","squash","rebase"],"mergeQueue":true}
 ```
 
 ## Policy: failed reads are reported, not read as empty
@@ -87,6 +110,19 @@ $ flow policy acme widgets gone | jq -c '{approvals, rulesNote}'
 {"approvals":null,"rulesNote":"reading base branch gone failed, so its rules were not read: gh: Not Found (HTTP 404)"}
 ```
 
+A response that cannot be parsed is a failed read too, not a reason to print nothing.
+
+```scrut
+$ stub_dir="$(mktemp -d "${work}/api.XXXXXX")" && cp -R "${MERGE_FLOW_DATA_DIR}/." "${stub_dir}/" && printf '<html>Unicorn!</html>\n' > "${stub_dir}/api/repos_acme_widgets.json" \
+>   && flow policy acme widgets main | jq -c '{allowed, settings, settingsNote}'; stub_dir=""
+{"allowed":["squash"],"settings":null,"settingsNote":"the repository settings response could not be parsed"}
+```
+
+```scrut
+$ flow policy acme widgets mangled | jq -c '{approvals, rules, rulesNote}'
+{"approvals":null,"rules":null,"rulesNote":"the base branch rules response could not be parsed"}
+```
+
 A failed settings read is reported beside the rules that were read.
 
 ```scrut
@@ -103,6 +139,13 @@ $ watch merged
 {"event":"merged","state":"MERGED","reviewDecision":"NONE","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":"2222222222222222222222222222222222222222"}
 ```
 
+A merge GitHub reports with no merge commit is reported after five such reads, rather than waited on until the watch expires.
+
+```scrut
+$ watch merged-no-commit | jq -c '{event, mergeCommit, error}'
+{"event":"merged","mergeCommit":null,"error":"GitHub reports the PR merged but names no merge commit after 5 reads"}
+```
+
 ## Watch: a close ends the watch
 
 ```scrut
@@ -112,7 +155,7 @@ $ watch closed | jq -c '{event, mergeCommit}'
 
 ## Watch: a push ends the watch
 
-A head that differs from the one readiness was declared on ends the watch, so a merge offer is never accepted for commits that were not checked.
+A head that differs from the one readiness was declared on ends the watch, so the new head goes back through the repair loop.
 
 ```scrut
 $ watch pushed | jq -c '{event, headRefOid}'
@@ -147,6 +190,18 @@ Consecutive failures end it with the last error.
 ```scrut
 $ MERGE_FLOW_MAX_FAILURES=2 watch offline
 {"event":"failed","error":"2 consecutive reads failed; last error: error connecting to api.github.com"}
+```
+
+Output that is not JSON, or that names no state or head, counts as a failed read.
+
+```scrut
+$ MERGE_FLOW_MAX_FAILURES=1 watch garbled
+{"event":"failed","error":"1 consecutive reads failed; last error: gh pr view returned output that is not JSON"}
+```
+
+```scrut
+$ MERGE_FLOW_MAX_FAILURES=1 watch empty
+{"event":"failed","error":"1 consecutive reads failed; last error: gh pr view returned no state or head"}
 ```
 
 A watch that outlives its lifetime ends too.
@@ -190,6 +245,14 @@ $ dir="$(clone)" && git_quiet -C "${dir}" remote rename origin upstream && git_q
 {"synced":true,"remote":"upstream"}
 ```
 
+An scp-like URL with a different case and a `.git` suffix names the repository too. That remote cannot be reached here, so the fetch failure is reported.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" remote remove origin && git_quiet -C "${dir}" remote add up git@github.com:Acme/Widgets.git \
+>   && GIT_SSH_COMMAND=false sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, remote, reason: (.reason | startswith("fetching main from up failed: "))}'
+{"synced":false,"remote":"up","reason":true}
+```
+
 No remote naming the repository is reported.
 
 ```scrut
@@ -204,19 +267,37 @@ $ dir="$(clone)" && sync "${dir}" acme widgets main 4444444444444444444444444444
 {"synced":false,"reason":"origin/main does not contain 4444444444444444444444444444444444444444"}
 ```
 
-## Sync: a refused fast-forward leaves the worktree alone
+## Sync: a diverged base branch is reported, not forced
 
-A local commit on the base branch makes it diverge, and the refusal is reported with git's own message.
+A local commit on the base branch makes it diverge, so it cannot be fast-forwarded, and nothing changes.
 
 ```scrut
 $ dir="$(clone)" && git_quiet -C "${dir}" commit --allow-empty -m local && before="$(git -C "${dir}" rev-parse HEAD)" \
->   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg before "${before}" '{synced, kept: (.after == $before), reason: (.reason | test("^fast-forwarding main in .* failed: "))}'
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg before "${before}" '{synced, kept: (.after == $before), reason}'
+{"synced":false,"kept":true,"reason":"local main has commits that origin/main does not, so it cannot be fast-forwarded"}
+```
+
+The same holds when no worktree has the branch checked out.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" commit --allow-empty -m local && git_quiet -C "${dir}" switch -c feature \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, worktree, reason}'
+{"synced":false,"worktree":null,"reason":"local main has commits that origin/main does not, so it cannot be fast-forwarded"}
+```
+
+## Sync: a refused fast-forward leaves the worktree alone
+
+An untracked file the merge would overwrite makes git refuse, and its message is reported.
+
+```scrut
+$ dir="$(clone)" && echo local > "${dir}/merged.txt" && before="$(git -C "${dir}" rev-parse HEAD)" \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg before "${before}" '{synced, kept: (.after == $before), reason: (.reason | test("^fast-forwarding main in .* failed: .*merged.txt"))}'
 {"synced":false,"kept":true,"reason":true}
 ```
 
 ## Panes: matched by whole path component
 
-Panes in a worktree or below one match, and the deepest worktree wins. A sibling directory whose name only starts with the repository's name does not match.
+Panes in a worktree or below one match, and the deepest worktree wins. A sibling directory whose name only starts with the repository's name does not match, nor does a directory above the repository.
 
 ```scrut
 $ repo="${work}/panes/repo" && mkdir -p "${repo}" && git_quiet -C "${repo}" init && git_quiet -C "${repo}" commit --allow-empty -m base \

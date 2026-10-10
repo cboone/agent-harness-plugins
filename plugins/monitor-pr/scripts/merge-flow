@@ -7,8 +7,20 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
-# The order merge methods are listed in, and the names gh pr merge takes.
+# The names gh pr merge takes, in the order they are listed, which matches the
+# allow_merge_commit, allow_squash_merge, allow_rebase_merge flags by position.
 readonly METHOD_ORDER='["merge", "squash", "rebase"]'
+
+# Separates the watch's parsed fields. Unlike a space or a tab, it is not IFS
+# whitespace, so an empty field stays in place instead of collapsing.
+readonly FIELD_SEPARATOR=$'\x1f'
+
+# How many consecutive reads may report MERGED without a merge commit before
+# the watch reports the merge anyway.
+readonly MERGED_WITHOUT_COMMIT_READS=5
+
+ERR_FILE=""
+trap 'rm -f "${ERR_FILE}"' EXIT
 
 function usage() {
   cat << USAGE_TEXT
@@ -27,28 +39,35 @@ Commands:
 Options:
   -h, --help    Show this help
 
-Every command prints one JSON object or array on stdout and exits 0 when it
-could answer, so a failed GitHub or git read is reported in the output rather
-than lost in a pipeline. Usage errors exit 2; panes exits 1 when tmux cannot
-be read.
+Every command prints one JSON object or array on stdout and reports a failed
+GitHub or git read inside it, including a response it cannot parse. A nonzero
+exit means no JSON was printed: 2 for a usage error, and 1 when sync or panes
+runs outside a git repository, or panes cannot use tmux.
 
-policy: "allowed" is the repository settings intersected with every
-pull_request rule on the base branch, or null when neither could be read.
-"approvals" is the highest required approving review count, or null when the
-rules could not be read. A note explains every null.
+policy: "allowed" is the repository settings intersected with every base-branch
+rule that limits merge methods: a pull_request rule's allowed_merge_methods,
+and required_linear_history, which leaves squash and rebase. It is null when
+no source supplied a method list, which happens when the settings could not be
+read and no readable rule limits methods; settingsNote says why. "approvals" is
+the highest approving review count a pull_request rule requires, or null when
+the rules could not be read; rulesNote says why. "mergeQueue" is true when a
+merge_queue rule applies, since the queue then merges the PR.
 
-watch: exits on the first of these events: merged (with a merge commit),
-closed, head (the head SHA differs from <head_sha>), decision (the review
-decision differs from --awaited, where NONE stands for no decision), failed
-(consecutive reads failed), or expired (the watch outlived its lifetime).
+watch: exits on the first of these events: merged, closed, head (the head SHA
+differs from <head_sha>), decision (the review decision differs from
+--awaited, where NONE stands for no decision), failed (consecutive reads
+failed or could not be parsed), or expired (the watch outlived its lifetime).
+A merged event carries the merge commit; after ${MERGED_WITHOUT_COMMIT_READS} reads reporting MERGED
+with no merge commit, it is reported with a null mergeCommit and an error.
 MERGE_FLOW_INTERVAL (seconds, default 60), MERGE_FLOW_MAX_FAILURES (default 8)
-and MERGE_FLOW_LIFETIME (seconds, default 86400) tune it. Reads that fail back
-off up to 15 minutes apart.
+and MERGE_FLOW_LIFETIME (seconds, default 86400) tune it. After each failed
+read it waits the interval times the failure count, at most 15 minutes.
 
 sync: fetches <base> from the remote whose URL names <owner>/<repo>, checks
 that it contains <merge_sha>, then fast-forwards the worktree that has <base>
 checked out, or the branch ref when none does. It never stashes, resets or
-forces; "synced" is true only when the local <base> contains <merge_sha>.
+force-updates a local branch; "synced" is true only when the local <base>
+contains <merge_sha>.
 
 Examples:
   ${SCRIPT_NAME} policy octocat hello-world main
@@ -70,51 +89,76 @@ function usage_error() {
 }
 
 # Runs a command, storing its stdout in CAPTURED_OUT and its stderr, squeezed
-# to one line, in CAPTURED_ERR. Returns the command's exit status.
+# to one line, in CAPTURED_ERR. Returns the command's exit status. Call it as
+# an if condition, so that errexit does not stop the script on a failure.
 function capture() {
-  local err_file status=0
-  err_file="$(mktemp)"
-  CAPTURED_OUT="$("$@" 2> "${err_file}")" || status=$?
-  CAPTURED_ERR="$(tr '\n' ' ' < "${err_file}" | sed 's/[[:space:]]*$//')"
-  rm -f "${err_file}"
+  local status=0
+  CAPTURED_OUT=""
+  CAPTURED_ERR=""
+  if [[ -z "${ERR_FILE}" ]] && ! ERR_FILE="$(mktemp)"; then
+    ERR_FILE=""
+    CAPTURED_ERR="mktemp failed, so ${1} was not run"
+    return 1
+  fi
+  CAPTURED_OUT="$("$@" 2> "${ERR_FILE}")" || status=$?
+  CAPTURED_ERR="$(tr '\n' ' ' < "${ERR_FILE}" | sed 's/[[:space:]]*$//')"
   return "${status}"
+}
+
+# Prints a JSON string for a note, from its text.
+function note() {
+  jq -Rc . <<< "${1}"
 }
 
 function cmd_policy() {
   [[ $# -eq 3 ]] || usage_error "policy needs <owner> <repo> <base>"
   local owner="${1}" repo="${2}" base="${3}"
-  local settings="null" settings_note="null" rules="null" rules_note="null" approvals="null"
+  local settings="null" settings_note="null" rules="null" rules_note="null" approvals="null" queue="null"
+  local parsed
 
-  if capture gh api "repos/${owner}/${repo}"; then
-    settings="$(jq -c --argjson order "${METHOD_ORDER}" '
-      [.allow_merge_commit, .allow_squash_merge, .allow_rebase_merge] as $flags
-      | if ($flags | all(.[]; . == null)) then null
-        else [range(3) | select($flags[.] == true) | $order[.]] end' <<< "${CAPTURED_OUT}")"
-    if [[ "${settings}" == "null" ]]; then
-      settings_note='"the repository merge settings are not visible to this account, which usually means it lacks admin access"'
-    fi
-  else
-    settings_note="$(jq -Rc . <<< "reading the repository settings failed: ${CAPTURED_ERR}")"
+  if ! capture gh api "repos/${owner}/${repo}"; then
+    settings_note="$(note "reading the repository settings failed: ${CAPTURED_ERR}")"
+  elif ! settings="$(jq -c --argjson order "${METHOD_ORDER}" '
+    [.allow_merge_commit, .allow_squash_merge, .allow_rebase_merge] as $flags
+    | if ($flags | all(.[]; . == null)) then null
+      else [range(3) | select($flags[.] == true) | $order[.]] end' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+    settings="null"
+    settings_note="$(note "the repository settings response could not be parsed")"
+  elif [[ "${settings}" == "null" ]]; then
+    settings_note="$(note "the repository merge settings are not visible to this account, which usually means it lacks admin access")"
   fi
 
   if ! capture gh api "repos/${owner}/${repo}/branches/${base}"; then
-    rules_note="$(jq -Rc . <<< "reading base branch ${base} failed, so its rules were not read: ${CAPTURED_ERR}")"
-  elif capture gh api --paginate --slurp "repos/${owner}/${repo}/rules/branches/${base}"; then
-    rules="$(jq -c '[.[][] | select(.type == "pull_request") | .parameters.allowed_merge_methods // empty]' <<< "${CAPTURED_OUT}")"
-    approvals="$(jq -c '[.[][] | select(.type == "pull_request") | .parameters.required_approving_review_count // 0] | max // 0' <<< "${CAPTURED_OUT}")"
+    rules_note="$(note "reading base branch ${base} failed, so its rules were not read: ${CAPTURED_ERR}")"
+  elif ! capture gh api --paginate --slurp "repos/${owner}/${repo}/rules/branches/${base}"; then
+    rules_note="$(note "reading the base branch rules failed: ${CAPTURED_ERR}")"
+  elif ! parsed="$(jq -c '
+    [.[][]] as $all
+    | [$all[] | select(.type == "pull_request") | .parameters] as $prs
+    | {
+        rules: ([$prs[] | .allowed_merge_methods // empty]
+                + [$all[] | select(.type == "required_linear_history") | ["squash", "rebase"]]),
+        approvals: ([$prs[] | .required_approving_review_count // 0] | max // 0),
+        queue: any($all[]; .type == "merge_queue")
+      }' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+    rules_note="$(note "the base branch rules response could not be parsed")"
   else
-    rules_note="$(jq -Rc . <<< "reading the base branch rules failed: ${CAPTURED_ERR}")"
+    rules="$(jq -c '.rules' <<< "${parsed}")"
+    approvals="$(jq -c '.approvals' <<< "${parsed}")"
+    queue="$(jq -c '.queue' <<< "${parsed}")"
   fi
 
   jq -nc \
     --argjson settings "${settings}" --argjson settingsNote "${settings_note}" \
     --argjson rules "${rules}" --argjson rulesNote "${rules_note}" \
-    --argjson approvals "${approvals}" --argjson order "${METHOD_ORDER}" '
+    --argjson approvals "${approvals}" --argjson queue "${queue}" \
+    --argjson order "${METHOD_ORDER}" '
     ([if $settings != null then $settings else empty end] + ($rules // [])) as $lists
     | {
         allowed: (if ($lists | length) == 0 then null
                   else [$order[] as $m | select($lists | all(index($m) != null)) | $m] end),
         approvals: $approvals,
+        mergeQueue: $queue,
         settings: $settings,
         settingsNote: $settingsNote,
         rules: $rules,
@@ -151,18 +195,37 @@ function cmd_watch() {
   local interval="${MERGE_FLOW_INTERVAL:-60}"
   local max_failures="${MERGE_FLOW_MAX_FAILURES:-8}"
   local lifetime="${MERGE_FLOW_LIFETIME:-86400}"
-  local failures=0 started="${SECONDS}" wait_for line state decision head merge
+  local failures=0 merged_reads=0 started="${SECONDS}" wait_for line read_ok
+  local state decision head merge
 
   while ((SECONDS - started < lifetime)); do
+    read_ok=false
     if capture gh pr view "${pr}" --repo "${owner}/${repo}" --json state,reviewDecision,headRefOid,mergeCommit; then
+      if line="$(jq -r --arg sep "${FIELD_SEPARATOR}" '
+        [(.state // ""), (if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end),
+         (.headRefOid // ""), (.mergeCommit.oid // "")] | join($sep)' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+        IFS="${FIELD_SEPARATOR}" read -r state decision head merge <<< "${line}"
+        if [[ -n "${state}" && -n "${head}" ]]; then
+          read_ok=true
+        else
+          CAPTURED_ERR="gh pr view returned no state or head"
+        fi
+      else
+        CAPTURED_ERR="gh pr view returned output that is not JSON"
+      fi
+    fi
+
+    if [[ "${read_ok}" == "true" ]]; then
       failures=0
-      line="$(jq -r '[.state, (if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end),
-        .headRefOid, (.mergeCommit.oid // "")] | join(" ")' <<< "${CAPTURED_OUT}")"
-      read -r state decision head merge <<< "${line}"
       case "${state}" in
         MERGED)
-          if [[ -n "${merge:-}" ]]; then
+          merged_reads=$((merged_reads + 1))
+          if [[ -n "${merge}" ]]; then
             watch_event merged "${state}" "${decision}" "${head}" "${merge}"
+            return 0
+          fi
+          if ((merged_reads >= MERGED_WITHOUT_COMMIT_READS)); then
+            watch_event merged "${state}" "${decision}" "${head}" "" "GitHub reports the PR merged but names no merge commit after ${merged_reads} reads"
             return 0
           fi
           ;;
@@ -205,16 +268,16 @@ function sync_result() {
      before: ($before | nullable), after: ($after | nullable), reason: ($reason | nullable)}'
 }
 
-# Prints the name of the remote whose URL names OWNER/REPO, ignoring case and
-# an optional .git suffix, in https, ssh or scp-like form.
+# Prints the name of the remote whose URL names OWNER/REPO, ignoring case, a
+# trailing slash and a .git suffix, in https, ssh or scp-like form.
 function find_remote() {
   local owner="${1}" repo="${2}" name url wanted
   wanted="$(printf '%s/%s' "${owner}" "${repo}" | tr '[:upper:]' '[:lower:]')"
   while IFS= read -r name; do
     [[ -n "${name}" ]] || continue
     url="$(git remote get-url "${name}" 2> /dev/null | tr '[:upper:]' '[:lower:]')" || continue
-    url="${url%.git}"
     url="${url%/}"
+    url="${url%.git}"
     if [[ "${url}" == *"/${wanted}" || "${url}" == *":${wanted}" ]]; then
       printf '%s\n' "${name}"
       return 0
@@ -252,6 +315,7 @@ function cmd_sync() {
   fi
   tracking="refs/remotes/${remote}/${base}"
 
+  # The + updates only the remote-tracking ref, as git's default refspec does.
   if ! capture git fetch --quiet "${remote}" "+refs/heads/${base}:${tracking}"; then
     sync_result false "${remote}" "" "" "" "fetching ${base} from ${remote} failed: ${CAPTURED_ERR}"
     return 0
@@ -262,14 +326,20 @@ function cmd_sync() {
   fi
 
   before="$(git rev-parse --verify --quiet "refs/heads/${base}" || true)"
+  if [[ -n "${before}" ]] && ! git merge-base --is-ancestor "${before}" "${tracking}"; then
+    worktree="$(worktree_for_branch "${base}" || true)"
+    sync_result false "${remote}" "${worktree}" "${before}" "${before}" "local ${base} has commits that ${remote}/${base} does not, so it cannot be fast-forwarded"
+    return 0
+  fi
+
   if worktree="$(worktree_for_branch "${base}")"; then
-    if ! capture git -C "${worktree}" merge --ff-only --quiet "${tracking}"; then
+    if ! capture git -c advice.diverging=false -C "${worktree}" merge --ff-only --quiet "${tracking}"; then
       sync_result false "${remote}" "${worktree}" "${before}" "${before}" "fast-forwarding ${base} in ${worktree} failed: ${CAPTURED_ERR}"
       return 0
     fi
   else
     worktree=""
-    if ! capture git fetch --quiet . "${tracking}:refs/heads/${base}"; then
+    if ! capture git fetch . "${tracking}:refs/heads/${base}"; then
       sync_result false "${remote}" "" "${before}" "${before}" "updating ${base} failed: ${CAPTURED_ERR}"
       return 0
     fi
@@ -305,12 +375,11 @@ function cmd_panes() {
 function main() {
   local command="${1:-}"
   [[ $# -eq 0 ]] || shift
-  # bash 3.2 rejects an empty "$@" under set -u, hence the ${@+...} guards.
   case "${command}" in
-    policy) cmd_policy ${@+"$@"} ;;
-    watch) cmd_watch ${@+"$@"} ;;
-    sync) cmd_sync ${@+"$@"} ;;
-    panes) cmd_panes ${@+"$@"} ;;
+    policy) cmd_policy "$@" ;;
+    watch) cmd_watch "$@" ;;
+    sync) cmd_sync "$@" ;;
+    panes) cmd_panes "$@" ;;
     -h | --help) usage ;;
     "") usage_error "missing command" ;;
     *) usage_error "unknown command ${command}" ;;
