@@ -115,6 +115,9 @@ function main() {
     code-only)
       payload="$(jq -nc --arg reply $'```bash\nmake test\n```' '{session_id: "session-one", last_assistant_message: $reply}')"
       ;;
+    pipeless-table)
+      payload="$(jq -nc --arg reply $'Results:\n\nCheck | State\n:--- | ---:\nLint | pass\n\nAll good.' '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
     short-room)
       payload="$(jq -nc --arg reply "$(printf 'word %.0s' {1..22})ends here. A second sentence that cannot fit in the room left." \
         '{session_id: "session-one", last_assistant_message: $reply}')"

@@ -60,6 +60,17 @@ Glass
 codex.png
 ```
 
+## Table without leading pipes is dropped
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" pipeless-table
+Done
+sample-repo · Sample task
+Results: All good.
+Glass
+codex.png
+```
+
 ## First code line when nothing else remains
 
 ```scrut

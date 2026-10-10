@@ -292,6 +292,7 @@ function summarizeReply(reply: string, limit: number): string {
 // Splits reply lines into prose, status and code units. Fenced lines and table
 // rows are code; a fence left open at the end is read again as prose.
 function replyUnits(lines: string[]): ReplyUnit[] {
+  const tables = tableRows(lines);
   const units: ReplyUnit[] = [];
   let fence = -1;
   let mark = 0;
@@ -311,8 +312,8 @@ function replyUnits(lines: string[]): ReplyUnit[] {
       }
     } else if (fence >= 0) {
       units.push({ text: line, kind: "code" });
-    } else if (/^\s*\|/u.test(line)) {
-      if (!/^[\s|:-]+$/u.test(line)) {
+    } else if (tables.has(i) || /^\s*\|/u.test(line)) {
+      if (!isTableRule(line)) {
         flush();
         units.push({
           text: line.replace(/^\s*\||\|\s*$/gu, "").replace(/\s*\|\s*/gu, " · "),
@@ -334,6 +335,23 @@ function replyUnits(lines: string[]): ReplyUnit[] {
   if (fence >= 0) return [...units.slice(0, mark), ...replyUnits(lines.slice(fence + 1))];
   flush();
   return units;
+}
+
+function isTableRule(line: string): boolean {
+  return /^[\s|:-]+$/u.test(line) && line.includes("|") && line.includes("-");
+}
+
+// Indexes of table lines, found by a separator row under a header containing a
+// pipe, with or without leading pipes; the table runs until a line without a pipe.
+function tableRows(lines: string[]): Set<number> {
+  const rows = new Set<number>();
+  for (let i = 1; i < lines.length; i++) {
+    if (!isTableRule(lines[i] ?? "") || !(lines[i - 1] ?? "").includes("|")) continue;
+    let end = i + 1;
+    while (end < lines.length && (lines[end] ?? "").includes("|")) end++;
+    for (let j = i - 1; j < end; j++) rows.add(j);
+  }
+  return rows;
 }
 
 // Keeps the prose units, else the status units, else the first unit.
