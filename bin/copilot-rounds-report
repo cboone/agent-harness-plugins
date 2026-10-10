@@ -1,0 +1,390 @@
+#!/usr/bin/env bash
+# copilot-rounds-report -- Summarize the Copilot code review rounds taken by
+# pull requests created in a date range.
+#
+# Usage: copilot-rounds-report --owner OWNER [--owner OWNER]... --since DATE
+#          [--until DATE] [--author LOGIN] [--client-owner OWNER]...
+#          [--save FILE | --input FILE]
+#
+# A round is one Copilot review. A notice in its place, such as "encountered an
+# error", has no Markdown heading and is counted apart. The verdict is the first
+# level-3 heading. The older "Pull request overview" layout has none; any other
+# review without one warns, because Copilot has changed its layout.
+#
+# A round's findings are its inline comments plus the findings its body lists as
+# previously missed. Severity comes from the finding badges. The report prints
+# how many findings were rated, so badges it no longer recognizes show up as a
+# small denominator.
+#
+# A findings-free round lists no finding and does not recommend approval.
+#
+# Stops instead of summarizing partial data: no matches, more than 1,000
+# matches, GraphQL errors, a cut-short page sequence, or more than 100 reviews
+# on one pull request. Requires authenticated `gh` and `jq`.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+# Rounds from this one on are reported together in the per-round table.
+readonly LAST_ROUND_ROW=8
+
+# A pull request with at least this many rounds counts as a long one.
+readonly LONG_ROUNDS=5
+
+# GitHub search returns at most this many results for one query.
+readonly SEARCH_LIMIT=1000
+
+# shellcheck disable=SC2016 # $q and $endCursor are GraphQL variables.
+readonly QUERY='query($q: String!, $endCursor: String) {
+  search(type: ISSUE, query: $q, first: 25, after: $endCursor) {
+    issueCount
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest {
+        number
+        repository { nameWithOwner owner { login } }
+        reviews(first: 100) {
+          totalCount
+          nodes { author { login } body comments { totalCount } }
+        }
+      }
+    }
+  }
+}'
+
+function usage() {
+  cat << EOF
+Usage: ${SCRIPT_NAME} --owner OWNER [--owner OWNER]... --since DATE [options]
+
+Report Copilot code review rounds for the pull requests created by one author
+in the given owners' repositories, as Markdown on stdout.
+
+Options:
+  --owner OWNER         User or organization to search; repeatable, required
+  --since YYYY-MM-DD    First creation date to include, required
+  --until YYYY-MM-DD    Last creation date to include (default: no limit)
+  --author LOGIN        Pull request author (default: @me)
+  --client-owner OWNER  Report this owner's pull requests as client work, and
+                        the rest as non-client; repeatable
+  --save FILE           Also write the fetched search pages to FILE
+  --input FILE          Read search pages from FILE instead of fetching them
+  -h, --help            Show this help
+EOF
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function warn() {
+  echo "${SCRIPT_NAME}: warning: ${1}" >&2
+}
+
+# Rejects dates such as 2026-02-30 that fit the shape but not the calendar.
+function require_date() {
+  local name="${1}"
+  local value="${2}"
+
+  if [[ ! "${value}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
+    || ! jq -e -n --arg d "${value}" \
+      'try ($d | strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d") == $d) catch false' \
+      > /dev/null; then
+    die "${name} needs a YYYY-MM-DD date, got '${value}'"
+  fi
+}
+
+# Prints the search pages as one JSON array. Runs in a command substitution, so
+# the EXIT trap removes the query file even when die exits.
+function fetch_pages() {
+  local search="${1}"
+  local query_dir
+
+  query_dir="$(mktemp -d "${TMPDIR:-/tmp}/copilot-rounds.XXXXXX")" \
+    || die "could not create a temporary directory"
+  # shellcheck disable=SC2064 # Expand now: query_dir is local to this function.
+  trap "rm -rf '${query_dir}'" EXIT
+  printf '%s\n' "${QUERY}" > "${query_dir}/copilot-rounds.graphql" \
+    || die "could not write the search query"
+
+  if ! gh api graphql --paginate --slurp \
+    -F "query=@${query_dir}/copilot-rounds.graphql" \
+    -f "q=${search}" < /dev/null; then
+    die "could not search for pull requests"
+  fi
+}
+
+# Prints the first reason the search pages cannot be summarized, or nothing.
+# shellcheck disable=SC2016 # $ names are jq variables.
+readonly PAGES_PROBLEM_FILTER='
+  def problem:
+    if type != "array" or length == 0 then
+      "expected a non-empty array of search pages"
+    elif any(.[]; type != "object") then
+      "expected an array of search pages"
+    elif any(.[]; has("errors")) then
+      "a search page holds GraphQL errors: \([.[].errors // empty | .[].message] | first)"
+    elif any(.[]; (.data.search.nodes | type) != "array"
+        or (.data.search.issueCount | type) != "number") then
+      "expected an array of search pages"
+    elif .[-1].data.search.pageInfo.hasNextPage != false then
+      "the last search page says more results follow, so the search was cut short"
+    elif any(.[].data.search.nodes[]; type != "object" or (.number | type) != "number") then
+      "a search result is not a pull request"
+    elif .[0].data.search.issueCount == 0 then
+      "no pull requests matched"
+    elif .[0].data.search.issueCount > $limit then
+      "\(.[0].data.search.issueCount) pull requests matched, more than the \($limit) GitHub search returns; split the range with --since and --until"
+    else
+      ([.[].data.search.nodes[]
+        | select(.reviews.totalCount > (.reviews.nodes | length))
+        | "\(.repository.nameWithOwner)#\(.number)"] | unique) as $truncated
+      | if ($truncated | length) > 0 then
+          "more reviews than the query reads (100) on \($truncated | join(", "))"
+        else empty end
+    end;
+  first(problem) // ""
+'
+
+# Reduces the pages to match counts, notice counts and each pull request's
+# rounds. A pull request listed twice, as when results shift during
+# pagination, keeps its fuller listing.
+# shellcheck disable=SC2016 # $ names are jq variables.
+readonly ROUNDS_FILTER='
+  def count_of(re): [scan(re)] | length;
+  def severity($s):
+    count_of("alt=\"\($s) severity\"[^\n]*· New")
+      + count_of("<summary><picture>[^\n]*alt=\"\($s) severity\"");
+  def severity_counts:
+    {high: severity("High"), medium: severity("Medium"), low: severity("Low")};
+  def copilot_reviews:
+    .reviews.nodes[]
+    | select((.author.login // "" | ascii_downcase) | IN($copilot_logins[]))
+    | (.body // "") as $body
+    | {
+        body: $body,
+        inline: .comments.totalCount,
+        verdict: (
+          if ($body | test("(^|\n)#{1,6} ") | not) then null
+          elif ($body | test("(^|\n)## Pull request overview")) then "none (older layout)"
+          else (($body | capture("(^|\n)### [^A-Za-z\n]*(?<v>[^\n]+)") | .v) // "unrecognized")
+          end)
+      };
+  .[0].data.search.issueCount as $matched
+  | [.[].data.search.nodes[]]
+  | group_by([.repository.nameWithOwner, .number])
+  | map(max_by(.reviews.nodes | length))
+  | map({
+      pr: "\(.repository.nameWithOwner)#\(.number)",
+      client: (.repository.owner.login | ascii_downcase | IN($clients[])),
+      reviews: [copilot_reviews]
+    })
+  | {
+      matched: $matched,
+      returned: length,
+      notices: ([.[].reviews[] | select(.verdict == null)] | length),
+      unrecognized: ([.[].reviews[] | select(.verdict == "unrecognized")] | length),
+      prs: (map(
+          {
+            pr,
+            client,
+            rounds: [
+              .reviews[]
+              | select(.verdict != null)
+              | ((.body | capture("Previously missed \\((?<n>[0-9]+)\\)") | .n | tonumber) // 0) as $missed
+              | {
+                  verdict: .verdict,
+                  findings: (.inline + $missed),
+                  approval: (.verdict | startswith("Approval")),
+                  severity: (.body | severity_counts)
+                }
+              | .findings_free = (.findings == 0 and (.approval | not))
+            ]
+          }
+        ) | map(select(.rounds | length > 0)))
+    }
+'
+
+# Renders the Markdown report. p90 is the nearest-rank percentile.
+# shellcheck disable=SC2016 # $ names are jq variables.
+readonly REPORT_FILTER='
+  def median: sort | length as $n
+    | if $n == 0 then 0
+      elif $n % 2 == 1 then .[($n - 1) / 2]
+      else (.[$n / 2 - 1] + .[$n / 2]) / 2 end;
+  def p90: sort | length as $n
+    | if $n == 0 then 0 else .[((9 * $n + 9) / 10 | floor) - 1] end;
+  def one_decimal: (. * 10 | round) / 10 | tostring
+    | if test("\\.") then . else . + ".0" end;
+  def mean(total; count): if count == 0 then "0.0" else (total / count | one_decimal) end;
+  def share(part; whole): if whole == 0 then "n/a"
+    else "\((part / whole * 100) | round)% of \(whole)" end;
+  def group_row($name):
+    (map(.rounds | length)) as $counts
+    | ([.[].rounds[]] | length) as $rounds
+    | "| \($name) | \(length) | \($rounds) | \($counts | median) | "
+      + "\(mean($rounds; length)) | "
+      + "\($counts | p90) | \([$counts[] | select(. >= $long)] | length) | "
+      + "\([.[].rounds[0].findings] | add // 0) | "
+      + "\([.[].rounds[1:][].findings] | add // 0) | "
+      + "\([.[].rounds[] | select(.findings_free)] | length) | "
+      + "\([.[] | select(.rounds[-1].approval)] | length) |";
+  def round_row($label; $reviews):
+    ($reviews | map(.findings) | add // 0) as $findings
+    | ($reviews | map(.severity.high) | add // 0) as $high
+    | ($reviews | map(.severity.high + .severity.medium + .severity.low) | add // 0) as $rated
+    | ($reviews | length) as $count
+    | "| \($label) | \($count) | \($findings) | "
+      + "\(mean($findings; $count)) | "
+      + "\(share($high; $rated)) | "
+      + "\($reviews | map(select(.findings_free)) | length) |";
+  .prs as $prs
+  | [
+      "# Copilot rounds report",
+      "",
+      "Pull requests by \($author) in \($owners | join(", ")), created \($range).",
+      "",
+      "Pull requests matched: \(.matched). With a Copilot review: \($prs | length). "
+        + "Copilot notices in place of a review, not counted as rounds: \(.notices).",
+      "",
+      "## Rounds per pull request",
+      "",
+      "| Group | PRs | Rounds | Median | Mean | p90 | \($long)+ rounds | Round 1 findings | Later findings | Findings-free rounds | Last round approves |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+      (if ($clients | length) > 0 then
+        ($prs | map(select(.client)) | group_row("Client")),
+        ($prs | map(select(.client | not)) | group_row("Non-client"))
+      else empty end),
+      ($prs | group_row("All")),
+      "",
+      "## Findings per round",
+      "",
+      "| Round | Reviews | Findings | Per review | High share of rated | Findings-free |",
+      "| --- | --- | --- | --- | --- | --- |",
+      ((range(1; $last) as $n | {label: "\($n)", reviews: [$prs[].rounds[$n - 1] | values]}),
+        {label: "\($last)+", reviews: [$prs[].rounds[($last - 1):][]]}
+        | select(.reviews | length > 0)
+        | round_row(.label; .reviews)),
+      "",
+      "## Most rounds",
+      "",
+      "| Pull request | Rounds | Findings | Last verdict |",
+      "| --- | --- | --- | --- |",
+      ($prs | sort_by(-(.rounds | length), .pr) | .[:10][]
+        | "| \(.pr) | \(.rounds | length) | \([.rounds[].findings] | add) | \(.rounds[-1].verdict | gsub("\\|"; "\\|")) |")
+    ]
+  | .[]
+'
+
+# Copilot's review logins. Keep in step with COPILOT_DIRECT_LOGINS in
+# resolve-copilot-threads, which ships inside plugins and cannot share this list.
+readonly COPILOT_LOGINS='["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"]'
+
+function main() {
+  local -a owners=()
+  local -a client_owners=()
+  local since=""
+  local until=""
+  local author="@me"
+  local save_file=""
+  local input_file=""
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --owner | --since | --until | --author | --client-owner | --save | --input)
+        [[ $# -ge 2 && -n "${2}" && "${2}" != --* ]] || die "${1} needs a value"
+        case "${1}" in
+          --owner) owners+=("${2}") ;;
+          --since) since="${2}" ;;
+          --until) until="${2}" ;;
+          --author) author="${2}" ;;
+          --client-owner) client_owners+=("${2}") ;;
+          --save) save_file="${2}" ;;
+          --input) input_file="${2}" ;;
+          *) ;;
+        esac
+        shift 2
+        ;;
+      *)
+        usage >&2
+        die "unexpected argument '${1}'"
+        ;;
+    esac
+  done
+
+  [[ ${#owners[@]} -gt 0 ]] || die "at least one --owner is required"
+  [[ -n "${since}" ]] || die "--since is required"
+  require_date "--since" "${since}"
+  local range="on or after ${since}"
+  local created=">=${since}"
+  if [[ -n "${until}" ]]; then
+    require_date "--until" "${until}"
+    [[ ! "${until}" < "${since}" ]] || die "--until ${until} is before --since ${since}"
+    range="from ${since} to ${until}"
+    created="${since}..${until}"
+  fi
+  [[ -z "${save_file}" || -z "${input_file}" ]] || die "--save and --input cannot be combined"
+
+  local search="is:pr author:${author} created:${created}"
+  local owner
+  for owner in "${owners[@]}"; do
+    search+=" owner:${owner}"
+  done
+  search+=" sort:created-asc"
+
+  local pages
+  if [[ -n "${input_file}" ]]; then
+    [[ -f "${input_file}" ]] || die "no such input file ${input_file}"
+    pages="$(cat "${input_file}")"
+  else
+    pages="$(fetch_pages "${search}")"
+  fi
+
+  local problem
+  problem="$(jq -r --argjson limit "${SEARCH_LIMIT}" "${PAGES_PROBLEM_FILTER}" <<< "${pages}")" \
+    || die "the search response is not valid JSON"
+  [[ -z "${problem}" ]] || die "${problem}"
+  if [[ -n "${save_file}" ]]; then
+    printf '%s\n' "${pages}" > "${save_file}"
+  fi
+
+  local owners_json clients_json
+  owners_json="$(jq -n -c '$ARGS.positional' --args "${owners[@]}")"
+  clients_json="$(jq -n -c '[$ARGS.positional[] | ascii_downcase]' \
+    --args ${client_owners[@]+"${client_owners[@]}"})"
+
+  local summary
+  summary="$(jq \
+    --argjson clients "${clients_json}" \
+    --argjson copilot_logins "${COPILOT_LOGINS}" \
+    "${ROUNDS_FILTER}" <<< "${pages}")"
+
+  local matched returned with_copilot unrecognized
+  IFS=$'\t' read -r matched returned with_copilot unrecognized \
+    < <(jq -r '[.matched, .returned, (.prs | length), .unrecognized] | @tsv' <<< "${summary}")
+  if [[ "${matched}" != "${returned}" ]]; then
+    warn "the search matched ${matched} pull requests but returned ${returned}; results may have shifted while the pages were fetched"
+  fi
+  if [[ "${unrecognized}" != "0" ]]; then
+    warn "${unrecognized} Copilot reviews had no recognizable verdict; check whether the review layout changed"
+  fi
+  if [[ "${with_copilot}" == "0" ]]; then
+    warn "none of the ${returned} pull requests had a Copilot review"
+  fi
+
+  jq -r \
+    --arg author "${author}" \
+    --arg range "${range}" \
+    --argjson owners "${owners_json}" \
+    --argjson clients "${clients_json}" \
+    --argjson last "${LAST_ROUND_ROW}" \
+    --argjson long "${LONG_ROUNDS}" \
+    "${REPORT_FILTER}" <<< "${summary}"
+}
+
+main "$@"
