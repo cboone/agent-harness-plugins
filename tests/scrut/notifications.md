@@ -2,11 +2,18 @@
 
 ## Parses under the system bash
 
-On macOS, `/bin/bash` is bash 3.2, which `env bash` finds without Homebrew on `PATH`. A parse failure exits 2, which Claude Code treats as blocking.
+On macOS, `/bin/bash` is bash 3.2, which `env bash` finds without Homebrew on `PATH`. A parse failure exits 2, which Claude Code treats as blocking. CI runs on Linux, where `/bin/bash` is bash 5, so this case guards bash 3.2 only in local macOS runs.
 
 ```scrut
 $ /bin/bash -n "${NOTIFY_BIN}" && echo "Parses"
 Parses
+```
+
+## Every manifest subcommand dispatches
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" manifests
+Every manifest subcommand dispatches
 ```
 
 ## Completion sound
@@ -20,7 +27,7 @@ Glass
 codex.png
 ```
 
-## Duplicate completion
+## Claude Code completion
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" claude-completion
@@ -64,6 +71,17 @@ Glass
 codex.png
 ```
 
+## Unclosed fence read as prose
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" unclosed-fence
+Done
+sample-repo · Sample task
+Here is the fix: make test
+Glass
+codex.png
+```
+
 ## Long reply cut at a word boundary
 
 ```scrut
@@ -97,7 +115,7 @@ Glass
 codex.png
 ```
 
-## Empty reply does not borrow an earlier turn
+## Empty reply does not borrow other text
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" stop-empty
@@ -114,7 +132,18 @@ claude-code.png
 $ "${CHECK_NOTIFICATIONS_BIN}" stop-transcript
 Done
 sample-repo · Sample task
-Current turn reply.
+Task completed
+Glass
+claude-code.png
+```
+
+## Tool-only turn does not borrow an earlier reply
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" stop-tool-only
+Done
+sample-repo · Sample task
+Task completed
 Glass
 claude-code.png
 ```
@@ -148,6 +177,17 @@ $ "${CHECK_NOTIFICATIONS_BIN}" claude-question
 Question
 sample-repo · Sample task
 Choose a branch?
+Tink
+claude-code.png
+```
+
+## Elicitation dialog
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" elicit
+Question
+sample-repo · Sample task
+Sign in to the sample server
 Tink
 claude-code.png
 ```
@@ -251,6 +291,39 @@ Funk
 claude-code.png
 ```
 
+## Answered calls are not pending
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-answered
+Approve Bash?
+sample-repo · Sample task
+make deploy
+Funk
+claude-code.png
+```
+
+## Interactive prompt picks the oldest pending call
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-interactive
+Approve Bash?
+sample-repo · Sample task
+echo first
+Funk
+claude-code.png
+```
+
+## Prompt that names no tool call
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-sandbox
+Needs approval
+sample-repo · Sample task
+A sandboxed command needs network access
+Funk
+claude-code.png
+```
+
 ## Permission prompt without a matching tool call
 
 ```scrut
@@ -276,6 +349,17 @@ $ "${CHECK_NOTIFICATIONS_BIN}" plan
 Plan ready for review
 sample-repo · Sample task
 Add a sample skill
+Tink
+claude-code.png
+```
+
+## Plan approval message
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" plan-message
+Plan ready for review
+sample-repo · Sample task
+Sample plan
 Tink
 claude-code.png
 ```

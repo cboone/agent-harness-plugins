@@ -114,7 +114,33 @@ function main() {
       action="cc-stop"
       transcript_text "${transcript}" "Earlier turn reply."
       transcript_prompt "${transcript}"
+      transcript_text "${transcript}" "Running the build now."
       payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: ""}')"
+      ;;
+    stop-tool-only)
+      action="cc-stop"
+      transcript_text "${transcript}" "Earlier turn reply."
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"make"}'
+      transcript_result "${transcript}" tool-1
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path}')"
+      ;;
+    unclosed-fence)
+      payload="$(jq -nc --arg reply $'Here is the fix:\n```bash\nmake test' '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    elicit)
+      action="cc-elicit"
+      payload='{"session_id":"session-one","message":"Sign in to\nthe sample server"}'
+      ;;
+    manifests)
+      # Every subcommand the hook manifests register must dispatch.
+      local hooks sub
+      hooks="$(dirname "${NOTIFY_BIN}")/../hooks"
+      for sub in $(jq -r '.. | .command? // empty | split(" ") | last' "${hooks}"/*.json | sort -u); do
+        printf '%s' '{"session_id":"manifest"}' | "${NOTIFY_BIN}" "${sub}" > /dev/null 2>&1 || echo "Not dispatched: ${sub}"
+      done
+      echo "Every manifest subcommand dispatches"
+      return 0
       ;;
     stop-transcript)
       action="cc-stop"
@@ -191,6 +217,34 @@ function main() {
       message="Claude needs your permission to use TodoWrite"
       transcript_prompt "${transcript}"
       ;;
+    permission-answered)
+      action="cc-permission"
+      message="Claude needs your permission"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"make deploy"}'
+      transcript_tool_use "${transcript}" tool-2 Bash '{"command":"ls"}'
+      transcript_result "${transcript}" tool-2
+      ;;
+    permission-interactive)
+      action="cc-permission"
+      message="Claude needs your permission"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"echo first"}'
+      transcript_tool_use "${transcript}" tool-2 Bash '{"command":"echo second"}'
+      transcript_tool_use "${transcript}" tool-3 ExitPlanMode '{"plan":"# Sample plan"}'
+      ;;
+    permission-sandbox)
+      action="cc-permission"
+      message="A sandboxed command needs network access"
+      write_transcript "${transcript}" Bash '{"command":"curl example.com"}'
+      ;;
+    plan-message)
+      action="cc-permission"
+      message="Claude Code needs your approval for the plan"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"ls"}'
+      transcript_tool_use "${transcript}" tool-2 ExitPlanMode '{"plan":"# Sample plan"}'
+      ;;
     plan)
       action="cc-permission"
       write_transcript "${transcript}" ExitPlanMode '{"plan":"Intro\n\n# Add a `sample` skill\n\n## Steps"}'
@@ -211,7 +265,7 @@ function main() {
       '{session_id: "session-one", transcript_path: $path} + (if $message == "" then {} else {message: $message} end)')"
   fi
   printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
-  # Detached dispatch is bounded by a polling validity check.
+  # Polls for up to 3 seconds for the detached alerter stub to log its call.
   local count=0
   case "${scenario}" in
     visible | subagent | permission-question) ;;
