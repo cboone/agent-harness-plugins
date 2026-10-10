@@ -12,7 +12,7 @@ Commit, push, and create a pull request in one automated step. Never prompt the 
 ## Skill dependencies
 
 - **Required:** `lint-and-fix`
-- **Optional:** None
+- **Optional:** `trim-text`
 
 ## Workflow
 
@@ -335,6 +335,19 @@ If step 2 recorded follow-up issues, check the PR repository's visibility and ea
 
 Place `## Follow-ups` last, after any `## Related issues` or `## Closes` section, or after `## Test plan` when neither appears. List one publishable issue per line as `- #N` in the same repository, `- owner/name#N` in another repository on the same host, or `- https://HOST/OWNER/NAME/issues/N` across hosts. Never use a closing keyword. If no entries can be published, omit the section entirely.
 
+#### Trim the body
+
+Invoke the `trim-text` skill on the drafted body, passing this continuation block after the draft:
+
+```text
+Parent continuation:
+- Caller: pr
+- Resume target: Step 7, create the PR
+- Profile: pr-and-issue-bodies
+```
+
+Use the returned `Trimmed text` as the body when `Status` is `success`, and the draft otherwise. Then confirm that the `## Closes`, `## Related issues`, and `## Follow-ups` sections and every issue reference in them are unchanged from the draft; if any differ, use the draft. If the `trim-text` skill is not installed, use the draft and record the trim as skipped for step 9.
+
 #### Create the PR
 
 First, generate a unique temporary file path using `mktemp -u`:
@@ -421,6 +434,7 @@ After the PR is created, report:
 1. A brief summary of what was committed and pushed.
 1. Connected issues (if any) and the closing keywords used.
 1. Follow-up issues listed in the PR body (if any).
+1. Whether `trim-text` trimmed the body, found nothing to trim, or was skipped, and why.
 
 ## Plan-Aware Commits
 
