@@ -1,14 +1,11 @@
 import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 import type { TextPart } from "@opencode-ai/sdk";
 
-const TITLE_BASE = "OpenCode";
-const TASK_LIMIT_USER_HEAD = 55;
-const TASK_LIMIT_ASSISTANT_TAIL_PAIRED = 60;
-const TASK_LIMIT_USER_FALLBACK = 120;
-const TASK_LIMIT_DEFAULT = 140;
+// Body length budget: a banner shows about two lines, an expanded alert about four.
+const BODY_LIMIT = 140;
 const FIRE_TIMEOUT = 86400;
 
-const PANE_TITLE_DEFAULTS = new Set(["", "zsh", "bash", "fish", "sh", "tmux", "ssh", "nvim", "vim", "-zsh", "-bash"]);
+const PANE_TITLE_DEFAULTS = new Set(["", "zsh", "bash", "fish", "sh", "tmux", "ssh", "nvim", "vim", "-zsh", "-bash", "Claude Code", "Codex", "OpenCode"]);
 
 const ICON_PATH = `${import.meta.dir}/../assets/opencode.png`;
 const FOCUS_SCRIPT = `${import.meta.dir}/../scripts/focus-pane`;
@@ -23,7 +20,6 @@ interface TmuxState {
 }
 
 const seenPermissions = new Set<string>();
-const seenCompactions = new Set<string>();
 const seenErrors = new Set<string>();
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
@@ -39,21 +35,20 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   write: "Write",
 };
 
+// Titles name the action; the icon names the harness.
 export const Notify: Plugin = async ({ $, client, directory }) => {
   return {
     event: async ({ event }) => {
       if (event.type === "session.idle") {
         const sessionID = event.properties.sessionID;
         const subtitle = await computeSubtitle($, directory);
-        const userMsg = await lastMessage(client, sessionID, "user", TASK_LIMIT_USER_HEAD);
-        const assistantTail = await lastMessage(client, sessionID, "assistant", TASK_LIMIT_ASSISTANT_TAIL_PAIRED);
-        const message = await composeStopBody(client, sessionID, userMsg, assistantTail);
+        const reply = await lastAssistantText(client, sessionID);
         const tmux = await computeTmuxState($);
 
         fireAlerterDetached($, {
-          title: `${TITLE_BASE} · Done`,
+          title: "Done",
           subtitle,
-          message,
+          message: summarizeReply(reply ?? "", BODY_LIMIT) || "Task completed",
           sound: "Glass",
           group: "opencode-stop",
           icon: ICON_PATH,
@@ -81,9 +76,9 @@ export const Notify: Plugin = async ({ $, client, directory }) => {
         const body = errorMessage || errorName || "Session error";
 
         fireAlerterDetached($, {
-          title: `${TITLE_BASE} · Error`,
+          title: "Error",
           subtitle,
-          message: truncate(body.replace(/\n/g, " "), TASK_LIMIT_DEFAULT),
+          message: truncate(body.replace(/\n/g, " "), BODY_LIMIT),
           sound: "Funk",
           group: "opencode-error",
           icon: ICON_PATH,
@@ -98,15 +93,14 @@ export const Notify: Plugin = async ({ $, client, directory }) => {
         seenPermissions.add(id);
 
         const subtitle = await computeSubtitle($, directory);
+        const root = await repoRoot($, directory);
         const tmux = await computeTmuxState($);
-        const tool = extractToolFromPermission(event);
-        const fullSubtitle = tool.name ? `${subtitle} · ${tool.name}` : subtitle;
-        const body = tool.preview || tool.name || "Needs permission";
+        const tool = extractToolFromPermission(event, root, directory);
 
         fireAlerterDetached($, {
-          title: `${TITLE_BASE} · Permission`,
-          subtitle: fullSubtitle,
-          message: body,
+          title: tool.name ? `Approve ${tool.name}?` : "Needs approval",
+          subtitle,
+          message: tool.preview || "Needs permission",
           sound: "Funk",
           group: "opencode-permission",
           icon: ICON_PATH,
@@ -114,24 +108,6 @@ export const Notify: Plugin = async ({ $, client, directory }) => {
         });
         return;
       }
-    },
-
-    "experimental.session.compacting": async (input) => {
-      if (seenCompactions.has(input.sessionID)) return;
-      seenCompactions.add(input.sessionID);
-
-      const subtitle = await computeSubtitle($, directory);
-      const tmux = await computeTmuxState($);
-
-      fireAlerterDetached($, {
-        title: `${TITLE_BASE} · Compacting`,
-        subtitle,
-        message: "Auto-compacting context",
-        sound: "Pop",
-        group: "opencode-compact",
-        icon: ICON_PATH,
-        tmux,
-      });
     },
   };
 };
@@ -174,17 +150,44 @@ function fireAlerterDetached($: BunShell, args: AlerterArgs): void {
   })();
 }
 
+async function repoRoot($: BunShell, directory: string): Promise<string> {
+  const result = await $`git -C ${directory} rev-parse --show-toplevel`.nothrow().quiet();
+  const root = result.exitCode === 0 ? result.text().trim() : "";
+  return root || directory;
+}
+
+// Names the repository rather than the worktree folder: worktrees share the
+// primary checkout's git directory, so its parent names the repository.
+async function repoName($: BunShell, directory: string): Promise<string> {
+  const folder = basename(directory);
+  const result = await $`git -C ${directory} rev-parse --path-format=absolute --git-common-dir`.nothrow().quiet();
+  const common = result.exitCode === 0 ? result.text().trim() : "";
+  if (!common) return folder;
+  const name = basename(common);
+  if (name === ".git" || name === ".bare") return basename(common.slice(0, -name.length - 1)) || folder;
+  return name.endsWith(".git") ? name.slice(0, -4) : name;
+}
+
+function basename(path: string): string {
+  return path.split("/").filter(Boolean).pop() ?? "";
+}
+
+// The subtitle is `<repo> · <task>`. The task is the tmux pane title without
+// leading status glyphs, or the branch suffix when the title names no task.
 async function computeSubtitle($: BunShell, directory: string): Promise<string> {
-  const project = directory.split("/").filter(Boolean).pop() ?? "";
+  const repo = await repoName($, directory);
 
   const tmuxPane = process.env.TMUX_PANE;
   if (tmuxPane) {
     const titleResult = await $`tmux display-message -t ${tmuxPane} -p '#T'`.nothrow().quiet();
     if (titleResult.exitCode === 0) {
-      const title = titleResult.text().trim();
-      if (!PANE_TITLE_DEFAULTS.has(title) && title !== project) {
-        return `${project} · ${title}`;
-      }
+      const title = titleResult
+        .text()
+        .trim()
+        .replace(/^[^\p{L}\p{N}#([]+/u, "");
+      // A shell's default user@host:path title names no task.
+      const generic = PANE_TITLE_DEFAULTS.has(title) || title === repo || title === basename(directory) || /^[^\s@]+@[^\s:]+:/.test(title);
+      if (!generic) return `${repo} · ${title}`;
     }
   }
 
@@ -194,7 +197,7 @@ async function computeSubtitle($: BunShell, directory: string): Promise<string> 
   const slashIdx = branch.indexOf("/");
   if (slashIdx >= 0) branch = branch.slice(slashIdx + 1);
 
-  return `${project} · ${branch}`;
+  return `${repo} · ${branch}`;
 }
 
 async function computeTmuxState($: BunShell): Promise<TmuxState | null> {
@@ -209,19 +212,19 @@ async function computeTmuxState($: BunShell): Promise<TmuxState | null> {
   return { session: parts[0]!, window: parts[1]!, pane: parts[2]! };
 }
 
-async function lastMessage(client: Client, sessionID: string, role: "user" | "assistant", limit: number): Promise<string | null> {
+async function lastAssistantText(client: Client, sessionID: string): Promise<string | null> {
   try {
     const result = await client.session.messages({ path: { id: sessionID } });
     const messages = result?.data ?? [];
     for (let i = messages.length - 1; i >= 0; i--) {
       const m = messages[i];
-      if (m?.info?.role !== role) continue;
+      if (m?.info?.role !== "assistant") continue;
       const text = (m.parts ?? [])
         .filter((p): p is TextPart => p?.type === "text")
         .map((p) => p.text)
-        .join(" ")
+        .join("\n")
         .trim();
-      if (text) return truncate(text, limit);
+      if (text) return text;
     }
   } catch {
     return null;
@@ -229,14 +232,95 @@ async function lastMessage(client: Client, sessionID: string, role: "user" | "as
   return null;
 }
 
-async function composeStopBody(client: Client, sessionID: string, userMsg: string | null, assistantTail: string | null): Promise<string> {
-  if (userMsg && assistantTail) return `${userMsg} → ${assistantTail}`;
-  if (userMsg) {
-    const longer = await lastMessage(client, sessionID, "user", TASK_LIMIT_USER_FALLBACK);
-    return longer ?? userMsg;
+interface ReplyUnit {
+  text: string;
+  status: boolean;
+}
+
+const BLOCK_START = /^\s*(#{1,6}|[-*+>•]|\d+\.)\s/;
+
+// Mirrors SUMMARY_JQ in ../scripts/notify; keep the two in step.
+// Reduces a reply to plain prose for a banner body. Fenced code, table rows and
+// status lines (a leading ▸, or two or more " · " fields) are dropped unless
+// nothing else remains. Headings, list items and paragraphs become separate
+// sentences. Whole sentences are kept in order within `limit`; a sentence that
+// no longer fits is cut at a word boundary when at least 40 characters remain.
+// A JSON object reply with a string `summary` is summarized from that field.
+function summarizeReply(reply: string, limit: number): string {
+  let text = reply;
+  try {
+    const parsed: unknown = JSON.parse(reply);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && typeof (parsed as { summary?: unknown }).summary === "string") {
+      text = (parsed as { summary: string }).summary;
+    }
+  } catch {
+    // Plain-text replies are the common case.
   }
-  if (assistantTail) return assistantTail;
-  return "Task completed";
+
+  const units: ReplyUnit[] = [];
+  let fence = false;
+  let current = "";
+  const flush = () => {
+    if (current !== "") units.push({ text: current, status: false });
+    current = "";
+  };
+  for (const line of text.split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      flush();
+      fence = !fence;
+    } else if (fence || /^\s*\|/.test(line)) {
+      continue;
+    } else if (/^\s*$/.test(line)) {
+      flush();
+    } else if (isStatusLine(line)) {
+      flush();
+      units.push({ text: stripInline(line), status: true });
+    } else if (BLOCK_START.test(line)) {
+      flush();
+      current = stripInline(line);
+    } else {
+      current = `${current} ${stripInline(line)}`.trimStart();
+    }
+  }
+  flush();
+
+  const cleaned = units.map((u) => ({ ...u, text: u.text.replace(/\s+/g, " ").trim() })).filter((u) => u.text !== "");
+  const kept = cleaned.some((u) => !u.status) ? cleaned.filter((u) => !u.status) : cleaned;
+  const sentences = kept.flatMap((u) => {
+    const unit = /[.!?:]$/.test(u.text) ? u.text : `${u.text}.`;
+    return (unit.match(/(?:[^.!?]|[.!?]+(?!\s|$))+(?:[.!?]+(?=\s|$))?/g) ?? []).map((s) => s.trimStart()).filter((s) => s !== "");
+  });
+
+  let out = "";
+  for (const sentence of sentences) {
+    const gap = out === "" ? "" : " ";
+    const room = limit - out.length - gap.length;
+    if (sentence.length <= room) {
+      out += gap + sentence;
+    } else {
+      if (out === "" || room >= 40) out += gap + cutAtWord(sentence, room);
+      break;
+    }
+  }
+  return out;
+}
+
+function stripInline(line: string): string {
+  return line
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*|__|`/g, "")
+    .replace(/(?<![\w*])\*([^*\s][^*]*)\*/g, "$1")
+    .replace(/^\s*(#{1,6}|[-*+>▸•]|\d+\.)\s+/, "");
+}
+
+function isStatusLine(line: string): boolean {
+  return /^\s*▸/.test(line) || line.split(" · ").length > 2;
+}
+
+function cutAtWord(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  if (limit < 1) return "";
+  return text.slice(0, limit - 1).replace(/\s+\S*$/, "") + "…";
 }
 
 interface ToolInfo {
@@ -249,26 +333,60 @@ interface ToolInfo {
 // `type` is the lowercase permission name ("bash", "edit", ...). `title` is a
 // pre-computed UI summary; `pattern` and `metadata` are the per-tool fall-backs
 // when no title is set. Older shapes (`tool`, `tool_name`, `tool_input`) are
-// still accepted defensively in case an older OpenCode emits them.
-function extractToolFromPermission(event: { properties: Record<string, unknown> }): ToolInfo {
+// still accepted defensively in case an older OpenCode emits them. File tools
+// prefer their path, shown relative to the repository so the file name stays.
+function extractToolFromPermission(event: { properties: Record<string, unknown> }, root: string, directory: string): ToolInfo {
   const props = event.properties;
 
   const rawType = typeof props.type === "string" ? props.type : typeof props.tool === "string" ? props.tool : typeof props.tool_name === "string" ? props.tool_name : "";
   const name = toolDisplayName(rawType);
+  const type = rawType.toLowerCase();
+
+  if (FILE_TOOLS.has(type)) {
+    const path = metadataPreview(props.metadata, rawType) || legacyInputPreview(props, rawType);
+    if (path.trim()) return { name, preview: displayPath(path.trim(), root, BODY_LIMIT) };
+  }
 
   const candidates: string[] = [typeof props.title === "string" ? props.title : "", patternToString(props.pattern), patternToString(props.patterns), metadataPreview(props.metadata, rawType), legacyInputPreview(props, rawType)];
 
   for (const candidate of candidates) {
-    const trimmed = candidate.trim();
+    let trimmed = candidate.trim();
+    if (type === "bash" || type === "shell") trimmed = stripWorkingCd(trimmed, [directory, root]);
     if (trimmed) {
       return {
         name,
-        preview: truncate(trimmed.replace(/\n/g, " "), TASK_LIMIT_DEFAULT),
+        preview: truncate(trimmed.replace(/\n/g, " "), BODY_LIMIT),
       };
     }
   }
 
   return { name, preview: "" };
+}
+
+const FILE_TOOLS = new Set(["edit", "write", "read", "notebookedit"]);
+
+// Shows a path relative to the repository root, or under ~, keeping its end.
+function displayPath(path: string, root: string, limit: number): string {
+  const home = process.env.HOME ?? "";
+  let shown = path;
+  if (path.startsWith(`${root}/`)) shown = path.slice(root.length + 1);
+  else if (home && path.startsWith(`${home}/`)) shown = `~/${path.slice(home.length + 1)}`;
+  if (shown.length <= limit) return shown;
+  if (limit < 1) return "";
+  return "…" + shown.slice(shown.length - limit + 1);
+}
+
+// Drops a leading cd into the session's own directory, which says nothing.
+function stripWorkingCd(command: string, dirs: string[]): string {
+  for (const dir of dirs) {
+    for (const quoted of [dir, `"${dir}"`, `'${dir}'`]) {
+      for (const separator of [" && ", "; "]) {
+        const prefix = `cd ${quoted}${separator}`;
+        if (command.startsWith(prefix)) return command.slice(prefix.length);
+      }
+    }
+  }
+  return command;
 }
 
 function patternToString(value: unknown): string {
