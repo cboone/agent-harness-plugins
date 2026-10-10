@@ -465,7 +465,7 @@ On the foreground path, a harness with neither a background task nor a scheduled
 
 Handle the watch's `event`:
 
-- **`merged`**: go to step 8f with its `mergeCommit`. When `mergeCommit` is `null`, GitHub reported the merge without naming its commit: report its `error`.
+- **`merged`**: go to step 8f with its `mergeCommit`. When `mergeCommit` is `null`, GitHub reported the merge without naming its commit: report its `error`. When the event carries an `error` and a `mergeCommit`, the PR merged at a head other than `READY_HEAD`, so commits this watch never checked landed: lead the final report with that `error`, and still run step 8f, since the merge stands.
 - **`closed`**: report that the PR was closed without merging, and stop. Do not sync or notify.
 - **`head`**: a push arrived after readiness, so the readiness verdict no longer holds. Keep the merge policy, clear the offer and the approval wait, re-establish the step 2 wait mechanism, and resume at step 3. A push resets an approval as far as this skill is concerned, whatever GitHub's dismissal rules do.
 - **`decision`**: go to step 8d's change rules.
