@@ -282,7 +282,7 @@ When adding or removing a plugin, regenerate the mirror with `bin/build-opencode
 ### OpenCode known limitations
 
 - **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Claude Code substitutes this placeholder in SKILL.md bodies when a skill loads, which is how `/address-issue-in-worktree`, `/create-worktree`, `/monitor-pr`, `/publish-report-board`, and `/resolve-copilot-pr-feedback` name their bundled helper scripts. OpenCode does not substitute it, so the path reaches the agent as a literal string starting with `$`. Each of those five skills carries a documented fallback that locates the script by glob instead, so they stay usable at the cost of an extra search step. For the direct path, run them in Claude Code.
-- **Hook event parity is approximate.** OpenCode's event model collapses several distinct Claude Code notification matchers (`idle_prompt`, `elicitation_dialog`, `permission_prompt`). See each hook's README for the specific mapping.
+- **Hook event parity is approximate.** OpenCode maps only completion, permission and error events; it has no question or plan banner, completion deduplication, visibility check or per-session grouping. See each hook's README for the specific mapping.
 
 ## License
 
