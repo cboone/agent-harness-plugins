@@ -29,6 +29,12 @@ readonly GO_REVIEW_CHECKLIST="plugins/write-go-code/skills/write-go-code/referen
 readonly REVIEW_CHECKLIST_COPIES="plugins/set-up-review-config/skills/set-up-review-config/references/checklists"
 readonly REVIEW_GUIDES="plugins/set-up-review-config/skills/set-up-review-config/references/guides.md"
 
+# The shared reference scenarios edit the source or the copy that
+# bin/build-shared-references keeps identical, without running it, so rule 22
+# is the only rule that fires.
+readonly SHARED_REFERENCE_SOURCE="plugins/publish-report-board/skills/publish-report-board/references/progress-model.md"
+readonly SHARED_REFERENCE_COPY="plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md"
+
 # Replaces a SKILL.md frontmatter description, including any folded
 # continuation lines, with a single plain-scalar line.
 function replace_description() {
@@ -187,6 +193,12 @@ function main() {
       ;;
     invalid-review-checklist)
       printf '%s\n' '- plain item' >> "${FIXTURE_ROOT}/${GO_REVIEW_CHECKLIST}"
+      ;;
+    stale-shared-reference)
+      printf '%s\n' '' 'A line added without a rebuild.' >> "${FIXTURE_ROOT}/${SHARED_REFERENCE_SOURCE}"
+      ;;
+    edited-shared-reference-copy)
+      printf '%s\n' '' 'A line added to the copy.' >> "${FIXTURE_ROOT}/${SHARED_REFERENCE_COPY}"
       ;;
     # In both length scenarios the window leaves the budget ample room, so only
     # the length is at fault, however little headroom the catalog has.

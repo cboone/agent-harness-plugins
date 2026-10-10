@@ -1033,6 +1033,23 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
   fi
 done
 
+# ─── 22. Shared reference copies are current ────────────────────────────────
+# bin/build-shared-references copies a reference that skills in two plugins read
+# into the plugin that does not hold its source, because a skill can read only
+# the files its own plugin ships. A copy edited by hand, or a source edited
+# without a rebuild, would give the two skills different rules, so the copies
+# are compared with their sources byte for byte.
+
+if ! shared_reference_output="$(bin/build-shared-references --check 2>&1)"; then
+  printf '%s\n' "${shared_reference_output}"
+  shared_reference_errors="$(grep -c '^::error::' <<< "${shared_reference_output}" || true)"
+  if [[ "${shared_reference_errors}" -gt 0 ]]; then
+    errors=$((errors + shared_reference_errors))
+  else
+    error "bin/build-shared-references failed without reporting a finding"
+  fi
+fi
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then
