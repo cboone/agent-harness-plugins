@@ -46,11 +46,13 @@ GitHub or git read inside it, including a response it cannot parse. A nonzero
 exit means no JSON was printed: 2 for a usage error, and 1 when sync or panes
 runs outside a git repository, or panes cannot use tmux.
 
-policy: "allowed" is the repository settings intersected with every base-branch
-rule that limits merge methods: a pull_request rule's allowed_merge_methods,
-and required_linear_history, which leaves squash and rebase. It is null when
-no source supplied a method list, which happens when the settings could not be
-read and no readable rule limits methods; settingsNote says why. "approvals" is
+policy: "candidates" is the repository settings intersected with every
+base-branch rule that limits merge methods: a pull_request rule's
+allowed_merge_methods, and required_linear_history, which leaves squash and
+rebase. "allowed" is the same list once both the settings and the rules were
+read, and null while either is unknown, since the unread one may narrow it;
+settingsNote or rulesNote says why. "candidates" is null when no readable
+source lists methods. "approvals" is
 the highest approving review count a pull_request rule requires, or null when
 the rules could not be read; rulesNote says why. "mergeQueue" is true when a
 merge_queue rule applies, since the queue then merges the PR.
@@ -149,9 +151,11 @@ function cmd_policy() {
     --argjson parsed "${rules_json}" --arg rulesNote "${rules_note}" '
     def nullable: if . == "" then null else . end;
     ([if $settings != null then $settings else empty end] + ($parsed.rules // [])) as $lists
+    | (if ($lists | length) == 0 then null
+       else [("merge", "squash", "rebase") as $m | select($lists | all(index($m) != null)) | $m] end) as $candidates
     | {
-        allowed: (if ($lists | length) == 0 then null
-                  else [("merge", "squash", "rebase") as $m | select($lists | all(index($m) != null)) | $m] end),
+        allowed: (if $settings != null and $parsed != null then $candidates else null end),
+        candidates: $candidates,
         approvals: $parsed.approvals,
         mergeQueue: $parsed.queue,
         settings: $settings,
@@ -349,17 +353,19 @@ function read_worktrees() {
   fi
 }
 
-# Prints the path of the worktree that has refs/heads/BASE checked out.
-function worktree_for_branch() {
+# Sets FOUND_WORKTREE to the worktree that has refs/heads/BASE checked out, or
+# to empty. A variable, not printed output, because command substitution would
+# strip a trailing newline from the path.
+function find_worktree_for_branch() {
   local i
+  FOUND_WORKTREE=""
   read_worktrees || return 1
   for ((i = 0; i < ${#WORKTREE_PATHS[@]}; i++)); do
     if [[ "${WORKTREE_BRANCHES[i]}" == "refs/heads/${1}" ]]; then
-      printf '%s\n' "${WORKTREE_PATHS[i]}"
+      FOUND_WORKTREE="${WORKTREE_PATHS[i]}"
       return 0
     fi
   done
-  return 1
 }
 
 function cmd_sync() {
@@ -385,7 +391,11 @@ function cmd_sync() {
     return 0
   fi
 
-  worktree="$(worktree_for_branch "${base}" || true)"
+  if ! find_worktree_for_branch "${base}"; then
+    sync_result false "listing the worktrees failed"
+    return 0
+  fi
+  worktree="${FOUND_WORKTREE}"
   before="$(git rev-parse --verify --quiet "refs/heads/${base}" || true)"
   if [[ -n "${before}" ]] && ! git merge-base --is-ancestor "${before}" "${tracking}"; then
     sync_result false "local ${base} has commits that ${remote}/${base} does not, so it cannot be fast-forwarded"

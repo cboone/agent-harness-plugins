@@ -58,18 +58,18 @@ $ flow policy acme widgets dev | jq -c '{allowed, approvals}'
 
 ## Policy: hidden settings are unknown, not empty
 
-Without admin access, GitHub omits the merge settings, which read as null. That reads as unknown, so the rules decide alone.
+Without admin access, GitHub omits the merge settings, which read as null. Unknown settings leave `allowed` unknown, and the rules alone supply the candidates.
 
 ```scrut
-$ flow policy acme hidden main | jq -c '{allowed, settings, settingsNote}'
-{"allowed":["squash"],"settings":null,"settingsNote":"the repository merge settings are not visible to this account, which usually means it lacks admin access"}
+$ flow policy acme hidden main | jq -c '{allowed, candidates, settings, settingsNote}'
+{"allowed":null,"candidates":["squash"],"settings":null,"settingsNote":"the repository merge settings are not visible to this account, which usually means it lacks admin access"}
 ```
 
 With no rules either, nothing is known about the methods.
 
 ```scrut
-$ flow policy acme hidden dev | jq -c '{allowed, approvals}'
-{"allowed":null,"approvals":0}
+$ flow policy acme hidden dev | jq -c '{allowed, candidates, approvals}'
+{"allowed":null,"candidates":null,"approvals":0}
 ```
 
 ## Policy: every limiting rule narrows the methods
@@ -97,11 +97,11 @@ $ flow policy acme open queue | jq -c '{allowed, mergeQueue}'
 
 ## Policy: failed reads are reported, not read as empty
 
-A failed rules read leaves both the rules and the approval requirement unknown.
+A failed rules read leaves the rules, the approval requirement, and so `allowed` unknown, while the settings still supply the candidates.
 
 ```scrut
-$ STUB_GH_API_FAIL=rules_branches_main flow policy acme widgets main | jq -c '{allowed, approvals, rulesNote}'
-{"allowed":["merge","squash"],"approvals":null,"rulesNote":"reading the base branch rules failed: gh: Resource not accessible by integration (HTTP 403)"}
+$ STUB_GH_API_FAIL=rules_branches_main flow policy acme widgets main | jq -c '{allowed, candidates, approvals, mergeQueue, rulesNote}'
+{"allowed":null,"candidates":["merge","squash"],"approvals":null,"mergeQueue":null,"rulesNote":"reading the base branch rules failed: gh: Resource not accessible by integration (HTTP 403)"}
 ```
 
 A base branch that does not exist is not a branch without rules.
@@ -115,8 +115,8 @@ A response that cannot be parsed is a failed read too, not a reason to print not
 
 ```scrut
 $ stub_dir="$(mktemp -d "${work}/api.XXXXXX")" && cp -R "${MERGE_FLOW_DATA_DIR}/." "${stub_dir}/" && printf '<html>Unicorn!</html>\n' > "${stub_dir}/api/repos_acme_widgets.json" \
->   && flow policy acme widgets main | jq -c '{allowed, settings, settingsNote}'; stub_dir=""
-{"allowed":["squash"],"settings":null,"settingsNote":"the repository settings response could not be parsed"}
+>   && flow policy acme widgets main | jq -c '{allowed, candidates, settings, settingsNote}'; stub_dir=""
+{"allowed":null,"candidates":["squash"],"settings":null,"settingsNote":"the repository settings response could not be parsed"}
 ```
 
 ```scrut
@@ -127,8 +127,8 @@ $ flow policy acme widgets mangled | jq -c '{approvals, rules, rulesNote}'
 A failed settings read is reported beside the rules that were read.
 
 ```scrut
-$ STUB_GH_API_FAIL=repos_acme_widgets flow policy acme widgets main | jq -c '{allowed, settingsNote}'
-{"allowed":["squash"],"settingsNote":"reading the repository settings failed: gh: Resource not accessible by integration (HTTP 403)"}
+$ STUB_GH_API_FAIL=repos_acme_widgets flow policy acme widgets main | jq -c '{allowed, candidates, settingsNote}'
+{"allowed":null,"candidates":["squash"],"settingsNote":"reading the repository settings failed: gh: Resource not accessible by integration (HTTP 403)"}
 ```
 
 ## Watch: a merge ends the watch only once it has a merge commit
@@ -281,10 +281,16 @@ $ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && git_quiet -C "${d
 {"synced":true,"there":true}
 ```
 
-A worktree path containing a newline stays intact.
+A worktree path containing a newline stays intact, including one that ends in a newline.
 
 ```scrut
 $ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && wt="${dir}.odd"$'\n'"name" && git_quiet -C "${dir}" worktree add "${wt}" main \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg wt "${wt}" '{synced, there: (.worktree == $wt)}'
+{"synced":true,"there":true}
+```
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && wt="${dir}.tail"$'\n' && git_quiet -C "${dir}" worktree add "${wt}" main \
 >   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg wt "${wt}" '{synced, there: (.worktree == $wt)}'
 {"synced":true,"there":true}
 ```
