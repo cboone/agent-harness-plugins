@@ -1,5 +1,6 @@
 /* Every report board's styles. report-board render inlines this sheet into
-   each template's style element, so a published board stays one file.
+   each template's style element, and report-board starter into the starter
+   page, so a published page stays one file.
 
    IBM Plex Sans for text and Plex Mono for numbers and labels. The light
    theme is Graphite and orange, the dark theme Night. Primary fills the one
@@ -177,7 +178,7 @@ a:focus-visible {
   color: var(--muted);
 }
 
-/* Outlined, so the Start now count stays the only filled block. */
+/* Outlined, not filled, so a lane key never reads as the filled block. */
 .badge {
   display: inline-block;
   flex: none;
@@ -372,10 +373,12 @@ a.tag:hover {
   color: var(--muted);
 }
 
-/* A fact, not a count: a date, a ratio, or a state word. Never filled. */
+/* A fact, not a count: a date, a ratio, or a state word. Never filled. Set
+   smaller than a count, on a line as tall as a count's, and free to wrap. */
 .count--fact dd {
   font-size: 24px;
   line-height: 40px;
+  overflow-wrap: anywhere;
 }
 
 .count-warn {
@@ -1286,6 +1289,11 @@ a.tag:hover {
 
   .count dd {
     font-size: 32px;
+  }
+
+  .count--fact dd {
+    font-size: 20px;
+    line-height: 32px;
   }
 
   .count dt {

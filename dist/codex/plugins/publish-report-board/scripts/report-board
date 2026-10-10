@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# report-board -- Validate, render, extract, and compare report board data.
+# report-board -- Validate, render, extract, and compare report board data,
+# and write a starter page for a report laid out by hand.
 #
 # A report board is a self-contained HTML page drawn from one JSON document.
 # The page templates ship beside this script in ../templates/<board>.html,
@@ -989,35 +990,60 @@ function available_boards() {
 
 # Prints the shared stylesheet. It goes into the template before the title and
 # data are, so it must not carry either placeholder, and it must not close the
-# style element it is written into.
+# style element it is written into. HTML reads an end tag in any letter case.
+#
+# Like inline_stylesheet and fill_template, it runs in a command substitution,
+# which does not inherit errexit, so each read that fails has to stop it
+# explicitly rather than carry on with an empty value.
 function read_stylesheet() {
-  local styles
+  local styles marker closes
 
   require_file "${STYLESHEET}"
-  styles="$(< "${STYLESHEET}")"
-  if [[ "${styles}" == *"${TITLE_PLACEHOLDER}"* || "${styles}" == *"${DATA_PLACEHOLDER}"* || "${styles}" == *"${STYLE_CLOSE}"* ]]; then
-    die "${E_INVALID}" "${STYLESHEET} holds ${TITLE_PLACEHOLDER}, ${DATA_PLACEHOLDER}, or ${STYLE_CLOSE}"
+  styles="$(< "${STYLESHEET}")" || die "${E_INVALID}" "cannot read ${STYLESHEET}"
+  for marker in "${TITLE_PLACEHOLDER}" "${DATA_PLACEHOLDER}"; do
+    if [[ "${styles}" == *"${marker}"* ]]; then
+      die "${E_INVALID}" "${STYLESHEET} holds ${marker}, which would capture the value meant for it"
+    fi
+  done
+  shopt -s nocasematch
+  closes=false
+  [[ "${styles}" == *"${STYLE_CLOSE}"* ]] && closes=true
+  shopt -u nocasematch
+  if [[ "${closes}" == true ]]; then
+    die "${E_INVALID}" "${STYLESHEET} holds a closing style tag, which would end the style element early"
   fi
   printf '%s' "${styles}"
 }
 
 # Prints a template with the shared stylesheet in place of its styles
-# placeholder.
+# placeholder, which has to appear once, inside a style element.
 function inline_stylesheet() {
   local template_file="${1}"
-  local template styles
+  local template styles before after before_lower after_lower
 
-  template="$(< "${template_file}")"
+  template="$(< "${template_file}")" || die "${E_INVALID}" "cannot read ${template_file}"
   if [[ "${template}" != *"${STYLES_PLACEHOLDER}"* ]]; then
     die "${E_INVALID}" "${template_file} is missing the ${STYLES_PLACEHOLDER} placeholder"
   fi
+  before="${template%%"${STYLES_PLACEHOLDER}"*}"
+  after="${template#*"${STYLES_PLACEHOLDER}"}"
+  if [[ "${after}" == *"${STYLES_PLACEHOLDER}"* ]]; then
+    die "${E_INVALID}" "${template_file} holds the ${STYLES_PLACEHOLDER} placeholder more than once"
+  fi
+  # Inside a style element: an opening tag before the placeholder, no closing
+  # tag between that opening tag and the placeholder, and one after it. Tag
+  # names match in any letter case, as HTML reads them.
+  before_lower="$(printf '%s' "${before}" | tr '[:upper:]' '[:lower:]')" || die "${E_INVALID}" "cannot read ${template_file}"
+  after_lower="$(printf '%s' "${after}" | tr '[:upper:]' '[:lower:]')" || die "${E_INVALID}" "cannot read ${template_file}"
+  if [[ "${before_lower}" != *"<style"* || "${before_lower##*<style}" == *"${STYLE_CLOSE}"* || "${after_lower}" != *"${STYLE_CLOSE}"* ]]; then
+    die "${E_INVALID}" "${template_file} places the ${STYLES_PLACEHOLDER} placeholder outside a style element"
+  fi
 
-  # This function runs in a command substitution, which does not inherit
-  # errexit, so a refused stylesheet has to stop it explicitly. Split rather
+  # A refused stylesheet stops this function explicitly, as above. Split rather
   # than substitute, so nothing in the stylesheet is read as a replacement
   # pattern.
   styles="$(read_stylesheet)" || exit "${E_INVALID}"
-  printf '%s' "${template%%"${STYLES_PLACEHOLDER}"*}${styles}${template#*"${STYLES_PLACEHOLDER}"}"
+  printf '%s' "${before}${styles}${after}"
 }
 
 # Wraps a page in the opening and closing lines of a complete document.
@@ -1034,7 +1060,7 @@ function fill_template() {
   local payload="${3}"
   local template
 
-  template="$(< "${template_file}")"
+  template="$(< "${template_file}")" || die "${E_INVALID}" "cannot read ${template_file}"
   if [[ "${template}" != *"${TITLE_PLACEHOLDER}"* || "${template}" != *"${DATA_PLACEHOLDER}"* ]]; then
     die "${E_INVALID}" "${template_file} is missing the ${TITLE_PLACEHOLDER} or ${DATA_PLACEHOLDER} placeholder"
   fi
@@ -1043,8 +1069,9 @@ function fill_template() {
   template="$(inline_stylesheet "${template_file}")" || exit "${E_INVALID}"
 
   # Both values are board data, so either can hold the other's placeholder.
-  # Splitting the original template on both markers first keeps a title that
-  # contains the data placeholder from capturing the data slot.
+  # Splitting the template on both markers before either value goes in keeps a
+  # title that contains the data placeholder from capturing the data slot. The
+  # stylesheet already in it carries neither marker, as read_stylesheet checks.
   local before_title rest before_data after_data
   before_title="${template%%"${TITLE_PLACEHOLDER}"*}"
   rest="${template#*"${TITLE_PLACEHOLDER}"}"
@@ -1057,16 +1084,30 @@ function fill_template() {
 }
 
 # Replaces the output file in one step, so a republish never reads a
-# half-written page.
+# half-written page. With "new" as a third argument it only ever creates the
+# file: it claims the name first with an exclusive create, which fails if
+# anything, a directory included, already holds it, and then moves the page
+# onto its own claim.
 function write_output() {
   local output_file="${1}"
   local content="${2}"
+  local new_only="${3:-}"
   local output_dir temp_file current_umask mode=""
 
+  [[ -n "${output_file}" ]] || die "${E_INVALID}" "the output path is empty; name the page file to write"
   [[ -d "${output_file}" ]] && die "${E_INVALID}" "${output_file} is a directory; name the page file to write"
   output_dir="$(dirname -- "${output_file}")"
   [[ -d "${output_dir}" ]] || die "${E_INVALID}" "directory ${output_dir} does not exist"
-  temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")" || die "${E_INVALID}" "cannot write to ${output_dir}"
+  if [[ "${new_only}" == "new" ]] && ! (set -o noclobber && : > "${output_file}") 2> /dev/null; then
+    if [[ -e "${output_file}" || -L "${output_file}" ]]; then
+      die "${E_INVALID}" "${output_file} already exists; name a new page file"
+    fi
+    die "${E_INVALID}" "cannot write ${output_file}"
+  fi
+  if ! temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")"; then
+    [[ "${new_only}" == "new" ]] && rm -f -- "${output_file}"
+    die "${E_INVALID}" "cannot write to ${output_dir}"
+  fi
 
   # mktemp creates the file for its owner alone, or for nobody under a umask
   # that denies the owner too. Fill it in as the owner, then give the page its
@@ -1092,6 +1133,8 @@ function write_output() {
       && mv -- "${temp_file}" "${output_file}"
   }; then
     rm -f -- "${temp_file}"
+    # The claim is this run's own empty file; leave no trace of it.
+    [[ "${new_only}" == "new" ]] && rm -f -- "${output_file}"
     die "${E_INVALID}" "cannot write ${output_file}"
   fi
 }
@@ -1178,6 +1221,7 @@ function cmd_render() {
   board="$(jq -r '.board' "${data_file}")"
   template_file="${TEMPLATE_DIR}/${board}.html"
   [[ -f "${template_file}" ]] || die "${E_INVALID}" "no template for board type ${board}; available: $(available_boards)"
+  require_file "${template_file}"
 
   title_html="$(jq -r '.title | @html' "${data_file}")"
   # Escaping "<" keeps any "</script>" inside a title or note from closing the
@@ -1242,7 +1286,11 @@ function cmd_starter() {
   output_file="$(operand "${1}")"
 
   # A starter page is laid out by hand once written, so writing another over
-  # it would discard that work. -L also catches a symlink to nothing.
+  # it would discard that work. -L also catches a symlink to nothing, and
+  # write_output's claim refuses a file that appears after these checks.
+  if [[ -d "${output_file}" ]]; then
+    die "${E_INVALID}" "${output_file} is a directory; name the page file to write"
+  fi
   if [[ -e "${output_file}" || -L "${output_file}" ]]; then
     die "${E_INVALID}" "${output_file} already exists; name a new page file"
   fi
@@ -1252,7 +1300,7 @@ function cmd_starter() {
     page="$(standalone_page "${page}")"
   fi
 
-  write_output "${output_file}" "${page}"$'\n'
+  write_output "${output_file}" "${page}"$'\n' new
   printf '%s: wrote a starter page to %s\n' "${SCRIPT_NAME}" "${output_file}" >&2
 }
 

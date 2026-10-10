@@ -10,9 +10,10 @@
   A starting point for a report laid out by hand: the parts every board shares,
   filled with sample text that says what each part is for. Replace the text,
   drop the parts the report does not need, and repeat the ones it does. Draw
-  only from the classes in the stylesheet above; design-conventions.md says
-  how each part is used. A page-specific rule goes in a second style element
-  after this one, never in this one, so the shared sheet can be renewed.
+  on the classes in the stylesheet above; design-conventions.md says how each
+  part is used. A rule the page needs that the sheet lacks goes in a second
+  style element after this one, never in this one, so the shared rules stay
+  identical to every board's.
 -->
 <div class="board">
   <header class="head">
@@ -34,7 +35,7 @@
         <dd>2</dd>
       </div>
       <div class="count count--accent">
-        <dt>Needs a decision</dt>
+        <dt>In progress</dt>
         <dd>1</dd>
       </div>
       <div class="count">
@@ -96,15 +97,15 @@
     </section>
     <section class="section section--tier section--accent" aria-labelledby="tier-heading">
       <div class="section-head">
-        <h2 class="section-title" id="tier-heading">Needs a decision</h2>
-        <p class="section-note">The second tier: what is current, contended, or waiting on a call.</p>
+        <h2 class="section-title" id="tier-heading">In progress</h2>
+        <p class="section-note">The second tier: what is current or contended.</p>
       </div>
       <ol class="ruled">
         <li class="rank-row rank-row--tier">
           <p class="rank" aria-hidden="true">01</p>
           <div class="rank-main">
-            <p class="rank-line"><span class="tag tag--accent">Decide</span><a class="num" href="https://github.com/OWNER/REPO/issues/3">#3</a><span>The item's own title</span></p>
-            <p class="rank-headline">The decision to make, put as the choice between its options.</p>
+            <p class="rank-line"><span class="tag tag--accent">In progress</span><a class="num" href="https://github.com/OWNER/REPO/issues/3">#3</a><span>The item's own title</span></p>
+            <p class="rank-headline">What remains, and what it waits on.</p>
           </div>
           <div class="rank-side">
             <dl class="facts">
