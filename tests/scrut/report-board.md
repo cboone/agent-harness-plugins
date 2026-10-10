@@ -1233,6 +1233,15 @@ scripts
 templates
 ```
 
+## A style element in capitals
+
+HTML reads tag names in any letter case, so the placement check does too.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${dir}/scripts" "${dir}/templates/starter" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && printf 'a { color: red; }\n' > "${dir}/templates/board.css" && printf '<STYLE>/* __BOARD_STYLES__ */</STYLE>\n' > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && cat "${dir}/report.html"
+<STYLE>a { color: red; }</STYLE>
+```
+
 ## A missing stylesheet
 
 ```scrut
@@ -1255,9 +1264,9 @@ report-board: */board.css holds __BOARD_TITLE__, which would capture the value m
 exit 1
 report-board: */board.css holds "__BOARD_DATA__", which would capture the value meant for it (glob)
 exit 1
-report-board: */board.css holds </style, which would end the style element early (glob)
+report-board: */board.css holds a closing style tag, which would end the style element early (glob)
 exit 1
-report-board: */board.css holds </style, which would end the style element early (glob)
+report-board: */board.css holds a closing style tag, which would end the style element early (glob)
 exit 1
 scripts
 templates
@@ -1358,7 +1367,7 @@ templates
 
 ```scrut
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp -R "$(dirname "${REPORT_BOARD_BIN}")/../templates/starter" "${dir}/templates/" && printf '</style><p>\n' > "${dir}/templates/board.css" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; ls "${dir}"
-report-board: */board.css holds </style, which would end the style element early (glob)
+report-board: */board.css holds a closing style tag, which would end the style element early (glob)
 exit 1
 scripts
 templates
