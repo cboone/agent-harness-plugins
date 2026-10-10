@@ -323,6 +323,7 @@ else
               else check($issue.milestone | absent_or(is_text); "\($at): milestone must be text or null") end),
              check($issue.short | absent_or(is_text); "\($at): short must be text"),
              check($issue | has("inProgress") | not; "\($at): inProgress is replaced by progress, which backlog-gather finish writes"),
+             check($issue | has("progress"); "\($at): progress is required, null when the issue has no stage; backlog-gather finish writes it"),
              ($issue.progress | progress_problems($at)),
              ($issue.affinity | affinity_problems($at)),
              ($issue.areas | item_areas_problems($at; $area_names)),
@@ -402,6 +403,7 @@ else
                check($pick.why | is_text; "\($at): why is required"),
                check($pick.touches | absent_or(is_text); "\($at): touches must be text"),
                (if ($target.waitingOn | type == "array" and length > 0) then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
+               (if $target.progress.stage? == "close-out" then "\($at) is in close-out (\($target.progress.signal)); close or split it instead of starting it" else empty end),
                (progress_of($pick.issue) as $work
                 | if $work == null then empty
                   elif $work.number == $pick.issue then "\($at) is already in progress (\($work | work_text))"

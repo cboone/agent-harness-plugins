@@ -27,6 +27,7 @@
       "number": 101,
       "title": "parser: replace the tokenizer",
       "milestone": "Parser rewrite",
+      "progress": null,
       "affinity": {
         "owner": null,
         "kind": null,
@@ -40,6 +41,7 @@
       "milestone": "Parser rewrite",
       "waitingOn": [101],
       "blockedBecause": "Streaming reads the token format that #101 replaces.",
+      "progress": null,
       "affinity": {
         "owner": null,
         "kind": null,
@@ -52,6 +54,7 @@
       "title": "cli: report parse errors with columns",
       "milestone": "Parser rewrite",
       "sameBranchAs": 101,
+      "progress": null,
       "affinity": {
         "owner": null,
         "kind": null,
@@ -66,6 +69,7 @@
       "milestone": "Documentation",
       "waitingOn": [101],
       "blockedBecause": "The tutorial documents the tokenizer that #101 is rewriting.",
+      "progress": null,
       "affinity": {
         "owner": null,
         "kind": null,
@@ -102,6 +106,7 @@
       "number": 106,
       "title": "ci: cache dependencies",
       "milestone": null,
+      "progress": null,
       "affinity": {
         "owner": null,
         "kind": null,
@@ -113,6 +118,7 @@
       "number": 107,
       "title": "cli: color output",
       "milestone": null,
+      "progress": null,
       "affinity": {
         "owner": "you",
         "kind": "implicit",

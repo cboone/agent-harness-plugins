@@ -26,6 +26,7 @@
       "number": 102,
       "title": "parser: stream large inputs",
       "milestone": "Parser rewrite",
+      "progress": null,
       "affinity": {
         "owner": null,
         "kind": null,
@@ -38,6 +39,7 @@
       "title": "docs: tutorial for the new parser",
       "short": "parser tutorial",
       "milestone": "Documentation",
+      "progress": null,
       "affinity": {
         "owner": null,
         "kind": null,
@@ -74,6 +76,7 @@
       "number": 107,
       "title": "cli: color output",
       "milestone": "Parser rewrite",
+      "progress": null,
       "affinity": {
         "owner": "you",
         "kind": "implicit",
@@ -87,6 +90,7 @@
       "milestone": "Parser rewrite",
       "waitingOn": [102],
       "blockedBecause": "Benchmarks measure the streaming path that #102 adds.",
+      "progress": null,
       "affinity": {
         "owner": null,
         "kind": null,

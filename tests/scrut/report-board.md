@@ -371,7 +371,7 @@ report-board: */data.json is not valid board data: (glob)
 ## Nothing in a head lane starts before its head
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 105)) |= del(.progress) | (.issues[] | select(.number == 104)) |= del(.waitingOn, .blockedBecause) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 105)).progress = null | (.issues[] | select(.number == 104)) |= del(.waitingOn, .blockedBecause) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - startNow #104: lane L2 is a head lane, and nothing in it starts before its head, #105
 [1]
@@ -1088,7 +1088,7 @@ report-board: */data.json is not valid board data: (glob)
 ## Duplicate numbers, lane keys, picks, and claims
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.issues += [{"number": 101, "title": "again", "milestone": null, "affinity": {"owner": null, "kind": null, "tier": null, "reasons": []}}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[0].issues += [101] | .contention.claims[1].issues = [107, 107] | .contention.claims += [{"name": "cli", "issues": [103, 107]}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.issues += [{"number": 101, "title": "again", "milestone": null, "progress": null, "affinity": {"owner": null, "kind": null, "tier": null, "reasons": []}}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[0].issues += [101] | .contention.claims[1].issues = [107, 107] | .contention.claims += [{"name": "cli", "issues": [103, 107]}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - issues: #101 appears more than once
   - lanes: key L1 is used more than once
@@ -1223,6 +1223,29 @@ rather than work, so the head lane is free again and its head comes first.
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress = progress("close-out"; {"pr": 9})) | on(104; del(.waitingOn, .blockedBecause)) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - startNow #104: lane L2 is a head lane, and nothing in it starts before its head, #105
+[1]
+```
+
+## A close-out issue is not a start pick
+
+Its work merged, so what remains is to close or split it.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(106; .progress = progress("close-out"; {"pr": 9}))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #106 is in close-out (sample signal); close or split it instead of starting it
+[1]
+```
+
+## Every issue carries progress
+
+An issue with no stage carries null, so data that skipped `backlog-gather
+finish` cannot pass as nothing in progress.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 107)) |= del(.progress)' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: progress is required, null when the issue has no stage; backlog-gather finish writes it
 [1]
 ```
 
