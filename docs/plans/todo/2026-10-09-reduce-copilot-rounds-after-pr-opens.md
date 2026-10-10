@@ -2,13 +2,13 @@
 
 ## Context
 
-An analysis of 132 PRs opened from 2026-09-29 to 2026-10-09 (55 in client repositories, 77 in personal ones) found 499 Copilot reviews: median 3 rounds per PR, mean 3.8, p90 7, and 36 PRs with five or more. Every review ran at Lite effort, which stays the setting.
+An analysis of 132 PRs opened from 2026-09-29 to 2026-10-09 (55 in client repositories, 77 in personal ones) found 499 Copilot reviews: median 3 rounds per PR, mean 3.8, p90 7, and 36 PRs with five or more. Every review ran at Lite effort, which stays the setting. These figures come from the original count; the Phase 1 baseline below is the script's later run over the same range, which differs slightly because open PRs gained rounds in between.
 
 What the data shows:
 
 - **The pre-PR review is working; the tail comes after it.** Round 1 averaged about 1.1 findings per PR, but rounds 2 through 8 kept producing about 0.8 new findings per round. About two thirds of all findings arrived after round 1.
 - **Late findings are not trivial.** The share Copilot labeled High was 33% in round 1 and 53% in rounds 6 and later. Nineteen PRs drew a High in round 4 or later, and 15 times a High appeared after two or more rounds without one.
-- **Most of the tail comes from our own fixes.** Of the inline findings from round 2 onward, about 55% were in code or text the previous fix had just added, about 15% were siblings of an issue a fix had repaired in only one place, and about 30% were older code that earlier rounds had not flagged. The resolver commits a fix, runs `lint-and-fix` and pushes, so no local review ever sees fix code.
+- **Most of the tail comes from the fixes themselves.** Of the inline findings from round 2 onward, about 55% were in code or text the previous fix had just added, about 15% were siblings of an issue a fix had repaired in only one place, and about 30% were older code that earlier rounds had not flagged. The resolver commits a fix, runs `lint-and-fix` and pushes, so no local review ever sees fix code.
 - **Narrow fixes produce chains.** #563 in this repository spent 19 rounds on successive bypasses of one path-safety check. Another PR spent 14 rounds patching a redaction blocklist one input form at a time before switching to logging client-supplied IDs only in their exact known formats. #545 and several other PRs, mostly sanitizers, parsers and version comparisons, show the same shape.
 - **Rounds scale with size.** Mean rounds by diff-size quartile: 1.8, 3.3, 4.1, 5.9.
 
@@ -72,7 +72,7 @@ bin/copilot-rounds-report --owner cboone --owner CLIENT_ORG --since 2026-09-29 -
 | Non-client | 77  | 303    | 3      | 3.9  | 7   | 23        | 88               | 201            | 93                   | 36                  |
 | All        | 132 | 506    | 3      | 3.8  | 7   | 38        | 145              | 293            | 169                  | 65                  |
 
-Findings per review by round: 1.1, 0.8, 0.9, 0.7, 0.9, 0.6, 0.8 for rounds 1 to 7 and 0.7 for round 8 on. High share of rated findings by round: 33%, 39%, 29%, 35%, 52%, 63%, 54%, then 47%; every finding in the range carried a severity badge. The script matched 133 PRs, one of which had only a Copilot error notice, and set aside 5 such notices in all. It was run on 2026-10-10, so open PRs from the range had gained rounds since the first count.
+Findings per review by round: 1.1, 0.8, 0.9, 0.7, 0.9, 0.6, 0.8 for rounds 1 to 7 and 0.7 for round 8 on. High share of rated findings by round: 33%, 39%, 29%, 35%, 52%, 63%, 54%, then 47%; every finding in the range carried a severity badge. The script matched 133 PRs, one of which had only a Copilot error notice, and set aside 5 Copilot notices in all. It was run on 2026-10-10, so open PRs from the range had gained rounds since the first count.
 
 1. `bin/copilot-rounds-report` (load `write-bash-scripts` first).
 1. Scrut coverage in `tests/scrut/` with a stubbed `gh` that serves fixture JSON, registered in the Makefile's `SCRUT_ENV` and CI's `scrut-env` list per `tests/AGENTS.md`.
@@ -115,4 +115,4 @@ All in `plugins/resolve-copilot-pr-feedback/skills/resolve-copilot-pr-feedback/S
 - After each phase: `make build`, then `make test-all`; observe the final result. Run the `check-versions` skill before each PR.
 - Phase 2: run `review-anti-patterns` against the fix commits of two of the redaction chains from the analysis and confirm it flags the sibling forms Copilot found in the following rounds. Those PRs are private, so this check runs locally and its results stay out of this repository.
 - Phase 3: read the resolver end to end for the paths: a single Valid finding, a finding with extra instances, a sibling-chain escalation, and a run that changes no files.
-- After the changes have been in use across a comparable number of PRs, rerun `bin/copilot-rounds-report` and compare rounds per PR, findings per round after round 1, and the fix-induced share against the baseline.
+- After the changes have been in use across a comparable number of PRs, rerun `bin/copilot-rounds-report` and compare rounds per PR and findings per round after round 1 against the baseline. The script cannot classify findings, so compare the fix-induced share by reclassifying a sample of later-round findings by hand.
