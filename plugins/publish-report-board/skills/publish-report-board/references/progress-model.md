@@ -8,13 +8,13 @@ This model says how far along each open issue's work is, whose move comes next, 
 
 Only these signals mark work, each gathered on the current sync. Nothing is carried over from an earlier sync, and nothing is inferred: a long-running routine, a time-gated task, or a plan to start soon is not progress. When something outside the repository gates an issue, record it as a blocker with its reason, or leave it out.
 
-| Signal   | What counts                                                                                                                                                                                  |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Label    | A label in the progress labels, matched without regard to case. The default is `in progress`.                                                                                                |
-| Pipeline | A ZenHub pipeline in the progress pipelines, on a board that reads ZenHub. The default is `In Progress` and `Review/QA`.                                                                     |
-| Branch   | A local branch, a remote branch, or a worktree whose name contains the issue number as a whole number, such as `feature/412-tags` for #412 but not for #41. The default branch never counts. |
-| Open PR  | An open pull request that closes the issue, or whose head branch names it as a branch does.                                                                                                  |
-| Merged   | A pull request in the same repository that has merged and links the open issue, whether it closes the issue or only references it.                                                           |
+| Signal   | What counts                                                                                                                                                                                                                                                                                              |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Label    | A label in the progress labels, matched without regard to case. The default is `in progress`.                                                                                                                                                                                                            |
+| Pipeline | A ZenHub pipeline in the progress pipelines, on a board that reads ZenHub. The default is `In Progress` and `Review/QA`.                                                                                                                                                                                 |
+| Branch   | A local branch, a remote branch, or a worktree whose name contains the issue number as a whole number, such as `feature/412-tags` for #412 but not for #41. The default branch never counts.                                                                                                             |
+| Open PR  | An open pull request that closes the issue, or whose head branch names it as a branch does.                                                                                                                                                                                                              |
+| Merged   | A merged pull request in the same repository that closes the open issue, through a closing keyword or a manual link; or one that only mentions it, while a progress label or pipeline is still on the issue. A mention alone is not a signal: pull requests often name follow-up issues they leave open. |
 
 Assignment is not a progress signal. It says who owns an issue, not that work has started; ownership is [affinity](#affinity).
 
@@ -30,7 +30,7 @@ An issue with no signal has no stage and is not in progress. Otherwise its stage
 | `awaiting-review` | An open pull request whose review is required and not given, or whose checks are still running | Reviewer, CI, or nobody | wait for review, request a review, or wait for checks                     |
 | `needs-author`    | An open pull request with a merge conflict, changes requested, or failing checks               | Author                  | resolve the conflict, answer the review, or fix the checks, in that order |
 | `ready-to-merge`  | An open pull request approved or needing no review, with checks passing or absent              | Author                  | merge it                                                                  |
-| `close-out`       | A merged pull request linking the issue, which is still open                                   | Author                  | close or split                                                            |
+| `close-out`       | A merged pull request, as Merged describes, on an issue still open                             | Author                  | close or split                                                            |
 
 `close-out` outranks every other stage: an issue whose linked pull request merged is `close-out` even when a progress label, a branch, or another pull request remains, and those remain as extra carriers. A leftover progress label also raises the `leftover-label` flag, as a cleanup.
 
