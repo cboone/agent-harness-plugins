@@ -150,6 +150,8 @@ jobs:
         CURL_STUB_BIN=./tests/fixtures/curl-stub
         RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
         MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads
+        MERGE_FLOW_BIN=./plugins/monitor-pr/scripts/merge-flow
+        MERGE_FLOW_DATA_DIR=./tests/data/merge-flow
         REVIEW_SCOPE_BIN=./plugins/review-until-clean/scripts/review-scope
         RUN_SCRUT_DOCUMENTS_BIN=./bin/run-scrut-documents
         SCRUT_STUB_BIN=./tests/fixtures/scrut-stub
