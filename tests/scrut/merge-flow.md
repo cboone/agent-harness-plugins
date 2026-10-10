@@ -147,6 +147,13 @@ $ watch merged-no-commit | jq -c '{event, mergeCommit, error}'
 {"event":"merged","mergeCommit":null,"error":"GitHub reports the PR merged but names no merge commit after 5 reads"}
 ```
 
+A merge at a head other than the ready one is still a merge, so it is reported, with the mismatch named.
+
+```scrut
+$ STUB_GH_PR_VIEW="pr-view/merged-now.txt" STUB_GH_PR_VIEW_STATE="$(mktemp "${work}/state.XXXXXX")" MERGE_FLOW_INTERVAL=0 flow watch acme widgets 7 3333333333333333333333333333333333333333 | jq -c '{event, error}'
+{"event":"merged","error":"the PR merged at head 1111111111111111111111111111111111111111, not at the ready head 3333333333333333333333333333333333333333"}
+```
+
 ## Watch: a close ends the watch
 
 ```scrut
@@ -271,6 +278,14 @@ The fast-forward runs where the branch is checked out, since a branch checked ou
 ```scrut
 $ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && git_quiet -C "${dir}" worktree add "${dir}.main" main \
 >   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg wt "${dir}.main" '{synced, there: (.worktree == $wt)}'
+{"synced":true,"there":true}
+```
+
+A worktree path containing a newline stays intact.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && wt="${dir}.odd"$'\n'"name" && git_quiet -C "${dir}" worktree add "${wt}" main \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg wt "${wt}" '{synced, there: (.worktree == $wt)}'
 {"synced":true,"there":true}
 ```
 

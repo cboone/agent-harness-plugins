@@ -14,11 +14,14 @@ readonly FIELD_SEPARATOR=$'\x1f'
 # Reads of MERGED with no merge commit before the merge is reported anyway.
 readonly MERGED_WITHOUT_COMMIT_READS=5
 
-ERR_FILE="$(mktemp)" || {
+ERR_FILE=""
+LIST_FILE=""
+if ! ERR_FILE="$(mktemp)" || ! LIST_FILE="$(mktemp)"; then
+  rm -f "${ERR_FILE}"
   echo "${SCRIPT_NAME}: mktemp failed" >&2
   exit 1
-}
-trap 'rm -f "${ERR_FILE}"' EXIT
+fi
+trap 'rm -f "${ERR_FILE}" "${LIST_FILE}"' EXIT
 
 function usage() {
   cat << USAGE_TEXT
@@ -199,6 +202,9 @@ function poll_once() {
       merged_reads=$((merged_reads + 1))
       if [[ -n "${merge}" ]]; then
         event="merged"
+        if [[ "${head}" != "${expected_head}" ]]; then
+          error="the PR merged at head ${head}, not at the ready head ${expected_head}"
+        fi
       elif ((merged_reads >= MERGED_WITHOUT_COMMIT_READS)); then
         event="merged"
         error="GitHub reports the PR merged but names no merge commit after ${merged_reads} reads"
@@ -318,18 +324,41 @@ function find_remote() {
   return 1
 }
 
-function worktree_for_branch() {
-  local base="${1}" line path=""
-  while IFS= read -r line; do
-    case "${line}" in
-      "worktree "*) path="${line#worktree }" ;;
-      "branch refs/heads/${base}")
-        printf '%s\n' "${path}"
-        return 0
+# Sets WORKTREE_PATHS and WORKTREE_BRANCHES from git worktree list -z, which
+# keeps a path containing a newline intact. A detached worktree has no branch.
+function read_worktrees() {
+  local field path="" branch=""
+  WORKTREE_PATHS=()
+  WORKTREE_BRANCHES=()
+  git worktree list --porcelain -z > "${LIST_FILE}" || return 1
+  while IFS= read -r -d '' field; do
+    case "${field}" in
+      "worktree "*) path="${field#worktree }" ;;
+      "branch "*) branch="${field#branch }" ;;
+      "")
+        WORKTREE_PATHS+=("${path}")
+        WORKTREE_BRANCHES+=("${branch}")
+        path="" branch=""
         ;;
       *) ;;
     esac
-  done <<< "$(git worktree list --porcelain)"
+  done < "${LIST_FILE}"
+  if [[ -n "${path}" ]]; then
+    WORKTREE_PATHS+=("${path}")
+    WORKTREE_BRANCHES+=("${branch}")
+  fi
+}
+
+# Prints the path of the worktree that has refs/heads/BASE checked out.
+function worktree_for_branch() {
+  local i
+  read_worktrees || return 1
+  for ((i = 0; i < ${#WORKTREE_PATHS[@]}; i++)); do
+    if [[ "${WORKTREE_BRANCHES[i]}" == "refs/heads/${1}" ]]; then
+      printf '%s\n' "${WORKTREE_PATHS[i]}"
+      return 0
+    fi
+  done
   return 1
 }
 
@@ -385,18 +414,16 @@ function cmd_panes() {
   git rev-parse --git-dir > /dev/null 2>&1 || die "not inside a git repository"
   command -v tmux > /dev/null 2>&1 || die "tmux is not available"
 
-  local worktrees
-  worktrees="$(git worktree list --porcelain | sed -n 's/^worktree //p')"
+  read_worktrees || die "listing the worktrees failed"
   if ! capture tmux list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}'; then
     die "listing tmux panes failed: ${CAPTURED_ERR}"
   fi
 
-  jq -Rn --arg worktrees "${worktrees}" '
-    ($worktrees | split("\n") | map(select(. != ""))) as $trees
+  jq -Rn '$ARGS.positional as $trees
     | [inputs | select(. != "") | capture("^(?<pane>%[0-9]+)\\|[^|]*\\|(?<path>.*)$")
        | . as $p
        | ([$trees[] | . as $t | select($p.path == $t or ($p.path | startswith($t + "/")))] | max_by(length)) as $tree
-       | select($tree != null) | {pane, worktree: $tree}]' <<< "${CAPTURED_OUT}"
+       | select($tree != null) | {pane, worktree: $tree}]' --args ${WORKTREE_PATHS[@]+"${WORKTREE_PATHS[@]}"} <<< "${CAPTURED_OUT}"
 }
 
 function main() {
