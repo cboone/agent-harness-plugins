@@ -9,16 +9,18 @@ Boards read as one system because they share one set of design rules. The `backl
 
 ## Layout
 
-- **Summary before detail.** A masthead carries an eyebrow label naming the board type and owner, the repository as a large heading, and the sync time, branch, commit, and live age on the right, over a heavy rule. A count strip follows, then one or two sentences of summary, then the sections, most actionable first. A reader who stops after the summary still knows what to do.
+- **Summary before detail.** A masthead carries an eyebrow label naming the board type and owner, the repository as a large heading, and the sync time, branch, commit, and live age on the right, over a heavy rule. A count strip follows, then a strip of work by stage when any work is under way, then one or two sentences of summary, then the sections, most actionable first. A reader who stops after the summary still knows what to do.
 - **One filled block in the count strip**, for the count that matters most: Critical on a bugs board, Start now on a backlog board. The other counts stay plain beside it, except that a bugs board colors its High priority label with the accent.
 - **Every section opens with a heading and a one-line note** that says what the section claims, not what it contains. Section names and notes are neutral, without dated time words such as "today" or "this week", which go stale between syncs; "Start now" names an action, not a date.
+- **Work in flight is drawn by stage.** Every issue or bug with progress carries its stage tag, its carrier, its flags, and its next action, and a stage strip under the counts links each stage to its rows. A backlog board lists that work in an In flight section above Start now, grouped by stage, closest to done first and close-out last, as Ready to go orders a bugs board, and keeps each issue in its lane as well, because lane order and capacity depend on it. A bugs board has no separate section: Ready to go groups by stage, and Critical and High priority rows carry the stage beside their facts.
 - **Rows, not cards.** What to act on is a list of numbered rows separated by rules, with the row's main claim as its headline and its supporting facts in a narrow column beside it: the next action on a bugs board, the reasons for the pick on a backlog board. On a bugs board, grouped lists such as Ready to go sit in columns.
 - **A double rule labeled Report** divides what to act on from the reference material below it. The sections sit in a `main` landmark between the header, which holds the masthead, count strip, and summary, and the footer, and the divider carries its label for screen readers, since a separator's own text is not read.
 - **One column of content**, at most 1200 pixels wide, that reflows into a single stack at phone width. Wide tables scroll inside their own container, so the page never scrolls sideways.
 
 ## Color
 
-- **Semantic color stays separate from the accent.** The filled block and the ranks of the rows it counts share one color. The accent marks the second tier of attention: on a backlog board, what is current or contended, meaning the lane segments that can run now, the contention cells, and work in progress; on a bugs board, High priority, in outline. Milestone chip markers and other secondary marks stay neutral. Blue is reserved for focus, except in the dark theme, where the filled block takes the same light blue as the focus ring. Neither is decoration.
+- **Semantic color stays separate from the accent.** The filled block and the ranks of the rows it counts share one color. The accent marks the second tier of attention: on a backlog board, what is current or contended, meaning the lane segments that can run now and the contention cells; on a bugs board, High priority, in outline. Milestone chip markers and other secondary marks stay neutral. Blue is reserved for focus, except in the dark theme, where the filled block takes the same light blue as the focus ring. Neither is decoration.
+- **Stages have their own palette.** Ready to merge takes the fix green (`--fix`), awaiting review the wait color (`--stage-wait`, the same values as the accent), needs author the stale red, and the earlier stages and close-out stay neutral. Stage colors never replace the stage's form, below.
 - **Both themes are defined as tokens.** Light values sit on `:root`; dark values sit under `prefers-color-scheme: dark` and again under `[data-theme="dark"]`, so an explicit choice wins in either direction. Components use tokens only, never a literal color that works in one theme. Tokens both templates use carry the same names and values. The filled block and the accent carry role names with the same values: `--primary` and `--accent` on a backlog board, `--critical` and `--high` on a bugs board.
 
 ## State in Form as Well as Color
@@ -28,13 +30,13 @@ Every state a reader acts on has a shape as well as a hue, so it survives a colo
 - Lane segments that can run now are solid, queued ones are outlined, and blocked ones carry a hatch.
 - An issue with no milestone gets a dashed chip.
 - A soft ordering link, "better after" or "eases", gets a dashed underline; a hard one, "waits on" or "unblocks", keeps a solid one.
-- An issue in progress carries an "In progress" tag that names its branch.
+- Each stage has a border form of its own: dashed for started, dotted for a branch, double for a draft, solid for awaiting review, hatched for needs author, filled for ready to merge, and struck through for close-out. A flag is a small dashed mark, solid when it reports a stale branch or a conflict.
 - Order is numbered only where it is real. Serial lanes number their steps; lanes with no order show a dot.
 - On a bugs board, a Critical row has a filled tag and a High priority row an outlined one; a bug to confirm first carries a dashed tag; a fact nobody has confirmed is italic with a dashed underline, a fact the triage note set carries a dot, and an expired triage entry is struck through and tagged.
 
 ## Links
 
-Every issue number, milestone, branch, and commit links to its source, including issue numbers written into prose, and the contention matrix links every component it lists. The footprint beside a lane or a pick stays prose, naming components the matrix links. The board summarizes; the reader acts in the source, so every row is one click away from it.
+Every issue number, milestone, branch, pull request, and commit links to its source, including the carrier of work in progress, including issue numbers written into prose, and the contention matrix links every component it lists. The footprint beside a lane or a pick stays prose, naming components the matrix links. The board summarizes; the reader acts in the source, so every row is one click away from it.
 
 ## Writing the Board Data
 
