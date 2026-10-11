@@ -1,8 +1,6 @@
-# One page of a repository's open issues. gh api graphql --paginate supplies
-# $endCursor. Each issue carries what decides its progress and affinity: its
-# labels and assignees, its recent comments, and the pull requests that link
-# it, through a closing reference, which includes a manual link, or a
-# cross-reference.
+# One page of open issues; gh api graphql --paginate supplies $endCursor. Each
+# carries labels, assignees, recent comments, and the pull requests that link
+# it by closing reference (manual links included) or cross-reference.
 query ($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     issues(states: OPEN, first: 50, after: $endCursor, orderBy: { field: CREATED_AT, direction: ASC }) {

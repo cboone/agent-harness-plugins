@@ -884,9 +884,8 @@
       root.replaceChildren(h("p", { class: "board-message" }, message));
       return;
     }
-    // A board before schema version 2 lacks the progress fields this page
-    // reads, so it asks for a sync rather than drawing work in progress as
-    // absent.
+    // A board before schema version 2 lacks progress fields, so ask for a sync
+    // rather than draw all work as absent.
     if (data.schemaVersion !== 2) {
       root.replaceChildren(
         h(
@@ -989,9 +988,8 @@
       age.classList.toggle("is-stale", hours >= STALE_AFTER_HOURS);
     }
 
-    // Stages, flags, and affinity, drawn from the progress and affinity a
-    // gather script derived. The same in backlog-triage.html and bugs.html;
-    // fix both together. STAGES follows the order of the progress model.
+    // Stages, flags, and affinity. Identical in backlog-triage.html and
+    // bugs.html; change both together. STAGES follows the progress model order.
     const STAGES = [
       ["started", "Started"],
       ["branch", "Branch"],
@@ -1168,8 +1166,7 @@
       return h("dl", { class: "facts" }, rows);
     }
 
-    // What carries the work: its stage, carrier, and flags, then the next
-    // action, from the progress bugs-gather derived.
+    // The stage, carrier, and flags, then the next action.
     function progressLine(progress) {
       return [
         h("p", null, [stageTag(progress), " ", carrierLink(progress.carrier), " ", flagMarks(progress)]),

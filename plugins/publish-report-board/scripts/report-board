@@ -106,8 +106,7 @@ def stages: ["started", "branch", "draft", "awaiting-review", "needs-author", "r
 def progress_flags: ["quiet", "stale", "behind", "conflict", "multiple", "local", "leftover-label"];
 def next_moves: ["author", "reviewer", "ci", "nobody"];
 def uniformity_kinds: ["assigned", "claimed", "filed", "commented", "active", "recent"];
-# A branch carrier becomes a compare link on the page, so it must not carry a
-# dot path segment, as a branch blocker must not.
+# A branch carrier becomes a compare link, so no dot path segments.
 def carrier_ok:
   type == "object" and length == 1
   and ((.pr | is_int and . > 0)
@@ -123,8 +122,7 @@ def carrier_text:
    elif .pipeline != null then "the \(.pipeline) pipeline"
    else tojson end)
   | if type == "string" then . else tojson end;
-# True for an issue or bug whose work is in progress: a progress whose stage
-# is anything but close-out, which is a cleanup rather than work.
+# True when progress has a stage other than close-out, which is a cleanup.
 def working: (.progress | type) == "object" and .progress.stage != "close-out";
 # Problems with the progress object of the issue or bug at $at. Null or absent
 # progress means no stage.
@@ -254,9 +252,8 @@ else
       | any(.seen[]; . == $start);
     # The lane model the page draws, so start picks can be held to it.
     def riders($n): [$issue_list[] | select(.sameBranchAs == $n) | .number | select(is_int)];
-    # The issue carrying work in progress on the branch of $n, as {number,
-    # progress}, or null. Work on an issue riding the branch counts, and a
-    # close-out stage is a cleanup rather than work.
+    # The issue with work in progress on the branch of $n, riders included, as
+    # {number, progress}, or null.
     def progress_of($n): [($n, riders($n)[]) as $m | issue($m) | select(working) | {number, progress}] | first;
     def work_text: "\(.progress.stage) on \(.progress.carrier | carrier_text)";
     def rides($n): issue($n) | .sameBranchAs | is_int;
@@ -473,9 +470,8 @@ else
         end)
      end),
 
-    # With areas tagged, the claims are the areas two or more issues list, in
-    # area order, each with its issues in issue order, as backlog-gather finish
-    # writes them, so a claim cannot drift from the areas it comes from.
+    # Claims must be the areas two or more issues list, in area order with
+    # issues in issue order, so a claim cannot drift from its area.
     (if ($d.areas | type) != "array" then empty
      else
        [$d.areas[] | objects | select(.name | is_text) | .name as $n | .query as $q
@@ -740,19 +736,16 @@ else
 end
 '
 
-# Progress entries both change reports share. Each pair is a {now, was} of
-# one item kept from the previous sync, and describe is the report line naming
-# the item. A previous board without a schemaVersion predates the progress
-# model: its work in progress is an inProgress text or a Ready group that maps
-# onto no single stage, so the reports print one notice in place of an entry
-# for every item rather than report moves that did not happen.
+# Progress entries both change reports share. Each pair is a {now, was} of one
+# item kept from the previous sync. A previous board without schemaVersion has
+# no stages to compare, so the reports print one notice instead of an entry per
+# item.
 # shellcheck disable=SC2016
 readonly COMPARE_PROGRESS_DEFS='
 def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
 def stage_of: (.progress | if type == "object" then .stage else null end);
-# The stage and what carries it, as validation messages name them. Adapted
-# from carrier_text in the validation filters, for a progress that may never
-# have been validated.
+# The stage and its carrier, as validation names them, for a progress that may
+# never have been validated.
 def work_text:
   (.progress.carrier
    | if type != "object" then "an unknown carrier"

@@ -1205,9 +1205,8 @@
       );
       return;
     }
-    // A board before schema version 2 lacks the progress fields this page
-    // reads, so it asks for a sync rather than drawing work in progress as
-    // absent.
+    // A board before schema version 2 lacks progress fields, so ask for a sync
+    // rather than draw all work as absent.
     if (data.schemaVersion !== 2) {
       root.replaceChildren(
         h(
@@ -1453,9 +1452,8 @@
         : h("a", { class: "chip chip--none", href: milestoneUrl(null) }, "No milestone");
     }
 
-    // Stages, flags, and affinity, drawn from the progress and affinity a
-    // gather script derived. The same in backlog-triage.html and bugs.html;
-    // fix both together. STAGES follows the order of the progress model.
+    // Stages, flags, and affinity. Identical in backlog-triage.html and
+    // bugs.html; change both together. STAGES follows the progress model order.
     const STAGES = [
       ["started", "Started"],
       ["branch", "Branch"],
@@ -1686,9 +1684,8 @@
       h("p", { class: "summary" }, prose(data.summary)),
     ]);
 
-    // In flight: every issue with work under way or left to close, grouped by
-    // stage in model order. Lanes keep these issues in place as well, because
-    // their order and capacity depend on them.
+    // In flight: every issue with work under way or left to close, by stage.
+    // Lanes still list these issues, since their order and capacity depend on them.
     function flightRow(issue) {
       const progress = issue.progress;
       const extra = progress.extraCarriers ?? [];
@@ -1704,8 +1701,7 @@
       ]);
     }
 
-    // Closest to done first, as the bugs board orders Ready to go, with
-    // close-out last because it is cleanup rather than work.
+    // Closest to done first, with close-out, a cleanup, last.
     const FLIGHT_ORDER = ["ready-to-merge", "needs-author", "awaiting-review", "draft", "branch", "started", "close-out"];
     const flightGroups = FLIGHT_ORDER.map((key) => [key, STAGE_LABEL.get(key), inFlight.filter((issue) => issue.progress.stage === key)]).filter(
       ([, , members]) => members.length,

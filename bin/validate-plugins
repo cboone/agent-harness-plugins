@@ -1034,11 +1034,8 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
 done
 
 # ─── 22. Shared reference copies are current ────────────────────────────────
-# bin/build-shared-references copies a reference that skills in two plugins read
-# into the plugin that does not hold its source, because a skill can read only
-# the files its own plugin ships. A copy edited by hand, or a source edited
-# without a rebuild, would give the two skills different rules, so the copies
-# are compared with their sources byte for byte.
+# Each copy bin/build-shared-references writes must match its source byte for
+# byte; a hand-edited copy or an unbuilt source gives two skills different rules.
 
 if ! shared_reference_output="$(bin/build-shared-references --check 2>&1)"; then
   printf '%s\n' "${shared_reference_output}"

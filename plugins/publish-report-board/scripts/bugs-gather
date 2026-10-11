@@ -31,14 +31,12 @@
 #       could not be read or written
 #   2 - Usage error, or a required tool is missing
 #
-# BUGS_GATHER_NOW, an ISO 8601 UTC time, replaces the current time; tests use
-# it to keep every window fixed. BUGS_GATHER_HOST replaces the host name a
-# local branch is reported on.
+# BUGS_GATHER_NOW (ISO 8601 UTC) and BUGS_GATHER_HOST override the current
+# time and the host name, for fixed test output.
 #
-# Run from a checkout of the repository, gather also reads its local branches,
-# worktrees, and the current user's commits; anywhere else, or in a checkout
-# whose origin is another repository or lacks the default branch, it reads the
-# branches GitHub holds and says so.
+# In a checkout of the repository, gather also reads local branches, worktrees,
+# and the current user's commits. Elsewhere it reads only the branches GitHub
+# holds, and says why.
 set -euo pipefail
 
 # Prints the directory holding this script, following symlinks so the queries
@@ -92,7 +90,7 @@ SAVE_LOCK=""
 CONFIG=""
 # Read from the variable the config names, once per gather.
 ZENHUB_TOKEN=""
-# The machine the gather runs on, which a local branch names. Set by gather.
+# The machine a local branch is reported on. Set by gather.
 HOST_NAME=""
 JOB_PIDS=()
 JOB_NAMES=()
@@ -118,8 +116,7 @@ def config_keys: ["repo", "timeZone", "bugLabels", "bugTypes", "urgentLabels", "
 # pipeline weight takes any pipeline name.
 def weight_groups: {impact: ["security", "data-loss", "money", "access", "core-flow", "degraded", "cosmetic", "internal", "unknown"], surface: ["public", "signed-in", "admin", "internal", "unknown"], reach: ["all", "many", "some", "few", "unknown"], evidence: ["user-report", "production-observed", "reproduced", "code-reading", "unknown"]};
 def weight_scalars: ["timeSensitive", "mitigated", "urgent", "sprint", "regression", "outsidePerson", "outsideCap", "reaction", "reactionCap"];
-# The affinity weights: one for bugs the current user owns, one for bugs someone
-# else owns.
+# Affinity weights for bugs the current user owns and bugs someone else owns.
 def affinity_keys: ["you", "other"];
 def weight_problems:
   to_entries[] | .key as $k | .value as $v
@@ -133,9 +130,8 @@ def weight_problems:
       (if ($v | type) != "object" then "weights.pipelines: expected a number per pipeline name" else ($v | to_entries[] | select((.value | type) != "number") | "weights.pipelines.\(.key): expected a number") end)
     elif (weight_scalars | index($k)) != null then check($v | type == "number"; "weights.\($k): expected a number")
     else "weights.\($k): not a weight; expected one of \((weight_groups | keys) + ["pipelines", "affinity"] + weight_scalars | join(", "))" end;
-# Names on both a progress list and a claim list, compared as the gather
-# compares them. A name on both would count one signal as both work started
-# and ownership, which the progress model keeps apart.
+# Names on both a progress list and a claim list, compared as the gather does.
+# The progress model keeps work started and ownership apart.
 def fold($on): if $on then ascii_downcase else . end;
 def overlap($progress; $claim; $fold): [$progress // [] | .[] | select(type == "string")] as $p | [$claim // [] | .[] | select(type == "string") | . as $n | select($p | any(.[]; fold($fold) == ($n | fold($fold))))];
 
@@ -231,8 +227,7 @@ else
 end
 '
 
-# Shared by the filters that read GitHub and ZenHub responses, after the
-# progress model.
+# Shared by the filters that read GitHub and ZenHub responses.
 # shellcheck disable=SC2016
 readonly COMMON_DEFS="${PROGRESS_DEFS}"'
 def is_bot($bots): . != null and (.__typename == "Bot" or (.login | endswith("[bot]")) or (.login as $l | $bots | any(. == $l)));
@@ -298,14 +293,10 @@ $config.bots as $bots
         lastComment: ($people | last | if . == null then null else {author: (.author.login // "ghost"), at: .createdAt, outside: (.authorAssociation | outside)} end),
         fixes: [$prs[] | select(.state == "OPEN")],
         fixedBy: [$prs[] | select(.state == "MERGED")],
-        # Every merged pull request in the repository linked to the bug, with
-        # closes false for one that only mentions it.
         merged: ($n | merged_links($repo)),
-        # Who commented, and when, among the most recent 30 comments, for the
-        # discussion tier of affinity.
+        # Commenters among the last 30 comments, for tier 3 affinity.
         commenters: [$people[] | {login: (.author.login // "ghost"), at: .createdAt}],
-        # Lists GitHub cut short, which gather warns about: an item past the
-        # cut is missing from this bug.
+        # Lists GitHub cut short, which gather warns about.
         truncated: [(select($n.labels.pageInfo.hasNextPage == true) | "labels"),
                     (select($n.assignees.pageInfo.hasNextPage == true) | "assignees"),
                     (select($n.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests"),
@@ -349,9 +340,8 @@ def lookup_error: (.path // []) | length == 1 and (.[0] | type == "string" and t
 def unexpected_errors: [.errors[]? | select(lookup_error | not)];
 '
 
-# Reduces the slurped pages of a pull request search, or of the open pull
-# request connection, to a list, each pull request with its changed files.
-# Takes $pages.
+# Reduces pages of the merged search or the open pull request connection to a
+# list of pull requests with their changed files. Takes $pages.
 # shellcheck disable=SC2016
 readonly PULLS_FILTER="${COMMON_DEFS}"'
 [$pages[] | (.data.search.nodes[]? | select(. != null and .__typename == "PullRequest")), (.data.repository.pullRequests.nodes[]? | select(. != null))
@@ -371,9 +361,8 @@ readonly ASSEMBLE_FILTER="${COMMON_DEFS}"'
 | $repository.repository.defaultBranchRef.name as $default
 | $repository.viewer.login as $viewer
 | ($config.affinityWorkDays * 86400) as $work_window
-# The branches GitHub holds, which are pushed, joined by name with the
-# checkout when there is one, which knows the local ones, the worktrees, and
-# how far each runs ahead of the default branch.
+# Pushed branches from GitHub, joined with the checkout, which adds local
+# branches, worktrees, and ahead and behind counts.
 | ([$repository.repository.refs.nodes | as_list | .[] | {name, local: false, remote: true, worktree: false, at: (.target.committedDate // null), ahead: null, behind: null}]
    + ($local.branches // [])
    | join_branches($default)) as $branches
@@ -405,9 +394,8 @@ readonly ASSEMBLE_FILTER="${COMMON_DEFS}"'
       outsideReporters: [$all[] | select(.state == "open" and .outsideReporter)] | length,
       inProgress: [$all[] | select(.progress != null and .progress.stage != "close-out")] | length
     },
-    # The files the current user is working on now, and has worked on within
-    # the affinity window, for the implicit tiers of affinity. score matches
-    # them against the areas the assessments name.
+    # Files of the current user, active now and recent within the affinity
+    # window, which score matches against assessment areas.
     viewerFiles: {
       active: ([$pulls.open[] | select(.author == $viewer) | .number as $n | .files[] | {path: ., via: "pull request #\($n)"}]
         + [$local.branchFiles // [] | .[] | {path, via: "branch \(.branch)"}] | unique),
@@ -576,9 +564,7 @@ $config as $c
     and (($a.deadline + "T00:00:00Z" | fromdateiso8601) - ($today + "T00:00:00Z" | fromdateiso8601)) <= $c.deadlineDays * 86400;
   # The first open fix that is not a draft, or null.
   def nondraft_fix($b): [$b.fixes[] | select(.isDraft | not)] | first;
-  # The weight affinity adds: some for a bug the current user owns, and a
-  # penalty for one someone else owns. A claim with no known owner, and no
-  # owner at all, add nothing.
+  # An unknown owner, like no owner, adds nothing.
   def affinity_weight($f): if $f.owner == "you" then $w.affinity.you elif $f.owner == null or $f.owner == "unknown" then 0 else $w.affinity.other end;
   def score_of($a; $b; $f):
     ($w.impact[$a.impact] // 0) + ($w.surface[$a.surface] // 0) + ($w.reach[$a.reach] // 0) + ($w.evidence[$a.evidence] // 0)
@@ -642,9 +628,8 @@ $config as $c
     | if $a == null then "#\(.number): no assessment; read it"
       elif $a.updatedAt != .updatedAt then "#\(.number): assessed at updatedAt \($a.updatedAt), but the bug was updated at \(.updatedAt); read it again"
       else ($a | assessment_problems("#\(.number)")) end] + $assessed_twice) as $assessment_problems
-# Two bugs naming one area must give it the same paths, or the board would
-# draw one area two ways. Malformed areas are reported above, so only
-# well-formed ones are compared here.
+# Two bugs naming one area must give it the same paths. Malformed areas are
+# reported above, so only well-formed ones are compared.
 | ([$open[] | $assessed[.number | tostring] | select(. != null) | .number as $n
     | .areas | if type == "array" then .[] else empty end
     | select(type == "object" and (.name | type) == "string" and (.paths | type) == "array") | {name, paths: (.paths | unique), n: $n}]
@@ -652,9 +637,8 @@ $config as $c
 | if ($assessment_problems | length) > 0 then {problems: $assessment_problems}
   elif ($area_problems | length) > 0 then {problems: $area_problems}
   else
-    # Affinity, from the signals each open bug carries. The tiers match the
-    # areas its assessment names against the files the current user is
-    # working on now and has worked on within the window.
+    # Affinity signals per open bug, with tiers 1 and 2 from its assessment
+    # areas.
     ($c.affinityCommentDays * 86400) as $comment_window
     | [$open[] | . as $b | ($assessed[$b.number | tostring].areas // []) as $areas
        | {number: $b.number,
@@ -1000,9 +984,8 @@ function github_open_pulls() {
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/open-pulls.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
 }
 
-# Searches the current user's merged pull requests in a repository. The query
-# names the user as @me, so the search needs no login first and runs beside
-# the others.
+# Searches the current user's merged pull requests. The query says @me, so it
+# needs no login lookup and runs beside the others.
 function github_pulls() {
   local query="${1}"
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/pulls.graphql" -f "q=${query}"
@@ -1026,9 +1009,8 @@ function zenhub_post() {
     --data-binary @"${payload_file}"
 }
 
-# Succeeds when a git remote URL points at the repository OWNER/NAME on
-# GitHub, over HTTPS or SSH, with or without a .git suffix. GitHub compares
-# names without regard to case, and so does this.
+# Succeeds when a remote URL points at OWNER/NAME on GitHub over HTTPS or SSH,
+# with or without .git, ignoring case as GitHub does.
 function remote_matches() {
   local repo="${1}" url="${2}"
   url="$(printf '%s' "${url%.git}" | tr '[:upper:]' '[:lower:]')"
@@ -1036,20 +1018,15 @@ function remote_matches() {
   [[ "${url}" == *"${GITHUB_HOST}/${repo}" || "${url}" == *"${GITHUB_HOST}:${repo}" ]]
 }
 
-# Writes TEMP_DIR/local.json from the checkout in the current directory: its
-# local and origin branches with their last commit, whether a worktree has
-# each checked out, and how far each runs ahead of and behind the default
-# branch; the files changed on the branches whose last commit is the current
-# user's; and the user's commits since SINCE with their files. Outside a
-# checkout of REPO, or without the default branch from origin, it writes null
-# and says why, and the gather relies on the branches GitHub holds. Inside one,
-# a failed git command stops the gather rather than reading as no branches.
+# Writes TEMP_DIR/local.json: the local and origin branches, the files on the
+# current user's branches, and their commits since SINCE. Writes null, with a
+# notice, outside a usable checkout of REPO. Inside one, a failed git command
+# stops the gather rather than reading as no branches.
 function gather_local() {
   local repo="${1}" default_branch="${2}" since="${3}"
   local output="${TEMP_DIR}/local.json"
-  # Notices about local state go to TEMP_DIR/local-notice.txt, which gather
-  # prints once the board data is written, so a gather that stops shows only
-  # why it stopped.
+  # gather prints these notices only after writing, so a gather that stops
+  # shows only why.
   : > "${TEMP_DIR}/local-notice.txt"
   local url email base refname committed author name kind counts behind ahead path worktree
   if ! command -v git > /dev/null 2>&1; then
@@ -1115,9 +1092,8 @@ function gather_local() {
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${kind}" "${name}" "${committed}" "${behind}" "${ahead}" "${worktree}" >> "${TEMP_DIR}/local-branches.tsv"
   done < "${TEMP_DIR}/local-refs.tsv"
   if [[ -n "${email}" ]]; then
-    # Each commit starts with a record separator, which no file name holds. An
-    # email address ignores case, and git matches --author with case unless
-    # told otherwise. The refs read are the ones backlog-gather reads.
+    # A record separator, which no file name holds, starts each commit. Email
+    # addresses ignore case; git matches --author with case by default.
     git log --branches --remotes=origin --no-merges --since="${since}" --fixed-strings --regexp-ignore-case --author="${email}" --name-only --format=$'\x1e%h\t%cI' > "${TEMP_DIR}/local-commits.txt" \
       || die "${E_INVALID}" "cannot read your recent commits in this checkout"
   else
@@ -1269,10 +1245,9 @@ function cmd_gather() {
 
   local search_file search_name kind
   printf '[]' > "${TEMP_DIR}/searches.json"
-  # Every open pull request must arrive, or a bug it carries would read as not
-  # in progress. GitHub search stops at 1000 results and then reports no
-  # further page, so a merged search that returned fewer than it counted was
-  # cut short.
+  # A missing open pull request would hide a bug it carries. GitHub search
+  # stops at 1000 results without saying so, so a merged search that returned
+  # fewer than it counted was cut short.
   jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls-open.json" > /dev/null 2>&1 \
     || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
   jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/pulls-merged.json" > /dev/null 2>&1 \

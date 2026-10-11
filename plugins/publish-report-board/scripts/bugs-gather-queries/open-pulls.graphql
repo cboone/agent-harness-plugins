@@ -1,7 +1,5 @@
-# One page of a repository's open pull requests, every author's: each can
-# carry a bug its branch names, and the files of the current user's own are
-# the areas they are working in now. The connection has no result cap, unlike
-# search. gh api graphql --paginate supplies $endCursor.
+# One page of open pull requests by every author; gh api graphql --paginate
+# supplies $endCursor. A connection, not search, which stops at 1000 results.
 query ($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequests(states: OPEN, first: 25, after: $endCursor) {

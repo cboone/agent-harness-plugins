@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 # backlog-gather -- Gather the progress and affinity behind a backlog board.
 #
-# A backlog triage board says what to start, what can run in parallel, and what
-# is blocked. This script does its deterministic half: it reads a repository's
-# open issues and pull requests from GitHub and its branches and recent commits
-# from the local checkout, and works out each issue's progress stage, flags,
-# and affinity signals as the progress model defines them. After the analysis
-# writes the board, finish adds the derived fields, so no stage or affinity is
-# ever written by hand. The GraphQL queries live beside it in
+# Reads a repository's open issues and pull requests from GitHub, and its
+# branches and recent commits from the checkout, and derives each issue's
+# progress and affinity signals. finish adds those fields to the analysis data,
+# so no stage or affinity is written by hand. The GraphQL queries live in
 # backlog-gather-queries/.
 #
 # Usage:
@@ -25,13 +22,12 @@
 #       could not be read or written
 #   2 - Usage error, or a required tool is missing
 #
-# BACKLOG_GATHER_NOW, an ISO 8601 UTC time, replaces the current time, and
-# BACKLOG_GATHER_HOST the host name a local branch is reported on; tests use
-# both to keep the output fixed.
+# BACKLOG_GATHER_NOW (ISO 8601 UTC) and BACKLOG_GATHER_HOST override the
+# current time and the host name, for fixed test output.
 set -euo pipefail
 
 # Prints the directory holding this script, following symlinks so the queries
-# are found beside the real script rather than beside a link to it.
+# are found beside the real script.
 function resolve_script_dir() {
   local path="${BASH_SOURCE[0]}"
   local link_dir
@@ -72,16 +68,16 @@ readonly DOT_SEGMENT_PATTERN='(^|/)\.\.?(/|$)'
 # email, or path holds one.
 readonly FIELD_SEPARATOR=$'\t'
 
-# Set by the gather and finish commands: the scratch directory, removed on
-# exit. It is global because an EXIT trap runs after main's locals are gone.
+# The scratch directory, removed on exit. Global because the EXIT trap runs
+# after the locals of main are gone.
 TEMP_DIR=""
 # Set by load_config.
 CONFIG=""
 JOB_PIDS=()
 JOB_NAMES=()
 
-# Checks a backlog config and fills in its defaults. Emits {problems, config};
-# the config is null when there are problems. It takes $repo.
+# Checks a backlog config and fills in its defaults, emitting {problems,
+# config} with config null on any problem. Takes $repo.
 # The $names in these filters are jq bindings, not shell expansions.
 # shellcheck disable=SC2016
 readonly CONFIG_FILTER='
@@ -90,8 +86,7 @@ def is_int: type == "number" and . == floor;
 def absent_or(f): . == null or f;
 def check(condition; message): if condition then empty else message end;
 def name_list: type == "array" and all(.[]; is_text);
-# The keys a config may carry; any other is a typo that would otherwise be
-# ignored without a word.
+# Any other key is a typo that would otherwise be silently ignored.
 def config_keys: ["progressLabels", "claimLabels", "quietDays", "staleDays", "affinityWorkDays", "affinityCommentDays", "uniformityShare", "uniformityMinimum"];
 
 if type != "object" then {problems: ["the config must be a JSON object"], config: null}
@@ -128,9 +123,9 @@ else
 end
 '
 
-# Works out each open issue's progress and affinity inputs from the gathered
-# responses. Takes $config, $now, $host, $viewer, $repository, $issues,
-# $pulls, $merged, $branches, $files, $commit, and $version.
+# Derives each open issue's progress and affinity inputs. Takes $config, $now,
+# $host, $viewer, $repository, $issues, $pulls, $merged, $branches, $files,
+# $commit, and $version.
 # shellcheck disable=SC2016
 readonly DERIVE_FILTER="${PROGRESS_DEFS}"'
 ($now | epoch) as $now_at
@@ -176,8 +171,7 @@ readonly DERIVE_FILTER="${PROGRESS_DEFS}"'
                   (select(.timelineItems.pageInfo.hasPreviousPage == true) | "cross-references"),
                   (select(.comments.pageInfo.hasPreviousPage == true) | "comments")]}
   ] as $derived
-# The kinds uniformity ignores among those the gather can judge; finish adds
-# the tiers that depend on areas.
+# finish adds active and recent, which need areas.
 | uniformity_ignored([$derived[] | .affinityInputs + {active: [], recent: []}]; $config) as $ignored
 | {
     version: $version,
@@ -211,8 +205,7 @@ else
   | [$d.issues[] | objects | .number | select(is_int)] as $numbers
   | [$gather.issues[] | .number] as $open
   | [$d.areas | as_list | .[] | objects | .name | select(is_text)] as $area_names
-  # These are derived from the gather, so analysis data that carries one would
-  # be overwritten without a word.
+  # finish derives these, and would silently overwrite them.
   | ((("schemaVersion", "affinityIgnored") | . as $k | select($d | has($k)) | "\(.): derived by backlog-gather finish; leave it out of the analysis data"),
      (select(($d.contention | type) == "object" and ($d.contention | has("claims"))) | "contention.claims: derived from the areas the issues list; leave it out of the analysis data"),
      ($d.issues | to_entries[] | .key as $i | .value
@@ -338,10 +331,9 @@ function require_output_dir() {
   [[ -d "${directory}" ]] || die "${E_INVALID}" "directory ${directory} does not exist"
 }
 
-# Sets CONFIG to the normalized config for OWNER/NAME, or exits listing its
-# problems. A repository with no config file gets the defaults. It sets a
-# global rather than printing, because a command substitution would run it
-# with errexit off and carry on past a failed check.
+# Sets CONFIG to the normalized config for OWNER/NAME, or the defaults without
+# a file, and exits listing any problems. A global, not output: a command
+# substitution would run it with errexit off, past a failed check.
 function load_config() {
   local repo="${1}"
   local path result
@@ -367,8 +359,7 @@ function config_field() {
   jq -r "${2}" <<< "${1}"
 }
 
-# Prints the current time as ISO 8601 UTC, or BACKLOG_GATHER_NOW when it is
-# set.
+# Prints the current time as ISO 8601 UTC, or BACKLOG_GATHER_NOW when set.
 function utc_now() {
   printf '%s' "${BACKLOG_GATHER_NOW:-$(date -u '+%Y-%m-%dT%H:%M:%SZ')}"
 }
@@ -430,8 +421,8 @@ function github_search() {
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/merged.graphql" -f "q=${search}"
 }
 
-# Succeeds when the checkout's origin is the repository, over https or ssh,
-# with or without .git, compared without regard to case as GitHub does.
+# Succeeds when origin is REPO over https or ssh, with or without .git,
+# ignoring case as GitHub does.
 function origin_is() {
   local repo="${1}"
   local url
@@ -441,9 +432,8 @@ function origin_is() {
   [[ "$(printf '%s' "${url}" | tr '[:upper:]' '[:lower:]')" == *[:/]"$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')" ]]
 }
 
-# Writes TEMP_DIR/branches.json, one entry per local branch and origin branch,
-# with whether a worktree has it checked out, and TEMP_DIR/active.tsv, the
-# files changed on the viewer's branches with commits beyond the default one.
+# Writes TEMP_DIR/branches.json, one entry per local and origin branch, and
+# TEMP_DIR/active.tsv, the files changed on the viewer's branches.
 function gather_branches() {
   local default="${1}"
   local email="${2}"
@@ -479,8 +469,8 @@ function gather_branches() {
       worktree=true
     fi
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${name}" "${is_local}" "${worktree}" "${at}" "${ahead}" "${behind}" >> "${TEMP_DIR}/branches.tsv"
-    # A branch is the viewer's when its last commit is, as bugs-gather
-    # decides it, so a teammate's branch checked out for review is not.
+    # A branch is the viewer's when its last commit is, so a teammate's branch
+    # checked out for review is not.
     if [[ "${ahead}" -gt 0 && -n "${email}" && "$(printf '%s' "${author}" | tr '[:upper:]' '[:lower:]')" == "<$(printf '%s' "${email}" | tr '[:upper:]' '[:lower:]')>" ]]; then
       git diff --name-only "${base}...${ref}" > "${changed_file}" || die "${E_INVALID}" "cannot list the files changed on ${ref}"
       while IFS= read -r path; do
@@ -500,8 +490,7 @@ function gather_commits() {
   local line commit="" at=""
   : > "${TEMP_DIR}/recent.tsv"
   [[ -n "${email}" ]] || return 0
-  # An email address ignores case, and git matches --author with case unless
-  # told otherwise.
+  # Email addresses ignore case; git matches --author with case by default.
   git log --branches --remotes=origin --no-merges --fixed-strings --regexp-ignore-case --author="${email}" --since="${since}" \
     --format="%x01%h${FIELD_SEPARATOR}%cI" --name-only > "${TEMP_DIR}/commits.txt" \
     || die "${E_INVALID}" "cannot read your recent commits in this checkout"
@@ -574,8 +563,8 @@ function cmd_gather() {
   jq -e '([.[] | .data.search.nodes | length] | add // 0) >= (.[0].data.search.issueCount // 0)' "${TEMP_DIR}/merged.json" > /dev/null \
     || die "${E_INVALID}" "the search for your merged pull requests was cut short, so the areas you worked in would be missing some files"
 
-  # The viewer's files: changed on open branches and open pull requests, and
-  # in recent commits and merged pull requests.
+  # The viewer's files: active from open branches and pull requests, recent
+  # from commits and merged pull requests.
   jq -n -R --arg viewer "${viewer}" --slurpfile pulls "${TEMP_DIR}/pulls.json" --slurpfile merged "${TEMP_DIR}/merged.json" \
     --rawfile active "${TEMP_DIR}/active.tsv" --rawfile recent "${TEMP_DIR}/recent.tsv" "${PROGRESS_DEFS}"'
     def rows($text): $text | split("\n") | map(select(length > 0) | split("\t"));

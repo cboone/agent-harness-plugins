@@ -15,7 +15,7 @@ def progress($stage; $carrier): {
   extraCarriers: []
 };
 
-# Affinity with no owner, as every issue carries when nothing says otherwise.
+# Affinity with no owner.
 def no_affinity: {owner: null, kind: null, tier: null, reasons: []};
 
 # Applies f to the backlog issue numbered $n.
