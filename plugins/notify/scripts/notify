@@ -460,7 +460,7 @@ function plan_heading() {
 # alerter dispatch
 # -----------------------------------------------------------------------------
 
-# Both stop alerter with SIGKILL: alerter removes its banner on SIGTERM or SIGINT.
+# stop_session_alerters and stop_alerter use SIGKILL: alerter removes its banner on SIGTERM or SIGINT.
 
 # Matches the session key in --group. `[^ ]*` cannot cross the space in the
 # pattern itself, so a concurrent pkill never matches.
