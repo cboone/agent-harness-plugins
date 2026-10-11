@@ -26,12 +26,11 @@
 #
 # A findings-free round has no findings and a verdict other than an approval.
 #
-# Stops instead of summarizing partial or malformed data: a failed search, an
-# empty or unparseable response, more than one JSON document, GraphQL errors,
-# any page, result or review without the fields the report reads, pages that
-# disagree on the match count, a cut-short page sequence, no matches, more than
-# 1,000 matches, or more than 100 reviews on one pull request. When fewer pull
-# requests come back than matched, the report says so in its output and warns.
+# Stops instead of summarizing partial or malformed data, such as a failed
+# search, GraphQL errors, a response without the fields the report reads, a
+# cut-short page sequence, more than 1,000 matches, or more than 100 reviews on
+# one pull request. When fewer pull requests come back than matched, the report
+# says so in its output and warns.
 # Requires `jq`, and authenticated `gh` unless --input is given.
 set -euo pipefail
 
@@ -187,10 +186,9 @@ readonly PAGES_PROBLEM_FILTER='
   end
 '
 
-# Reduces the pages to the matched and returned counts, the notice,
-# unrecognized-verdict and uncounted-finding counts, and the rounds of each pull
-# request that has at least one. A pull request listed twice, as when results
-# shift during pagination, keeps the listing with more reviews.
+# Reduces the pages to the counts behind the header and warnings, and each pull
+# request's rounds. A pull request listed twice, as when results shift during
+# pagination, keeps its fuller listing.
 # shellcheck disable=SC2016 # $ names are jq variables.
 readonly ROUNDS_FILTER='
   def count_of(re): [scan(re)] | length;
@@ -426,8 +424,8 @@ function main() {
   local problem
   problem="$(jq -r --slurp --argjson limit "${SEARCH_LIMIT}" "${PAGES_PROBLEM_FILTER}" <<< "${pages}")" \
     || problem="the search response is not valid JSON"
-  # A failed search reports its GraphQL errors when it printed any, and names the
-  # --save file so its output is not reused as if the search had succeeded.
+  # A failed search reports its GraphQL errors when it printed any. Otherwise the
+  # message names the --save file, so its output is not reused as a success.
   if [[ "${fetch_status}" != "0" && "${problem}" != "a search page holds GraphQL errors"* ]]; then
     local saved=""
     [[ -z "${save_file}" ]] || saved="; ${save_file} holds gh's output from the failed search"
