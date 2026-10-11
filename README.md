@@ -142,7 +142,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 **External tools:**
 
 - _Publish Report Board:_ [`jq`](https://jqlang.org/) (required; the bundled `report-board` script validates and renders board data with it), [`gh`](https://cli.github.com/) (required for the backlog board, which reads issues, milestones, and pull requests)
-- _Trim Text:_ an authenticated [`gh`](https://cli.github.com/) session, only for PR and issue bodies
+- _Trim Text:_ an authenticated [`gh`](https://cli.github.com/) session, only for PR and issue bodies; `realpath` (GNU coreutils, or macOS 13 and later) for symlinked instruction files
 - _Write Manual Verification Plan:_ an authenticated [`gh`](https://cli.github.com/) session, only when the checklist is kept on an issue rather than in a plan
 
 ### Scaffolding

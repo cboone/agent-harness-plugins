@@ -1,6 +1,6 @@
 # Profile: agent instructions
 
-Applies to `AGENTS.md`, `CLAUDE.md`, `SKILL.md` bodies and routing descriptions, a skill's or command's reference files, agent definitions, Copilot instruction files, and global agent instructions.
+Applies to `AGENTS.md`, `CLAUDE.md`, `SKILL.md` and command bodies and their routing descriptions, a skill's or command's reference files, agent definitions, Copilot instruction files, and global agent instructions.
 
 ## What leads
 

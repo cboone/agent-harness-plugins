@@ -33,6 +33,7 @@ How it applies the result depends on the input:
 
 - The [GitHub CLI](https://cli.github.com/), authenticated, for PR and issue bodies.
 - A Git repository for file paths.
+- `realpath` (GNU coreutils, or macOS 13 and later) for a symlinked instruction file such as `CLAUDE.md`.
 
 ## Usage
 
@@ -53,7 +54,7 @@ This skill reads PR and issue bodies with the GitHub CLI and runs read-only Git 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git status *)", "Bash(git --no-pager diff *)", "Bash(git show *)", "Bash(git symbolic-ref *)", "Bash(git config --get *)", "Bash(git remote)", "Bash(git branch --show-current)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(grep -Iq *)", "Bash(mktemp -u *)", "Bash(rm -f */gh-body-*)", "Bash(realpath *)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git status *)", "Bash(git --no-pager diff *)", "Bash(git show *)", "Bash(git cat-file -e *)", "Bash(git symbolic-ref *)", "Bash(git config --get *)", "Bash(git remote)", "Bash(git branch --show-current)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(grep -Iq *)", "Bash(mktemp -u *)", "Bash(rm -f */gh-body-*)", "Bash(realpath *)"]
   }
 }
 ```

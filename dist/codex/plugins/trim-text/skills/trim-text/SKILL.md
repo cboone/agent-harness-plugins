@@ -29,11 +29,11 @@ With no argument and no pasted text, the scope is the open PR for the current br
 
 A profile adapts the standard to one kind of text. Read it before classifying anything.
 
-| Profile               | Applies to                                                                                                                                                | Reference                                   |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| `pr-and-issue-bodies` | PR descriptions and issue bodies, published or drafted                                                                                                    | `./references/pr-and-issue-bodies.md`       |
-| `agent-instructions`  | `AGENTS.md`, `CLAUDE.md`, `SKILL.md`, a skill's or command's reference files, agent definitions, Copilot instruction files, and global agent instructions | `./references/agent-instructions.md`        |
-| `none`                | Anything else, such as pasted prose or a commit message body                                                                                              | none: the standard below applies on its own |
+| Profile               | Applies to                                                                                                                                                               | Reference                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| `pr-and-issue-bodies` | PR descriptions and issue bodies, published or drafted                                                                                                                   | `./references/pr-and-issue-bodies.md`       |
+| `agent-instructions`  | `AGENTS.md`, `CLAUDE.md`, `SKILL.md`, command files, a skill's or command's reference files, agent definitions, Copilot instruction files, and global agent instructions | `./references/agent-instructions.md`        |
+| `none`                | Anything else, such as pasted prose or a commit message body                                                                                                             | none: the standard below applies on its own |
 
 Code comments are out of scope. Use the `trim-comments` skill for them.
 
@@ -184,7 +184,7 @@ If the edit fails, the read-back command fails, or the stored body differs, repo
 ### 5. Verify
 
 - Check every change against "Preserve meaning" once more, comparing the final text with the original rather than with an intermediate draft.
-- For files, run the project's Markdown or prose linters and formatters in check mode on the edited files, plus any validator the profile names. Never run a formatter that has no check mode. If a check fails because of an edit made here, fix the edit by hand. A failure belongs to this run when it points at a changed unit. For any other failure, run that check on the original (`git show HEAD:path`); if it fails there too, report it as already present.
+- For files, run the project's Markdown or prose linters and formatters in check mode on the edited files, plus any validator the profile names. Never run a formatter that has no check mode. If a check fails because of an edit made here, fix the edit by hand. A failure belongs to this run when it points at a changed unit. For any other failure, run that check on the original (`git show HEAD:path`); if it fails there too, report it as already present. A file with no `HEAD` version (`git cat-file -e HEAD:path` fails) has no original to compare, so report such a failure as unattributed.
 - Never report a check that did not run as passed.
 
 ### 6. Commit
@@ -227,13 +227,15 @@ Honor it as part of the invocation. Do not ask the user anything, do not write t
 Status: <success|no-op|failure|unavailable>
 Reason: <none, or why the status is not success>
 Profile: <profile name>
-Trimmed text:
-<the full rewritten text, or the original unchanged for anything but success>
 Changes: <one line per rewrite or deletion, or none>
 Flagged: <none, or one line per flagged unit with any suggested correction>
 Cut material: <none, or one line per deleted item worth recording, with its destination>
 Caller resume target: <target from continuation block>
+Trimmed text:
+<the full rewritten text, or the original unchanged for anything but success>
 ```
+
+`Trimmed text` comes last: everything after its line is the text, so a line inside it that looks like a field name is still text.
 
 `no-op` means nothing needed trimming. `failure` means the text could not be processed, and `unavailable` means a capability the trim needs is missing; for both, the parent uses its original draft. The parent relays `Flagged` and `Cut material` to the user.
 
