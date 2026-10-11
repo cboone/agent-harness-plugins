@@ -12,6 +12,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS \
 	-u STUB_CAPTURE_TERM -u STUB_CAPTURE_TMUX \
 	-u STUB_GH_API_FAIL -u STUB_GH_AUTH_FAIL -u STUB_GH_DIR -u STUB_GH_LOG -u STUB_COPILOT_GH_DIR \
+	-u STUB_GH_PR_VIEW -u STUB_GH_PR_VIEW_STATE -u MERGE_FLOW_INTERVAL -u MERGE_FLOW_MAX_FAILURES -u MERGE_FLOW_LIFETIME \
 	-u STUB_GIT_BRANCHES -u STUB_GIT_FAIL -u STUB_GIT_INVALID_REF -u STUB_GIT_WORKTREE_PORCELAIN \
 	-u STUB_GIT_WORKTREE_PORCELAIN_FILE -u STUB_WORKMUX_EXIT -u STUB_WORKMUX_SKIP_WORKTREE \
 	-u STUB_WORKMUX_SLEEP \
@@ -67,6 +68,8 @@ SCRUT_ENV := \
 	CURL_STUB_BIN="$(CURDIR)/tests/fixtures/curl-stub" \
 	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads" \
 	MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/monitor-pr/scripts/resolve-copilot-threads" \
+	MERGE_FLOW_BIN="$(CURDIR)/plugins/monitor-pr/scripts/merge-flow" \
+	MERGE_FLOW_DATA_DIR="$(CURDIR)/tests/data/merge-flow" \
 	REVIEW_SCOPE_BIN="$(CURDIR)/plugins/review-until-clean/scripts/review-scope" \
 	RUN_SCRUT_DOCUMENTS_BIN="$(CURDIR)/bin/run-scrut-documents" \
 	SCRUT_STUB_BIN="$(CURDIR)/tests/fixtures/scrut-stub" \

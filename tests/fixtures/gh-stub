@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# gh-stub -- Test stub for the gh calls dependabot-prs fetch and bugs-gather
-# make.
+# gh-stub -- Test stub for the gh calls dependabot-prs fetch, bugs-gather,
+# record-traffic and merge-flow make.
 #
 # Responses are JSON files under STUB_GH_DIR:
 #   repo.json          gh repo view
@@ -8,7 +8,9 @@
 #   open.json          gh pr list (every author)
 #   api/KEY.json       gh api ENDPOINT, where KEY is the endpoint with the
 #                      repos/OWNER/REPO/ prefix and the query string removed and
-#                      each / replaced by _ (compare_main...SHA, pulls_12_files)
+#                      each / replaced by _ (compare_main...SHA, pulls_12_files);
+#                      the repository endpoint itself keeps its prefix
+#                      (repos_OWNER_REPO)
 #   graphql/search-KIND.json
 #                      gh api graphql with search.graphql, where KIND is
 #                      open-labels, closed-labels, open-type, or closed-type,
@@ -23,6 +25,11 @@
 # set, receives every invocation, one per line. A graphql call is logged as
 # its query file and variables, without the path of the query file.
 # STUB_GH_GRAPHQL_FAIL names one search KIND, or repository-NAME, that fails.
+#
+# gh pr view, whatever its arguments, answers with the next line of the file
+# STUB_GH_PR_VIEW names under STUB_GH_DIR, repeating the last line once the
+# file runs out. A FAIL line fails the call like a network error.
+# STUB_GH_PR_VIEW_STATE names the file that counts the calls.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -88,6 +95,25 @@ function do_pr_list() {
     fi
   done
   respond "open.json"
+}
+
+function do_pr_view() {
+  local responses="${STUB_GH_DIR:?STUB_GH_DIR must be set}/${STUB_GH_PR_VIEW:?STUB_GH_PR_VIEW must be set}"
+  local state="${STUB_GH_PR_VIEW_STATE:?STUB_GH_PR_VIEW_STATE must be set}"
+  local count=0 total line
+  [[ -f "${responses}" ]] || die "missing stub response ${responses}"
+  [[ ! -s "${state}" ]] || count="$(cat "${state}")"
+  count=$((count + 1))
+  printf '%s\n' "${count}" > "${state}"
+
+  total="$(wc -l < "${responses}" | tr -d ' ')"
+  ((count <= total)) || count="${total}"
+  line="$(sed -n "${count}p" "${responses}")"
+  if [[ "${line}" == "FAIL" ]]; then
+    echo "error connecting to api.github.com" >&2
+    exit 1
+  fi
+  printf '%s\n' "${line}"
 }
 
 # Answers gh api graphql. bugs-gather passes the query as -F query=@FILE and
@@ -180,6 +206,7 @@ function main() {
       ;;
     "repo view") respond "repo.json" ;;
     "pr list") do_pr_list "${@:3}" ;;
+    "pr view") do_pr_view ;;
     api\ *) do_api "${@:2}" ;;
     *) die "unexpected invocation: gh ${*}" ;;
   esac
