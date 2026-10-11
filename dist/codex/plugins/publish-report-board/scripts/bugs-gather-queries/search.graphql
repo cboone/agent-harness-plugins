@@ -59,7 +59,7 @@ query ($q: String!, $endCursor: String) {
             createdAt
           }
         }
-        closedByPullRequestsReferences(first: 10, includeClosedPrs: true) {
+        closedByPullRequestsReferences(first: 100, includeClosedPrs: true) {
           pageInfo {
             hasNextPage
           }
@@ -101,7 +101,7 @@ query ($q: String!, $endCursor: String) {
             }
           }
         }
-        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], last: 20) {
+        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], last: 100) {
           pageInfo {
             hasPreviousPage
           }

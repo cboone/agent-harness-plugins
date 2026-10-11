@@ -942,19 +942,25 @@ bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/scored.js
 ## Lists GitHub cut short are listed, and the gather goes on
 
 ```scrut
-$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 26) | .timelineItems.pageInfo) = {hasPreviousPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json" > "${capped}/graphql/search-open-type.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/timeline-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 26) | .assignees.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json" > "${capped}/graphql/search-open-type.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/assignees-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
 bugs-gather: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:
-  - #26: cross-references
+  - #26: assignees
 exit 0
 ```
 
-## Labels cut short stop the gather
+## Progress lists cut short stop the gather
 
-A progress label past the cut would read as no progress.
+A progress label, linked pull request or cross-reference past the cut would read as no progress.
 
 ```scrut
 $ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 12) | .labels.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/labels-cut.json" 2>&1
-bugs-gather: GitHub cut the labels of #12 short, so a progress label could be missing; the board cannot be trusted
+bugs-gather: GitHub cut short the lists of #12 (labels), so progress could be missing; the board cannot be trusted
+[1]
+```
+
+```scrut
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 26) | .timelineItems.pageInfo) = {hasPreviousPage: true} | (.data.search.nodes[] | select(.number == 26) | .closedByPullRequestsReferences.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json" > "${capped}/graphql/search-open-type.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/timeline-cut.json" 2>&1
+bugs-gather: GitHub cut short the lists of #26 (linked pull requests and cross-references), so progress could be missing; the board cannot be trusted
 [1]
 ```
 

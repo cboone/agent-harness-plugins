@@ -561,12 +561,20 @@ function cmd_gather() {
   # the board without a word.
   jq -e 'all(.[]; .data.repository.issues.nodes | type == "array")' "${TEMP_DIR}/issues.json" > /dev/null 2>&1 \
     || die "${E_INVALID}" "the open issues came back without a list, so the board cannot be trusted"
-  # A progress label past the cut would read as no progress.
-  cut_short="$(jq -r '[.[] | .data.repository.issues.nodes[] | select(.labels.pageInfo.hasNextPage == true) | "#\(.number)"] | join(", ")' "${TEMP_DIR}/issues.json")"
+  # A progress label, linked pull request or cross-reference past the cut
+  # would read as no progress.
+  cut_short="$(jq -r '[.[] | .data.repository.issues.nodes[]
+    | [(select(.labels.pageInfo.hasNextPage == true) | "labels"),
+       (select(.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests"),
+       (select(.timelineItems.pageInfo.hasPreviousPage == true) | "cross-references")] as $cut
+    | select($cut | length > 0) | "#\(.number) (\($cut | join(" and ")))"] | join(", ")' "${TEMP_DIR}/issues.json")"
   [[ -z "${cut_short}" ]] \
-    || die "${E_INVALID}" "GitHub cut the labels of ${cut_short} short, so a progress label could be missing; the board cannot be trusted"
+    || die "${E_INVALID}" "GitHub cut short the lists of ${cut_short}, so progress could be missing; the board cannot be trusted"
   jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls.json" > /dev/null 2>&1 \
     || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
+  cut_short="$(jq -r '[.[] | .data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.pageInfo.hasNextPage == true) | "#\(.number)"] | join(", ")' "${TEMP_DIR}/pulls.json")"
+  [[ -z "${cut_short}" ]] \
+    || die "${E_INVALID}" "pull requests ${cut_short} close more than 100 issues, so an issue past the cut would read as unstarted; the board cannot be trusted"
   jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/merged.json" > /dev/null 2>&1 \
     || die "${E_INVALID}" "the search for your merged pull requests came back without a result count"
   # GitHub search stops at 1000 results and then reports no further page.
@@ -606,11 +614,7 @@ function cmd_gather() {
 
   cut_short="$(jq -r '.warnings[] | "  - \(.)"' "${output_file}")"
   if [[ -n "${cut_short}" ]]; then
-    printf '%s: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
-  fi
-  cut_short="$(jq -r '.[] | .data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.pageInfo.hasNextPage == true) | "  - pull request #\(.number)"' "${TEMP_DIR}/pulls.json")"
-  if [[ -n "${cut_short}" ]]; then
-    printf '%s: these pull requests close more than 20 issues, so an issue past the cut misses them:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
+    printf '%s: GitHub cut these lists short, so an item past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
   fi
   cut_short="$(jq -r -n --slurpfile pulls "${TEMP_DIR}/pulls.json" --slurpfile merged "${TEMP_DIR}/merged.json" '
     ($pulls[0][] | .data.repository.pullRequests.nodes[]), ($merged[0][] | .data.search.nodes[])

@@ -39,7 +39,7 @@ query ($owner: String!, $name: String!, $endCursor: String) {
             }
           }
         }
-        closingIssuesReferences(first: 20) {
+        closingIssuesReferences(first: 100) {
           pageInfo {
             hasNextPage
           }

@@ -330,19 +330,25 @@ $ config_with && git switch -q -c fix/10-ready main && commit_at 2026-10-14T12:0
 ## Lists GitHub cut short are named, and the gather goes on
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BACKLOG_GATHER_DATA_DIR}/github/." "${dir}/" && jq '(.. | objects | select(.number? == 11 and has("timelineItems")) | .timelineItems.pageInfo) = {hasPreviousPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json" > "${dir}/graphql/issues.json" && jq '(.. | objects | select(.number? == 40 and has("closingIssuesReferences")) | .closingIssuesReferences.pageInfo) = {hasNextPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/pulls.json" > "${dir}/graphql/pulls.json" && backlog STUB_GH_DIR="${dir}" gather acme/widgets "${work}/cut.json" 2>&1 > /dev/null; echo "exit ${?}"
-backlog-gather: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:
-  - #11: cross-references
-backlog-gather: these pull requests close more than 20 issues, so an issue past the cut misses them:
-  - pull request #40
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BACKLOG_GATHER_DATA_DIR}/github/." "${dir}/" && jq '(.. | objects | select(.number? == 11 and has("assignees")) | .assignees.pageInfo) = {hasNextPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json" > "${dir}/graphql/issues.json" && backlog STUB_GH_DIR="${dir}" gather acme/widgets "${work}/cut.json" 2>&1 > /dev/null; echo "exit ${?}"
+backlog-gather: GitHub cut these lists short, so an item past the cut is missing:
+  - #11: assignees
 exit 0
 ```
 
-## Labels cut short stop the gather
+## Progress lists cut short stop the gather
+
+A progress label, linked pull request or cross-reference past the cut would read as no progress.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BACKLOG_GATHER_DATA_DIR}/github/." "${dir}/" && jq '(.. | objects | select(.number? == 1 and has("labels")) | .labels.pageInfo) = {hasNextPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json" > "${dir}/graphql/issues.json" && backlog STUB_GH_DIR="${dir}" gather acme/widgets "${work}/x.json" 2>&1
-backlog-gather: GitHub cut the labels of #1 short, so a progress label could be missing; the board cannot be trusted
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BACKLOG_GATHER_DATA_DIR}/github/." "${dir}/" && jq '(.. | objects | select(.number? == 1 and has("labels")) | .labels.pageInfo) = {hasNextPage: true} | (.. | objects | select(.number? == 11 and has("timelineItems")) | .timelineItems.pageInfo) = {hasPreviousPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json" > "${dir}/graphql/issues.json" && backlog STUB_GH_DIR="${dir}" gather acme/widgets "${work}/x.json" 2>&1
+backlog-gather: GitHub cut short the lists of #1 (labels), #11 (cross-references), so progress could be missing; the board cannot be trusted
+[1]
+```
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BACKLOG_GATHER_DATA_DIR}/github/." "${dir}/" && jq '(.. | objects | select(.number? == 40 and has("closingIssuesReferences")) | .closingIssuesReferences.pageInfo) = {hasNextPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/pulls.json" > "${dir}/graphql/pulls.json" && backlog STUB_GH_DIR="${dir}" gather acme/widgets "${work}/x.json" 2>&1
+backlog-gather: pull requests #40 close more than 100 issues, so an issue past the cut would read as unstarted; the board cannot be trusted
 [1]
 ```
 

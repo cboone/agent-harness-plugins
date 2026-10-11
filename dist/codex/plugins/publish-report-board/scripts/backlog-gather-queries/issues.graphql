@@ -48,7 +48,7 @@ query ($owner: String!, $name: String!, $endCursor: String) {
             createdAt
           }
         }
-        closedByPullRequestsReferences(first: 20, includeClosedPrs: true) {
+        closedByPullRequestsReferences(first: 100, includeClosedPrs: true) {
           pageInfo {
             hasNextPage
           }
@@ -60,7 +60,7 @@ query ($owner: String!, $name: String!, $endCursor: String) {
             }
           }
         }
-        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], last: 50) {
+        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], last: 100) {
           pageInfo {
             hasPreviousPage
           }
