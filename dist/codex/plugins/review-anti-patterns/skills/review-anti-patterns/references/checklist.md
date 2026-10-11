@@ -90,7 +90,7 @@ Data from outside the trust boundary reaches a shell, a log, an email, an argume
 - Is it passed as a separate argument or quoted for its destination, or spliced into a string that is then parsed? Can a leading `-` turn it into an option?
 - In a GitHub Actions workflow, does `${{ … }}` expand untrusted text directly into a `run:` script?
 - In a log or email, can newlines or control characters forge a second line or a header?
-- Does a command run a helper the repository or its configuration chooses, such as a git diff driver, a textconv filter or a pager? Pass the flags that turn them off, such as `git diff --no-ext-diff --no-textconv`.
+- Does a command run a helper the repository or its configuration chooses, such as a pager, a filesystem monitor, a git diff driver or a textconv filter? Turn off the whole family at every call site, such as `git --no-pager -c core.fsmonitor=false diff --no-ext-diff --no-textconv`, rather than the one helper a finding named.
 - Is a remote URL or other configured value passed on as is? It can carry credentials, and a tool may not accept every form of it.
 
 **Settled by:** the value traced from its source to the sink, with the escaping or argument boundary that applies, or its absence.
