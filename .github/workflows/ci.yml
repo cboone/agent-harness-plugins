@@ -54,10 +54,9 @@ jobs:
         run: |
           bin/build-review-checklists
           bin/build-codex-marketplace
-          bin/build-opencode-mirror
           # `git diff` compares the worktree to the index and ignores untracked
-          # files, so a newly added plugin skill produced a brand-new untracked
-          # symlink under dist/opencode/skills/ and still reported clean.
+          # files, so a newly added plugin would produce a brand-new untracked
+          # root under dist/codex/plugins/ and still report clean.
           # `git status --porcelain` catches additions as well as edits.
           drift="$(git status --porcelain dist/ .agents/ plugins/set-up-review-config/skills/set-up-review-config/references/checklists/)"
           if [[ -n "${drift}" ]]; then

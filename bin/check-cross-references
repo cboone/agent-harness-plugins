@@ -26,7 +26,7 @@ set -euo pipefail
 # Path prefixes that can only mean a file in this repository. A project a skill
 # is being run against has no plugins/ or dist/codex/ of its own, so these
 # resolve everywhere without asking the author what they meant.
-UNAMBIGUOUS_PREFIXES="plugins|dist/codex|dist/opencode"
+UNAMBIGUOUS_PREFIXES="plugins|dist/codex"
 
 # Prefixes a skill body shares with the project it is scaffolding. Most bin/ and
 # docs/ mentions here name a file the skill *creates* in the target project
@@ -57,7 +57,7 @@ DECLARED_PREFIXES="bin|docs"
 # near-miss wording below, which a reference file can hold on its own. Its
 # backticks are literal text to match, not a command substitution.
 # shellcheck disable=SC2016
-CANDIDATE_PREFILTER='\$\{CLAUDE_PLUGIN_ROOT\}/|\./references/|(plugins|dist/codex|dist/opencode|bin|docs)/|`/|skill|Skill dependencies|[Ii]nvoke `|validate-plugins:'
+CANDIDATE_PREFILTER='\$\{CLAUDE_PLUGIN_ROOT\}/|\./references/|(plugins|dist/codex|bin|docs)/|`/|skill|Skill dependencies|[Ii]nvoke `|validate-plugins:'
 
 # The one phrase that marks composition. Suggestions to the user, redirects to
 # an adjacent skill and "Pairs with" text are worded differently on purpose, so
