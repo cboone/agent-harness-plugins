@@ -94,6 +94,15 @@ function die() {
   exit "${2:-1}"
 }
 
+# Stops on a failed search, naming any --save file so its output is not reused
+# as if the search had succeeded.
+function search_failed() {
+  local save_file="${1}"
+
+  [[ -z "${save_file}" ]] || die "could not search for pull requests; ${save_file} holds gh's output from the failed search"
+  die "could not search for pull requests"
+}
+
 function warn() {
   echo "${SCRIPT_NAME}: warning: ${1}" >&2
 }
@@ -132,8 +141,8 @@ function fetch_pages() {
 }
 
 # Reads the response with --slurp and prints the first reason it cannot be
-# summarized, or nothing. Every page, pull request and review must have exactly
-# the fields and types the report reads; anything else is one shape error.
+# summarized, or nothing. Every page, pull request and review must have the
+# fields and types the report reads; anything else is one shape error.
 # shellcheck disable=SC2016 # $ names are jq variables.
 readonly PAGES_PROBLEM_FILTER='
   def count: type == "number" and . >= 0 and . == floor;
@@ -411,15 +420,18 @@ function main() {
       printf '%s\n' "${pages}" > "${save_file}" || die "could not write ${save_file}"
     fi
     if [[ "${fetch_status}" != "0" && -z "${pages//[[:space:]]/}" ]]; then
-      die "could not search for pull requests"
+      search_failed "${save_file}"
     fi
   fi
 
   local problem
   problem="$(jq -r --slurp --argjson limit "${SEARCH_LIMIT}" "${PAGES_PROBLEM_FILTER}" <<< "${pages}")" \
-    || die "the search response is not valid JSON"
+    || {
+      [[ "${fetch_status}" == "0" ]] || search_failed "${save_file}"
+      die "the search response is not valid JSON"
+    }
   [[ -z "${problem}" ]] || die "${problem}"
-  [[ "${fetch_status}" == "0" ]] || die "could not search for pull requests"
+  [[ "${fetch_status}" == "0" ]] || search_failed "${save_file}"
 
   local owners_json clients_json
   owners_json="$(jq -n -c '$ARGS.positional' --args "${owners[@]}")"

@@ -380,13 +380,13 @@ copilot-rounds-report: --author must be a single login or @me, got 'cboone is:me
 [1]
 ```
 
-A search that fails with no output still replaces an earlier saved file, so no stale file looks current.
+A search that fails with no output still replaces an earlier saved file, so no stale file looks current, and the message names the file.
 
 ```scrut
 $ printf 'stale\n' > "${work}/stale.json" \
 >   && STUB_GH_GRAPHQL_FAIL=copilot-rounds report --save "${work}/stale.json" 2>&1 | tail -n 1; \
 >   wc -c < "${work}/stale.json" | tr -d ' '
-copilot-rounds-report: could not search for pull requests
+copilot-rounds-report: could not search for pull requests; /*/stale.json holds gh's output from the failed search (glob)
 1
 ```
 
