@@ -36,7 +36,7 @@ The backlog board opens with the sync time and six counts, then the issues to st
 
 The bugs board is action first and report second. Above the fold, a row for each critical bug, hurting people on production or open to anyone, and each high priority one, getting worse or still to confirm, leads with the next action and says who is affected; the bugs ready to land or fix follow. Below it sit the bugs that need investigating, a table of lower priority bugs, what was fixed, what is parked, and your triage note. Most of what makes a bug urgent, such as whether it is on production, who it reaches, and how it is known, lives in issue bodies rather than labels, so each sync reads the bugs that changed and caches what it learned; a bundled `bugs-gather` script gathers, scores, and caches deterministically. A committed triage note records your calls, such as escalating a bug or confirming it on production, and every sync applies them before its own rules.
 
-Other board types, such as CI health or release readiness, do not have templates yet. Asked for one, the skill says so and answers in the terminal.
+Other board types, such as CI health or release readiness, do not have templates yet. Asked for one, the skill says so and answers in the terminal. Asked for a page anyway, such as an audit or a migration plan, it lays out a hand-laid report from a starter page in the same design: a one-time snapshot that carries no board data and is revised by hand rather than re-synced.
 
 ## Harness Support
 
@@ -61,6 +61,7 @@ The skill drives the bundled script; you can also run it directly.
 | `report-board render [--standalone] DATA PAGE` | Writes the data into its board type's template            |
 | `report-board extract PAGE`                    | Prints the data a rendered page was built from            |
 | `report-board compare PREVIOUS CURRENT`        | Reports what changed between two syncs                    |
+| `report-board starter [--standalone] PAGE`     | Writes a starter page for a report laid out by hand       |
 
 The bugs board adds `bugs-gather`, beside it:
 

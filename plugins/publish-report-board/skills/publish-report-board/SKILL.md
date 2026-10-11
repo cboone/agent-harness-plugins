@@ -20,13 +20,13 @@ A report board is an analysis with three properties that terminal output serves 
 | `backlog-triage` | What to start next, what can run in parallel, and what is blocked                                | `./references/board-types/backlog-triage.md` |
 | `bugs`           | Which of a repository's bugs are critical, which are high priority, and how the rest are triaged | `./references/board-types/bugs.md`           |
 
-Only these two ship a template. When the user wants a board for another kind of analysis, such as CI health or release readiness, say that no template exists for it yet and deliver the analysis in the terminal. Do not improvise a page outside the templates: boards read as one system because they share one design, described in `./references/design-conventions.md`.
+Only these two ship a template. When the user wants a board for another kind of analysis, such as CI health or release readiness, say that no template exists for it yet and deliver the analysis in the terminal. When the user asks for a page all the same, lay it out by hand from the starter page, as [Hand-Laid Reports](#hand-laid-reports) describes. Never improvise a page from scratch or from a copy of a published one: boards read as one system because they share one design, described in `./references/design-conventions.md`.
 
 ## Workflow
 
 ### 1. Decide Whether a Board Is Warranted
 
-Read `./references/choosing-a-board.md`. A one-time answer belongs in the terminal; say so in one sentence and answer there.
+Read `./references/choosing-a-board.md`. A one-time answer belongs in the terminal; say so in one sentence and answer there. When the user asks for a page all the same, lay it out by hand instead, as [Hand-Laid Reports](#hand-laid-reports) describes.
 
 ### 2. Locate the Script
 
@@ -141,6 +141,21 @@ Tell the user:
 
 Then stop. Publishing a board does not start work on anything it recommends.
 
+## Hand-Laid Reports
+
+Some reports fit no board type but are still wanted as a page: a cross-repository audit, a migration plan, an incident brief. Lay such a report out by hand, starting from the page the script writes:
+
+```bash
+bash REPORT_BOARD starter PAGE_HTML
+```
+
+- **The starter is the system's anatomy with sample text**: masthead, count strip, summary, ranked sections, an aside, the Report divider, report rows, a reference table, and the footer, with the shared stylesheet already inlined. Replace the text, drop the parts the report does not need, and repeat the ones it does, following `./references/design-conventions.md`. Draw on the stylesheet's classes; a rule the page needs that the sheet lacks goes in a second style element after the shared one.
+- **A hand-laid report is a snapshot, not a board.** It carries no board data, so `validate`, `extract`, and `compare` do not apply and nothing re-syncs it. Its masthead and footer say when it was laid out, against which branch and commit where one applies, and that it was laid out by hand.
+- **Name it `SLUG.html`**, where `SLUG` is a short kebab-case name for the subject, such as `monitoring-gaps` or `auth-migration`. A report can span several repositories, so the name does not depend on one. Give the page a `<title>` naming the subject, and keep it unchanged across revisions, because it is how a later conversation finds the report.
+- **With the Artifact tool**, write the page into a `reports` directory inside the session scratchpad directory, creating it if needed, or inside a directory from `mktemp -d "${TMPDIR:-/tmp}/report-board-XXXXXX"` when there is none. Publish it as `./references/artifact-mechanics.md` describes for a board, except that the first publish passes the icon `report`, no favicon, and a one-sentence description naming the subject; later publishes omit the icon, as a board's do. To revise it in the same conversation, edit the file and publish the same path again. In a later conversation, find the URL by the exact title, which has to match exactly one entry: a hand-laid page carries no board data, so when none or several match, ask the user for the URL rather than extracting or guessing. Then read the page, save it, edit that copy, and publish it with the URL. Never pass `force`.
+- **Without the Artifact tool**, write it with `--standalone` straight to `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/reports/SLUG.html`, creating the directory if needed. That file is the published page: no second render or freshness check follows, and a revision is an edit to it. Give the user its absolute path.
+- **`starter` only ever creates a page.** It refuses a path that already exists, so it never writes over a page laid out by hand; a revision always edits the page itself.
+
 ## Error Handling
 
 - If `gh` is not authenticated, tell the user to run `gh auth login` and stop; a board built from partial data is worse than none.
@@ -149,4 +164,4 @@ Then stop. Publishing a board does not start work on anything it recommends.
 - If `jq` is missing, `report-board` exits with status 2 and says so. Tell the user to install it.
 - If validation fails after an honest attempt to place every item, show the user the remaining problems rather than publishing a board that breaks its own rules.
 - If a publish is refused because the page changed since this conversation read it, read it again, rebuild from what comes back, and publish again.
-- If no board type fits the request, say so and answer in the terminal.
+- If no board type fits the request, say so and answer in the terminal, unless the user asks for a page; then follow [Hand-Laid Reports](#hand-laid-reports).

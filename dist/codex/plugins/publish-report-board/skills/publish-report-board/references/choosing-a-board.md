@@ -8,7 +8,7 @@ A board costs more than an answer. It has a URL to keep, a sync to repeat, and a
 | Scanned, not read            | Does the reader want "what do I do next" at a glance? | The reader returns to pick the next item                   | The reader wants an explanation or an argument         |
 | Kept open                    | Will someone consult it more than once?               | It is a working surface for days or weeks                  | It answers one question and is done                    |
 
-With all three, a board is warranted. Missing any one, answer in the terminal and say why in a sentence, for example: "This is a one-time answer, so here it is rather than a board."
+With all three, a board is warranted. Missing any one, answer in the terminal and say why in a sentence, for example: "This is a one-time answer, so here it is rather than a board." When the user asks for a page all the same, a one-time report is laid out by hand as a snapshot rather than published as a board; the skill's Hand-Laid Reports section covers it.
 
 ## Which Board
 
