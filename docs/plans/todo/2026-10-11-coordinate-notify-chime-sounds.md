@@ -18,12 +18,12 @@ This plan is the integration record for work that spans this repository and a pr
 
 ## Work items
 
-| Item                                | Where                  | Status |
-| ----------------------------------- | ---------------------- | ------ |
-| Sound-set selection in notify, #595 | this repository        | filed  |
-| Catalog entry for the chime set     | private catalog        | filed  |
-| Chime generation and install        | private generation lab | filed  |
-| Set `NOTIFY_SOUND_SET`              | dotfiles               | open   |
+| Item                                | Where                  | Status                 |
+| ----------------------------------- | ---------------------- | ---------------------- |
+| Sound-set selection in notify, #595 | this repository        | waiting for #594       |
+| Catalog entry for the chime set     | private catalog        | planning in a worktree |
+| Chime generation and install        | private generation lab | planning in a worktree |
+| Set `NOTIFY_SOUND_SET`              | dotfiles               | open                   |
 
 ## Sequencing
 
@@ -44,3 +44,4 @@ This plan is the integration record for work that spans this repository and a pr
 ## Log
 
 - 2026-10-11: Filed #595 and the two private generation issues. Custom sound playback verified.
+- 2026-10-11: Started planning sessions for the catalog entry and the generation work. #595 waits for #594 to merge; the #594 session reports when its PR opens and merges.
