@@ -31,7 +31,7 @@ Run these commands to build a complete picture:
 
 ```bash
 # Open issues (with details for analysis)
-gh issue list --state open --json number,title,labels,assignees,createdAt,updatedAt,comments,milestone,body,author --limit 100
+gh issue list --state open --json number,title,labels,assignees,createdAt,updatedAt,comments,milestone,body,author --limit 1000
 
 # Recently closed issues (understand momentum)
 gh issue list --state closed --json number,title,labels,closedAt --limit 10 --sort updated
@@ -60,7 +60,7 @@ gh repo view --json description,defaultBranchRef
 
 If the user specified `--label` or `--milestone`, add the corresponding `--label` or `--milestone` flag to `gh issue list`.
 
-A list that returns exactly its `--limit` may be cut short. Run it again with a higher limit; if it still fills the limit, say in the output that pull requests past the cut were not read, since a missing open pull request can hide work already under way and a missing merged one can hide a `close-out` issue or recent affinity.
+A list that returns exactly its `--limit` may be cut short, whether it lists open issues or pull requests. Run it again with a higher limit; if it still fills the limit, say in the output which list was cut and that what lies past the cut was not read. A missing open issue drops out of the recommendations and skews uniformity, a missing open pull request can hide work already under way, and a missing merged one can hide a `close-out` issue or recent affinity.
 
 If the user specified `--include-prs`, the open pull request list above already holds what that option reviews: drafts, review decisions, conflicts and check state.
 
