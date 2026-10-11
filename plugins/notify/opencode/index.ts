@@ -126,7 +126,8 @@ function fireAlerterDetached(args: AlerterArgs): void {
     const proc = Bun.spawn(["/bin/sh", "-c", STOP_SCRIPT, "notify-alerter", String(WAIT_LIMIT), "--title", args.title, "--subtitle", args.subtitle, "--message", args.message, "--sound", args.sound, "--group", args.group, "--app-icon", args.icon, "--timeout", String(FIRE_TIMEOUT)], { stdin: "ignore", stdout: "ignore", stderr: "ignore", detached: true });
     proc.unref();
   } catch {
-    // Notification failures are silent: alerter not installed, sandbox, etc.
+    // Notification failures are silent. A missing alerter fails inside the
+    // detached sh; this catches spawn failures such as a sandbox.
   }
 }
 

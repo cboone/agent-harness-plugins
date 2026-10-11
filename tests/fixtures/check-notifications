@@ -398,8 +398,8 @@ function main() {
     delivery)
       # The default grace period is 2 seconds; allow 6 under parallel load.
       poll 300 not_running "${first}" || exit 1
-      # Whole-second SECONDS still shows at least 1 after a 2-second wait.
-      [[ $((SECONDS - started)) -ge 1 ]] || exit 1
+      # Two 1-second sleeps precede the stop, so whole-second SECONDS shows at least 2.
+      [[ $((SECONDS - started)) -ge 2 ]] || exit 1
       # SIGTERM would make the real alerter remove its banner.
       [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
       [[ "$(jq -r '.[index("--timeout") + 1]' "${NOTIFY_TEST_LOG}")" == 86400 ]] || exit 1
