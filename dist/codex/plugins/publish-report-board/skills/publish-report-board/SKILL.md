@@ -26,7 +26,7 @@ Only these two ship a template. When the user wants a board for another kind of 
 
 ### 1. Decide Whether a Board Is Warranted
 
-Read `./references/choosing-a-board.md`. A one-time answer belongs in the terminal; say so in one sentence and answer there.
+Read `./references/choosing-a-board.md`. A one-time answer belongs in the terminal; say so in one sentence and answer there. When the user asks for a page all the same, lay it out by hand instead, as [Hand-Laid Reports](#hand-laid-reports) describes.
 
 ### 2. Locate the Script
 
