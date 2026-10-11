@@ -577,3 +577,17 @@ codex.png
 $ "${CHECK_NOTIFICATIONS_BIN}" click
 Click targets captured session, window and pane on originating server
 ```
+
+## New alert ends the session's waiting alerter
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" replace
+A new alert ends the session's waiting alerter
+```
+
+## Other sessions keep their waiting alerters
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" other-session
+Other sessions keep their waiting alerters
+```

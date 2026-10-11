@@ -20,8 +20,9 @@ readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR FOCUS_SCRIPT
 # Body length budget: a banner shows about two lines, an expanded alert about four.
 readonly BODY_LIMIT=140
 
-# Detached fire-and-forget timeout (24h).
-readonly FIRE_TIMEOUT=86400
+# Detached fire-and-forget timeout (30 minutes). Each waiting alerter polls
+# usernoted, so a short timeout bounds that load when a session goes quiet.
+readonly FIRE_TIMEOUT=1800
 
 # Reduces a reply to plain prose for a banner body; ../opencode/index.ts
 # mirrors it in summarizeReply. Lengths count Unicode code points.
@@ -452,11 +453,24 @@ function plan_heading() {
 # alerter dispatch
 # -----------------------------------------------------------------------------
 
+# Ends the session's previous alerter if it is still waiting, so each session
+# keeps at most one. Its banner stays in Notification Center; only
+# click-to-focus is lost. A PID is ended only while its command line still
+# names alerter and this session's key, so a stale or reused PID is left alone.
+function end_waiting_alerter() {
+  local pid
+  pid="$(cat "${STATE_DIR}/alerter.pid" 2> /dev/null)" || return 0
+  [[ "${pid}" =~ ^[0-9]+$ ]] || return 0
+  [[ "$(ps -ww -p "${pid}" -o command= 2> /dev/null)" == *alerter*"${SESSION_KEY}"* ]] || return 0
+  kill "${pid}" 2> /dev/null || true
+}
+
 # Fires alerter in a detached subshell that routes a body click to focus-pane,
 # so the harness is not blocked on user interaction. Groups are suffixed with
 # the session key. Stop groups fire once per turn (an atomic mkdir marker) and
 # are skipped while the originating pane is visible. An empty sound omits
-# --sound, so the notification is silent.
+# --sound, so the notification is silent. alerter's PID is recorded so the
+# session's next notification can end it.
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
@@ -483,9 +497,12 @@ function fire_alerter_detached() {
     sound_args=(--sound "${sound}")
   fi
 
+  end_waiting_alerter
+
   (
-    local result
-    result="$(alerter \
+    local output result="" pid
+    output="$(mktemp "${STATE_DIR}/alerter.XXXXXX")" || exit 0
+    alerter \
       --title "${title}" \
       --subtitle "${subtitle}" \
       --message "${message}" \
@@ -493,7 +510,12 @@ function fire_alerter_detached() {
       --group "${group}" \
       --app-icon "${icon}" \
       --timeout "${FIRE_TIMEOUT}" \
-      2> /dev/null)" || true
+      > "${output}" 2> /dev/null &
+    pid=$!
+    printf '%s\n' "${pid}" > "${STATE_DIR}/alerter.pid"
+    wait "${pid}" || true
+    result="$(cat "${output}" 2> /dev/null)" || true
+    rm -f "${output}"
     case "${result}" in
       *@CONTENTCLICKED*)
         "${FOCUS_SCRIPT}" \

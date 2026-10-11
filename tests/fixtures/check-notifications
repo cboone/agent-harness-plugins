@@ -32,6 +32,29 @@ function write_transcript() {
   transcript_tool_use "${1}" tool-1 "${2}" "${3}"
 }
 
+# Polls for up to 3 seconds until a held alerter stub records a PID other
+# than $1, then prints it.
+function wait_for_alerter_pid() {
+  local count=0 pid=""
+  while [[ "${count}" -lt 150 ]]; do
+    pid="$(cat "${XDG_CACHE_HOME}"/agent-harness-notify/*/alerter.pid 2> /dev/null | grep -vx "${1:-none}" | head -n 1)" || pid=""
+    [[ -n "${pid}" ]] && break
+    sleep 0.02
+    count=$((count + 1))
+  done
+  printf '%s' "${pid}"
+}
+
+# Polls for up to 3 seconds until process $1 is no longer running.
+function wait_for_exit() {
+  local count=0
+  while kill -0 "${1}" 2> /dev/null && [[ "${count}" -lt 150 ]]; do
+    sleep 0.02
+    count=$((count + 1))
+  done
+  ! kill -0 "${1}" 2> /dev/null
+}
+
 # Polls for up to 3 seconds until the alerter stub has logged $1 calls.
 function wait_for_alerts() {
   local count=0
@@ -62,8 +85,10 @@ function main() {
   export XDG_CACHE_HOME="${test_dir}/cache"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
 
+  # NOTIFY_TEST_HOLD keeps the stub waiting, like an unanswered banner.
   printf '%s\n' '#!/usr/bin/env bash' \
     'jq -nc --args '\''$ARGS.positional'\'' -- "$@" >> "${NOTIFY_TEST_LOG}"' \
+    'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then trap '\''kill $! 2> /dev/null; exit 143'\'' TERM; sleep 30 & wait $!; fi' \
     'printf "%s" "${NOTIFY_TEST_CLICK}"' > "${test_dir}/bin/alerter"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
@@ -321,6 +346,7 @@ function main() {
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
     click) export NOTIFY_TEST_CLICK="@CONTENTCLICKED" ;;
+    replace | other-session) export NOTIFY_TEST_HOLD=1 ;;
     *) ;;
   esac
   if [[ "${action}" == cc-permission ]]; then
@@ -360,6 +386,26 @@ function main() {
       wait_for_alerts 2
       [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
       echo "Separate sessions retain separate banners"
+      ;;
+    replace | other-session)
+      local first second next_payload='{"session_id":"session-one"}'
+      first="$(wait_for_alerter_pid)"
+      [[ -n "${first}" ]]
+      [[ "${scenario}" == other-session ]] && next_payload='{"session_id":"session-two"}'
+      printf '%s' "${next_payload}" | "${NOTIFY_BIN}" codex-turn-start
+      printf '%s' "${next_payload}" | "${NOTIFY_BIN}" codex-stop
+      wait_for_alerts 2
+      second="$(wait_for_alerter_pid "${first}")"
+      [[ -n "${second}" ]]
+      if [[ "${scenario}" == replace ]]; then
+        wait_for_exit "${first}"
+        echo "A new alert ends the session's waiting alerter"
+      else
+        sleep 0.2
+        kill -0 "${first}"
+        echo "Other sessions keep their waiting alerters"
+      fi
+      kill "${first}" "${second}" 2> /dev/null || true
       ;;
     visible | subagent | permission-question)
       # Gives a detached alerter time to appear before asserting none did.
