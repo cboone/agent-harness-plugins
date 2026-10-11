@@ -578,11 +578,11 @@ $ "${CHECK_NOTIFICATIONS_BIN}" click
 Click targets captured session, window and pane on originating server
 ```
 
-## New alert ends the session's waiting alerter
+## New alert stops the session's waiting alerter
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" replace
-A new alert ends the session's waiting alerter
+A new alert stops the session's waiting alerter without SIGTERM
 ```
 
 ## Other sessions keep their waiting alerters
@@ -590,4 +590,25 @@ A new alert ends the session's waiting alerter
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" other-session
 Other sessions keep their waiting alerters
+```
+
+## Skipped duplicate keeps the waiting alerter
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" held-duplicate
+A skipped duplicate keeps the waiting alerter
+```
+
+## Recorded PID of another process is left running
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" stale-pid
+A PID that is not this session's alerter is left running
+```
+
+## Watchdog stops a waiting alerter
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" watchdog
+The watchdog stops a waiting alerter without SIGTERM
 ```

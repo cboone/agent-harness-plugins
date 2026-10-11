@@ -32,8 +32,8 @@ function write_transcript() {
   transcript_tool_use "${1}" tool-1 "${2}" "${3}"
 }
 
-# Polls for up to 3 seconds until a held alerter stub records a PID other
-# than $1, then prints it.
+# Polls for up to 3 seconds until any session's alerter.pid holds a PID
+# other than $1, then prints it.
 function wait_for_alerter_pid() {
   local count=0 pid=""
   while [[ "${count}" -lt 150 ]]; do
@@ -71,8 +71,9 @@ function main() {
   # printf %q escapes the path, so a TMPDIR holding quotes or shell
   # metacharacters cannot break out of the trap command.
   printf -v quoted_test_dir '%q' "${test_dir}"
+  # Held alerter stubs are stopped too, including when an assertion fails.
   # shellcheck disable=SC2064
-  trap "rm -rf ${quoted_test_dir}" EXIT
+  trap "pkill -KILL -f ${quoted_test_dir}/bin/alerter 2> /dev/null || true; rm -rf ${quoted_test_dir}" EXIT
   : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
   mkdir "${test_dir}/bin"
   export NOTIFY_TEST_LOG="${test_dir}/alerts"
@@ -85,10 +86,13 @@ function main() {
   export XDG_CACHE_HOME="${test_dir}/cache"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
 
-  # NOTIFY_TEST_HOLD keeps the stub waiting, like an unanswered banner.
+  # NOTIFY_TEST_HOLD keeps the stub waiting, like an unanswered banner, and
+  # logs a SIGTERM, which makes the real alerter remove its banner. The trap
+  # is set before the call is logged, which is what the scenarios wait for.
   printf '%s\n' '#!/usr/bin/env bash' \
+    'trap '\''echo TERM >> "${NOTIFY_TEST_LOG}.signals"; exit 143'\'' TERM' \
     'jq -nc --args '\''$ARGS.positional'\'' -- "$@" >> "${NOTIFY_TEST_LOG}"' \
-    'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then trap '\''kill $! 2> /dev/null; exit 143'\'' TERM; sleep 30 & wait $!; fi' \
+    'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then for _ in {1..300}; do sleep 0.1; done; fi' \
     'printf "%s" "${NOTIFY_TEST_CLICK}"' > "${test_dir}/bin/alerter"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
@@ -346,7 +350,8 @@ function main() {
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
     click) export NOTIFY_TEST_CLICK="@CONTENTCLICKED" ;;
-    replace | other-session) export NOTIFY_TEST_HOLD=1 ;;
+    replace | other-session | held-duplicate | stale-pid) export NOTIFY_TEST_HOLD=1 ;;
+    watchdog) export NOTIFY_TEST_HOLD=1 NOTIFY_WAIT_LIMIT=1 ;;
     *) ;;
   esac
   if [[ "${action}" == cc-permission ]]; then
@@ -399,13 +404,47 @@ function main() {
       [[ -n "${second}" ]]
       if [[ "${scenario}" == replace ]]; then
         wait_for_exit "${first}"
-        echo "A new alert ends the session's waiting alerter"
+        # SIGTERM would make the real alerter remove its banner.
+        [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]]
+        echo "A new alert stops the session's waiting alerter without SIGTERM"
       else
         sleep 0.2
         kill -0 "${first}"
         echo "Other sessions keep their waiting alerters"
       fi
-      kill "${first}" "${second}" 2> /dev/null || true
+      ;;
+    held-duplicate)
+      first="$(wait_for_alerter_pid)"
+      [[ -n "${first}" ]]
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
+      sleep 0.2
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 1 ]]
+      kill -0 "${first}"
+      echo "A skipped duplicate keeps the waiting alerter"
+      ;;
+    stale-pid)
+      first="$(wait_for_alerter_pid)"
+      [[ -n "${first}" ]]
+      local decoy pid_file
+      # Names alerter like another session's process, without this session's key.
+      bash -c 'sleep 30; :' alerter-decoy &
+      decoy=$!
+      pid_file="$(grep -lx "${first}" "${XDG_CACHE_HOME}"/agent-harness-notify/*/alerter.pid)"
+      printf '%s\n' "${decoy}" > "${pid_file}"
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-turn-start
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
+      wait_for_alerts 2
+      [[ -n "$(wait_for_alerter_pid "${decoy}")" ]]
+      kill -0 "${decoy}"
+      { kill "${decoy}" && wait "${decoy}"; } 2> /dev/null || true
+      echo "A PID that is not this session's alerter is left running"
+      ;;
+    watchdog)
+      first="$(wait_for_alerter_pid)"
+      [[ -n "${first}" ]]
+      wait_for_exit "${first}"
+      [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]]
+      echo "The watchdog stops a waiting alerter without SIGTERM"
       ;;
     visible | subagent | permission-question)
       # Gives a detached alerter time to appear before asserting none did.

@@ -3,9 +3,7 @@ import type { TextPart } from "@opencode-ai/sdk";
 
 // Body length budget: a banner shows about two lines, an expanded alert about four.
 const BODY_LIMIT = 140;
-// Detached alerter timeout (30 minutes). Each waiting alerter polls usernoted,
-// so a short timeout bounds that load.
-const FIRE_TIMEOUT = 1800;
+const FIRE_TIMEOUT = 86400;
 
 const PANE_TITLE_DEFAULTS = new Set(["", "zsh", "bash", "fish", "sh", "tmux", "ssh", "nvim", "vim", "-zsh", "-bash", "Claude Code", "Codex", "OpenCode"]);
 
