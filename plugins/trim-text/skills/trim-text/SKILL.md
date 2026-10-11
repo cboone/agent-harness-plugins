@@ -27,7 +27,7 @@ With no argument and no pasted text, the scope is the open PR for the current br
 
 ## Profiles
 
-A profile says what the reader of that kind of text needs first, how long it should be, what else to cut or keep, what to preserve, and how to verify the result. Read the profile before classifying anything.
+A profile adapts the standard to one kind of text. Read it before classifying anything.
 
 | Profile               | Applies to                                                                                                                                                | Reference                                   |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
@@ -108,7 +108,7 @@ Good: detects the base branch, then computes the diff
 
 ## Check for misreadings
 
-The worst text in practice is ambiguous, not long. Reread each sentence as someone without the context. If it can be parsed two ways, rewrite it, even if it is already short.
+Reread each sentence as someone without the context. If it can be parsed two ways, rewrite it, even if it is already short.
 
 ## Preserve meaning
 
