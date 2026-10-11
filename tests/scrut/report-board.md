@@ -1239,19 +1239,24 @@ templates
 
 ## A styles placeholder out of place
 
-A placeholder outside the style element, including one inside an element whose
-name only begins with style, would write the stylesheet into the page as text,
-and a second one would be left behind in the page.
+The placeholder has to sit alone in a style element. Anywhere else, including
+an element whose name only begins with style, an attribute of the style tag,
+or beside other text, the stylesheet would land in the page as text or in the
+wrong place, and a second placeholder would be left behind in the page.
 
 ```scrut
-$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<stylesheet>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */</stylesheet>' '<style data="/* __BOARD_STYLES__ */"></style>' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
-report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
+$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<stylesheet>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */</stylesheet>' '<style data="/* __BOARD_STYLES__ */"></style>' '<style data="> /* __BOARD_STYLES__ */"></style>' '<style>a { } /* __BOARD_STYLES__ */</style>' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)
 exit 1
-report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
+report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)
 exit 1
-report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
+report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)
 exit 1
-report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
+report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)
+exit 1
+report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)
+exit 1
+report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)
 exit 1
 report-board: */report.html holds the /* __BOARD_STYLES__ */ placeholder more than once (glob)
 exit 1
@@ -1259,13 +1264,16 @@ scripts
 templates
 ```
 
-## A style element in capitals
+## A style element in capitals, with attributes
 
-HTML reads tag names in any letter case, so the placement check does too.
+HTML reads tag names in any letter case, so the placement check does too, and
+whitespace around the placeholder is part of the element.
 
 ```scrut
-$ dir="$(isolated_tree)" && printf 'a { color: red; }\n' > "${dir}/templates/board.css" && printf '<STYLE>/* __BOARD_STYLES__ */</STYLE>\n' > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && cat "${dir}/report.html"
-<STYLE>a { color: red; }</STYLE>
+$ dir="$(isolated_tree)" && printf 'a { color: red; }\n' > "${dir}/templates/board.css" && printf '<STYLE media="screen">\n  /* __BOARD_STYLES__ */\n</STYLE >\n' > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && cat "${dir}/report.html"
+<STYLE media="screen">
+  a { color: red; }
+</STYLE >
 ```
 
 ## A missing stylesheet
