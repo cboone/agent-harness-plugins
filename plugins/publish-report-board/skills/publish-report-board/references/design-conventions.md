@@ -100,7 +100,7 @@ Every issue number, milestone, branch, and commit links to its source, including
 - Links rest on a `--link-rule` underline, muted at 45 percent opacity, that turns `currentColor` on hover. The link text keeps its color.
 - Focus is always visible: a 2-pixel `--focus` outline offset by 2 pixels.
 - Boards are read, not operated. The only control a board adds is a native `details` disclosure, and nothing moves beyond the browser's own disclosure.
-- No icons, logos, or emoji. The masthead heading is the board's identity, and state is carried by shapes, not pictograms.
+- No logos, emoji, or pictograms. The masthead heading is the board's identity, and state is carried by shapes and words. The one glyph a board draws is the check beside a fixed bug, stroked in `--fix` beside the words that say how it closed, and hidden from screen readers.
 
 ## Writing the Board Data
 
