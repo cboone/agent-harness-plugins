@@ -72,6 +72,7 @@ plugins/notify/
 ├── opencode/
 │   └── index.ts
 └── scripts/
+    ├── fire-alerter
     └── notify
 ```
 
