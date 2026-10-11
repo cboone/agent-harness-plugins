@@ -1224,7 +1224,7 @@ A placeholder outside the style element would write the stylesheet into the
 page as text, and a second one would be left behind in the page.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp "$(dirname "${REPORT_BOARD_BIN}")/../templates/board.css" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter.html" && mkdir -p "${dir}/templates/starter" && mv "${dir}/templates/starter.html" "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${dir}/scripts" "${dir}/templates/starter" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp "$(dirname "${REPORT_BOARD_BIN}")/../templates/board.css" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
 report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
 exit 1
 report-board: */report.html holds the /* __BOARD_STYLES__ */ placeholder more than once (glob)
