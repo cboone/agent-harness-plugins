@@ -117,6 +117,18 @@ Pull requests matched: 12. With a Copilot round: 10. Copilot notices in place of
 | pinned/format-d-zero-open-line#1 | 1 | 0 | Needs a closer look |
 ```
 
+A format-c review lists its new findings only as inline comments, so inline comments without a badge marked new do not warn there.
+
+```scrut
+$ jq '[{data: {search: {issueCount: 1, pageInfo: {hasNextPage: false}, nodes: [{number: 1,
+>     repository: {nameWithOwner: "pinned/format-c", owner: {login: "pinned"}},
+>     reviews: {totalCount: 1, nodes: [.[] | {author: {login: .user.login}, body, comments: {totalCount: 2}}]}}]}}}]' \
+>   "${COPILOT_REVIEW_DATA_DIR}/format-c.json" > "${work}/variant.json" \
+>   && replay 2>&1 | grep -c warning
+0
+[1]
+```
+
 ## The search names the author, range and every owner, in creation order
 
 ```scrut
@@ -151,6 +163,13 @@ A search whose pages return fewer pull requests than it matched still reports, w
 ```scrut
 $ variant '.[].data.search.issueCount = 5' && replay 2>&1 > /dev/null
 copilot-rounds-report: warning: the search matched 5 pull requests but returned 4; results may have shifted while the pages were fetched
+```
+
+The report itself says it is partial, so the gap does not live only on stderr.
+
+```scrut
+$ replay 2> /dev/null | grep '^Partial'
+Partial: 4 of the 5 matched pull requests were returned, so every figure below leaves some out.
 ```
 
 ```scrut
@@ -232,7 +251,7 @@ copilot-rounds-report: the last search page says more results follow, so the sea
 
 ```scrut
 $ variant '.[1].data.search.nodes += [null]' && replay 2>&1
-copilot-rounds-report: a search result is not a pull request
+copilot-rounds-report: the search response does not have the shape the report reads
 [1]
 ```
 
@@ -272,13 +291,25 @@ copilot-rounds-report: expected one JSON document, got 2
 
 ```scrut
 $ printf '[{"data":"x"}]\n' > "${work}/variant.json" && replay 2>&1
-copilot-rounds-report: expected an array of search pages
+copilot-rounds-report: the search response does not have the shape the report reads
 [1]
 ```
 
 ```scrut
 $ variant '.[1].data.search.nodes[1].reviews = null' && replay 2>&1
-copilot-rounds-report: a search result is missing its repository or reviews
+copilot-rounds-report: the search response does not have the shape the report reads
+[1]
+```
+
+```scrut
+$ variant '.[1].data.search.nodes[1].reviews.nodes[0].comments = null' && replay 2>&1
+copilot-rounds-report: the search response does not have the shape the report reads
+[1]
+```
+
+```scrut
+$ variant '.[1].data.search.issueCount = 5' && replay 2>&1
+copilot-rounds-report: the search pages disagree on how many pull requests matched
 [1]
 ```
 
@@ -346,6 +377,22 @@ copilot-rounds-report: an owner must be a single login, got 'cboone client-org'
 ```scrut
 $ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --author 'cboone is:merged' --since 2026-09-29 2>&1
 copilot-rounds-report: --author must be a single login or @me, got 'cboone is:merged'
+[1]
+```
+
+A search that fails with no output still replaces an earlier saved file, so no stale file looks current.
+
+```scrut
+$ printf 'stale\n' > "${work}/stale.json" \
+>   && STUB_GH_GRAPHQL_FAIL=copilot-rounds report --save "${work}/stale.json" 2>&1 | tail -n 1; \
+>   wc -c < "${work}/stale.json" | tr -d ' '
+copilot-rounds-report: could not search for pull requests
+1
+```
+
+```scrut
+$ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 --save "${work}" 2>&1
+copilot-rounds-report: cannot write the --save file /* (glob)
 [1]
 ```
 

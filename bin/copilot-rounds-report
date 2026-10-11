@@ -20,15 +20,19 @@
 # previously missed. Severity comes from the badges on findings marked "· New"
 # and on previously missed findings; badges on findings carried over from an
 # earlier round are not counted. The findings table prints how many findings
-# were rated ("of N"), and the report warns when badges and counts disagree.
+# were rated ("of N"). The report warns when a body has more previously missed
+# badges than its "Previously missed (N)" count, or when a review in the overview
+# layout has inline comments but no finding marked new.
 #
 # A findings-free round has no findings and a verdict other than an approval.
 #
 # Stops instead of summarizing partial or malformed data: a failed search, an
-# empty or unparseable response, more than one JSON document, malformed pages
-# or results, no matches, more than 1,000 matches, GraphQL errors, a cut-short
-# page sequence, or more than 100 reviews on one pull request. Requires `jq`,
-# and authenticated `gh` unless --input is given.
+# empty or unparseable response, more than one JSON document, GraphQL errors,
+# any page, result or review without the fields the report reads, pages that
+# disagree on the match count, a cut-short page sequence, no matches, more than
+# 1,000 matches, or more than 100 reviews on one pull request. When fewer pull
+# requests come back than matched, the report says so in its output and warns.
+# Requires `jq`, and authenticated `gh` unless --input is given.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -107,9 +111,10 @@ function require_date() {
   fi
 }
 
-# Prints the search pages as one JSON array. Call it only in a command
-# substitution: its EXIT trap then removes the query directory when that
-# subshell exits, even through die, without replacing a trap in the main shell.
+# Prints gh's output and returns its status, so a failed search can still be
+# saved. Call it only in a command substitution: its EXIT trap then removes the
+# query directory when that subshell exits, without replacing a trap in the
+# main shell.
 function fetch_pages() {
   local search="${1}"
   local query_dir
@@ -121,38 +126,49 @@ function fetch_pages() {
   printf '%s\n' "${QUERY}" > "${query_dir}/copilot-rounds.graphql" \
     || die "could not write the search query"
 
-  if ! gh api graphql --paginate --slurp \
+  gh api graphql --paginate --slurp \
     -F "query=@${query_dir}/copilot-rounds.graphql" \
-    -f "q=${search}" < /dev/null; then
-    die "could not search for pull requests"
-  fi
+    -f "q=${search}" < /dev/null
 }
 
 # Reads the response with --slurp and prints the first reason it cannot be
-# summarized, or nothing.
+# summarized, or nothing. Every page, pull request and review must have exactly
+# the fields and types the report reads; anything else is one shape error.
 # shellcheck disable=SC2016 # $ names are jq variables.
 readonly PAGES_PROBLEM_FILTER='
+  def count: type == "number" and . >= 0 and . == floor;
+  def valid_review:
+    type == "object"
+    and (.body | type == "string" or type == "null")
+    and (.author | type == "null" or (type == "object" and (.login | type) == "string"))
+    and (.comments | type) == "object" and (.comments.totalCount | count);
+  def valid_pull_request:
+    type == "object" and (.number | count)
+    and (.repository | type) == "object"
+    and (.repository.nameWithOwner | type) == "string"
+    and (.repository.owner | type) == "object"
+    and (.repository.owner.login | type) == "string"
+    and (.reviews | type) == "object" and (.reviews.totalCount | count)
+    and (.reviews.nodes | type) == "array" and all(.reviews.nodes[]; valid_review);
+  def valid_page:
+    type == "object" and (.data | type) == "object"
+    and (.data.search | type) == "object"
+    and (.data.search.issueCount | count)
+    and (.data.search.pageInfo | type) == "object"
+    and (.data.search.pageInfo.hasNextPage | type) == "boolean"
+    and (.data.search.nodes | type) == "array"
+    and all(.data.search.nodes[]; valid_pull_request);
   def problem:
     if type != "array" or length == 0 then
       "expected a non-empty array of search pages"
-    elif any(.[]; type != "object") then
-      "expected an array of search pages"
-    elif any(.[]; has("errors")) then
-      "a search page holds GraphQL errors: \([.[].errors // empty | .[].message] | first)"
-    elif any(.[]; (.data | type) != "object" or (.data.search | type) != "object"
-        or (.data.search.nodes | type) != "array"
-        or (.data.search.issueCount | type) != "number") then
-      "expected an array of search pages"
-    elif .[-1].data.search.pageInfo.hasNextPage != false then
+    elif any(.[]; type == "object" and has("errors")) then
+      "a search page holds GraphQL errors: \([.[] | objects | .errors // empty | .[]?.message?] | first)"
+    elif all(.[]; valid_page) | not then
+      "the search response does not have the shape the report reads"
+    elif [.[].data.search.issueCount] | unique | length > 1 then
+      "the search pages disagree on how many pull requests matched"
+    elif .[-1].data.search.pageInfo.hasNextPage then
       "the last search page says more results follow, so the search was cut short"
-    elif any(.[].data.search.nodes[]; type != "object" or (.number | type) != "number") then
-      "a search result is not a pull request"
-    elif any(.[].data.search.nodes[];
-        (.repository.nameWithOwner | type) != "string"
-        or (.repository.owner.login | type) != "string"
-        or (.reviews.nodes | type) != "array"
-        or (.reviews.totalCount | type) != "number") then
-      "a search result is missing its repository or reviews"
     elif .[0].data.search.issueCount == 0 then
       "no pull requests matched"
     elif .[0].data.search.issueCount > $limit then
@@ -167,7 +183,7 @@ readonly PAGES_PROBLEM_FILTER='
     end;
   if length == 0 then "the search response is empty"
   elif length > 1 then "expected one JSON document, got \(length)"
-  else .[0] | try (first(problem) // "") catch "unexpected search response shape"
+  else .[0] | first(problem) // ""
   end
 '
 
@@ -213,7 +229,8 @@ readonly ROUNDS_FILTER='
       uncounted: ([.[].reviews[] | select(.verdict != null and .verdict != "none (older layout)")
         | ((.body | capture("Previously missed \\((?<n>[0-9]+)\\)") | .n | tonumber) // 0) as $missed
         | select((.body | [missed_badges("High", "Medium", "Low")] | add) > $missed
-            or (.inline > 0 and (.body | [new_badges("High", "Medium", "Low")] | add) == 0))]
+            or (.inline > 0 and (.body | test("<!-- ccr-overview-v[0-9]+ -->"))
+              and (.body | [new_badges("High", "Medium", "Low")] | add) == 0))]
         | length),
       prs: (map(
           {
@@ -277,6 +294,9 @@ readonly REPORT_FILTER='
       "",
       "Pull requests matched: \(.matched). With a Copilot round: \($prs | length). "
         + "Copilot notices in place of a review, not counted as rounds: \(.notices).",
+      (if .returned < .matched then
+        "", "Partial: \(.returned) of the \(.matched) matched pull requests were returned, so every figure below leaves some out."
+      else empty end),
       "",
       "## Rounds per pull request",
       "",
@@ -367,7 +387,10 @@ function main() {
     created="${since}..${until}"
   fi
   [[ -z "${save_file}" || -z "${input_file}" ]] || die "--save and --input cannot be combined"
-  if [[ -n "${save_file}" && ! -w "$(dirname "${save_file}")" ]]; then
+  if [[ -n "${save_file}" ]] && {
+    [[ ! -w "$(dirname "${save_file}")" ]] \
+      || [[ -e "${save_file}" && ! (-f "${save_file}" && -w "${save_file}") ]]
+  }; then
     die "cannot write the --save file ${save_file}"
   fi
 
@@ -378,14 +401,17 @@ function main() {
   done
   search+=" sort:created-asc"
 
-  local pages
+  local pages fetch_status=0
   if [[ -n "${input_file}" ]]; then
     [[ -f "${input_file}" ]] || die "no such input file ${input_file}"
     pages="$(cat "${input_file}")"
   else
-    pages="$(fetch_pages "${search}")"
+    pages="$(fetch_pages "${search}")" || fetch_status=$?
     if [[ -n "${save_file}" ]]; then
       printf '%s\n' "${pages}" > "${save_file}" || die "could not write ${save_file}"
+    fi
+    if [[ "${fetch_status}" != "0" && -z "${pages//[[:space:]]/}" ]]; then
+      die "could not search for pull requests"
     fi
   fi
 
@@ -393,6 +419,7 @@ function main() {
   problem="$(jq -r --slurp --argjson limit "${SEARCH_LIMIT}" "${PAGES_PROBLEM_FILTER}" <<< "${pages}")" \
     || die "the search response is not valid JSON"
   [[ -z "${problem}" ]] || die "${problem}"
+  [[ "${fetch_status}" == "0" ]] || die "could not search for pull requests"
 
   local owners_json clients_json
   owners_json="$(jq -n -c '$ARGS.positional' --args "${owners[@]}")"
