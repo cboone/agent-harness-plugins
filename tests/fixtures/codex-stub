@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# codex-stub -- Test stub for `codex exec`, as codex-aspects invokes it.
+#
+# Reads the aspect and snapshot from the prompt, then behaves as
+# CODEX_STUB_MODES says for that aspect: a space-separated list of
+# aspect=mode pairs, where an aspect left out gets "ok".
+#
+#   ok              valid output with no findings
+#   critical        valid output with one critical finding
+#   exit            exit 1 without writing output
+#   none            exit 0 without writing output
+#   empty           exit 0 after writing an empty output file
+#   malformed       exit 0 after writing text that is not JSON
+#   schema          exit 0 after writing JSON with a key missing
+#   wrong-aspect    valid output naming another aspect
+#   wrong-snapshot  valid output naming another snapshot
+#   write           valid output, after appending a line to CODEX_STUB_WRITE
+#
+# When CODEX_STUB_LOG_DIR is set, each run records its arguments, minus the
+# prompt, and the kind of stdin it was given in <dir>/<aspect>.args.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit 2
+}
+
+function mode_for() {
+  local aspect="${1}" pair
+
+  for pair in ${CODEX_STUB_MODES:-}; do
+    if [[ "${pair%%=*}" == "${aspect}" ]]; then
+      printf '%s' "${pair#*=}"
+      return 0
+    fi
+  done
+
+  printf 'ok'
+}
+
+function write_output() {
+  local file="${1}" aspect="${2}" snapshot="${3}" severity="${4}"
+
+  jq -n --arg aspect "${aspect}" --arg snapshot "${snapshot}" --arg severity "${severity}" '{
+    aspect: $aspect,
+    findings: (if $severity == "" then [] else [{
+      confidence: 95,
+      detail: "Stub detail.",
+      file: "lib.sh",
+      fix: "Stub fix.",
+      line: 1,
+      severity: $severity,
+      title: "Stub finding."
+    }] end),
+    reviewed: $snapshot,
+    strengths: ["Stub strength."],
+    summary: "Stub summary."
+  }' > "${file}"
+}
+
+function main() {
+  [[ "${1:-}" == "exec" ]] || die "only exec is stubbed"
+  shift
+
+  local output="" prompt="" recorded=()
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --output-last-message)
+        output="${2}"
+        recorded+=("${1}" "<output>")
+        shift 2
+        ;;
+      --output-schema | --cd)
+        recorded+=("${1}" "<path>")
+        shift 2
+        ;;
+      --sandbox | --model | --config)
+        recorded+=("${1}" "${2}")
+        shift 2
+        ;;
+      --*)
+        recorded+=("${1}")
+        shift
+        ;;
+      *)
+        prompt="${1}"
+        shift
+        ;;
+    esac
+  done
+
+  local aspect snapshot
+  aspect="$(sed -n 's/^- Set "aspect" to exactly: //p' <<< "${prompt}")"
+  snapshot="$(sed -n 's/^- Set "reviewed" to exactly: //p' <<< "${prompt}")"
+  [[ -n "${aspect}" && -n "${snapshot}" ]] || die "prompt carries no aspect or snapshot"
+
+  if [[ -n "${CODEX_STUB_LOG_DIR:-}" ]]; then
+    local stdin_kind="other"
+    if [[ -c /dev/stdin ]]; then
+      stdin_kind="character-device"
+    fi
+    {
+      printf '%s\n' "${recorded[@]}"
+      printf 'stdin: %s\n' "${stdin_kind}"
+    } > "${CODEX_STUB_LOG_DIR}/${aspect}.args"
+  fi
+
+  case "$(mode_for "${aspect}")" in
+    ok) write_output "${output}" "${aspect}" "${snapshot}" "" ;;
+    critical) write_output "${output}" "${aspect}" "${snapshot}" "critical" ;;
+    exit)
+      echo "stub: simulated failure" >&2
+      exit 1
+      ;;
+    none) ;;
+    empty) : > "${output}" ;;
+    malformed) echo "I could not finish the review." > "${output}" ;;
+    schema)
+      write_output "${output}" "${aspect}" "${snapshot}" ""
+      jq 'del(.strengths)' "${output}" > "${output}.tmp"
+      mv "${output}.tmp" "${output}"
+      ;;
+    wrong-aspect) write_output "${output}" "types" "${snapshot}" "" ;;
+    wrong-snapshot) write_output "${output}" "${aspect}" "0000000" "" ;;
+    write)
+      echo "# simplified" >> "${CODEX_STUB_WRITE:?CODEX_STUB_WRITE is required for write mode}"
+      write_output "${output}" "${aspect}" "${snapshot}" ""
+      ;;
+    *) die "unknown mode for ${aspect}" ;;
+  esac
+}
+
+main "$@"

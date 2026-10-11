@@ -153,6 +153,9 @@ jobs:
         MERGE_FLOW_BIN=./plugins/monitor-pr/scripts/merge-flow
         MERGE_FLOW_DATA_DIR=./tests/data/merge-flow
         REVIEW_SCOPE_BIN=./plugins/review-until-clean/scripts/review-scope
+        REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN=./plugins/review-pr-with-codex/scripts/review-scope
+        CODEX_ASPECTS_BIN=./plugins/review-pr-with-codex/scripts/codex-aspects
+        CODEX_STUB_BIN=./tests/fixtures/codex-stub
         RUN_SCRUT_DOCUMENTS_BIN=./bin/run-scrut-documents
         SCRUT_STUB_BIN=./tests/fixtures/scrut-stub
         GIT_CONFIG_GLOBAL=/dev/null
