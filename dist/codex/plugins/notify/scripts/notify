@@ -468,10 +468,11 @@ function stop_session_alerters() {
   pkill -KILL -f -- "--group [^ ]*-${SESSION_KEY}" 2> /dev/null || true
 }
 
-# The command-line check leaves a reused PID alone.
+# Stops PID $1 only while its start time is still $2, so a reused PID, even a
+# later alerter from this session, is left alone.
 function stop_alerter() {
-  kill -0 "${1}" 2> /dev/null || return 0
-  [[ "$(ps -ww -p "${1}" -o command= 2> /dev/null)" == *alerter*"${SESSION_KEY}"* ]] || return 0
+  [[ -n "${2}" ]] || return 0
+  [[ "$(ps -p "${1}" -o lstart= 2> /dev/null)" == "${2}" ]] || return 0
   kill -KILL "${1}" 2> /dev/null || true
 }
 
@@ -524,13 +525,14 @@ function fire_alerter_detached() {
       pid=$!
       # Watchdog. Its output goes to /dev/null so the substitution does not wait for it.
       (
+        started="$(ps -p "${pid}" -o lstart= 2> /dev/null)" || started=""
         waited=0
         while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do
           step=$((WAIT_LIMIT - waited < 5 ? WAIT_LIMIT - waited : 5))
           sleep "${step}"
           waited=$((waited + step))
         done
-        stop_alerter "${pid}"
+        stop_alerter "${pid}" "${started}"
       ) > /dev/null 2>&1 &
       wait "${pid}" || true
     )" || true
