@@ -94,15 +94,6 @@ function die() {
   exit "${2:-1}"
 }
 
-# Stops on a failed search, naming any --save file so its output is not reused
-# as if the search had succeeded.
-function search_failed() {
-  local save_file="${1}"
-
-  [[ -z "${save_file}" ]] || die "could not search for pull requests; ${save_file} holds gh's output from the failed search"
-  die "could not search for pull requests"
-}
-
 function warn() {
   echo "${SCRIPT_NAME}: warning: ${1}" >&2
 }
@@ -203,21 +194,31 @@ readonly PAGES_PROBLEM_FILTER='
 # shellcheck disable=SC2016 # $ names are jq variables.
 readonly ROUNDS_FILTER='
   def count_of(re): [scan(re)] | length;
-  def new_badges($s): count_of("alt=\"\($s) severity\"[^\n]*· New");
-  def missed_badges($s): count_of("<summary><picture>[^\n]*alt=\"\($s) severity\"");
-  def severity($s): new_badges($s) + missed_badges($s);
-  def severity_counts:
-    {high: severity("High"), medium: severity("Medium"), low: severity("Low")};
+  def badges(re): {
+    high: count_of(re | sub("SEVERITY"; "High")),
+    medium: count_of(re | sub("SEVERITY"; "Medium")),
+    low: count_of(re | sub("SEVERITY"; "Low"))
+  };
+  def total: .high + .medium + .low;
+  def layout:
+    if test("(^|\n)#{1,6} ") | not then "notice"
+    elif test("(^|\n)## Pull request overview") then "older"
+    elif test("<!-- ccr-overview-v[0-9]+ -->") then "overview"
+    else "other" end;
   def copilot_reviews:
     .reviews.nodes[]
     | select((.author.login // "" | ascii_downcase) | IN($copilot_logins[]))
     | (.body // "") as $body
+    | ($body | layout) as $layout
     | {
-        body: $body,
+        layout: $layout,
         inline: .comments.totalCount,
+        missed: (($body | capture("Previously missed \\((?<n>[0-9]+)\\)") | .n | tonumber) // 0),
+        new_badges: ($body | badges("alt=\"SEVERITY severity\"[^\n]*· New")),
+        missed_badges: ($body | badges("<summary><picture>[^\n]*alt=\"SEVERITY severity\"")),
         verdict: (
-          if ($body | test("(^|\n)#{1,6} ") | not) then null
-          elif ($body | test("(^|\n)## Pull request overview")) then "none (older layout)"
+          if $layout == "notice" then null
+          elif $layout == "older" then "none (older layout)"
           else (($body | capture("(^|\n)### [^A-Za-z\r\n]*(?<v>[^\r\n]+)") | .v) // "unrecognized")
           end)
       };
@@ -235,11 +236,9 @@ readonly ROUNDS_FILTER='
       returned: length,
       notices: ([.[].reviews[] | select(.verdict == null)] | length),
       unrecognized: ([.[].reviews[] | select(.verdict == "unrecognized")] | length),
-      uncounted: ([.[].reviews[] | select(.verdict != null and .verdict != "none (older layout)")
-        | ((.body | capture("Previously missed \\((?<n>[0-9]+)\\)") | .n | tonumber) // 0) as $missed
-        | select((.body | [missed_badges("High", "Medium", "Low")] | add) > $missed
-            or (.inline > 0 and (.body | test("<!-- ccr-overview-v[0-9]+ -->"))
-              and (.body | [new_badges("High", "Medium", "Low")] | add) == 0))]
+      uncounted: ([.[].reviews[]
+        | select((.missed_badges | total) > .missed
+            or (.layout == "overview" and .inline > 0 and (.new_badges | total) == 0))]
         | length),
       prs: (map(
           {
@@ -248,12 +247,15 @@ readonly ROUNDS_FILTER='
             rounds: [
               .reviews[]
               | select(.verdict != null)
-              | ((.body | capture("Previously missed \\((?<n>[0-9]+)\\)") | .n | tonumber) // 0) as $missed
               | {
                   verdict: .verdict,
-                  findings: (.inline + $missed),
+                  findings: (.inline + .missed),
                   approval: (.verdict | startswith("Approval")),
-                  severity: (.body | severity_counts)
+                  severity: {
+                    high: (.new_badges.high + .missed_badges.high),
+                    medium: (.new_badges.medium + .missed_badges.medium),
+                    low: (.new_badges.low + .missed_badges.low)
+                  }
                 }
               | .findings_free = (.findings == 0 and (.approval | not))
             ]
@@ -419,19 +421,19 @@ function main() {
     if [[ -n "${save_file}" ]]; then
       printf '%s\n' "${pages}" > "${save_file}" || die "could not write ${save_file}"
     fi
-    if [[ "${fetch_status}" != "0" && -z "${pages//[[:space:]]/}" ]]; then
-      search_failed "${save_file}"
-    fi
   fi
 
   local problem
   problem="$(jq -r --slurp --argjson limit "${SEARCH_LIMIT}" "${PAGES_PROBLEM_FILTER}" <<< "${pages}")" \
-    || {
-      [[ "${fetch_status}" == "0" ]] || search_failed "${save_file}"
-      die "the search response is not valid JSON"
-    }
+    || problem="the search response is not valid JSON"
+  # A failed search reports its GraphQL errors when it printed any, and names the
+  # --save file so its output is not reused as if the search had succeeded.
+  if [[ "${fetch_status}" != "0" && "${problem}" != "a search page holds GraphQL errors"* ]]; then
+    local saved=""
+    [[ -z "${save_file}" ]] || saved="; ${save_file} holds gh's output from the failed search"
+    die "could not search for pull requests${saved}"
+  fi
   [[ -z "${problem}" ]] || die "${problem}"
-  [[ "${fetch_status}" == "0" ]] || search_failed "${save_file}"
 
   local owners_json clients_json
   owners_json="$(jq -n -c '$ARGS.positional' --args "${owners[@]}")"
@@ -446,7 +448,7 @@ function main() {
 
   local counts matched returned with_copilot unrecognized uncounted
   counts="$(jq -r '[.matched, .returned, (.prs | length), .unrecognized, .uncounted] | @tsv' \
-    <<< "${summary}")" || die "could not summarize the search pages"
+    <<< "${summary}")"
   IFS=$'\t' read -r matched returned with_copilot unrecognized uncounted <<< "${counts}"
   if [[ "${matched}" != "${returned}" ]]; then
     warn "the search matched ${matched} pull requests but returned ${returned}; results may have shifted while the pages were fetched"
