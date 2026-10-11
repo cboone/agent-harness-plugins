@@ -314,6 +314,27 @@ backlog-gather: WORK/config/report-boards/backlog-triage/github.com/acme/widgets
 [1]
 ```
 
+## A pull request and its own head branch carry the issue once
+
+Pushing `fix/10-ready`, the head of pull request `#100`, adds no carrier and
+no `multiple` flag, and its newer commit becomes the issue's last activity.
+
+```scrut
+$ config_with && git switch -q -c fix/10-ready main && commit_at 2026-10-14T12:00:00Z ben@example.com fix/ready.c && git push -q origin fix/10-ready && git switch -q main && backlog gather acme/widgets "${work}/head.json" > /dev/null && jq -c '.issues[] | select(.number == 10) | .progress | {carrier, extraCarriers, flags, lastActivity}' "${work}/head.json"; git push -q origin --delete fix/10-ready && git branch -q -D fix/10-ready
+{"carrier":{"pr":100},"extraCarriers":[{"label":"In Progress"}],"flags":["behind"],"lastActivity":"2026-10-14T12:00:00Z"}
+```
+
+## Lists GitHub cut short are named, and the gather goes on
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BACKLOG_GATHER_DATA_DIR}/github/." "${dir}/" && jq '(.. | objects | select(.number? == 11 and has("timelineItems")) | .timelineItems.pageInfo) = {hasPreviousPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json" > "${dir}/graphql/issues.json" && jq '(.. | objects | select(.number? == 40 and has("closingIssuesReferences")) | .closingIssuesReferences.pageInfo) = {hasNextPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/pulls.json" > "${dir}/graphql/pulls.json" && backlog STUB_GH_DIR="${dir}" gather acme/widgets "${work}/cut.json" 2>&1 > /dev/null; echo "exit ${?}"
+backlog-gather: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:
+  - #11: cross-references
+backlog-gather: these pull requests close more than 20 issues, so an issue past the cut misses them:
+  - pull request #40
+exit 0
+```
+
 ## Gather stops when it cannot trust what it read
 
 ```scrut

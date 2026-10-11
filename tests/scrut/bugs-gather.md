@@ -223,6 +223,44 @@ $ jq -c '.bugs[] | select(.number == 20) | {outsideReporter, outsidePeople, reac
 {"outsideReporter":true,"outsidePeople":2,"reactions":4,"comments":3,"lastComment":{"author":"alice","at":"2026-10-12T09:00:00Z","outside":false}}
 ```
 
+## Anyone's open pull request carries a bug, but only the viewer's files count
+
+`bob`'s open pull request names `#21` by its branch. It carries the bug, and
+its files stay out of the viewer's affinity.
+
+```scrut
+$ dir="$(variant .)" && jq 'map(.data.repository.pullRequests.nodes += [{number: 46, title: "Speed up admin search", url: "https://github.com/acme/widgets/pull/46", state: "OPEN", isDraft: false, createdAt: "2026-10-13T09:00:00Z", updatedAt: "2026-10-14T09:00:00Z", mergedAt: null, mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", headRefName: "21-admin-search", reviewDecision: "REVIEW_REQUIRED", reviewRequests: {totalCount: 1}, latestReviews: {nodes: []}, author: {login: "bob"}, commits: {nodes: []}, files: {pageInfo: {hasNextPage: false}, nodes: [{path: "src/admin/search.js"}]}}])' "${BUGS_GATHER_DATA_DIR}/github/graphql/pulls-open.json" > "${dir}/graphql/pulls-open.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/others.json" > /dev/null 2>&1 && progress "${work}/others.json" 21 && jq -r '"files via #46: \([.viewerFiles.active[] | select(.via == "pull request #46")] | length)"' "${work}/others.json"
+awaiting-review, reviewer: wait for review
+files via #46: 0
+```
+
+## An open fix in another repository does not carry a bug
+
+```scrut
+$ dir="$(variant 'if .number == 16 then .closedByPullRequestsReferences.nodes |= map(.repository = {nameWithOwner: "acme/other"}) else . end')" && jq 'map(.data.repository.pullRequests.nodes |= map(select(.number != 40)))' "${BUGS_GATHER_DATA_DIR}/github/graphql/pulls-open.json" > "${dir}/graphql/pulls-open.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/elsewhere.json" > /dev/null 2>&1 && progress "${work}/elsewhere.json" 16
+none
+```
+
+## A pull request and its own head branch carry a bug once
+
+The head branch of `#40` adds no carrier, and its newer commit becomes the
+last activity.
+
+```scrut
+$ dir="$(variant .)" && jq '.data.repository.refs.nodes += [{name: "16-election-day", target: {committedDate: "2026-10-15T08:00:00Z"}}]' "${BUGS_GATHER_DATA_DIR}/github/graphql/repository-widgets.json" > "${dir}/graphql/repository-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/head.json" > /dev/null 2>&1 && jq -c '.bugs[] | select(.number == 16) | .progress | {carrier, extraCarriers, flags, lastActivity}' "${work}/head.json"
+{"carrier":{"pr":40},"extraCarriers":[],"flags":[],"lastActivity":"2026-10-15T08:00:00Z"}
+```
+
+## A pipeline alone starts a bug from when it entered the pipeline
+
+Without its branch, `#12` is carried by its ZenHub pipeline, and its last
+activity is when it moved there.
+
+```scrut
+$ dir="$(variant .)" && jq '.data.repository.refs.nodes |= map(select(.name != "12-token-refresh"))' "${BUGS_GATHER_DATA_DIR}/github/graphql/repository-widgets.json" > "${dir}/graphql/repository-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pipeline.json" > /dev/null 2>&1 && jq -r '.bugs[] | select(.number == 12) | .progress | "\(.stage) on \(.carrier | to_entries[0] | "\(.key) \(.value)"), last activity \(.lastActivity)"' "${work}/pipeline.json"
+started on pipeline In Progress, last activity 2026-10-05T14:00:00Z
+```
+
 ## Fix pull requests carry their draft, check, and review state
 
 ```scrut

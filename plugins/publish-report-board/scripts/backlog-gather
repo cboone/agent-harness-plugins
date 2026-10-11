@@ -192,7 +192,7 @@ readonly DERIVE_FILTER="${PROGRESS_DEFS}"'
     issues: [$derived[] | del(.truncated)],
     viewerFiles: $files,
     affinityIgnored: $ignored,
-    warnings: [$derived[] | select(.truncated | length > 0) | "#\(.number): GitHub cut its \(.truncated | join(" and ")) short"]
+    warnings: [$derived[] | select(.truncated | length > 0) | "#\(.number): \(.truncated | join(" and "))"]
   }
 '
 
@@ -609,7 +609,7 @@ function cmd_gather() {
   local cut_short
   cut_short="$(jq -r '.warnings[] | "  - \(.)"' "${output_file}")"
   if [[ -n "${cut_short}" ]]; then
-    printf '%s: GitHub cut these lists short, so a label, an assignee, a linked pull request, or a comment past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
+    printf '%s: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
   fi
   cut_short="$(jq -r '.[] | .data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.pageInfo.hasNextPage == true) | "  - pull request #\(.number)"' "${TEMP_DIR}/pulls.json")"
   if [[ -n "${cut_short}" ]]; then

@@ -166,6 +166,30 @@ $ model '{closedByPullRequestsReferences: {nodes: [{number: 1, mergedAt: "2026-1
 #5 closes false
 ```
 
+## Times convert to UTC from any offset
+
+A malformed time is an error rather than no value.
+
+```scrut
+$ model '["2026-10-15T05:00:00-07:00", "2026-10-15T12:00:00.5Z", "2026-10-15T12:00+00:00", "2026-10-15T17:30:00+05:30"][] | utc' && model '"2026-10-15 12:00" | utc' 2>&1; echo "exit ${?}"
+2026-10-15T12:00:00Z
+2026-10-15T12:00:00Z
+2026-10-15T12:00:00Z
+2026-10-15T12:00:00Z
+jq: error (at <unknown>): not an ISO 8601 time
+exit 5
+```
+
+## A pull request linked twice is one merged link
+
+A closing reference and a mention of the same pull request make one link that
+closes the issue.
+
+```scrut
+$ model '{closedByPullRequestsReferences: {nodes: [{number: 1, mergedAt: "2026-10-01T12:00:00Z", repository: {nameWithOwner: "acme/widgets"}}]}, timelineItems: {nodes: [{__typename: "CrossReferencedEvent", willCloseTarget: false, source: {__typename: "PullRequest", number: 1, mergedAt: "2026-10-01T12:00:00Z", repository: {nameWithOwner: "acme/widgets"}}}]}} | merged_links("acme/widgets") | map("#\(.number) closes \(.closes)") | join(", ")'
+#1 closes true
+```
+
 ## The owner follows assignment, then a claim's assignees, then implicit tiers
 
 An issue assigned to someone else stays theirs despite implicit affinity. With
