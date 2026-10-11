@@ -1110,21 +1110,39 @@ function require_new_output() {
   fi
 }
 
-# Creates a page. noclobber makes the create exclusive, so a file that appears
-# after the check is refused. Written in place: a new page has no reader yet.
+# Creates a page. The page is written whole to a temporary file first, then the
+# name is claimed with an exclusive noclobber create, which refuses a file that
+# appeared after the check, and the page moved onto the claim. A signal between
+# claim and move removes both, so an interrupted run leaves no file a retry
+# would refuse.
 function write_new_output() {
   local output_file="${1}"
   local content="${2}"
+  local output_dir temp_file current_umask mode
 
   require_new_output "${output_file}"
+  output_dir="$(dirname -- "${output_file}")"
+  temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")" || die "${E_INVALID}" "cannot write to ${output_dir}"
+  current_umask="$(umask)"
+  mode="$(printf '%o' "$((8#666 & ~8#${current_umask}))")"
+  if ! { printf '%s' "${content}" > "${temp_file}" && chmod -- "${mode}" "${temp_file}"; }; then
+    rm -f -- "${temp_file}"
+    die "${E_INVALID}" "cannot write ${output_file}"
+  fi
+
+  trap 'rm -f -- "${temp_file}" "${output_file}"; exit "${E_INVALID}"' HUP INT TERM
   if ! (set -o noclobber && : > "${output_file}") 2> /dev/null; then
+    trap - HUP INT TERM
+    rm -f -- "${temp_file}"
     require_new_output "${output_file}"
     die "${E_INVALID}" "cannot write ${output_file}"
   fi
-  if ! printf '%s' "${content}" > "${output_file}"; then
-    rm -f -- "${output_file}"
+  if ! mv -- "${temp_file}" "${output_file}"; then
+    rm -f -- "${temp_file}" "${output_file}"
+    trap - HUP INT TERM
     die "${E_INVALID}" "cannot write ${output_file}"
   fi
+  trap - HUP INT TERM
 }
 
 # Replaces the output file in one step, so a republish never reads a
