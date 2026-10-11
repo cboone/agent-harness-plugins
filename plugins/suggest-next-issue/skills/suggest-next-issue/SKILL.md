@@ -49,6 +49,10 @@ gh pr list --state open --limit 1000 --json number,title,headRefName,isDraft,rev
 # Recently merged pull requests (work merged on an issue still open)
 gh pr list --state merged --limit 300 --json number,title,body,mergedAt,closingIssuesReferences,author,files
 
+# Merged pull requests that mention an issue carrying an "in progress" label,
+# in their body, a comment or a commit; run once per such issue
+gh api --paginate "repos/OWNER/REPO/issues/NUMBER/timeline" --jq '.[] | select(.event == "cross-referenced") | .source.issue | select(.pull_request.merged_at != null and .repository.full_name == "OWNER/REPO") | .number'
+
 # Current authenticated user and git identity (for affinity)
 gh api user --jq '.login'
 git config user.email
@@ -112,7 +116,7 @@ Treat a stale claim as free, and mention it so the user can clear it. Nothing th
 
 ### 2. Identify In-Progress Work
 
-Read [the progress model](./references/progress-model.md) and apply it to every open issue, using only the signals gathered in step 1: a branch or worktree that names the issue as the model's Branch row describes, and carries commits beyond the default branch or is checked out in a worktree; an "in progress" label (matched without regard to case); an open pull request that closes the issue, through `closingIssuesReferences`, which includes a manual link, or whose head branch names it; and a merged pull request that closes an issue still open, or only mentions it while the issue still has an "in progress" label. A mention alone is not a signal, since pull requests often name follow-up issues they leave open. Nothing else marks work: not an assignment, not a recurring routine, not a plan to start soon. Give each issue with a signal its stage, next move and flags as the model defines them.
+Read [the progress model](./references/progress-model.md) and apply it to every open issue, using only the signals gathered in step 1: a branch or worktree that names the issue as the model's Branch row describes, and carries commits beyond the default branch or is checked out in a worktree; an "in progress" label (matched without regard to case); an open pull request that closes the issue, through `closingIssuesReferences`, which includes a manual link, or whose head branch names it; and a merged pull request that closes an issue still open, or only mentions it, in its body, a comment or a commit, while the issue still has an "in progress" label; the issue timeline read in step 1 shows those mentions. A mention alone is not a signal, since pull requests often name follow-up issues they leave open. Nothing else marks work: not an assignment, not a recurring routine, not a plan to start soon. Give each issue with a signal its stage, next move and flags as the model defines them.
 
 Exclude issues in the stages from `started` to `ready-to-merge` from recommendations, and note each one in the output with its stage, what carries it and whose move comes next. A `started` issue, one marked only by its label, may mean local work is complete but the related pull request is still waiting to merge. Keep excluding it. Do not recommend it again only because no matching branch or worktree is visible.
 
