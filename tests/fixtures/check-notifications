@@ -32,13 +32,42 @@ function write_transcript() {
   transcript_tool_use "${1}" tool-1 "${2}" "${3}"
 }
 
+# Retries the command in $2... every 0.02 seconds, up to $1 times, until it succeeds.
+function poll() {
+  local tries="${1}"
+  shift
+  until "$@"; do
+    [[ "${tries}" -gt 0 ]] || return 1
+    tries=$((tries - 1))
+    sleep 0.02
+  done
+}
+
+function alert_count_is() {
+  [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == "${1}" ]]
+}
+
+function not_running() {
+  ! kill -0 "${1}" 2> /dev/null
+}
+
+# Sets HELD_PID to a held alerter stub's PID other than $1; fails if none.
+function find_held_pid() {
+  HELD_PID="$(pgrep -f -- "${NOTIFY_TEST_STUB} --title" | grep -vx "${1:-none}" | head -n 1)" || true
+  [[ -n "${HELD_PID}" ]]
+}
+
 # Polls for up to 3 seconds until the alerter stub has logged $1 calls.
 function wait_for_alerts() {
-  local count=0
-  while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != "${1}" && "${count}" -lt 150 ]]; do
-    sleep 0.02
-    count=$((count + 1))
-  done
+  poll 150 alert_count_is "${1}" || true
+}
+
+# Starts a new turn in session $1 and fires its completion alert.
+function next_turn() {
+  local payload="{\"session_id\":\"${1}\"}"
+  printf '%s' "${payload}" | "${NOTIFY_BIN:?}" codex-turn-start
+  printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
+  wait_for_alerts 2
 }
 
 function main() {
@@ -48,11 +77,13 @@ function main() {
   # printf %q escapes the path, so a TMPDIR holding quotes or shell
   # metacharacters cannot break out of the trap command.
   printf -v quoted_test_dir '%q' "${test_dir}"
+  # Also stops held alerter stubs, even after a failed assertion.
   # shellcheck disable=SC2064
-  trap "rm -rf ${quoted_test_dir}" EXIT
+  trap "[[ -z \${NOTIFY_TEST_HOLD:-} ]] || pkill -KILL -f ${quoted_test_dir}/bin/alerter 2> /dev/null || true; rm -rf ${quoted_test_dir}" EXIT
   : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
   mkdir "${test_dir}/bin"
   export NOTIFY_TEST_LOG="${test_dir}/alerts"
+  NOTIFY_TEST_STUB="${test_dir}/bin/alerter"
   export NOTIFY_TEST_TMUX_LOG="${test_dir}/tmux"
   export NOTIFY_TEST_FRONT="com.example.background"
   export NOTIFY_TEST_VISIBLE="%99|attached,focused,UTF-8"
@@ -61,9 +92,16 @@ function main() {
   export PATH="${test_dir}/bin:${PATH}"
   export XDG_CACHE_HOME="${test_dir}/cache"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
+  # Keeps a developer's NOTIFY_WAIT_LIMIT out of the scenarios.
+  unset NOTIFY_WAIT_LIMIT
 
+  # The stub logs SIGTERM, which makes the real alerter remove its banner.
+  # The trap is set before the call is logged, since scenarios wait for that log.
+  # NOTIFY_TEST_HOLD keeps the stub waiting like an unanswered banner.
   printf '%s\n' '#!/usr/bin/env bash' \
+    'trap '\''echo TERM >> "${NOTIFY_TEST_LOG}.signals"; exit 143'\'' TERM' \
     'jq -nc --args '\''$ARGS.positional'\'' -- "$@" >> "${NOTIFY_TEST_LOG}"' \
+    'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then for _ in {1..300}; do sleep 0.1; done; fi' \
     'printf "%s" "${NOTIFY_TEST_CLICK}"' > "${test_dir}/bin/alerter"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
@@ -321,6 +359,8 @@ function main() {
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
     click) export NOTIFY_TEST_CLICK="@CONTENTCLICKED" ;;
+    duplicate | replace | other-session) export NOTIFY_TEST_HOLD=1 ;;
+    watchdog) export NOTIFY_TEST_HOLD=1 NOTIFY_WAIT_LIMIT=2 ;;
     *) ;;
   esac
   if [[ "${action}" == cc-permission ]]; then
@@ -340,12 +380,20 @@ function main() {
       [[ -s "${NOTIFY_TEST_LOG}" ]]
       ;;
   esac
+  # `|| exit 1` on held-alerter assertions: a failing [[ ]] does not trigger errexit in bash 3.2.
+  local first=""
+  if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then
+    poll 150 find_held_pid || exit 1
+    first="${HELD_PID}"
+  fi
   case "${scenario}" in
     duplicate)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
       # Polls for up to 3 seconds for a detached duplicate before asserting none came.
       wait_for_alerts 2
-      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 1 ]]
+      alert_count_is 1 || exit 1
+      # A skipped duplicate leaves the waiting alerter alone.
+      kill -0 "${first}" || exit 1
       echo "One completion alert per turn"
       ;;
     reset | claude-reset)
@@ -360,6 +408,26 @@ function main() {
       wait_for_alerts 2
       [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
       echo "Separate sessions retain separate banners"
+      ;;
+    replace)
+      next_turn session-one
+      poll 150 find_held_pid "${first}" || exit 1
+      poll 150 not_running "${first}" || exit 1
+      # SIGTERM would make the real alerter remove its banner.
+      [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
+      echo "A new alert stops the session's waiting alerter without SIGTERM"
+      ;;
+    other-session)
+      next_turn session-two
+      poll 150 find_held_pid "${first}" || exit 1
+      kill -0 "${first}" || exit 1
+      echo "Other sessions keep their waiting alerters"
+      ;;
+    watchdog)
+      # NOTIFY_WAIT_LIMIT is 2 seconds; allow 6 under parallel load.
+      poll 300 not_running "${first}" || exit 1
+      [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
+      echo "The watchdog stops a waiting alerter without SIGTERM"
       ;;
     visible | subagent | permission-question)
       # Gives a detached alerter time to appear before asserting none did.

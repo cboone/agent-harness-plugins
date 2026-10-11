@@ -577,3 +577,24 @@ codex.png
 $ "${CHECK_NOTIFICATIONS_BIN}" click
 Click targets captured session, window and pane on originating server
 ```
+
+## New alert stops the session's waiting alerter
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" replace
+A new alert stops the session's waiting alerter without SIGTERM
+```
+
+## Other sessions keep their waiting alerters
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" other-session
+Other sessions keep their waiting alerters
+```
+
+## Watchdog stops a waiting alerter
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" watchdog
+The watchdog stops a waiting alerter without SIGTERM
+```
