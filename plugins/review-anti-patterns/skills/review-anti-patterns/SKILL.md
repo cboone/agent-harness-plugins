@@ -20,7 +20,7 @@ The checklist exists because a general review asks "is this right?" and these pa
 - **--files `<paths>`**: limit the scope to these repository-relative paths, or to these globs, within the range
 - **--severity `<important|nit>`**: lowest severity reported; default `nit`, which reports everything
 
-An unknown option, a `--severity` other than the two values, or a `--range` without `..` is an error: stop with `failure` and name it. A single revision is refused because `git diff <rev>` compares against the working tree, which is not what a range promises.
+An unknown option, a `--severity` other than the two values, a `--range` without `..`, or a `--range` with an endpoint that begins with `-` is an error: stop with `failure` and name it. A single revision is refused because `git diff <rev>` compares against the working tree, which is not what a range promises, and a leading `-` would reach `git diff` as an option such as `--output`, which writes a file.
 
 ## Ground rules
 
@@ -46,11 +46,11 @@ Then collect the changed files and their hunks:
 - **Without `--range`**: run `git merge-base <base-ref> HEAD` with the ref chosen above, then read `git diff <merge-base>` for committed, staged and unstaged changes together, and `git ls-files --others --exclude-standard` for untracked files. An untracked file is new in its entirety, so all of it is in scope.
 - **With `--range`**: read `git diff <range>`. A range is committed history only. Check `git status --porcelain` too: working-tree changes, staged, unstaged or untracked, are outside the review, and the report must say so, because a caller that has not yet committed its fixes would otherwise read the result as covering them.
 
-Apply `--files` to the list, and keep the list of changed files it dropped for the report. Then drop generated files: paths marked `linguist-generated` in `.gitattributes`, paths the repository's agent instructions name as generated or not to be edited, lock files, vendored dependencies, and files whose header says they are generated.
+Apply `--files` to the list. Then drop generated files: paths marked `linguist-generated` in `.gitattributes`, paths the repository's agent instructions name as generated or not to be edited, lock files, vendored dependencies, and files whose header carries a generated marker such as `@generated` or `Code generated ... DO NOT EDIT`. Keep both lists of dropped files for the report's `excluded` field.
 
 Treat every symlink in scope, tracked or untracked, as its link text, `<path> -> <target>`, and never open its target: the target may be outside the repository, and following the link would put whatever it names into the review.
 
-**If the scope is empty**, report that there is nothing to review with status `no-op`, and stop. A clean result over an empty scope means nothing. When the range is empty but the working tree has changes, say so in the report: those changes are what the caller probably meant to review.
+**If the scope is empty**, report per step 7 with status `no-op`, and stop. A clean result over an empty scope means nothing. When the range is empty but the working tree has changes, set `complete` to false and list those changes in `not_reviewed`: they are probably what the caller meant to review.
 
 ### 2. Classify the scope
 
@@ -60,7 +60,9 @@ Sort each file in scope into one or more groups. Each checklist item names the g
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Code        | Source, scripts, tests, CI workflows and infrastructure configuration                                                                                                                           |
 | Agent prose | Skills, commands, agent definitions, prompts and their reference files, and agent instruction files such as `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` and `*.instructions.md` |
-| Docs        | READMEs, plans, changelogs, help text and any other prose a person reads, plus code comments, and the pull request body when the branch has an open pull request (`gh pr view --json body`)     |
+| Docs        | READMEs, plans, changelogs, help text and any other prose a person reads, plus code comments, and the pull request body when the branch has an open pull request                                |
+
+Read the pull request body with `gh pr list --repo "$(git remote get-url origin)" --head "$(git branch --show-current)" --state open --json number,body`, naming the origin remote for the same reason as in step 1. An empty array means there is no open pull request and no body to review. A non-zero exit, such as `gh` missing, unauthenticated or offline, means the body was not read: put `PR body` in `not_reviewed` and set `complete` to false.
 
 Every scope gets the docs items, because a code-only change can still leave a document wrong.
 
@@ -72,7 +74,7 @@ Then look outward, because most of the patterns live outside the hunk:
 
 - **Siblings.** Search the repository for the identifiers, flags, paths, error messages and literal values the hunk changed or relies on. Every other place that does the same job is a candidate sibling: a parallel branch of the same `case`, a second parser of the same format, a mirror copy, a test fixture, a caller.
 - **Consumers.** Find what reads the changed output: callers of a function, readers of a file format, skills that invoke a skill, documents that describe the behavior.
-- **History, when reviewing a fix.** When the range is a fix for review feedback, read the commits just before it with `git log` and `git show`, and ask what the fix was answering. A fix that closed one input form of a check is the case the Sibling input forms item is about. Then read each file the fix touches whole, at its newest state, and walk the checklist over all of it: Copilot re-reviews the whole pull request every round and reports defects in code that has not changed, so a review of the fix lines alone leaves those for the next round. Anchor such a finding to its line and say that the fix did not introduce it.
+- **History, when reviewing a fix.** When the scope is a fix for review feedback, because the caller says so or its commits answer review comments, read the commits just before it with `git log` and `git show`, and ask what the fix was answering. A fix that closed one input form of a check is the case the Sibling input forms item is about. Then read each file the fix touches whole, at its newest state, and walk the checklist over all of it: Copilot re-reviews the whole pull request every round and reports defects in code that has not changed, so a review of the fix lines alone leaves those for the next round. Anchor such a finding to its line and say that the fix did not introduce it.
 
 ### 4. Walk the checklist
 
@@ -90,17 +92,18 @@ Do not install tools, initialize working directories or authenticate to run a ch
 
 ### 6. Assign severity
 
-- **Important**: the defect breaks behavior, lets a rejected input through, accepts invalid input, loses or leaks data, breaks the build or a release, or leads a reader or agent who follows a document to do the wrong thing.
-- **Nit**: anything else that is still wrong, such as a document that disagrees with the code in a way that misleads nobody.
+- **Important**: the defect breaks behavior, lets a rejected input through, accepts invalid input, loses or leaks data, or breaks the build or a release. In docs and agent prose, it is Important when a reader or agent who follows the text would take a consequential wrong action: push, skip a required check, report the wrong status, or run something unsafe.
+- **Nit**: anything else that is still wrong, such as a document that disagrees with the code in a way that misleads nobody, or agent prose that is unclear but leads to the right action.
 
-These are the same two levels `review-until-clean` uses, with its Important definition spelled out for the patterns here. Report findings at or above `--severity`.
+These are the two levels `review-until-clean` uses. One difference: a defect the change did not introduce keeps its severity here rather than dropping to Nit, because Copilot reports those as findings like any other. Say in its `detail` that it predates the change. Report findings at or above `--severity`.
 
 ### 7. Report
 
-Return JSON first. Each finding has the fields of a `review-until-clean` finding, so a caller that already handles those findings can handle these. The top level adds what that schema has no place for, because a caller reading only the JSON must still be able to tell a complete review from a partial one.
+Return JSON first, whatever the outcome, including `no-op`, `failure` and `unavailable`. Each finding has the fields of a `review-until-clean` finding, so a caller that already handles those findings can handle these. The top level adds what that schema has no place for, because a caller reading only the JSON must still be able to tell a complete review from a partial one, and a clean review from one that did not run.
 
 ```json
 {
+  "status": "success",
   "reviewed": "4f2a9c1..HEAD",
   "complete": true,
   "findings": [
@@ -114,26 +117,28 @@ Return JSON first. Each finding has the fields of a `review-until-clean` finding
     }
   ],
   "unverified": ["Unrun platform configuration: deploy/service.yaml needs `gcloud run services replace --dry-run`, which needs credentials"],
-  "not_reviewed": []
+  "not_reviewed": [],
+  "excluded": ["package-lock.json"]
 }
 ```
 
+- **`status`** is `success` when the review ran, `no-op` when the scope was empty, `failure` when the review could not run, for example because the range does not resolve, and `unavailable` when the session lacked something the review needs, such as a way to ask for the base branch. `failure` never means "findings were reported".
 - **`reviewed`** names the scope as a range: the `--range` as given, or `<merge-base>..working-tree`. It is a description, not a content snapshot, so a caller must not use it to decide whether a later tree is the one that was reviewed.
 - **`title`** starts with the checklist item's name.
 - **`file`** is a repository-relative path, or `PR body` for a finding in the pull request description. **`line`** is null for a finding about a whole file, a deleted file or the pull request body.
-- **`complete`** is true only when every applicable item was walked over every file in scope. It is false when a file could not be read, when working-tree changes sat outside a `--range`, or when `--files` dropped changed files from the range.
-- **`unverified`** lists each check that was not run, with the command that would settle it. **`not_reviewed`** lists the paths left out: unreadable files, working-tree changes outside the range, and files `--files` dropped.
+- **`complete`** is true only when the review ran and every applicable item was walked over everything in scope. It is false when a file or the pull request body could not be read, when working-tree changes sat outside a `--range`, and whenever `status` is not `success`.
+- **`unverified`** lists each check that was not run, with the command that would settle it. **`not_reviewed`** lists what the review should have covered and did not: unreadable files, an unread pull request body, and working-tree changes outside the range. **`excluded`** lists the changed files left out on purpose, by `--files` or as generated; they do not make the review incomplete.
 
 After the JSON, report in plain text:
 
-- the scope reviewed, and everything in `not_reviewed`, with the reason for each
+- the scope reviewed, and everything in `not_reviewed` and `excluded`, with the reason for each
 - the groups found, and the checklist items walked
 - the mechanical checks run, with their results, and the unverified ones
 - for each finding, the siblings examined, so a fixer can fix the whole class at once
 
-An empty `findings` array is a clean result only when `complete` is true. Say so plainly, and name what was not verified.
+An empty `findings` array is a clean result only when `status` is `success` and `complete` is true. Say so plainly, and name what was not verified.
 
-When a parent workflow invoked this skill with a continuation block, end with the structured result:
+When a parent workflow invoked this skill with a continuation block, end with the structured result, its status matching the JSON's:
 
 ```text
 Status: <success|no-op|failure|unavailable>
@@ -142,17 +147,16 @@ Unresolved or skipped: <not_reviewed and unverified entries, or none>
 Caller resume target: <the parent's resume target>
 ```
 
-`success` means the review ran; check `complete` and `Unresolved or skipped` before treating it as covering the whole scope. `failure` means the review did not run, for example because the range does not resolve. It never means "findings were reported". `unavailable` means the session lacked something the review needs, such as a way to ask for the base branch.
-
 ## Reference Navigation
 
-- `./references/checklist.md`: the thirteen patterns as reviewer questions, grouped into code, agent prose and docs, each with the groups it applies to, the evidence that settles it and an example
+- `./references/checklist.md`: the thirteen patterns as reviewer questions, filed under code, all groups, agent prose and docs, each with the groups it applies to, the evidence that settles it and an example
 - `./references/mechanical-checks.md`: commands that settle the platform-dependent items, which of them may run, and what to report when they cannot
 
 ## Example Output
 
 ```json
 {
+  "status": "success",
   "reviewed": "4f2a9c1..HEAD",
   "complete": true,
   "findings": [
@@ -174,17 +178,18 @@ Caller resume target: <the parent's resume target>
     }
   ],
   "unverified": ["Unrun platform configuration: deploy/config.yaml needs `gcloud run services replace --dry-run`, which needs credentials"],
-  "not_reviewed": []
+  "not_reviewed": [],
+  "excluded": []
 }
 ```
 
 ```text
 Scope: 4f2a9c1..HEAD (3 files: src/fetch.ts, README.md, tests/fetch.test.ts)
 Working-tree changes: none
-Groups: code, docs. Items walked: all eleven that apply to code or docs.
+Groups: code, docs. Items walked: the twelve that apply to code or docs.
 
 Mechanical checks:
-  ran         npx jest --ci fetch    passed, 14 tests
+  ran         npm test -- --ci fetch    passed, 14 tests
   unverified  deploy/config.yaml: `gcloud run services replace --dry-run` needs credentials
 
 Siblings examined for the first finding: isLocal(), isPrivate() in src/net.ts, the allowlist in src/config.ts.
@@ -192,9 +197,12 @@ Siblings examined for the first finding: isLocal(), isPrivate() in src/net.ts, t
 
 ## Error Handling
 
+Every stop still returns the step 7 JSON, with its `status`, before any plain text.
+
 - **Invalid option**: stop with `failure`, naming the option and what it accepts.
 - **No default branch found**: ask, per step 1; when no one can be asked, stop with `unavailable`.
 - **No merge base with the default branch**: stop with `failure`, naming the ref compared against, and ask for a `--range`. An empty diff here means nothing was measured, not that nothing changed.
 - **`--range` does not resolve**: stop with `failure`, naming the range and the error. Never fall back to a different range: reviewing the wrong commits looks exactly like a clean review of the right ones.
 - **A file in scope cannot be read**: list it in `not_reviewed`, set `complete` to false, and continue with the rest.
+- **The pull request body cannot be read**: put `PR body` in `not_reviewed`, set `complete` to false, and continue.
 - **A mechanical check is unavailable, would write, or would run untrusted code**: list it in `unverified` with its command. Never report it as passed.

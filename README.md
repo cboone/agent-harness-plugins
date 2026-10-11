@@ -96,6 +96,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 **External tools:**
 
+- _Review Anti-Patterns:_ [`gh`](https://cli.github.com/) (optional; finds the default branch when `origin/HEAD` is unset, and reads the open pull request's body)
 - _Review Colleague PR:_ [`gh`](https://cli.github.com/) (required; the skill reads the PR, its linked issues, its reviews, and its CI status over the GitHub API, and writes nothing)
 - _Review Plan:_ [`gh`](https://cli.github.com/) (optional; only for explicitly linked GitHub context)
 - _Review Until Clean:_ [`codex`](https://github.com/openai/codex) or [`claude`](https://code.claude.com/docs/en/overview) (one required, as the reviewer backend; both run read-only and neither is given a fix flag); `jq` (required; the bundled scope helper emits JSON)
