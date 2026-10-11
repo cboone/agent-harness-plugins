@@ -124,7 +124,7 @@ def progress_of($item; $branches; $c; $now; $host):
          behind: (.mergeStateStatus == "BEHIND" or (($head.behind // 0) > 0)), conflict: (.mergeable == "CONFLICTING"), work: true}
         + pr_next),
      ($free[] | (.local and (.remote | not)) as $only_local
-      | {carrier: {branch: .name}, stage: "branch", signal: branch_signal, lastActivity: (.at | utc), since: null,
+      | {carrier: ({branch: .name} + (if $only_local then {local: true} else {} end)), stage: "branch", signal: branch_signal, lastActivity: (.at | utc), since: null,
          nextMove: "author", nextAction: (if $only_local then "push it" else "open a pull request" end),
          behind: ((.behind // 0) > 0), local: $only_local, work: true}),
      ($labels[]

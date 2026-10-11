@@ -98,18 +98,18 @@ The boards carry these objects. A gather script writes them; the analysis never 
 
 `progress`, on an issue or bug, or null when it has no stage:
 
-| Field           | Value                                                                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stage`         | One of the stages                                                                                                                                     |
-| `carrier`       | What carries it, exactly one of `{ "pr": 412 }`, `{ "branch": "feature/412-tags" }`, `{ "label": "in progress" }`, or `{ "pipeline": "In Progress" }` |
-| `signal`        | The gathered signal in words, such as `pull request #412, approved, checks passing`                                                                   |
-| `lastActivity`  | An ISO 8601 time                                                                                                                                      |
-| `since`         | An ISO 8601 time the carrier began, such as when its pull request opened or its pull request merged, or null                                          |
-| `nextMove`      | `author`, `reviewer`, `ci`, or `nobody`                                                                                                               |
-| `nextAction`    | The next action in words                                                                                                                              |
-| `flags`         | A list of flags, empty when there are none                                                                                                            |
-| `host`          | The machine that saw a `local` branch, or null                                                                                                        |
-| `extraCarriers` | The other carriers, in the same form as `carrier`, empty when there are none                                                                          |
+| Field           | Value                                                                                                                                                                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stage`         | One of the stages                                                                                                                                                                                                            |
+| `carrier`       | What carries it, exactly one of `{ "pr": 412 }`, `{ "branch": "feature/412-tags" }`, `{ "label": "in progress" }`, or `{ "pipeline": "In Progress" }`; a branch only on the machine that ran the gather adds `"local": true` |
+| `signal`        | The gathered signal in words, such as `pull request #412, approved, checks passing`                                                                                                                                          |
+| `lastActivity`  | An ISO 8601 time                                                                                                                                                                                                             |
+| `since`         | An ISO 8601 time the carrier began, such as when its pull request opened or its pull request merged, or null                                                                                                                 |
+| `nextMove`      | `author`, `reviewer`, `ci`, or `nobody`                                                                                                                                                                                      |
+| `nextAction`    | The next action in words                                                                                                                                                                                                     |
+| `flags`         | A list of flags, empty when there are none                                                                                                                                                                                   |
+| `host`          | The machine that saw a `local` branch, or null                                                                                                                                                                               |
+| `extraCarriers` | The other carriers, in the same form as `carrier`, empty when there are none                                                                                                                                                 |
 
 `affinity`, on every open issue or bug:
 

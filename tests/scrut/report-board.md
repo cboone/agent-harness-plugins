@@ -535,7 +535,7 @@ the same rule.
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress.carrier = {"branch": "../other"}) | on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"branch": "a/../b"}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v startNow
 report-board: */data.json is not valid board data: (glob)
   - #101: progress.extraCarriers must be a list of carriers, empty when there are none
-  - #105: progress.carrier must name exactly one of pr, branch, label, or pipeline
+  - #105: progress.carrier must name exactly one of pr, branch, label, or pipeline, and only a branch may add local: true
 ```
 
 ## A label carrier carrying a dot segment
@@ -1154,7 +1154,7 @@ report-board: */data.json is not valid board data: (glob)
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("shipped"; {"pr": 0}) | .flags = ["quiet", "stale", "local", "quiet"] | .nextMove = "everyone" | .note = "x")) | on(102; .progress = (progress("draft"; {"pr": 4}) | .flags = ["leftover-label"] | .host = "studio" | .lastActivity = "yesterday")) | on(103; .progress = "branch")' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v startNow
 report-board: */data.json is not valid board data: (glob)
   - #101: progress.stage must be one of started, branch, draft, awaiting-review, needs-author, ready-to-merge, close-out
-  - #101: progress.carrier must name exactly one of pr, branch, label, or pipeline
+  - #101: progress.carrier must name exactly one of pr, branch, label, or pipeline, and only a branch may add local: true
   - #101: progress.nextMove must be one of author, reviewer, ci, nobody
   - #101: progress.flags lists quiet more than once
   - #101: progress is quiet or stale, never both
@@ -1271,6 +1271,27 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DAT
 - Flags raised: #101 parser: replace the tokenizer (behind)
 - Flags cleared: #105 docs: fix broken links (quiet)
 - Affinity changed: #107 cli: color output (you at tier 1 to none)
+```
+
+## Validate accepts local only on a branch carrier
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"branch": "fix/101-y", "local": true}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -c 'progress\.'
+0
+[1]
+```
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"pr": 4, "local": true}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep 'progress\.'
+  - #101: progress.extraCarriers must be a list of carriers, empty when there are none
+```
+
+## Compare reports a new carrier or next move within a stage
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("awaiting-review"; {"pr": 2}) | .nextMove = "nobody" | .nextAction = "request a review"))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("awaiting-review"; {"pr": 5}) | .nextMove = "reviewer" | .nextAction = "review it"))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | grep -E 'Carrier|Next move'
+- Carrier changed: #101 parser: replace the tokenizer (PR #2 to PR #5)
+- Next move changed: #101 parser: replace the tokenizer (nobody: request a review to reviewer: review it)
 ```
 
 ## Compare reports affinity that changes while the owner stays

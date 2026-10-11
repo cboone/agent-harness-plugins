@@ -117,9 +117,12 @@ def stages: ["started", "branch", "draft", "awaiting-review", "needs-author", "r
 def progress_flags: ["quiet", "stale", "behind", "conflict", "multiple", "local", "leftover-label"];
 def next_moves: ["author", "reviewer", "ci", "nobody"];
 def uniformity_kinds: ["assigned", "claimed", "filed", "commented", "active", "recent"];
-# A branch carrier becomes a compare link, so no dot path segments.
+# A branch carrier becomes a compare link, so no dot path segments. Only a
+# branch carrier may add "local": true, for a branch only on the gathering
+# machine, which stays text.
 def carrier_ok:
-  type == "object" and length == 1
+  type == "object"
+  and (length == 1 or (length == 2 and has("branch") and .local == true))
   and ((.pr | is_int and . > 0)
        or (.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not))
        or (.label | is_text)
@@ -143,7 +146,7 @@ def progress_problems($at):
   else
     (["stage", "carrier", "signal", "lastActivity", "since", "nextMove", "nextAction", "flags", "host", "extraCarriers"] - keys | .[] | "\($at): progress.\(.) is required, null where the model allows it"),
     check(.stage | IN(stages[]); "\($at): progress.stage must be one of \(stages | join(", "))"),
-    check(.carrier | carrier_ok; "\($at): progress.carrier must name exactly one of pr, branch, label, or pipeline"),
+    check(.carrier | carrier_ok; "\($at): progress.carrier must name exactly one of pr, branch, label, or pipeline, and only a branch may add local: true"),
     check(.signal | is_text; "\($at): progress.signal is required, the gathered signal in words"),
     check(.lastActivity | iso_time and calendar_date; "\($at): progress.lastActivity must be an ISO 8601 time with a zone"),
     check(.since | absent_or(iso_time and calendar_date); "\($at): progress.since must be an ISO 8601 time with a zone, or null"),
@@ -759,15 +762,17 @@ def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($it
 def stage_of: (.progress | if type == "object" then .stage else null end);
 # The stage and its carrier, as validation names them, for a progress that may
 # never have been validated.
-def work_text:
+def carrier_of:
   (.progress.carrier
    | if type != "object" then "an unknown carrier"
      elif .pr != null then "PR #\(.pr)"
      elif .branch != null then "\(.branch)"
      elif .label != null then "the \(.label) label"
      elif .pipeline != null then "the \(.pipeline) pipeline"
-     else tojson end) as $carrier
-  | "\(stage_of) on \($carrier)";
+     else tojson end);
+def work_text: "\(stage_of) on \(carrier_of)";
+# Whose move and what to do, as the board shows them.
+def next_of: (.progress | if type == "object" then "\(.nextMove): \(.nextAction)" else null end);
 def flags_of: (.progress | if type == "object" then (.flags | if type == "array" then map(tostring) else [] end) else [] end);
 def affinity_of:
   (.affinity | if type == "object" and .owner != null
@@ -783,6 +788,8 @@ def progress_entries($pairs; describe):
   entry("Started"; [$pairs[] | select((.now | stage_of) != null and (.was | stage_of) == null) | "\(.now | describe) (\(.now | work_text))"]),
   entry("Stage moved"; [$pairs[] | (.now | stage_of) as $n | (.was | stage_of) as $w | select($n != null and $w != null and $n != $w) | "\(.now | describe) (\($w) to \($n))"]),
   entry("No longer in progress"; [$pairs[] | select((.now | stage_of) == null and (.was | stage_of) != null) | "\(.now | describe) (was \(.was | stage_of))"]),
+  entry("Carrier changed"; [$pairs[] | (.now | stage_of) as $n | select($n != null and $n == (.was | stage_of)) | (.now | carrier_of) as $c | (.was | carrier_of) as $w | select($c != $w) | "\(.now | describe) (\($w) to \($c))"]),
+  entry("Next move changed"; [$pairs[] | (.now | stage_of) as $n | select($n != null and $n == (.was | stage_of)) | (.now | next_of) as $x | (.was | next_of) as $w | select($x != $w) | "\(.now | describe) (\($w) to \($x))"]),
   entry("Flags raised"; [$pairs[] | ((.now | flags_of) - (.was | flags_of)) as $f | select(($f | length) > 0) | "\(.now | describe) (\($f | join(", ")))"]),
   entry("Flags cleared"; [$pairs[] | ((.was | flags_of) - (.now | flags_of)) as $f | select(($f | length) > 0) | "\(.now | describe) (\($f | join(", ")))"]),
   entry("Affinity changed"; [$pairs[] | (.now | affinity_of) as $n | (.was | affinity_of) as $w | select($n != $w)

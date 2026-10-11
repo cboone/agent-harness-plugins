@@ -346,29 +346,20 @@
 
     // A pull request links to itself, and a branch to its comparison with the
     // synced branch. A label, a pipeline, or a branch only on the gathering machine stays text.
-    function carrierHref(carrier, local = false) {
+    function carrierHref(carrier) {
       if (carrier?.pr != null) return `${repoUrl}/pull/${carrier.pr}`;
-      if (carrier?.branch != null && !local) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(carrier.branch)}`;
+      if (carrier?.branch != null && carrier.local !== true) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(carrier.branch)}`;
       return null;
     }
 
-    // A branch only on the machine that ran the gather has no page on GitHub.
-
-    function isLocal(progress) {
-
-      return progress.flags?.includes("local") ?? false;
-
-    }
-
-
-    function carrierLink(carrier, local = false) {
-      const href = carrierHref(carrier, local);
+    function carrierLink(carrier) {
+      const href = carrierHref(carrier);
       return href ? h("a", { class: "num", href }, carrierText(carrier)) : h("span", null, carrierText(carrier));
     }
 
     function stageTag(progress) {
       const label = STAGE_LABEL.get(progress.stage) ?? progress.stage;
-      const href = carrierHref(progress.carrier, isLocal(progress));
+      const href = carrierHref(progress.carrier);
       return h(
         href ? "a" : "span",
         { class: `stage stage--${progress.stage}`, href, title: `${label}: ${progress.signal}` },
@@ -553,7 +544,7 @@
       return h("li", { class: "flight-row" }, [
         h("p", { class: "flight-issue" }, [ref(issue.number), " ", shortTitle(issue.number)]),
         h("p", { class: "flight-carrier" }, [
-          carrierLink(progress.carrier, isLocal(progress)),
+          carrierLink(progress.carrier),
           extra.length ? [" + ", extra.map((carrier, i) => [i ? ", " : "", carrierLink(carrier)])] : null,
           " ",
           flagMarks(progress),

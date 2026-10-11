@@ -209,29 +209,20 @@
 
     // A pull request links to itself, and a branch to its comparison with the
     // synced branch. A label, a pipeline, or a branch only on the gathering machine stays text.
-    function carrierHref(carrier, local = false) {
+    function carrierHref(carrier) {
       if (carrier?.pr != null) return `${repoUrl}/pull/${carrier.pr}`;
-      if (carrier?.branch != null && !local) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(carrier.branch)}`;
+      if (carrier?.branch != null && carrier.local !== true) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(carrier.branch)}`;
       return null;
     }
 
-    // A branch only on the machine that ran the gather has no page on GitHub.
-
-    function isLocal(progress) {
-
-      return progress.flags?.includes("local") ?? false;
-
-    }
-
-
-    function carrierLink(carrier, local = false) {
-      const href = carrierHref(carrier, local);
+    function carrierLink(carrier) {
+      const href = carrierHref(carrier);
       return href ? h("a", { class: "num", href }, carrierText(carrier)) : h("span", null, carrierText(carrier));
     }
 
     function stageTag(progress) {
       const label = STAGE_LABEL.get(progress.stage) ?? progress.stage;
-      const href = carrierHref(progress.carrier, isLocal(progress));
+      const href = carrierHref(progress.carrier);
       return h(
         href ? "a" : "span",
         { class: `stage stage--${progress.stage}`, href, title: `${label}: ${progress.signal}` },
@@ -357,16 +348,16 @@
     // The stage, carrier, and flags, then the next action.
     function progressLine(progress) {
       return [
-        h("p", null, [stageTag(progress), " ", carrierLink(progress.carrier, isLocal(progress)), " ", flagMarks(progress)]),
+        h("p", null, [stageTag(progress), " ", carrierLink(progress.carrier), " ", flagMarks(progress)]),
         h("p", { class: "next-action" }, nextText(progress)),
       ];
     }
 
-    // The stage, carrier, and flags on one line, for report rows that name a
-    // bug without its full progress line.
+    // The stage, carrier, flags, and next action on one line, for report rows
+    // that name a bug without its full progress line.
     function progressBrief(progress) {
       if (!progress) return null;
-      return h("p", { class: "next-action" }, [stageTag(progress), " ", carrierLink(progress.carrier, isLocal(progress)), " ", flagMarks(progress)]);
+      return h("p", { class: "next-action" }, [stageTag(progress), " ", carrierLink(progress.carrier), " ", flagMarks(progress), " · ", nextText(progress)]);
     }
 
     // The user's own calls and the tracker's signals, beside the facts.
@@ -424,7 +415,7 @@
         h("p", { class: "ready-title" }, [ref(bug.number), bug.title]),
         progress
           ? [
-              h("p", { class: "carrier" }, [carrierLink(progress.carrier, isLocal(progress)), " ", flagMarks(progress)]),
+              h("p", { class: "carrier" }, [carrierLink(progress.carrier), " ", flagMarks(progress)]),
               h("p", { class: "next-action" }, nextText(progress)),
             ]
           : h("p", { class: "ready-next" }, prose(bug.assessment?.nextStep ?? entry.why)),

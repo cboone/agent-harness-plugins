@@ -137,6 +137,13 @@ branch fix/12-a, 0 commits ahead, local [local] push it on devbox
 branch fix/12-a, commits ahead unknown [] open a pull request
 ```
 
+## A branch only on the gathering machine is marked local, even as an extra carrier
+
+```scrut
+$ model 'item(.prs = [pr(40; .)]) | progress_of(.; [branch("fix/12-y"; .local = true | .remote = false)]; c; now; "devbox") | .extraCarriers | tojson'
+[{"branch":"fix/12-y","local":true}]
+```
+
 ## Local and remote copies of a branch join, counting from the one further ahead
 
 ```scrut
