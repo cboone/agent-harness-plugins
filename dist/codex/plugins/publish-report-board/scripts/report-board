@@ -1013,12 +1013,14 @@ function read_stylesheet() {
   printf '%s' "${styles}"
 }
 
-# Exits unless the styles placeholder appears once, inside a style element.
-# Tag names match in any case, as HTML reads them.
+# Exits unless the styles placeholder appears once, alone in a style element:
+# only whitespace between it and the opening tag's ">" and the closing tag, and
+# an opening tag whose attributes hold no "<" or ">" and balanced quotes. Tag
+# names match in any case, as HTML reads them.
 function require_styles_placeholder() {
   local page_file="${1}"
   local text="${2}"
-  local before after opened closed
+  local before after tag gap closed double_quotes single_quotes
 
   if [[ "${text}" != *"${STYLES_PLACEHOLDER}"* ]]; then
     die "${E_INVALID}" "${page_file} is missing the ${STYLES_PLACEHOLDER} placeholder"
@@ -1028,14 +1030,20 @@ function require_styles_placeholder() {
   if [[ "${after}" == *"${STYLES_PLACEHOLDER}"* ]]; then
     die "${E_INVALID}" "${page_file} holds the ${STYLES_PLACEHOLDER} placeholder more than once"
   fi
-  opened="${before##*<[Ss][Tt][Yy][Ll][Ee]}"
+  # The opening tag after its name, trailing whitespace removed, and the text
+  # between the placeholder and the closing tag.
+  tag="${before##*<[Ss][Tt][Yy][Ll][Ee]}"
+  tag="${tag%"${tag##*[![:space:]]}"}"
+  gap="${after%%</[Ss][Tt][Yy][Ll][Ee]*}"
   closed="${after#*</[Ss][Tt][Yy][Ll][Ee]}"
-  # A tag name ends at whitespace or ">", so <stylesheet> is no style element,
-  # and the opening tag's ">" must come first, so an attribute value is not
-  # the element's content.
+  double_quotes="${tag//[!\"]/}"
+  single_quotes="${tag//[!\']/}"
   shopt -s nocasematch
-  if [[ "${before}" != *"<style"* || "${opened}" != [[:space:]\>]* || "${opened}" != *">"* || "${opened}" == *"${STYLE_CLOSE}"* || "${after}" != *"${STYLE_CLOSE}"* || "${closed}" != [[:space:]\>]* ]]; then
-    die "${E_INVALID}" "${page_file} places the ${STYLES_PLACEHOLDER} placeholder outside a style element"
+  if [[ "${before}" != *"<style"* || "${after}" != *"${STYLE_CLOSE}"* || "${tag}" != *">" ]] \
+    || [[ "${tag%>}" != "" && "${tag%>}" != [[:space:]]* ]] \
+    || [[ "${tag%>}" == *[\<\>]* || -n "${gap//[[:space:]]/}" || "${closed}" != [[:space:]\>]* ]] \
+    || ((${#double_quotes} % 2 || ${#single_quotes} % 2)); then
+    die "${E_INVALID}" "${page_file} must hold the ${STYLES_PLACEHOLDER} placeholder alone in a style element"
   fi
   shopt -u nocasematch
 }
