@@ -1241,11 +1241,13 @@ templates
 
 The placeholder has to sit alone in a style element. Anywhere else, including
 an element whose name only begins with style, an attribute of the style tag,
-beside other text, or inside an HTML comment, the stylesheet would land in the
+beside other text, or inside an HTML comment or a script, the stylesheet would land in the
 page as text or in the wrong place, and a second placeholder would be left behind in the page.
 
 ```scrut
-$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<stylesheet>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */</stylesheet>' '<style data="/* __BOARD_STYLES__ */"></style>' '<style data="> /* __BOARD_STYLES__ */"></style>' '<style>a { } /* __BOARD_STYLES__ */</style>' '<!-- <style>/* __BOARD_STYLES__ */</style> -->' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<stylesheet>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */</stylesheet>' '<style data="/* __BOARD_STYLES__ */"></style>' '<style data="> /* __BOARD_STYLES__ */"></style>' '<style>a { } /* __BOARD_STYLES__ */</style>' '<!-- <style>/* __BOARD_STYLES__ */</style> -->' '<script>const x = "<style>/* __BOARD_STYLES__ */</style>";</script>' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)
+exit 1
 report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)
 exit 1
 report-board: */report.html must hold the /* __BOARD_STYLES__ */ placeholder alone in a style element (glob)

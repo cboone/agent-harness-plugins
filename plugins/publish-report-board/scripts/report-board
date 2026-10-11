@@ -1016,8 +1016,8 @@ function read_stylesheet() {
 # Exits unless the styles placeholder appears once, alone in a style element:
 # only whitespace between it and the opening tag's ">" and the closing tag, an
 # opening tag whose attributes hold no "<" or ">" and balanced quotes, and no
-# HTML comment left open before it. Tag names match in any case, as HTML reads
-# them.
+# HTML comment or script element left open before it. Tag names match in any
+# case, as HTML reads them.
 function require_styles_placeholder() {
   local page_file="${1}"
   local text="${2}"
@@ -1044,6 +1044,7 @@ function require_styles_placeholder() {
     || [[ "${tag%>}" != "" && "${tag%>}" != [[:space:]]* ]] \
     || [[ "${tag%>}" == *[\<\>]* || -n "${gap//[[:space:]]/}" || "${closed}" != [[:space:]\>]* ]] \
     || [[ "${before}" == *"<!--"* && "${before##*<!--}" != *"-->"* ]] \
+    || [[ "${before}" == *"<script"* && "${before##*<[Ss][Cc][Rr][Ii][Pp][Tt]}" != *"</script"* ]] \
     || ((${#double_quotes} % 2 || ${#single_quotes} % 2)); then
     die "${E_INVALID}" "${page_file} must hold the ${STYLES_PLACEHOLDER} placeholder alone in a style element"
   fi
@@ -1112,39 +1113,50 @@ function require_new_output() {
   fi
 }
 
-# Creates a page. The page is written whole to a temporary file first, then the
-# name is claimed with an exclusive noclobber create, which refuses a file that
-# appeared after the check, and the page moved onto the claim. A signal between
-# claim and move removes both, so an interrupted run leaves no file a retry
-# would refuse.
+# Creates a page, never replacing a file. The page is written whole to a
+# temporary file, then linked into place: a hard link is an atomic create that
+# fails if the name is taken. Where the filesystem has no hard links, the name
+# is claimed with an exclusive noclobber create and the page moved onto the
+# claim. Any exit before the page is in place removes the temporary file, and
+# the claim while it is still this run's empty file, so a retry is never
+# refused.
 function write_new_output() {
   local output_file="${1}"
   local content="${2}"
-  local output_dir temp_file current_umask mode
+  local output_dir temp_file current_umask mode claimed=false
 
   require_new_output "${output_file}"
   output_dir="$(dirname -- "${output_file}")"
   temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")" || die "${E_INVALID}" "cannot write to ${output_dir}"
+  trap 'rm -f -- "${temp_file}"; if [[ "${claimed}" == true && -f "${output_file}" && ! -s "${output_file}" ]]; then rm -f -- "${output_file}"; fi' EXIT
+  trap 'exit "${E_INVALID}"' HUP INT TERM
+
   current_umask="$(umask)"
   mode="$(printf '%o' "$((8#666 & ~8#${current_umask}))")"
   if ! { printf '%s' "${content}" > "${temp_file}" && chmod -- "${mode}" "${temp_file}"; }; then
-    rm -f -- "${temp_file}"
     die "${E_INVALID}" "cannot write ${output_file}"
   fi
 
-  trap 'rm -f -- "${temp_file}" "${output_file}"; exit "${E_INVALID}"' HUP INT TERM
-  if ! (set -o noclobber && : > "${output_file}") 2> /dev/null; then
-    trap - HUP INT TERM
-    rm -f -- "${temp_file}"
-    require_new_output "${output_file}"
-    die "${E_INVALID}" "cannot write ${output_file}"
+  if ln -- "${temp_file}" "${output_file}" 2> /dev/null; then
+    # ln puts the link inside a directory that appeared at the path since the
+    # check, so take it back out.
+    if [[ -d "${output_file}" ]]; then
+      rm -f -- "${output_file}/$(basename -- "${temp_file}")"
+      die "${E_INVALID}" "${output_file} is a directory; name the page file to write"
+    fi
+  elif [[ -e "${output_file}" || -L "${output_file}" ]]; then
+    die "${E_INVALID}" "${output_file} already exists; name a new page file"
+  else
+    if ! (set -o noclobber && : > "${output_file}") 2> /dev/null; then
+      require_new_output "${output_file}"
+      die "${E_INVALID}" "cannot write ${output_file}"
+    fi
+    claimed=true
+    mv -- "${temp_file}" "${output_file}" || die "${E_INVALID}" "cannot write ${output_file}"
+    claimed=false
   fi
-  if ! mv -- "${temp_file}" "${output_file}"; then
-    rm -f -- "${temp_file}" "${output_file}"
-    trap - HUP INT TERM
-    die "${E_INVALID}" "cannot write ${output_file}"
-  fi
-  trap - HUP INT TERM
+  trap - EXIT HUP INT TERM
+  rm -f -- "${temp_file}"
 }
 
 # Replaces the output file in one step, so a republish never reads a
