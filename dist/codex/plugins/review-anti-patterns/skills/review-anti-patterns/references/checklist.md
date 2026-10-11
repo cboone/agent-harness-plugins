@@ -14,7 +14,10 @@ A blocklist, regular expression or sanitizer rejects one form of an input and ac
 
 - For each input form the change rejects or rewrites, what sibling forms exist? Consider encodings (percent, HTML entity, Unicode escapes and normalization), case, whitespace runs and other separators, CRLF and bare CR, IPv6 and numeric host forms, trailing dots and slashes, `..` after decoding, and symlinked parents.
 - Does the check run before or after decoding, normalization and path resolution?
+- Write the input grammar as a matrix and test every cell. For key and value redaction that is key quoting (none, `"`, `'`, escaped `\"`), separator (`=` or `:`, with and without surrounding spaces), value quoting and encoding; for an identifier, every separator the outer pattern admits. One cell fixed per round is how a chain of findings starts.
+- A form the code documents as deliberately left alone is still a candidate. Can it carry the value the check protects?
 - Would an allowlist of exact known-good forms, or a structural parse (a URL parser, a path resolver, a real tokenizer), remove the whole class instead of one member of it?
+- When the range is the second or later fix to the same check, report replacing it with an exact-format allowlist or a structural parse as an Important finding of its own, whatever else the review finds. Another patch to the same blocklist is what the next round would answer.
 
 **Settled by:** a sibling input traced through the code to the point where it is accepted, or the check shown to apply to a canonical form that every sibling reduces to.
 
@@ -71,6 +74,7 @@ Missing, empty, truncated or paginated input is treated as a clean pass.
 - What does this return for missing input, an empty list, the first page of several, a response cut off at a limit, and a response with an error field beside its data?
 - Can "nothing found" be told apart from "nothing read"? Does a zero count, an empty file or a failed command reach the same branch as success?
 - When a list is capped (`first: 100`, `--limit`, a search's 1,000-result ceiling), is reaching the cap detected and reported?
+- When one part of the work fails, such as an extractor that raises, do the parts that do not depend on it, such as a status or result code, still get written?
 
 **Settled by:** the empty or partial input traced to the result it produces.
 
@@ -140,6 +144,7 @@ The change claims a boundary, such as "read-only", "least privilege", "never pus
 
 - What mechanism enforces the claim: a token's permissions, a sandbox flag, a disallowed-tools list, a filesystem permission? Or only the instructions?
 - Can any path through the code or the workflow cross the boundary, such as a fallback, an error handler or a helper that writes?
+- Does an agent or reviewer instruction tell a reviewer not to raise something? That is a claim to verify like any other, and behavior that depends on import order or registration order is unverified until a test pins the order that ships.
 
 **Settled by:** the enforcing mechanism named and checked, or the path that crosses the boundary.
 
@@ -156,6 +161,8 @@ A change updates one of several places that do the same job and leaves the other
 - Which other places do the same thing: another branch of the same `case`, a second implementation of the same format, a byte-identical mirror copy, a generated file, a test fixture, a caller, a sibling skill that shares the rule?
 - Did every one of them change, or is there a reason one should not?
 - Did the fix for a review finding land in only the one place the finding named?
+- When a fix changes the order or preprocessing of one rule in a pipeline, such as moving it before decoding, every other rule in that pipeline is a sibling: does each still see the input it expects?
+- For an allowlist, registry or route table, list the full set it is meant to cover, such as every public write route, and compare it with its entries. For a lookup by path or key, which spellings of the same request reach it: trailing slash, case, encoding?
 
 **Settled by:** a repository search for the shared identifier, flag, message or literal, with each hit checked.
 

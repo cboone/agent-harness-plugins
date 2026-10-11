@@ -13,9 +13,13 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 A general review asks whether a change is right. This skill asks narrower questions that a general review tends to skip: what the sibling of each handled case is and whether it behaves the same way, which other places do the same job and whether they changed too, and which documents describe what just changed. Those questions come from a review of 132 pull requests in which most Copilot findings after the first round were a sibling input form, a parallel path, or a document that the previous fix had left behind.
 
-The checklist has thirteen patterns, grouped into code, agent prose and docs, so a change with no code skips the code items. Agent prose, such as skills, prompts and agent instruction files, is reviewed as a program: rule order, branches that end nowhere, rules that conflict, and commands that the permission block does not cover. Where an item depends on how a platform behaves, the skill runs the project's own read-only check, such as `actionlint` or a validate-only flag, and reports anything it could not check as unverified rather than passed.
+The checklist has thirteen patterns, and each names the kinds of files it applies to: code, agent prose or docs, so a change touching only docs skips what cannot apply there. Agent prose, such as skills, prompts and agent instruction files, is reviewed as a program: rule order, branches that end nowhere, rules that conflict, and commands that the permission block does not cover. Where an item depends on how a platform behaves, the skill runs the project's own check, such as `actionlint` or a validate-only flag, when the check writes nothing and the code it runs is yours, and reports anything it could not check as unverified rather than passed.
 
-It never edits. It returns findings in the same JSON shape as [Review Until Clean](../review-until-clean/README.md), each with the case that goes wrong and the evidence, followed by the siblings it examined, so a fix can cover the whole class at once.
+It never edits; nothing but its instructions enforces that unless you run it somewhere that cannot write. It returns JSON whose findings have the same fields as [Review Until Clean](../review-until-clean/README.md)'s, each with the case that goes wrong and the evidence, plus whether the review covered the whole scope and what it left unverified. A plain-text report follows, naming the siblings examined for each finding, so a fix can cover the whole class at once.
+
+## Requirements
+
+- A Git repository with an `origin` remote. The skill finds the default branch from `origin/HEAD`, falling back to the [GitHub CLI](https://cli.github.com/), which also reads the pull request body when the branch has an open pull request.
 
 ## Usage
 
@@ -25,20 +29,16 @@ It never edits. It returns findings in the same JSON shape as [Review Until Clea
 /review-anti-patterns --files src/redact.ts --severity important
 ```
 
-| Option                        | Effect                                                                                                                                                        |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--range <rev-range>`         | Review this revision range. The default is the merge base with the default branch through the working tree, including staged, unstaged and untracked changes. |
-| `--files <paths>`             | Limit the scope to these paths or globs.                                                                                                                      |
-| `--severity <important\|nit>` | Lowest severity reported. The default, `nit`, reports everything.                                                                                             |
+| Option                        | Effect                                                                                                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--range <rev-range>`         | Review this revision range, written with `..` or `...`. The default is the merge base with the default branch through the working tree, including staged, unstaged and untracked changes. |
+| `--files <paths>`             | Limit the scope to these paths or globs. The report lists the changed files this leaves out.                                                                                              |
+| `--severity <important\|nit>` | Lowest severity reported. The default, `nit`, reports everything.                                                                                                                         |
 
 Two places it fits:
 
 - **Before opening a pull request**, as a targeted re-review after the general review and its fixes.
-- **On a fix for review feedback**, with `--range` set to the commits the fix added, before the fix is pushed. Fix code is new code, and it is where most later-round findings come from.
-
-## Requirements
-
-- A Git repository. The [GitHub CLI](https://cli.github.com/) finds the default branch and reads the pull request body when it is available; otherwise the skill falls back to the remote's `HEAD` ref.
+- **On a fix for review feedback**, with `--range` set to the commits the fix added, before the fix is pushed. Fix code is new code, and it is where most later-round findings come from. Each file the fix touches is reviewed whole, because Copilot re-reviews the whole pull request every round.
 
 ## Recommended Permissions
 
@@ -47,7 +47,7 @@ This skill runs read-only Git and GitHub CLI commands to find its scope. To allo
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh repo view *)", "Bash(gh pr view *)", "Bash(git symbolic-ref *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git ls-files *)", "Bash(git rev-parse *)"]
+    "allow": ["Bash(gh repo view *)", "Bash(gh pr view *)", "Bash(git symbolic-ref *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status *)", "Bash(git log *)", "Bash(git show *)", "Bash(git ls-files *)"]
   }
 }
 ```
@@ -57,7 +57,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Th
 ## Examples
 
 - "review anti-patterns on this branch": the whole branch, every applicable item
-- "check the fix before pushing it": the fix commits only, with `--range`
+- "check the fix before pushing it": the fix commits, with `--range`, and the files they touch
 - "did this sanitizer change miss a sibling form?": the sanitizer's file, with `--files`
 
 ## See Also
