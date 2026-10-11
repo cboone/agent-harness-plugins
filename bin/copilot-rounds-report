@@ -94,6 +94,11 @@ function die() {
   exit "${2:-1}"
 }
 
+# Prints the singular or plural noun for a count.
+function noun() {
+  if [[ "${1}" == "1" ]]; then printf '%s' "${2}"; else printf '%s' "${3}"; fi
+}
+
 function warn() {
   echo "${SCRIPT_NAME}: warning: ${1}" >&2
 }
@@ -463,16 +468,16 @@ function main() {
     <<< "${summary}")"
   IFS=$'\t' read -r matched returned with_copilot unrecognized uncounted <<< "${counts}"
   if [[ "${matched}" != "${returned}" ]]; then
-    warn "the search matched ${matched} pull requests but returned ${returned}; results may have shifted while the pages were fetched"
+    warn "the search matched ${matched} $(noun "${matched}" "pull request" "pull requests") but returned ${returned}; results may have shifted while the pages were fetched"
   fi
   if [[ "${unrecognized}" != "0" ]]; then
-    warn "${unrecognized} Copilot reviews had no recognizable verdict; check whether the review layout changed"
+    warn "${unrecognized} Copilot $(noun "${unrecognized}" "review" "reviews") had no recognizable verdict; check whether the review layout changed"
   fi
   if [[ "${uncounted}" != "0" ]]; then
-    warn "${uncounted} Copilot rounds list findings or badges the report could not count; check whether the review layout changed"
+    warn "${uncounted} Copilot $(noun "${uncounted}" "round lists" "rounds list") findings or badges the report could not count; check whether the review layout changed"
   fi
   if [[ "${with_copilot}" == "0" ]]; then
-    warn "none of the ${returned} pull requests had a Copilot round"
+    warn "$(noun "${returned}" "the one pull request returned had no Copilot round" "none of the ${returned} pull requests had a Copilot round")"
   fi
 
   jq -r \

@@ -193,7 +193,12 @@ A review whose verdict line cannot be found still counts as a round, with a warn
 ```scrut
 $ variant '.[0].data.search.nodes[1].reviews.nodes[0].body |= sub("### [^\n]*"; "Approved.")' \
 >   && replay 2>&1 > /dev/null
-copilot-rounds-report: warning: 1 Copilot reviews had no recognizable verdict; check whether the review layout changed
+copilot-rounds-report: warning: 1 Copilot review had no recognizable verdict; check whether the review layout changed
+```
+
+```scrut
+$ variant '[.[1] | .data.search.nodes = [.data.search.nodes[1]] | .data.search.issueCount = 1]' && replay 2>&1 > /dev/null
+copilot-rounds-report: warning: the one pull request returned had no Copilot round
 ```
 
 Findings the report cannot count also warn: a previously missed list under another heading, or inline findings with no badge marked new.
@@ -201,7 +206,7 @@ Findings the report cannot count also warn: a previously missed list under anoth
 ```scrut
 $ variant '.[1].data.search.nodes[0].reviews.nodes |= map(.body |= sub("Previously missed"; "Earlier missed"))' \
 >   && replay 2>&1 > /dev/null
-copilot-rounds-report: warning: 1 Copilot rounds list findings or badges the report could not count; check whether the review layout changed
+copilot-rounds-report: warning: 1 Copilot round lists findings or badges the report could not count; check whether the review layout changed
 ```
 
 ```scrut
