@@ -199,6 +199,14 @@ src/api/v2/writes.js via pull request #39
 src/deps/axios.js via commit * (glob)
 ```
 
+## A checkout of a lookalike host supplies no local state
+
+```scrut
+$ repo="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (cd "${repo}" && git init -q -b main && git remote add origin https://evilgithub.com/acme/widgets.git && bugs gather "${work}/config.json" "${work}/lookalike.json" 2>&1 > /dev/null | grep 'origin is') && jq -c '.checkout' "${work}/lookalike.json"
+bugs-gather: this checkout's origin is https://evilgithub.com/acme/widgets.git, not acme/widgets, so the gather reads only the branches GitHub holds
+false
+```
+
 ## Outside a checkout, the gather reads no local state
 
 ```scrut

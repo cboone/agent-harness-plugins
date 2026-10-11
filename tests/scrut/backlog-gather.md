@@ -10,10 +10,11 @@ Every GitHub call goes through `tests/fixtures/backlog-gather-gh-stub`, which
 answers from `tests/data/backlog-gather/github/`. The fixtures describe
 `acme/widgets`, read by `ana`, with 22 open issues built so that between them
 they reach every stage, flag, and affinity tier. The checkout is a throwaway
-clone of a bare repository made below, with commits at fixed dates, a branch
-that was never pushed, and a worktree. `backlog` takes settings (`NAME=value`)
-first, then the command. The gather time is fixed at 2026-10-15T16:00:00Z and
-the host at `devbox`.
+clone of a bare repository made below, whose origin reads as
+`github.com/acme/widgets` while pushes go to the bare repository, with commits
+at fixed dates, a branch that was never pushed, and a worktree. `backlog` takes
+settings (`NAME=value`) first, then the command. The gather time is fixed at
+2026-10-15T16:00:00Z and the host at `devbox`.
 
 ```scrut
 $ function backlog() {
@@ -52,6 +53,8 @@ $ function backlog() {
 > git init -q --bare "${work}/remote/acme/widgets.git"
 > git clone -q "${work}/remote/acme/widgets.git" "${work}/widgets" 2> /dev/null
 > cd "${work}/widgets"
+> git remote set-url origin https://github.com/acme/widgets.git
+> git remote set-url --push origin "${work}/remote/acme/widgets.git"
 > git symbolic-ref HEAD refs/heads/main
 > git config user.email ana@example.com
 > commit_at 2026-08-01T10:00:00Z ana@example.com old/notes.txt
@@ -346,8 +349,16 @@ backlog-gather: issues failed:
 
 ```scrut
 $ backlog gather acme/other "${work}/x.json" 2>&1
-backlog-gather: the origin of this checkout is not acme/other
+backlog-gather: the origin of this checkout is not acme/other on github.com
 [1]
+```
+
+A lookalike host is not GitHub, so its checkout supplies no branches.
+
+```scrut
+$ git remote set-url origin https://evilgithub.com/acme/widgets.git && backlog gather acme/widgets "${work}/x.json" 2>&1; code=$?; git remote set-url origin https://github.com/acme/widgets.git; echo "exit ${code}"
+backlog-gather: the origin of this checkout is not acme/widgets on github.com
+exit 1
 ```
 
 ```scrut

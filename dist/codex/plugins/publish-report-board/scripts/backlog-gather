@@ -421,15 +421,19 @@ function github_search() {
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/merged.graphql" -f "q=${search}"
 }
 
-# Succeeds when origin is REPO over https or ssh, with or without .git,
-# ignoring case as GitHub does.
-function origin_is() {
-  local repo="${1}"
-  local url
-  url="$(git remote get-url origin 2> /dev/null)" || return 1
-  url="${url%.git}"
+# Succeeds when a remote URL is OWNER/NAME on github.com, as
+# https://github.com/OWNER/NAME, ssh://git@github.com/OWNER/NAME, or
+# git@github.com:OWNER/NAME, with or without .git, ignoring case as GitHub
+# does. Any other host or path, such as a lookalike host or a local clone,
+# does not match.
+function remote_matches() {
+  local repo="${1}" url="${2}"
+  url="$(printf '%s' "${url}" | tr '[:upper:]' '[:lower:]')"
   url="${url%/}"
-  [[ "$(printf '%s' "${url}" | tr '[:upper:]' '[:lower:]')" == *[:/]"$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')" ]]
+  url="${url%.git}"
+  repo="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
+  repo="${repo//./\\.}"
+  [[ "${url}" =~ ^(https://([^/@]+@)?github\.com/|ssh://git@github\.com(:22)?/|git@github\.com:)${repo}$ ]]
 }
 
 # Writes TEMP_DIR/branches.json, one entry per local and origin branch, and
@@ -509,13 +513,15 @@ function cmd_gather() {
   [[ $# -eq 2 ]] || usage_error "gather takes a repository and an output path"
   local repo="${1}"
   local output_file="${2}"
-  local config now host since viewer default commit email
+  local config now host since viewer default commit email url
   require_tools jq gh git
   load_config "${repo}"
   config="${CONFIG}"
   require_output_dir "${output_file}"
   git rev-parse --is-inside-work-tree > /dev/null 2>&1 || die "${E_INVALID}" "run gather inside a checkout of ${repo}"
-  origin_is "${repo}" || die "${E_INVALID}" "the origin of this checkout is not ${repo}"
+  if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then
+    die "${E_INVALID}" "the origin of this checkout is not ${repo} on github.com"
+  fi
 
   now="$(utc_now)"
   since="$(jq -n -r --arg now "${now}" --argjson days "$(config_field "${config}" '.affinityWorkDays')" \

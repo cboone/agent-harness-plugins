@@ -1009,13 +1009,19 @@ function zenhub_post() {
     --data-binary @"${payload_file}"
 }
 
-# Succeeds when a remote URL points at OWNER/NAME on GitHub over HTTPS or SSH,
-# with or without .git, ignoring case as GitHub does.
+# Succeeds when a remote URL is OWNER/NAME on github.com, as
+# https://github.com/OWNER/NAME, ssh://git@github.com/OWNER/NAME, or
+# git@github.com:OWNER/NAME, with or without .git, ignoring case as GitHub
+# does. Any other host or path, such as a lookalike host or a local clone,
+# does not match.
 function remote_matches() {
   local repo="${1}" url="${2}"
-  url="$(printf '%s' "${url%.git}" | tr '[:upper:]' '[:lower:]')"
+  url="$(printf '%s' "${url}" | tr '[:upper:]' '[:lower:]')"
+  url="${url%/}"
+  url="${url%.git}"
   repo="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
-  [[ "${url}" == *"${GITHUB_HOST}/${repo}" || "${url}" == *"${GITHUB_HOST}:${repo}" ]]
+  repo="${repo//./\\.}"
+  [[ "${url}" =~ ^(https://([^/@]+@)?github\.com/|ssh://git@github\.com(:22)?/|git@github\.com:)${repo}$ ]]
 }
 
 # Writes TEMP_DIR/local.json: the local and origin branches, the files on the
