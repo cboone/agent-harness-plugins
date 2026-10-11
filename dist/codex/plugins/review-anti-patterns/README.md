@@ -13,9 +13,9 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 A general review asks whether a change is right. This skill asks narrower questions that a general review tends to skip: what the sibling of each handled case is and whether it behaves the same way, which other places do the same job and whether they changed too, and which documents describe what just changed. Those questions come from a review of 132 pull requests in which most Copilot findings after the first round were a sibling input form, a parallel path, or a document that the previous fix had left behind.
 
-The checklist has thirteen patterns, and each names the kinds of files it applies to: code, agent prose or docs, so a change touching only docs skips what cannot apply there. Agent prose, such as skills, prompts and agent instruction files, is reviewed as a program: rule order, branches that end nowhere, rules that conflict, and commands that the permission block does not cover. Where an item depends on how a platform behaves, the skill runs the project's own check, such as `actionlint` or a validate-only flag, when the check writes nothing and the code it runs is yours, and reports anything it could not check as unverified rather than passed.
+The checklist has thirteen patterns, and each names the kinds of files it applies to: code, agent prose or docs, so a change touching only docs skips what cannot apply there. Agent prose, such as skills, prompts and agent instruction files, is reviewed as a program: rule order, branches that end nowhere, rules that conflict, and commands that the permission block does not cover. Where an item depends on how a platform behaves, the skill runs a read-only check such as `actionlint` or a validate-only flag, runs project tests and scripts only when you pass `--run-checks`, and reports anything it could not check as unverified rather than passed.
 
-It never edits; nothing but its instructions enforces that unless you run it somewhere that cannot write. It returns JSON whose findings have the same fields as [Review Until Clean](../review-until-clean/README.md)'s, each with the case that goes wrong and the evidence, plus whether the review covered the whole scope and what it left unverified. A plain-text report follows, naming the siblings examined for each finding, so a fix can cover the whole class at once.
+It never edits. Nothing but its instructions enforces that unless you run it somewhere that cannot write, and `--run-checks` lets project code run, which can write; the report says which applied and lists anything a check left behind. It returns JSON whose findings have the same fields as [Review Until Clean](../review-until-clean/README.md)'s, each with the case that goes wrong and the evidence, plus whether the review covered the whole scope and what it left unverified. A plain-text report follows, naming the siblings examined for each finding, so a fix can cover the whole class at once.
 
 ## Requirements
 
@@ -25,15 +25,16 @@ It never edits; nothing but its instructions enforces that unless you run it som
 
 ```text
 /review-anti-patterns
-/review-anti-patterns --range 4f2a9c1..HEAD
+/review-anti-patterns --range 4f2a9c1..HEAD --run-checks
 /review-anti-patterns --files src/redact.ts --severity important
 ```
 
-| Option                        | Effect                                                                                                                                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--range <rev-range>`         | Review this revision range, written with `..` or `...`. The default is the merge base with the default branch through the working tree, including staged, unstaged and untracked changes. |
-| `--files <paths>`             | Limit the scope to these paths or globs. The report lists the changed files this leaves out.                                                                                              |
-| `--severity <important\|nit>` | Lowest severity reported. The default, `nit`, reports everything.                                                                                                                         |
+| Option                        | Effect                                                                                                                                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--range <rev-range>`         | Review this revision range, written with `..` or `...`. The default is the merge base with the default branch through the working tree, including staged, unstaged and untracked changes.       |
+| `--files <paths>`             | Limit the scope to these paths or globs. The report lists the changed files this leaves out.                                                                                                    |
+| `--severity <important\|nit>` | Lowest severity reported. The default, `nit`, reports everything.                                                                                                                               |
+| `--run-checks`                | Also run checks that execute repository code: tests, Makefile targets and package scripts. Pass it only for code you trust, such as your own branch; the skill cannot tell from the repository. |
 
 Two places it fits:
 
