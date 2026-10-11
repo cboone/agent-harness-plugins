@@ -51,7 +51,7 @@ A stale sentence is worse than none: the reader trusts it, and nothing fails whe
 
 - **Anchor claims to what sits beside them.** A PR body describes this PR's diff; an instruction describes the behavior it governs. Text about something elsewhere drifts without anyone rereading it.
 - **Never cite line numbers.** Name a file, function, section heading, or rule instead.
-- **Leave out facts that change on their own schedule**: counts, version numbers, dates, "currently", "for now", "new", and lists of the places that use something. The exception is a fact that explains the text itself (see "Keep these").
+- **Leave out facts that change on their own schedule**: counts, version numbers, dates, "currently", "for now", "new", and lists of the places that use something. The exceptions are a fact that explains the text itself (see "Keep these") and a measurement tied to a fixed point, such as this change's before-and-after timings, which does not drift.
 - **Prefer a lasting reason to a passing one.** "The API rejects more than 3 tags" outlives "the API rejected 4 tags in last week's outage".
 
 ## Cut these
@@ -198,7 +198,7 @@ After a commit, check whether a hook changed anything. A committed file whose re
 
 ### 7. Report
 
-Report the profile, then a table: location (`file:line`, or the section heading in a PR or issue body), action, before, after. Leave out units kept unchanged. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
+Report the profile, then a table: location (`file:line`, or the section heading in a PR or issue body), action, before, after. Leave out units kept unchanged. Keep before and after to one line each, truncating with `…`. When a table or list changes as a whole, describe it in those cells instead of quoting it, such as "two tables, 9 rows" and "one line plus a 3-row table". With `--dry-run`, the table lists proposed changes.
 
 Then report:
 

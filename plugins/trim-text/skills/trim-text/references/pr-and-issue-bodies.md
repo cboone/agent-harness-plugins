@@ -17,6 +17,7 @@ Lean means no padding, not no reasoning. Keep what makes the change reviewable:
 - a behavior change, a risk, or a deploy step
 - known limits
 - verification a reviewer cannot see for themselves, such as a rehearsal against staging
+- measurements of this change, such as before-and-after timings, condensed to the numbers a reviewer needs
 - a test step someone still has to run, as an unchecked item, so the gap stays visible
 
 ## Cut these, in addition to the shared list
@@ -35,6 +36,7 @@ Lean means no padding, not no reasoning. Keep what makes the change reviewable:
 | Noise about unrelated tests or flaky runs                          | Delete, or a link to the issue that tracks the flake                             |
 | Template sections answered "No" with a justification               | Remove the section where the template allows it                                  |
 | Comments about the description's own revisions                     | Delete                                                                           |
+| A section recording review rounds: "Review hardening"              | Fold its behavior changes into the changes they belong to; delete the rest       |
 | Citation chains: "reference [39] cited therein, which is…"         | The citation that matters                                                        |
 | Counts that change with every commit: test counts, file counts     | A description: "adds scrut coverage for the bundled script"                      |
 
