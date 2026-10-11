@@ -18,6 +18,9 @@
 #                      with no results
 #   graphql/repository-NAME.json
 #                      gh api graphql with repository.graphql
+#   graphql/branches-NAME.json
+#                      gh api graphql with branches.graphql; a missing file
+#                      answers with no branches
 #   graphql/pulls-open.json
 #                      gh api graphql with open-pulls.graphql; a missing file
 #                      answers with no open pull requests
@@ -182,6 +185,8 @@ function do_graphql() {
     esac
   elif [[ "${query_name}" == "repository" ]]; then
     key="repository-${repo_name}"
+  elif [[ "${query_name}" == "branches" ]]; then
+    key="branches-${repo_name}"
   else
     die "unexpected gh api graphql query ${query_name}"
   fi
@@ -197,6 +202,8 @@ function do_graphql() {
     cat "${file}"
   elif [[ "${query_name}" == "search" || "${query_name}" == "pulls" ]]; then
     printf '[{"data":{"search":{"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}]\n'
+  elif [[ "${query_name}" == "branches" ]]; then
+    printf '[{"data":{"repository":{"refs":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}}]\n'
   elif [[ "${query_name}" == "open-pulls" ]]; then
     printf '[{"data":{"repository":{"pullRequests":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}}]\n'
   else

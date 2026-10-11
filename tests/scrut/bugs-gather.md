@@ -77,6 +77,7 @@ labels matches any of them, and each issue type runs as its own search.
 
 ```scrut
 $ log="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs STUB_GH_LOG="${log}" gather "${work}/config.json" "${work}/logged.json" > /dev/null && sort "${log}"
+gh api graphql branches owner=acme name=widgets
 gh api graphql open-pulls owner=acme name=widgets
 gh api graphql pulls q=repo:acme/widgets is:pr author:@me is:merged merged:>=2026-09-15
 gh api graphql repository owner=acme name=widgets
@@ -255,7 +256,7 @@ The head branch of `#40` adds no carrier, and its newer commit becomes the
 last activity.
 
 ```scrut
-$ dir="$(variant .)" && jq '.data.repository.refs.nodes += [{name: "16-election-day", target: {committedDate: "2026-10-15T08:00:00Z"}}]' "${BUGS_GATHER_DATA_DIR}/github/graphql/repository-widgets.json" > "${dir}/graphql/repository-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/head.json" > /dev/null 2>&1 && jq -c '.bugs[] | select(.number == 16) | .progress | {carrier, extraCarriers, flags, lastActivity}' "${work}/head.json"
+$ dir="$(variant .)" && jq 'map(.data.repository.refs.nodes += [{name: "16-election-day", target: {committedDate: "2026-10-15T08:00:00Z"}}])' "${BUGS_GATHER_DATA_DIR}/github/graphql/branches-widgets.json" > "${dir}/graphql/branches-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/head.json" > /dev/null 2>&1 && jq -c '.bugs[] | select(.number == 16) | .progress | {carrier, extraCarriers, flags, lastActivity}' "${work}/head.json"
 {"carrier":{"pr":40},"extraCarriers":[],"flags":[],"lastActivity":"2026-10-15T08:00:00Z"}
 ```
 
@@ -265,7 +266,7 @@ Without its branch, `#12` is carried by its ZenHub pipeline, and its last
 activity is when it moved there.
 
 ```scrut
-$ dir="$(variant .)" && jq '.data.repository.refs.nodes |= map(select(.name != "12-token-refresh"))' "${BUGS_GATHER_DATA_DIR}/github/graphql/repository-widgets.json" > "${dir}/graphql/repository-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pipeline.json" > /dev/null 2>&1 && jq -r '.bugs[] | select(.number == 12) | .progress | "\(.stage) on \(.carrier | to_entries[0] | "\(.key) \(.value)"), last activity \(.lastActivity)"' "${work}/pipeline.json"
+$ dir="$(variant .)" && jq 'map(.data.repository.refs.nodes |= map(select(.name != "12-token-refresh")))' "${BUGS_GATHER_DATA_DIR}/github/graphql/branches-widgets.json" > "${dir}/graphql/branches-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pipeline.json" > /dev/null 2>&1 && jq -r '.bugs[] | select(.number == 12) | .progress | "\(.stage) on \(.carrier | to_entries[0] | "\(.key) \(.value)"), last activity \(.lastActivity)"' "${work}/pipeline.json"
 started on pipeline In Progress, last activity 2026-10-05T14:00:00Z
 ```
 

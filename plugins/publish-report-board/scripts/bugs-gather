@@ -363,7 +363,7 @@ readonly ASSEMBLE_FILTER="${COMMON_DEFS}"'
 | ($config.affinityWorkDays * 86400) as $work_window
 # Pushed branches from GitHub, joined with the checkout, which adds local
 # branches, worktrees, and ahead and behind counts.
-| ([$repository.repository.refs.nodes | as_list | .[] | {name, local: false, remote: true, worktree: false, at: (.target.committedDate // null), ahead: null, behind: null}]
+| ([$refs[] | {name, local: false, remote: true, worktree: false, at: (.target.committedDate // null), ahead: null, behind: null}]
    + ($local.branches // [])
    | join_branches($default)) as $branches
 | [$bugs[] | . + {zenhub: (if $zenhub == null then null else ($zenhub.items[.number | tostring] // null) | if . == null then null else
@@ -991,6 +991,12 @@ function github_pulls() {
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/pulls.graphql" -f "q=${query}"
 }
 
+# Reads every branch in a repository, page by page.
+function github_branches() {
+  local repo="${1}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/branches.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
+}
+
 function github_repository() {
   local repo="${1}"
   gh api graphql -F "query=@${QUERY_DIR}/repository.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
@@ -1224,6 +1230,7 @@ function cmd_gather() {
   make_temp_dir
 
   start_job repository github_repository "${repo}"
+  start_job branches github_branches "${repo}"
   start_job pulls-open github_open_pulls "${repo}"
   start_job pulls-merged github_pulls "repo:${repo} is:pr author:@me is:merged merged:>=${work_since}"
   # A comma between labels matches any of them. An issue type takes one name
@@ -1270,9 +1277,9 @@ function cmd_gather() {
   if [[ -n "${pulls_cut}" ]]; then
     printf '%s: GitHub listed only the first 100 files of these pull requests, so affinity misses the rest:\n%s\n' "${SCRIPT_NAME}" "${pulls_cut}" >&2
   fi
-  if jq -e '.data.repository.refs.pageInfo.hasNextPage == true' "${TEMP_DIR}/repository.json" > /dev/null; then
-    printf '%s: GitHub listed only the 100 most recently committed branches, so an older branch past the cut marks no bug\n' "${SCRIPT_NAME}" >&2
-  fi
+  # A missing branch would leave a bug it carries looking unstarted.
+  jq -e 'all(.[]; .data.repository.refs.nodes | type == "array")' "${TEMP_DIR}/branches.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the branches came back without a list, so the board cannot be trusted"
   gather_local "${repo}" "${default_branch}" "${work_since}"
 
   for search_file in "${TEMP_DIR}"/search-*.json; do
@@ -1311,7 +1318,8 @@ function cmd_gather() {
     --slurpfile zenhub "${TEMP_DIR}/zenhub.json" \
     --slurpfile pulls "${TEMP_DIR}/pulls.json" \
     --slurpfile local "${TEMP_DIR}/local.json" \
-    "\$repository[0].data as \$repository | \$bugs[0] as \$bugs | \$zenhub[0] as \$zenhub | \$pulls[0] as \$pulls | \$local[0] as \$local | ${ASSEMBLE_FILTER}" \
+    --slurpfile branches "${TEMP_DIR}/branches.json" \
+    "\$repository[0].data as \$repository | [\$branches[0][] | .data.repository.refs.nodes[]] as \$refs | \$bugs[0] as \$bugs | \$zenhub[0] as \$zenhub | \$pulls[0] as \$pulls | \$local[0] as \$local | ${ASSEMBLE_FILTER}" \
     > "${TEMP_DIR}/gather.json"
   write_atomic "${output_file}" "${TEMP_DIR}/gather.json"
 

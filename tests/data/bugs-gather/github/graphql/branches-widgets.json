@@ -1,0 +1,34 @@
+[
+  {
+    "data": {
+      "repository": {
+        "refs": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": null
+          },
+          "nodes": [
+            {
+              "name": "main",
+              "target": {
+                "committedDate": "2026-10-15T09:00:00Z"
+              }
+            },
+            {
+              "name": "12-token-refresh",
+              "target": {
+                "committedDate": "2026-10-14T12:00:00Z"
+              }
+            },
+            {
+              "name": "docs-cleanup",
+              "target": {
+                "committedDate": "2026-10-02T12:00:00Z"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]
