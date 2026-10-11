@@ -1030,9 +1030,11 @@ function require_styles_placeholder() {
   fi
   opened="${before##*<[Ss][Tt][Yy][Ll][Ee]}"
   closed="${after#*</[Ss][Tt][Yy][Ll][Ee]}"
-  # A tag name ends at whitespace or ">", so <stylesheet> is no style element.
+  # A tag name ends at whitespace or ">", so <stylesheet> is no style element,
+  # and the opening tag's ">" must come first, so an attribute value is not
+  # the element's content.
   shopt -s nocasematch
-  if [[ "${before}" != *"<style"* || "${opened}" != [[:space:]\>]* || "${opened}" == *"${STYLE_CLOSE}"* || "${after}" != *"${STYLE_CLOSE}"* || "${closed}" != [[:space:]\>]* ]]; then
+  if [[ "${before}" != *"<style"* || "${opened}" != [[:space:]\>]* || "${opened}" != *">"* || "${opened}" == *"${STYLE_CLOSE}"* || "${after}" != *"${STYLE_CLOSE}"* || "${closed}" != [[:space:]\>]* ]]; then
     die "${E_INVALID}" "${page_file} places the ${STYLES_PLACEHOLDER} placeholder outside a style element"
   fi
   shopt -u nocasematch
