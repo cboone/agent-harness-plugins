@@ -206,7 +206,7 @@ Hooks are event-driven; they have no slash-command trigger.
 
 | Plugin                                       | What it does                                                                                                |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention. |
+| [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code or Codex CLI finishes a task or needs your attention. |
 
 **External tools:**
 

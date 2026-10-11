@@ -273,7 +273,7 @@
         "name": "Christopher Boone"
       },
       "category": "workflow",
-      "description": "Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention.",
+      "description": "Sends macOS notifications when Claude Code or Codex CLI finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["alerts", "macos", "notifications"],
       "license": "MIT",

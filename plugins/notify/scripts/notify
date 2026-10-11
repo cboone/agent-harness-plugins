@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Sends macOS notifications via alerter for Claude Code and Codex CLI hooks.
-# OpenCode has its own TypeScript implementation under ../opencode/.
 #
 # Each hook event is a subcommand; reads the hook's JSON payload from stdin
 # and shells out to alerter with per-event title, subtitle, body, sound, group,
@@ -31,8 +30,8 @@ if [[ "${NOTIFY_WAIT_LIMIT:-}" =~ ^[1-9][0-9]{0,8}$ ]]; then
 fi
 readonly WAIT_LIMIT
 
-# Reduces a reply to plain prose for a banner body; ../opencode/index.ts
-# mirrors it in summarizeReply. Lengths count Unicode code points.
+# Reduces a reply to plain prose for a banner body. Lengths count Unicode code
+# points.
 # - Input past 20,000 characters is ignored.
 # - A JSON object reply with a string `summary` is summarized from that field.
 # - Headings, list items and paragraphs become separate sentences, joined by a
@@ -210,7 +209,7 @@ function compute_pane_title() {
   cwd_basename="$(basename "${PWD}")"
   case "${title}" in
     "" | "${cwd_basename}" | "${repo}" | zsh | bash | fish | sh | tmux | ssh | nvim | vim | "-zsh" | "-bash") return 0 ;;
-    "Claude Code" | Codex | OpenCode) return 0 ;;
+    "Claude Code" | Codex) return 0 ;;
     *) ;;
   esac
   # A shell's default user@host:path title names no task.
