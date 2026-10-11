@@ -1,6 +1,6 @@
 # Anti-pattern checklist
 
-Thirteen defect patterns that most often get past a general local review and come back as Copilot findings in later rounds, written as the questions a reviewer asks. They come from a review of 132 pull requests and about 500 Copilot reviews, in which the patterns below accounted for most findings after round 1, and most of those findings were in code or text that the previous fix had just added.
+Thirteen defect patterns that most often get past a general local review and come back as Copilot findings in later rounds, written as the questions a reviewer asks. Most such findings are in code or text that the previous fix had just added.
 
 Each item names the groups it applies to (code, agent prose, docs), the questions to ask, what settles them, and an example. Cite an item by its heading in a finding's title, for example `Sibling input forms: …`.
 
@@ -14,10 +14,10 @@ A blocklist, regular expression or sanitizer rejects one form of an input and ac
 
 - For each input form the change rejects or rewrites, what sibling forms exist? Consider encodings (percent, HTML entity, Unicode escapes and normalization), case, whitespace runs and other separators, CRLF and bare CR, IPv6 and numeric host forms, trailing dots and slashes, `..` after decoding, and symlinked parents.
 - Does the check run before or after decoding, normalization and path resolution?
-- Write the input grammar as a matrix and test every cell. For key and value redaction that is key quoting (none, `"`, `'`, escaped `\"`), separator (`=` or `:`, with and without surrounding spaces), value quoting and encoding; for an identifier, every separator the outer pattern admits. One cell fixed per round is how a chain of findings starts.
+- Write the input grammar as a matrix and test every cell. For key and value redaction that is key quoting (none, `"`, `'`, escaped `\"`), separator (`=` or `:`, with and without surrounding spaces), value quoting and encoding; for an identifier, every separator the outer pattern admits.
 - A form the code documents as deliberately left alone is still a candidate. Can it carry the value the check protects?
 - Would an allowlist of exact known-good forms, or a structural parse (a URL parser, a path resolver, a real tokenizer), remove the whole class instead of one member of it?
-- When the range is the second or later fix to the same check, report replacing it with an exact-format allowlist or a structural parse as an Important finding of its own, whatever else the review finds. Another patch to the same blocklist is what the next round would answer.
+- When the range is the second or later fix to the same check, report replacing it with an exact-format allowlist or a structural parse as an Important finding of its own, whatever else the review finds.
 
 **Settled by:** a sibling input traced through the code to the point where it is accepted, or the check shown to apply to a canonical form that every sibling reduces to.
 

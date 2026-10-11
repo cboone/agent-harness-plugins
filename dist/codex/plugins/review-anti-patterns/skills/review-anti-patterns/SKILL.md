@@ -12,7 +12,7 @@ argument-hint: "[--range <rev-range>] [--files <paths>] [--severity important|ni
 
 Review a scoped diff against a fixed checklist of the defect patterns that most often get past a general local review and come back as Copilot findings in later rounds, and report each finding with the evidence that settles it. The skill never edits.
 
-The checklist exists because a general review asks "is this right?" and these patterns need a narrower question: "what is the sibling of this case, and does it behave the same way?" Most later-round findings are a sibling input form, a parallel path, or a document that the change left behind, and a reviewer finds them only by looking for them on purpose.
+Each item asks a narrower question than a general review: what is the sibling of this case, and does it behave the same way? Most later-round findings are a sibling input form, a parallel path, or a document the change left behind.
 
 ## Options
 
@@ -20,7 +20,7 @@ The checklist exists because a general review asks "is this right?" and these pa
 - **--files `<paths>`**: limit the scope to these repository-relative paths, or to these globs, within the range
 - **--severity `<important|nit>`**: lowest severity reported; default `nit`, which reports everything
 
-An unknown option, a `--severity` other than the two values, a `--range` without `..`, or a `--range` with an endpoint that begins with `-` is an error: stop with `failure` and name it. A single revision is refused because `git diff <rev>` compares against the working tree, which is not what a range promises, and a leading `-` would reach `git diff` as an option such as `--output`, which writes a file.
+An unknown option, a `--severity` other than the two values, a `--range` without `..`, or a `--range` with an endpoint that begins with `-` is an error: stop with `failure`, naming the option and what it accepts. A single revision would make `git diff` compare against the working tree, and a leading `-` would reach `git diff` as an option such as `--output`, which writes a file.
 
 ## Ground rules
 
@@ -37,7 +37,7 @@ Run every command from the repository's top level, `git rev-parse --show-topleve
 
 Find the default branch from `git symbolic-ref --short refs/remotes/origin/HEAD`, with its `origin/` prefix removed, falling back to `gh repo view "$(git remote get-url origin)" --json defaultBranchRef --jq .defaultBranchRef.name`. Name the origin remote explicitly: in a fork, a bare `gh repo view` can answer for the upstream repository.
 
-Compare against the remote-tracking branch, `origin/<default-branch>`, and fall back to the local branch only when `git rev-parse --verify --quiet origin/<default-branch>` finds no such ref. A local default branch can be missing, or older than the commit this branch was cut from, and an old merge base pulls already-merged commits into the review.
+Compare against the remote-tracking branch, `origin/<default-branch>`, falling back to the local branch only when `git rev-parse --verify --quiet origin/<default-branch>` finds no such ref; a stale local branch pulls already-merged commits into the review.
 
 When no default branch is found, ask which branch to compare against: use a structured question tool when the session offers one; otherwise list the local branches as numbered options in plain text and wait for the reply. When the session cannot ask anyone, as in a subagent, stop with `unavailable` and say that a `--range` is needed.
 
@@ -48,7 +48,7 @@ Then collect the changed files and their hunks:
 
 Apply `--files` to the list. Then drop generated files: paths marked `linguist-generated` in `.gitattributes`, paths the repository's agent instructions name as generated or not to be edited, lock files, vendored dependencies, and files whose header carries a generated marker such as `@generated` or `Code generated ... DO NOT EDIT`. Keep both lists of dropped files for the report's `excluded` field.
 
-Treat every symlink in scope, tracked or untracked, as its link text, `<path> -> <target>`, and never open its target: the target may be outside the repository, and following the link would put whatever it names into the review.
+Treat every symlink in scope, tracked or untracked, as its link text, `<path> -> <target>`, and never open its target, which may be outside the repository.
 
 **If the scope is empty**, report per step 7 with status `no-op`, and stop. A clean result over an empty scope means nothing. When the range is empty but the working tree has changes, set `complete` to false and list those changes in `not_reviewed`: they are probably what the caller meant to review.
 
@@ -64,7 +64,7 @@ Sort each file in scope into one or more groups. Each checklist item names the g
 
 Read the pull request body with `gh pr list --repo "$(git remote get-url origin)" --head "$(git branch --show-current)" --state open --json number,body`, naming the origin remote for the same reason as in step 1. An empty array means there is no open pull request and no body to review. A non-zero exit, such as `gh` missing, unauthenticated or offline, means the body was not read: put `PR body` in `not_reviewed` and set `complete` to false.
 
-Every scope gets the docs items, because a code-only change can still leave a document wrong.
+Every scope gets the docs items.
 
 ### 3. Read for context
 
@@ -74,11 +74,11 @@ Then look outward, because most of the patterns live outside the hunk:
 
 - **Siblings.** Search the repository for the identifiers, flags, paths, error messages and literal values the hunk changed or relies on. Every other place that does the same job is a candidate sibling: a parallel branch of the same `case`, a second parser of the same format, a mirror copy, a test fixture, a caller.
 - **Consumers.** Find what reads the changed output: callers of a function, readers of a file format, skills that invoke a skill, documents that describe the behavior.
-- **History, when reviewing a fix.** When the scope is a fix for review feedback, because the caller says so or its commits answer review comments, read the commits just before it with `git log` and `git show`, and ask what the fix was answering. A fix that closed one input form of a check is the case the Sibling input forms item is about. Then read each file the fix touches whole, at its newest state, and walk the checklist over all of it: Copilot re-reviews the whole pull request every round and reports defects in code that has not changed, so a review of the fix lines alone leaves those for the next round. Anchor such a finding to its line and say that the fix did not introduce it.
+- **History, when reviewing a fix.** When the scope is a fix for review feedback, because the caller says so or its commits answer review comments, read the commits just before it with `git log` and `git show` to see what the fix answered; a fix that closed one input form of a check is the Sibling input forms case. Then read each file the fix touches whole, at its newest state, and walk the checklist over all of it, because Copilot re-reviews unchanged code every round. Anchor such a finding to its line; step 6 says how to mark it.
 
 ### 4. Walk the checklist
 
-Read `./references/checklist.md`, and walk every item whose **Applies to** line names a group step 2 found. Select items by that line, not by the section they sit under: several items filed under Code also apply to agent prose or docs, such as a skill that builds a command from a pull request title. For each item, answer its questions against the scope and gather the evidence the item names. Most items come back with nothing to report, and that is the expected result.
+Read `./references/checklist.md`, and walk every item whose **Applies to** line names a group step 2 found, whatever section the item sits under. For each item, answer its questions against the scope and gather the evidence it names. Most items have nothing to report.
 
 Record a finding only when the evidence shows a concrete case that goes wrong. When an item cannot be settled by reading, because the answer depends on how a platform or tool behaves, take it to step 5 instead of guessing.
 
@@ -86,20 +86,18 @@ A finding can sit outside the changed lines. A sibling the change failed to upda
 
 ### 5. Run the mechanical checks
 
-Read `./references/mechanical-checks.md`. For each item step 4 could not settle by reading, run the check the reference lists for it when the project already supports that check, the check writes nothing, and the code it executes is trusted. A check that fails is a finding, with its output as the evidence. Any other check is reported as unverified, with the command that would settle it and the reason it was not run.
-
-Do not install tools, initialize working directories or authenticate to run a check.
+Read `./references/mechanical-checks.md`. For each item step 4 could not settle by reading, run the check it lists only when its rules allow: the project already supports the check, the check writes nothing, and the code it executes is trusted. Report each result, or each check not run, as that file describes.
 
 ### 6. Assign severity
 
 - **Important**: the defect breaks behavior, lets a rejected input through, accepts invalid input, loses or leaks data, or breaks the build or a release. In docs and agent prose, it is Important when a reader or agent who follows the text would take a consequential wrong action: push, skip a required check, report the wrong status, or run something unsafe.
 - **Nit**: anything else that is still wrong, such as a document that disagrees with the code in a way that misleads nobody, or agent prose that is unclear but leads to the right action.
 
-These are the two levels `review-until-clean` uses. One difference: a defect the change did not introduce keeps its severity here rather than dropping to Nit, because Copilot reports those as findings like any other. Say in its `detail` that it predates the change. Report findings at or above `--severity`.
+These are `review-until-clean`'s two levels, except that a defect the change did not introduce keeps its severity rather than dropping to Nit; say in its `detail` that it predates the change. Report findings at or above `--severity`.
 
 ### 7. Report
 
-Return JSON first, whatever the outcome, including `no-op`, `failure` and `unavailable`. Each finding has the fields of a `review-until-clean` finding, so a caller that already handles those findings can handle these. The top level adds what that schema has no place for, because a caller reading only the JSON must still be able to tell a complete review from a partial one, and a clean review from one that did not run.
+Return JSON first, whatever the outcome, including `no-op`, `failure` and `unavailable`. Each finding has the fields of a `review-until-clean` finding; the top-level fields let a caller reading only the JSON tell a complete review from a partial one, and a clean review from one that did not run.
 
 ```json
 {
@@ -154,34 +152,7 @@ Caller resume target: <the parent's resume target>
 
 ## Example Output
 
-```json
-{
-  "status": "success",
-  "reviewed": "4f2a9c1..HEAD",
-  "complete": true,
-  "findings": [
-    {
-      "title": "Sibling input forms: IPv6 and decimal loopback forms pass isLocal()",
-      "file": "src/fetch.ts",
-      "line": 42,
-      "severity": "important",
-      "detail": "isLocal() compares against 127.0.0.1 and localhost, so http://[::1]/ and http://2130706433/ reach the internal service.",
-      "evidence": "isLocal('[::1]') returns false; the request path at src/fetch.ts:58 sends it."
-    },
-    {
-      "title": "Docs drift: the README says redirects are refused; the code follows one redirect",
-      "file": "README.md",
-      "line": 88,
-      "severity": "nit",
-      "detail": "The README's security section says redirects are refused, but fetchSafe() follows one redirect.",
-      "evidence": "src/fetch.ts:71 passes { redirect: 'follow', follow: 1 }."
-    }
-  ],
-  "unverified": ["Unrun platform configuration: deploy/config.yaml needs `gcloud run services replace --dry-run`, which needs credentials"],
-  "not_reviewed": [],
-  "excluded": []
-}
-```
+The plain-text report that follows the step 7 JSON:
 
 ```text
 Scope: 4f2a9c1..HEAD (3 files: src/fetch.ts, README.md, tests/fetch.test.ts)
@@ -190,19 +161,15 @@ Groups: code, docs. Items walked: the twelve that apply to code or docs.
 
 Mechanical checks:
   ran         npm test -- --ci fetch    passed, 14 tests
-  unverified  deploy/config.yaml: `gcloud run services replace --dry-run` needs credentials
+  unverified  deploy/service.yaml: `gcloud run services replace --dry-run` needs credentials
 
 Siblings examined for the first finding: isLocal(), isPrivate() in src/net.ts, the allowlist in src/config.ts.
 ```
 
 ## Error Handling
 
-Every stop still returns the step 7 JSON, with its `status`, before any plain text.
+Every stop returns the step 7 JSON first. Options, steps 1, 2 and 5 cover an invalid option, a missing default branch, an unreadable pull request body and a check that cannot run. The other cases:
 
-- **Invalid option**: stop with `failure`, naming the option and what it accepts.
-- **No default branch found**: ask, per step 1; when no one can be asked, stop with `unavailable`.
 - **No merge base with the default branch**: stop with `failure`, naming the ref compared against, and ask for a `--range`. An empty diff here means nothing was measured, not that nothing changed.
 - **`--range` does not resolve**: stop with `failure`, naming the range and the error. Never fall back to a different range: reviewing the wrong commits looks exactly like a clean review of the right ones.
 - **A file in scope cannot be read**: list it in `not_reviewed`, set `complete` to false, and continue with the rest.
-- **The pull request body cannot be read**: put `PR body` in `not_reviewed`, set `complete` to false, and continue.
-- **A mechanical check is unavailable, would write, or would run untrusted code**: list it in `unverified` with its command. Never report it as passed.
