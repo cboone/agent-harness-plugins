@@ -187,8 +187,10 @@ function do_graphql() {
   [[ "${query_name}" != "search" ]] || file="${STUB_GH_DIR}/graphql/search-${key}.json"
   if [[ -f "${file}" ]]; then
     cat "${file}"
-    # gh prints a response that holds GraphQL errors, then exits 1.
-    if grep -q '"errors"[[:space:]]*:' "${file}"; then
+    # gh prints a response that holds GraphQL errors, then exits 1. Only a
+    # top-level errors field counts, on the response or on each slurped page.
+    if jq -e 'if type == "array" then any(.[]; type == "object" and has("errors"))
+      else type == "object" and has("errors") end' "${file}" > /dev/null 2>&1; then
       exit 1
     fi
   elif [[ "${query_name}" == "search" ]]; then

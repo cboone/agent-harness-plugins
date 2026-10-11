@@ -324,6 +324,15 @@ copilot-rounds-report: the search pages disagree on how many pull requests match
 [1]
 ```
 
+A field named `errors` below the top level of a response is data, not a GraphQL error.
+
+```scrut
+$ mkdir -p "${work}/nested/graphql" \
+>   && jq '.[1].data.search.nodes[0].reviews.nodes[0].errors = ["listed in a review"]' "${pages}" > "${work}/nested/graphql/copilot-rounds.json" \
+>   && STUB_GH_DIR="${work}/nested" report | sed -n 5p
+Pull requests matched: 4. With a Copilot round: 3. Copilot notices in place of a review, not counted as rounds: 1.
+```
+
 A fetched response is saved before it is checked, so a failed search can be inspected.
 
 ```scrut
