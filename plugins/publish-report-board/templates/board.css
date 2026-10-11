@@ -327,7 +327,10 @@ a.tag:hover {
   grid-auto-flow: column;
 }
 
+/* --count-size sets a count's figure, and a fact cell's in proportion, so a
+   breakpoint that resizes counts changes this one value. */
 .count {
+  --count-size: 40px;
   display: flex;
   flex-direction: column-reverse;
   justify-content: flex-end;
@@ -350,7 +353,7 @@ a.tag:hover {
 
 .count dd {
   font-family: var(--mono);
-  font-size: 40px;
+  font-size: var(--count-size);
   font-weight: 600;
   line-height: 1;
 }
@@ -376,8 +379,8 @@ a.tag:hover {
 /* A fact, not a count: a date, a ratio, or a state word. Never filled. Set
    smaller than a count, on a line as tall as a count's, and free to wrap. */
 .count--fact dd {
-  font-size: 24px;
-  line-height: 40px;
+  font-size: calc(var(--count-size) * 0.6);
+  line-height: var(--count-size);
   overflow-wrap: anywhere;
 }
 
@@ -860,12 +863,9 @@ a.tag:hover {
   border-top-color: var(--stale);
 }
 
+/* Set with .label, a size smaller. */
 .aside-label {
-  font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
 }
 
 .aside--warn .aside-label {
@@ -1284,16 +1284,8 @@ a.tag:hover {
   }
 
   .count {
+    --count-size: 32px;
     padding: 12px 10px;
-  }
-
-  .count dd {
-    font-size: 32px;
-  }
-
-  .count--fact dd {
-    font-size: 20px;
-    line-height: 32px;
   }
 
   .count dt {
