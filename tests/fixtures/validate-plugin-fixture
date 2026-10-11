@@ -260,9 +260,9 @@ function main() {
     # 2 percent of 100,000 is a 2,000-token budget, 850 after the reserve: less
     # than the counted descriptions alone cost.
     aggregate-overflow) export CODEX_REFERENCE_CONTEXT_WINDOW=100000 ;;
-    # A 3,500-token budget, 2,350 after the reserve: more than the counted
+    # A 4,200-token budget, 3,050 after the reserve: more than the counted
     # descriptions alone cost, less than their full lines with names and paths.
-    path-overhead) export CODEX_REFERENCE_CONTEXT_WINDOW=175000 ;;
+    path-overhead) export CODEX_REFERENCE_CONTEXT_WINDOW=210000 ;;
     empty-context-window) export CODEX_REFERENCE_CONTEXT_WINDOW="" ;;
     *)
       echo "Unknown scenario: ${scenario}" >&2
