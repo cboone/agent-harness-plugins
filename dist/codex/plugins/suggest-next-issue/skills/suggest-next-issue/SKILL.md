@@ -38,8 +38,8 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 10 --so
 
 # Current branches/worktrees (what's already in progress)
 git worktree list
-git branch --list --format='%(refname:short) %(committerdate:iso-strict)'
-git branch --remotes --format='%(refname:short) %(committerdate:iso-strict)'
+git branch --list --format='%(refname:short) %(committerdate:iso-strict) %(authoremail)'
+git branch --remotes --format='%(refname:short) %(committerdate:iso-strict) %(authoremail)'
 # Branches with commits beyond the default branch, which gh repo view below names
 git branch --all --no-merged "origin/DEFAULT_BRANCH" --format='%(refname:short)'
 
@@ -52,7 +52,7 @@ gh pr list --state merged --limit 100 --json number,title,body,mergedAt,closingI
 # Current authenticated user and git identity (for affinity)
 gh api user --jq '.login'
 git config user.email
-git log --all --since='30 days ago' --fixed-strings --regexp-ignore-case --author="$(git config user.email)" --name-only --format='commit %h %cI'
+git log --branches --remotes=origin --no-merges --since='30 days ago' --fixed-strings --regexp-ignore-case --author="$(git config user.email)" --name-only --format='commit %h %cI'
 
 # Project context
 gh repo view --json description,defaultBranchRef
@@ -167,7 +167,7 @@ For each recommendation, include:
 
 ### 5. Summarize In-Progress Work
 
-After recommendations, briefly list issues detected as in progress, furthest stage first. For each, give its stage, what carries it (a branch, a pull request or a label), whose move comes next and the next action, plus any flags, such as `stale` or `local`. Say "your move" only when the work is the current user's: they wrote the pull request, the branch is theirs, or the issue is assigned to them. Otherwise name the author's move. This gives the user a complete picture of active work, including issues that may be waiting on a pull request after local implementation is done. Then list `close-out` issues as cleanups.
+After recommendations, briefly list issues detected as in progress, furthest stage first. For each, give its stage, what carries it (a branch, a pull request or a label), whose move comes next and the next action, plus any flags, such as `stale` or `local`. Say "your move" only when the work is the current user's: they wrote the pull request, the branch is theirs, or, for a `started` issue carried by a label, the issue is assigned to them. Otherwise name the author's move. This gives the user a complete picture of active work, including issues that may be waiting on a pull request after local implementation is done. Then list `close-out` issues as cleanups.
 
 Then, when any resource is claimed, list who holds what: the resource, the branch, and whether the claim is stale. This is the half of the picture the issue list cannot show, and it is what answers "what can I work on in parallel" without the user having to remember the constraint. Skip the section entirely when nothing is claimed.
 
@@ -226,7 +226,7 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 - #16 -- ready to merge: PR #40, approved, checks passing (author's move: merge it)
 - #25 -- awaiting review: PR #42, review required, none requested (nobody's move: request a review)
 - #14 -- branch: feature/14-improve-notifications, local (your move: push it)
-- #21 -- started: the "in progress" label (your move: resume or drop; stale, last activity 34 days ago)
+- #21 -- started: the "in progress" label, assigned to you (your move: resume or drop; stale, last activity 34 days ago)
 
 **Ready to close out:**
 

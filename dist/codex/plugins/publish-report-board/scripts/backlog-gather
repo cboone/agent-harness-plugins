@@ -557,7 +557,7 @@ function cmd_gather() {
 
   email="$(git config user.email || true)"
   if [[ -z "${email}" ]]; then
-    printf '%s: git user.email is not set here, so no origin branch or commit counts as yours for affinity\n' "${SCRIPT_NAME}" >&2
+    printf '%s: git user.email is not set here, so no branch or commit in this checkout counts as yours for affinity\n' "${SCRIPT_NAME}" >&2
   fi
   gather_branches "${default}" "${email}"
   gather_commits "${email}" "${since}"
