@@ -147,7 +147,7 @@ def progress_of($item; $branches; $c; $now; $host):
          (select($top.local == true) | "local"),
          (select($top.stage == "close-out" and ($labels | length) > 0) | "leftover-label")] as $flags
       | {stage: $top.stage, carrier: $top.carrier, signal: $top.signal, lastActivity: $top.lastActivity, since: $top.since,
-         nextMove: $top.nextMove, nextAction: (if ($flags | index("stale")) != null then "resume or drop" else $top.nextAction end),
+         nextMove: $top.nextMove, nextAction: (if ($flags | index("stale")) != null and $top.stage != "close-out" then "resume or drop" else $top.nextAction end),
          flags: $flags, host: (if $top.local == true then $host else null end),
          extraCarriers: [$all[] | select(. != $top) | .carrier]}
     end;

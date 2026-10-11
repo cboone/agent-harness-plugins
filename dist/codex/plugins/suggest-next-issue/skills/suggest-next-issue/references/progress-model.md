@@ -55,15 +55,15 @@ The author moves next in every stage but `awaiting-review`. There the reviewer m
 
 Flags describe the condition of the work, beside its stage.
 
-| Flag             | Raised when                                                                                                                                        |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `quiet`          | The last activity is more than the quiet days old, 7 by default                                                                                    |
-| `stale`          | The last activity is more than the stale days old, 30 by default. It replaces `quiet`, and the next action becomes "resume or drop"                |
-| `behind`         | The carrying branch is behind the default branch                                                                                                   |
-| `conflict`       | GitHub reports the carrying pull request as conflicting                                                                                            |
-| `multiple`       | More than one branch or open pull request carries the issue, on a stage other than `close-out`. A pull request and its own head branch count once. |
-| `local`          | The carrying branch exists only on the machine that ran the gather, which the progress names as its host                                           |
-| `leftover-label` | A `close-out` issue still carries a progress label                                                                                                 |
+| Flag             | Raised when                                                                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quiet`          | The last activity is more than the quiet days old, 7 by default                                                                                            |
+| `stale`          | The last activity is more than the stale days old, 30 by default. It replaces `quiet`, and the next action becomes "resume or drop", except on `close-out` |
+| `behind`         | The carrying branch is behind the default branch                                                                                                           |
+| `conflict`       | GitHub reports the carrying pull request as conflicting                                                                                                    |
+| `multiple`       | More than one branch or open pull request carries the issue, on a stage other than `close-out`. A pull request and its own head branch count once.         |
+| `local`          | The carrying branch exists only on the machine that ran the gather, which the progress names as its host                                                   |
+| `leftover-label` | A `close-out` issue still carries a progress label                                                                                                         |
 
 Last activity is the latest of the carrying branch's last commit; the carrying pull request's last update, last review, and its head branch's last commit; the merge time for `close-out`; and, for `started`, the issue's last update, or when it entered a progress pipeline.
 

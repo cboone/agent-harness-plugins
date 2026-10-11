@@ -89,6 +89,13 @@ $ model 'item(.labels = ["in progress"] | .prs = [pr(40; .)] | .merged = [{numbe
 close-out on pr 38 [leftover-label] close or split; also pr 40, branch fix/12-x, label in progress
 ```
 
+## A stale close-out still asks to close or split
+
+```scrut
+$ model 'item(.merged = [{number: 38, mergedAt: "2026-08-01T12:00:00Z", closes: true}]) | run([])'
+close-out on pr 38 [stale] close or split
+```
+
 ## A merged pull request that only mentions an issue needs a mark of work
 
 Without a progress label or pipeline it is not progress. A pipeline marks the
