@@ -20,9 +20,9 @@ The outcome: both boards share one progress model derived in code from gathered 
   | Stage             | Signal                                                                                                                             | Next move               |
   | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
   | `started`         | A progress label or progress pipeline, with no branch or pull request; with either, the branch or pull request decides the stage   | Author                  |
-  | `branch`          | A local or remote branch, or a worktree, naming the issue, with no pull request                                                    | Author                  |
-  | `draft`           | An open draft pull request that closes the issue                                                                                   | Author                  |
-  | `awaiting-review` | An open pull request with review required and none given, checks passing or pending                                                | Reviewer or CI          |
+  | `branch`          | A local or remote branch, or a worktree, that names the issue and carries work, with no pull request                               | Author                  |
+  | `draft`           | An open draft pull request that closes the issue or whose branch names it                                                          | Author                  |
+  | `awaiting-review` | An open pull request whose required review is not given, or whose checks are still running                                         | Reviewer, CI, or nobody |
   | `needs-author`    | Changes requested, failing checks, or a merge conflict                                                                             | Author                  |
   | `ready-to-merge`  | Approved or no review required, checks passing, mergeable                                                                          | Author (merge)          |
   | `close-out`       | A merged pull request in the same repository closes the open issue, or only mentions it while a progress label or pipeline remains | Author (close or split) |
@@ -34,9 +34,9 @@ The outcome: both boards share one progress model derived in code from gathered 
 
 - **Next move** is `author`, `reviewer`, `ci`, or `nobody`. `nobody` means the stage waits on a reviewer and no review is requested from anyone, so the pull request cannot move until someone is asked. Inactivity is the `quiet` and `stale` flags' job, so the two never say the same thing.
 - **Flags**, orthogonal to the stage:
-  - `quiet` after 7 days and `stale` after 30 days with no commit, push, pull request update, or review event; both thresholds are configurable per board.
+  - `quiet` after 7 days and `stale` after 30 days with no commit, pull request update, review, merge, or, for a label or pipeline alone, issue update or pipeline move; both thresholds are configurable per board.
   - `behind` when the branch is behind the default branch, and `conflict` when GitHub reports it unmergeable.
-  - `multiple` when an issue has more than one branch or pull request.
+  - `multiple` when more than one branch or open pull request carries an issue short of `close-out`, counting a pull request and its own head branch once.
   - `local` when a branch exists only on the machine that ran the gather. It names that host, so a sync from another machine explains a difference, and its next action is "push it". Local and pushed branches share one stage because they answer "how far along, and whose move" the same way; being unpushed is a condition of the branch, not a step of progress.
 - **A merged pull request outranks a leftover label:** an open issue with a merged pull request that counts, as the `close-out` row says, is `close-out` even when a progress label is still present, and the label is noted as a cleanup.
 - **Provenance (#551):** every stage names the signal that produced it, and is re-derived on each sync from that sync's gather. Previous board data never supplies a stage. Inferred statuses, such as a long-running routine, are recorded as blockers or left off.
@@ -48,7 +48,7 @@ The outcome: both boards share one progress model derived in code from gathered 
     2. Recent work in the area: the user committed to those paths, or merged pull requests touching them, within 30 days (`affinityWorkDays`). The point is an area the user is in now; a longer window would mark most areas in a repository the user works in heavily.
     3. Discussion: the user filed the issue at any time, or commented on it within 90 days (`affinityCommentDays`).
   - Uniformity, applied to each signal separately: when one owner holds a signal on at least 90% of open issues (`uniformityShare`), and the repository has at least five open issues (`uniformityMinimum`), that signal is ignored for the repository. Only open issues count, since closed ones say nothing about the current backlog. This drops assignment, claims, and "filed it" in single-maintainer repositories without a per-repository switch, keeps them in repositories with several people, where they vary, and leaves whichever signals still tell issues apart.
-  - Effect: a small boost to picks and ranks for the current user, none for unowned issues, and a large penalty, never exclusion, for issues owned by someone else. Shown as context on every row: "affinity: you (recent commits in `bin/`)", "affinity: @someone (assigned)".
+  - Effect: a small boost to picks and ranks for the current user, none for unowned issues, and a large penalty, never exclusion, for issues owned by someone else. Shown as context on every row: "affinity: you (bin changed in commit 1a2b3c4 within 30 days)", "affinity: @someone (assigned)".
   - Affinity is a weak factor because issue state is not reliable. It never holds a slot and never marks progress.
 - **Bugs board groups** map to the shared stages: Ready to go groups become `ready-to-merge`, `needs-author`, `awaiting-review`, `draft`, `branch`, `started`, `close-out`, and `ready-to-fix`. Critical and High rows keep their tier, since urgency wins over readiness, and show the same stage tag and flags in place of the current one-line fix state.
 - **Areas, tagged by the analysis and matched in code:** the user's side of tiers 1 and 2 (changed files, commits, merged pull requests) is gathered in code, but only reading an issue says what part of the code it concerns. So the analysis tags each open issue or bug with one or more areas, and a deterministic step matches paths afterward:
@@ -122,7 +122,7 @@ The outcome: both boards share one progress model derived in code from gathered 
 
 ### 9. Tests
 
-- New `tests/scrut/backlog-gather.md` with fixture stubs for each stage, each flag including `local`, uniformity per signal and below `uniformityMinimum`, each implicit affinity tier, an issue with no areas, the `affinity` step refusing an undefined area, `close-out` from a referencing pull request merged into a non-default branch, `mergeable: UNKNOWN`, `nobody` with no review requested, and a progress label beside a pull request.
+- New `tests/scrut/backlog-gather.md` with fixture stubs for each stage, each flag including `local`, uniformity per signal and below `uniformityMinimum`, each implicit affinity tier, an issue with no areas, `finish` refusing an undefined area, `close-out` from a referencing pull request merged into a non-default branch, `mergeable: UNKNOWN`, `nobody` with no review requested, and a progress label beside a pull request.
 - Extend `bugs-gather.md`, `report-board.md`, and `report-board-bugs.md` for the new fields, assessments with areas, claims derived from areas, the regrouped Ready to go, a label in both progress and claim lists refused, `compare` output, and `compare` against a version 1 previous board printing only the model-change notice for progress.
 - New `tests/scrut/progress-model.md` covering `scripts/progress.jq` case by case, including the cases where signals compete.
 - Extend `tests/scrut/` coverage of `bin/validate-plugins` for rule 22: a missing copy and a stale copy each fail.

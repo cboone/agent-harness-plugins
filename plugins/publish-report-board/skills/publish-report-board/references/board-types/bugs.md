@@ -10,7 +10,7 @@ It draws on three sources: GitHub, ZenHub when the repository has a workspace, a
 | ----------- | ----------------------------------------------------------------------------------------------------------- |
 | Board type  | `bugs`                                                                                                      |
 | Template    | `${CLAUDE_PLUGIN_ROOT}/templates/bugs.html`                                                                 |
-| Title       | `REPO bugs`, such as `votefwd bugs`                                                                         |
+| Title       | `REPO bugs`, such as `widgets bugs`                                                                         |
 | Favicon     | 🐞                                                                                                          |
 | Icon        | `bug`                                                                                                       |
 | Description | `Bug board for OWNER/REPO: which bugs are critical, which are high priority, and how the rest are triaged.` |
@@ -18,7 +18,7 @@ It draws on three sources: GitHub, ZenHub when the repository has a workspace, a
 
 ## Scope
 
-Open issues in the repository that are bugs: those carrying a label in `bugLabels`, or an issue type in `bugTypes`. The pull requests that close or reference them come along, for their draft, check, review, and merge state, and so do bugs closed within `recentDays`, for Fixed. From these the gather derives each open bug's progress, as `./references/progress-model.md` describes. ZenHub containers are counted as parked, never ranked.
+Open issues in the repository that are bugs: those carrying a label in `bugLabels`, or an issue type in `bugTypes`. The pull requests that close them come along, for their draft, check, review, and merge state, with the merged pull requests that reference them, and so do bugs closed within `recentDays`, for Fixed. Every open pull request in the repository comes too, since one whose branch names a bug carries it. From these the gather derives each open bug's progress, as `./references/progress-model.md` describes. ZenHub containers are counted as parked, never ranked.
 
 ## Repository Config
 
@@ -153,7 +153,7 @@ Record each answer as a triage entry, with the current time and its offset from 
 
 1. Before editing, check that the note has no changes the user has not committed, in the worktree or the index. With `triageGit`, pass `--git-dir` and `--work-tree` to every git command, because plain `git` fails in a worktree with no `.git` directory. If there are such changes, stop rather than fold them into this commit.
 2. Stage the note by its exact path: `git add -- PATH`.
-3. Commit only that path, signed, naming the change: `git commit -S -m "docs: escalate votefwd#4579 on the bug board" -- PATH`. The pathspec keeps any other staged work out of the commit.
+3. Commit only that path, signed, naming the change: `git commit -S -m "docs: escalate widgets#4579 on the bug board" -- PATH`. The pathspec keeps any other staged work out of the commit.
 4. Never push; pushing stays with the user.
 
 If the host blocks the edit or the commit, stop before scoring again and report the blocked command and the restriction. Otherwise run `score` again, which takes a fraction of a second, and use its output from here on. The new entries are later than the gather, so the score counts the note as of its own time, which becomes the board's `sync.at`.

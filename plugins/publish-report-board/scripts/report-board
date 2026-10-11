@@ -166,7 +166,8 @@ def affinity_problems($at):
      else empty end),
     (keys - ["owner", "kind", "tier", "reasons"] | .[] | "\($at): affinity.\(.) is not an affinity field")
   end;
-# Problems with a top-level areas list, absent when the board tags no areas.
+# Problems with a top-level areas list. backlog-gather finish and bugs-gather
+# draft always write one; an absent list reads as no areas.
 def areas_problems($areas):
   if $areas == null then empty
   elif ($areas | type) != "array" then "areas: expected a list of areas, each with a name and paths"

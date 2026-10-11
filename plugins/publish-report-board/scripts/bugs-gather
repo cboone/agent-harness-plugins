@@ -211,8 +211,8 @@ else
       affinityCommentDays: ($c.affinityCommentDays // 90),
       uniformityShare: ($c.uniformityShare // 0.9),
       uniformityMinimum: ($c.uniformityMinimum // 5),
-      # Calibrated against swing-left/votefwd. A config overrides any of them,
-      # one key at a time.
+      # Calibrated against the bugs of a production repository. A config
+      # overrides any of them, one key at a time.
       weights: ({
         impact: {security: 40, "data-loss": 35, money: 35, access: 30, "core-flow": 30, degraded: 10, cosmetic: 3, internal: 2, unknown: 10},
         surface: {public: 15, "signed-in": 12, admin: 5, internal: 0, unknown: 5},

@@ -40,9 +40,11 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 10 --so
 git worktree list
 git branch --list --format='%(refname:short) %(committerdate:iso-strict)'
 git branch --remotes --format='%(refname:short) %(committerdate:iso-strict)'
+# Branches with commits beyond the default branch, which gh repo view below names
+git branch --all --no-merged "origin/DEFAULT_BRANCH" --format='%(refname:short)'
 
 # Open pull requests (how far along each piece of work is)
-gh pr list --state open --limit 200 --json number,title,headRefName,isDraft,reviewDecision,mergeable,statusCheckRollup,reviewRequests,closingIssuesReferences,updatedAt,author,files
+gh pr list --state open --limit 200 --json number,title,headRefName,isDraft,reviewDecision,mergeable,mergeStateStatus,statusCheckRollup,reviewRequests,latestReviews,closingIssuesReferences,createdAt,updatedAt,author,files
 
 # Recently merged pull requests (work merged on an issue still open)
 gh pr list --state merged --limit 100 --json number,title,body,mergedAt,closingIssuesReferences,author,files
@@ -105,7 +107,7 @@ Treat a stale claim as free, and mention it so the user can clear it. Nothing th
 
 ### 2. Identify In-Progress Work
 
-Read [the progress model](./references/progress-model.md) and apply it to every open issue, using only the signals gathered in step 1: a branch or worktree that names the issue as the model's Branch row describes (a segment of its name starting with the number, never a `dependabot/` or `renovate/` branch) and carries commits beyond the default branch or is checked out in a worktree; an "in progress" label (matched without regard to case); an open pull request that closes the issue, through `closingIssuesReferences`, which includes a manual link, or whose head branch names it; and a merged pull request that closes an issue still open, or only mentions it while the issue still has an "in progress" label. A mention alone is not a signal, since pull requests often name follow-up issues they leave open. Nothing else marks work: not an assignment, not a recurring routine, not a plan to start soon. Give each issue with a signal its stage, next move and flags as the model defines them.
+Read [the progress model](./references/progress-model.md) and apply it to every open issue, using only the signals gathered in step 1: a branch or worktree that names the issue as the model's Branch row describes, and carries commits beyond the default branch or is checked out in a worktree; an "in progress" label (matched without regard to case); an open pull request that closes the issue, through `closingIssuesReferences`, which includes a manual link, or whose head branch names it; and a merged pull request that closes an issue still open, or only mentions it while the issue still has an "in progress" label. A mention alone is not a signal, since pull requests often name follow-up issues they leave open. Nothing else marks work: not an assignment, not a recurring routine, not a plan to start soon. Give each issue with a signal its stage, next move and flags as the model defines them.
 
 Exclude issues in the stages from `started` to `ready-to-merge` from recommendations, and note each one in the output with its stage, what carries it and whose move comes next. A `started` issue, one marked only by its label, may mean local work is complete but the related pull request is still waiting to merge. Keep excluding it. Do not recommend it again only because no matching branch or worktree is visible.
 
@@ -165,7 +167,7 @@ For each recommendation, include:
 
 ### 5. Summarize In-Progress Work
 
-After recommendations, briefly list issues detected as in progress, furthest stage first. For each, give its stage, what carries it (a branch, a pull request or a label), whose move comes next and the next action, plus any flags, such as `stale` or `local`. Say "your move" only when the current user wrote the pull request or holds the branch; otherwise name the author's move. This gives the user a complete picture of active work, including issues that may be waiting on a pull request after local implementation is done. Then list `close-out` issues as cleanups.
+After recommendations, briefly list issues detected as in progress, furthest stage first. For each, give its stage, what carries it (a branch, a pull request or a label), whose move comes next and the next action, plus any flags, such as `stale` or `local`. Say "your move" only when the work is the current user's: they wrote the pull request, the branch is theirs, or the issue is assigned to them. Otherwise name the author's move. This gives the user a complete picture of active work, including issues that may be waiting on a pull request after local implementation is done. Then list `close-out` issues as cleanups.
 
 Then, when any resource is claimed, list who holds what: the resource, the branch, and whether the claim is stale. This is the half of the picture the issue list cannot show, and it is what answers "what can I work on in parallel" without the user having to remember the constraint. Skip the section entirely when nothing is claimed.
 
@@ -193,7 +195,7 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 
 2. **#23 - Fix typo in help output** (bug, 2 days old)
    The `--version` flag prints "verison" instead of "version" in the CLI help text.
-   Small fix, keeps the issue count tidy.
+   A one-line change, and it keeps the issue count tidy.
    Start: Check the help string in the CLI entry point.
 
 ### High Impact
@@ -214,7 +216,7 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 
 5. **#3 - Update installation docs** (documentation, 45 days old)
    The install guide still references the old `curl | bash` method; needs updating for the new package manager install flow.
-   Open since v0.2. Quick update needed for current install process.
+   Open since v0.2. The current install process needs documenting.
    Start: Compare current docs against actual install steps.
 
 ---
