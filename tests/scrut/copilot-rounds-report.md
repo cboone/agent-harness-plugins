@@ -178,7 +178,7 @@ copilot-rounds-report: warning: the search matched 5 pull requests but returned 
 The report itself says it is partial, so the gap does not live only on stderr.
 
 ```scrut
-$ replay 2> /dev/null | grep '^Partial'
+$ variant '.[].data.search.issueCount = 5' && replay 2> /dev/null | grep '^Partial'
 Partial: 4 of the 5 matched pull requests were returned, so every figure below leaves some out.
 ```
 
@@ -222,6 +222,15 @@ copilot-rounds-report: could not search for pull requests
 
 ```scrut
 $ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
+0
+```
+
+A temporary directory whose path holds a quote is still removed, and the quote never reaches the cleanup command as code.
+
+```scrut
+$ mkdir "${work}/it's" \
+>   && STUB_GH_GRAPHQL_FAIL=copilot-rounds TMPDIR="${work}/it's" report > /dev/null 2>&1; \
+>   find "${work}/it's" -mindepth 1 | wc -l | tr -d ' '
 0
 ```
 
