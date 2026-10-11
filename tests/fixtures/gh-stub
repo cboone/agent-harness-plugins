@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gh-stub -- Test stub for the gh calls dependabot-prs fetch, bugs-gather,
-# record-traffic and merge-flow make.
+# record-traffic, merge-flow and copilot-rounds-report make.
 #
 # Responses are JSON files under STUB_GH_DIR:
 #   repo.json          gh repo view
@@ -18,13 +18,18 @@
 #                      with no results
 #   graphql/repository-NAME.json
 #                      gh api graphql with repository.graphql
+#   graphql/NAME.json  gh api graphql with any other NAME.graphql: the full
+#                      response, which is the array of pages for --slurp. A
+#                      response with "errors" exits 1, as gh does; a missing
+#                      file is a stub error
 #
 # An api call with no response file fails the way gh does for a missing
 # resource. STUB_GH_API_FAIL names one KEY that fails with a permission error
 # instead, STUB_GH_AUTH_FAIL=1 makes gh auth token fail, and STUB_GH_LOG, when
 # set, receives every invocation, one per line. A graphql call is logged as
 # its query file and variables, without the path of the query file.
-# STUB_GH_GRAPHQL_FAIL names one search KIND, or repository-NAME, that fails.
+# STUB_GH_GRAPHQL_FAIL names one search KIND, repository-NAME or other query
+# NAME that fails.
 #
 # gh pr view, whatever its arguments, answers with the next line of the file
 # STUB_GH_PR_VIEW names under STUB_GH_DIR, repeating the last line once the
@@ -170,7 +175,7 @@ function do_graphql() {
   elif [[ "${query_name}" == "repository" ]]; then
     key="repository-${repo_name}"
   else
-    die "unexpected gh api graphql query ${query_name}"
+    key="${query_name}"
   fi
 
   if [[ "${key}" == "${STUB_GH_GRAPHQL_FAIL:-}" ]]; then
@@ -182,11 +187,17 @@ function do_graphql() {
   [[ "${query_name}" != "search" ]] || file="${STUB_GH_DIR}/graphql/search-${key}.json"
   if [[ -f "${file}" ]]; then
     cat "${file}"
+    # gh prints a response that holds GraphQL errors, then exits 1.
+    if grep -q '"errors"[[:space:]]*:' "${file}"; then
+      exit 1
+    fi
   elif [[ "${query_name}" == "search" ]]; then
     printf '[{"data":{"search":{"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}]\n'
-  else
+  elif [[ "${query_name}" == "repository" ]]; then
     echo "gh: Could not resolve to a Repository with the name ${repo_name}." >&2
     exit 1
+  else
+    die "missing stub response ${file}"
   fi
 }
 
