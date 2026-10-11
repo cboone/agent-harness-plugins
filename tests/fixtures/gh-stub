@@ -21,7 +21,8 @@
 #   graphql/NAME.json  gh api graphql with any other NAME.graphql, such as
 #                      copilot-rounds-report's copilot-rounds.graphql; it holds
 #                      the full response, the array of pages for a --slurp
-#                      call, and a missing file is a stub error
+#                      call; a response with "errors" exits 1 as gh does, and a
+#                      missing file is a stub error
 #
 # An api call with no response file fails the way gh does for a missing
 # resource. STUB_GH_API_FAIL names one KEY that fails with a permission error
@@ -187,6 +188,10 @@ function do_graphql() {
   [[ "${query_name}" != "search" ]] || file="${STUB_GH_DIR}/graphql/search-${key}.json"
   if [[ -f "${file}" ]]; then
     cat "${file}"
+    # gh prints a response that holds GraphQL errors, then exits 1.
+    if grep -q '"errors"[[:space:]]*:' "${file}"; then
+      exit 1
+    fi
   elif [[ "${query_name}" == "search" ]]; then
     printf '[{"data":{"search":{"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}]\n'
   elif [[ "${query_name}" == "repository" ]]; then
