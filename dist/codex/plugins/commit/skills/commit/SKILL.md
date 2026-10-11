@@ -155,7 +155,7 @@ Parent continuation:
 - Profile: none
 ```
 
-When `Status` is `success`, use the returned `Trimmed text` as the prose, then append one blank line and the split-off block exactly as drafted. Use the drafted body unchanged, block included, when the status is anything else, when the trimmed prose is empty, when it adds or drops an issue reference, a closing keyword, or a trailer-like line, or when any code span, code block, or link target in the drafted prose is missing or changed. Record the outcome, along with any `Flagged` and `Cut material` lines, and report it in step 7, or with the error if the commit fails. If the `trim-text` skill is not installed, record the trim as skipped.
+When `Status` is `success`, use the returned `Trimmed text` as the prose, then append one blank line and the split-off block exactly as drafted. Use the drafted body unchanged, block included, when the status is anything else, when the trimmed prose is empty, when it adds or drops an issue reference, a closing keyword, or a trailer-like line, or when any code span, code block, or link target in the drafted prose is missing or changed. When `Flagged` suggests a correction to a claim, check the claim against the staged diff before committing: apply the correction when the diff confirms it, and otherwise keep the claim and report the flag. Record the outcome, along with any `Flagged` and `Cut material` lines, and report it in step 7, or with the error if the commit fails. If the `trim-text` skill is not installed, record the trim as skipped.
 
 ### 6. Create the Commit
 

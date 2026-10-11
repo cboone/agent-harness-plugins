@@ -356,7 +356,7 @@ Use the returned `Trimmed text` as the body when `Status` is `success`, and the 
 - Every link target, image, mention, code span, and code block in the draft appears unchanged.
 - Every trailer or session line in the draft, such as a session URL, appears unchanged in the body.
 
-If the `trim-text` skill is not installed, use the draft. Record the outcome for step 9.
+When `Flagged` suggests a correction to a claim, check the claim against the branch diff before creating the PR: apply the correction to the body when the diff confirms it, and otherwise keep the claim and report the flag. If the `trim-text` skill is not installed, use the draft. Record the outcome for step 9.
 
 #### Create the PR
 
