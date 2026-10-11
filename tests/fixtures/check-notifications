@@ -371,6 +371,7 @@ function main() {
       [[ -s "${NOTIFY_TEST_LOG}" ]]
       ;;
   esac
+  local first
   case "${scenario}" in
     duplicate)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
@@ -393,7 +394,7 @@ function main() {
       echo "Separate sessions retain separate banners"
       ;;
     replace | other-session)
-      local first second next_payload='{"session_id":"session-one"}'
+      local second next_payload='{"session_id":"session-one"}'
       first="$(wait_for_alerter_pid)"
       [[ -n "${first}" ]]
       [[ "${scenario}" == other-session ]] && next_payload='{"session_id":"session-two"}'
