@@ -53,12 +53,20 @@ This skill reads PR and issue bodies with the GitHub CLI and runs read-only Git 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git status *)", "Bash(git --no-pager diff *)", "Bash(git show *)", "Bash(git symbolic-ref *)", "Bash(git config --get *)", "Bash(git remote)", "Bash(git branch --show-current)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(grep -Iq *)", "Bash(mktemp -u *)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git status *)", "Bash(git --no-pager diff *)", "Bash(git show *)", "Bash(git symbolic-ref *)", "Bash(git config --get *)", "Bash(git remote)", "Bash(git branch --show-current)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(grep -Iq *)", "Bash(mktemp -u *)", "Bash(rm -f */gh-body-*)", "Bash(realpath *)"]
   }
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linters and formatters in check mode, which depend on the project. Its writes prompt by default: `gh pr edit` and `gh issue edit` update a body after you approve the diff, `rm -f` removes the temporary body file, and `git commit` commits edited files. To let file trims run unattended, also allow `Bash(git commit *)`.
+If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linters and formatters in check mode, which depend on the project. Its writes prompt by default: `gh pr edit` and `gh issue edit` update a body after you approve the diff in the conversation, and `git commit` commits edited files. To let them run without a second prompt, also allow:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(gh pr edit *)", "Bash(gh issue edit *)", "Bash(git commit *)"]
+  }
+}
+```
 
 ## Examples
 
