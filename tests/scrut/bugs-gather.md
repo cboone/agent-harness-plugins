@@ -939,13 +939,23 @@ bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/assessmen
 bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/scored.json: it is unreadable or was written by another version of bugs-gather
 ```
 
-## Labels or fixes GitHub cut short are listed, and the gather goes on
+## Lists GitHub cut short are listed, and the gather goes on
 
 ```scrut
-$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 12) | .labels.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/labels-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 26) | .timelineItems.pageInfo) = {hasPreviousPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json" > "${capped}/graphql/search-open-type.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/timeline-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
 bugs-gather: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:
-  - #12: labels
+  - #26: cross-references
 exit 0
+```
+
+## Labels cut short stop the gather
+
+A progress label past the cut would read as no progress.
+
+```scrut
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 12) | .labels.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/labels-cut.json" 2>&1
+bugs-gather: GitHub cut the labels of #12 short, so a progress label could be missing; the board cannot be trusted
+[1]
 ```
 
 ## Usage errors

@@ -29,7 +29,7 @@ query ($owner: String!, $name: String!, $endCursor: String) {
             login
           }
         }
-        labels(first: 50) {
+        labels(first: 100) {
           pageInfo {
             hasNextPage
           }

@@ -338,6 +338,14 @@ backlog-gather: these pull requests close more than 20 issues, so an issue past 
 exit 0
 ```
 
+## Labels cut short stop the gather
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BACKLOG_GATHER_DATA_DIR}/github/." "${dir}/" && jq '(.. | objects | select(.number? == 1 and has("labels")) | .labels.pageInfo) = {hasNextPage: true}' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json" > "${dir}/graphql/issues.json" && backlog STUB_GH_DIR="${dir}" gather acme/widgets "${work}/x.json" 2>&1
+backlog-gather: GitHub cut the labels of #1 short, so a progress label could be missing; the board cannot be trusted
+[1]
+```
+
 ## Gather stops when it cannot trust what it read
 
 ```scrut

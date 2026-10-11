@@ -513,7 +513,7 @@ function cmd_gather() {
   [[ $# -eq 2 ]] || usage_error "gather takes a repository and an output path"
   local repo="${1}"
   local output_file="${2}"
-  local config now host since viewer default commit email url
+  local config now host since viewer default commit email url cut_short
   require_tools jq gh git
   load_config "${repo}"
   config="${CONFIG}"
@@ -561,6 +561,10 @@ function cmd_gather() {
   # the board without a word.
   jq -e 'all(.[]; .data.repository.issues.nodes | type == "array")' "${TEMP_DIR}/issues.json" > /dev/null 2>&1 \
     || die "${E_INVALID}" "the open issues came back without a list, so the board cannot be trusted"
+  # A progress label past the cut would read as no progress.
+  cut_short="$(jq -r '[.[] | .data.repository.issues.nodes[] | select(.labels.pageInfo.hasNextPage == true) | "#\(.number)"] | join(", ")' "${TEMP_DIR}/issues.json")"
+  [[ -z "${cut_short}" ]] \
+    || die "${E_INVALID}" "GitHub cut the labels of ${cut_short} short, so a progress label could be missing; the board cannot be trusted"
   jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls.json" > /dev/null 2>&1 \
     || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
   jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/merged.json" > /dev/null 2>&1 \
@@ -600,7 +604,6 @@ function cmd_gather() {
      | ${DERIVE_FILTER}" > "${TEMP_DIR}/gather.json"
   write_atomic "${output_file}" "${TEMP_DIR}/gather.json"
 
-  local cut_short
   cut_short="$(jq -r '.warnings[] | "  - \(.)"' "${output_file}")"
   if [[ -n "${cut_short}" ]]; then
     printf '%s: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2

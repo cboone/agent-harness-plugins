@@ -1299,7 +1299,12 @@ function cmd_gather() {
   done
   jq -n --argjson config "${config}" --arg repo "${repo}" --slurpfile searches "${TEMP_DIR}/searches.json" \
     "\$searches[0] as \$searches | ${NORMALIZE_FILTER}" > "${TEMP_DIR}/bugs.json"
+  # A progress label past the cut would read as no progress, so an open bug
+  # with more labels than one page holds stops the gather.
   local truncated
+  truncated="$(jq -r '[.[] | select(.state == "open" and (.truncated | index("labels"))) | "#\(.number)"] | join(", ")' "${TEMP_DIR}/bugs.json")"
+  [[ -z "${truncated}" ]] \
+    || die "${E_INVALID}" "GitHub cut the labels of ${truncated} short, so a progress label could be missing; the board cannot be trusted"
   truncated="$(jq -r '.[] | select(.truncated | length > 0) | "  - #\(.number): \(.truncated | join(" and "))"' "${TEMP_DIR}/bugs.json")"
   if [[ -n "${truncated}" ]]; then
     printf '%s: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:\n%s\n' "${SCRIPT_NAME}" "${truncated}" >&2

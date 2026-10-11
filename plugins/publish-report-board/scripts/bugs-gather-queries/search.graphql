@@ -34,7 +34,7 @@ query ($q: String!, $endCursor: String) {
             login
           }
         }
-        labels(first: 30) {
+        labels(first: 100) {
           pageInfo {
             hasNextPage
           }
