@@ -44,10 +44,10 @@ git branch --remotes --format='%(refname:short) %(committerdate:iso-strict) %(au
 git branch --all --no-merged "origin/DEFAULT_BRANCH" --format='%(refname:short)'
 
 # Open pull requests (how far along each piece of work is)
-gh pr list --state open --limit 200 --json number,title,headRefName,isDraft,reviewDecision,mergeable,mergeStateStatus,statusCheckRollup,reviewRequests,latestReviews,closingIssuesReferences,createdAt,updatedAt,author,files
+gh pr list --state open --limit 1000 --json number,title,headRefName,isDraft,reviewDecision,mergeable,mergeStateStatus,statusCheckRollup,reviewRequests,latestReviews,closingIssuesReferences,createdAt,updatedAt,author,files
 
 # Recently merged pull requests (work merged on an issue still open)
-gh pr list --state merged --limit 100 --json number,title,body,mergedAt,closingIssuesReferences,author,files
+gh pr list --state merged --limit 300 --json number,title,body,mergedAt,closingIssuesReferences,author,files
 
 # Current authenticated user and git identity (for affinity)
 gh api user --jq '.login'
@@ -59,6 +59,8 @@ gh repo view --json description,defaultBranchRef
 ```
 
 If the user specified `--label` or `--milestone`, add the corresponding `--label` or `--milestone` flag to `gh issue list`.
+
+A list that returns exactly its `--limit` may be cut short. Run it again with a higher limit; if it still fills the limit, say in the output that pull requests past the cut were not read, since a missing open pull request can hide work already under way and a missing merged one can hide a `close-out` issue or recent affinity.
 
 If the user specified `--include-prs`, the open pull request list above already holds what that option reviews: drafts, review decisions, conflicts and check state.
 
