@@ -51,7 +51,7 @@ A stale sentence is worse than none: the reader trusts it, and nothing fails whe
 
 - **Anchor claims to what sits beside them.** A PR body describes this PR's diff; an instruction describes the behavior it governs. Text about something elsewhere drifts without anyone rereading it.
 - **Never cite line numbers.** Name a file, function, section heading, or rule instead.
-- **Leave out facts that change on their own schedule**: counts, version numbers, dates, "currently", "for now", "new", and lists of the places that use something. The exceptions are a fact that explains the text itself (see "Keep these") and a measurement tied to a fixed point, such as this change's before-and-after timings, which does not drift.
+- **Leave out facts that change on their own schedule**: counts, version numbers, dates, "currently", "for now", "new", and lists of the places that use something. The exception is a fact that explains the text itself (see "Keep these").
 - **Prefer a lasting reason to a passing one.** "The API rejects more than 3 tags" outlives "the API rejected 4 tags in last week's outage".
 
 ## Cut these
@@ -77,7 +77,7 @@ When cut material is worth recording, it goes where it belongs: a commit message
 
 ## Keep these
 
-Deleting is the default, not the goal. Text earns its place when one of these applies. It stays even if it matches another rule in this skill; only "Do not touch" outranks it. Trim it to the reason it is kept.
+Deleting is the default, not the goal. Text earns its place when one of these applies. It stays even if it matches another rule in this skill; only "Do not touch" outranks it. The active profile's keep list carries the same weight. Trim it to the reason it is kept.
 
 - **A reader would otherwise do the wrong thing.** For a PR, a reviewer would flag deliberate behavior as a bug. For an instruction, the agent would fall back to a default the rule exists to prevent.
 - **Something looks wrong or arbitrary but is deliberate.**
@@ -198,7 +198,7 @@ After a commit, check whether a hook changed anything. A committed file whose re
 
 ### 7. Report
 
-Report the profile, then a table: location (`file:line`, or the section heading in a PR or issue body), action, before, after. Leave out units kept unchanged. Keep before and after to one line each, truncating with `…`. When a table or list changes as a whole, describe it in those cells instead of quoting it, such as "two tables, 9 rows" and "one line plus a 3-row table". With `--dry-run`, the table lists proposed changes.
+Report the profile, then a table: location (`file:line`, or the section heading in a PR or issue body), action, before, after. Leave out units kept unchanged. Keep before and after to one line each, truncating with `…`. Report units replaced together as one row, summarizing each side instead of quoting it: "two tables, 9 rows" becomes "one line plus a 3-row table". With `--dry-run`, the table lists proposed changes.
 
 Then report:
 

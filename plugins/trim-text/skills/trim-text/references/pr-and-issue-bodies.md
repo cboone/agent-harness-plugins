@@ -22,23 +22,22 @@ Lean means no padding, not no reasoning. Keep what makes the change reviewable:
 
 ## Cut these, in addition to the shared list
 
-| Cut                                                                | Instead                                                                          |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| A description of the commits or the branch history                 | The net change. A commit that reverted an earlier one leaves nothing to describe |
-| Restating the diff or what CI reports                              | Delete it. "Renames the test file" is visible in the diff                        |
-| A file-by-file inventory                                           | A few bullets grouped by change                                                  |
-| The investigation story: "How this surfaced", "found by…"          | The finding, stated once                                                         |
-| Out-of-scope findings written up as prose                          | Links to filed issues, under the section the repository uses for follow-ups      |
-| The author's doubts, notes on what was left alone, reviewer to-dos | Delete; these belong in the hand-off message to the person who asked             |
-| Session leakage: "the user", "has been asked", "as discussed"      | The fact, without the conversation around it                                     |
-| A restatement of a committed plan, or an audit against it          | A link to the plan as the source of truth                                        |
-| Test-plan boilerplate: checked lint, type check, suite counts      | Delete; CI reports these. Keep unchecked steps and evidence CI cannot show       |
-| Noise about unrelated tests or flaky runs                          | Delete, or a link to the issue that tracks the flake                             |
-| Template sections answered "No" with a justification               | Remove the section where the template allows it                                  |
-| Comments about the description's own revisions                     | Delete                                                                           |
-| A section recording review rounds: "Review hardening"              | Fold its behavior changes into the changes they belong to; delete the rest       |
-| Citation chains: "reference [39] cited therein, which is…"         | The citation that matters                                                        |
-| Counts that change with every commit: test counts, file counts     | A description: "adds scrut coverage for the bundled script"                      |
+| Cut                                                                                   | Instead                                                                                                                                          |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A description of the commits, the branch history, or review rounds, under any heading | The net change, with each behavior change folded into the change it belongs to. A commit that reverted an earlier one leaves nothing to describe |
+| Restating the diff or what CI reports                                                 | Delete it. "Renames the test file" is visible in the diff                                                                                        |
+| A file-by-file inventory                                                              | A few bullets grouped by change                                                                                                                  |
+| The investigation story: "How this surfaced", "found by…"                             | The finding, stated once                                                                                                                         |
+| Out-of-scope findings written up as prose                                             | Links to filed issues, under the section the repository uses for follow-ups                                                                      |
+| The author's doubts, notes on what was left alone, reviewer to-dos                    | Delete; these belong in the hand-off message to the person who asked                                                                             |
+| Session leakage: "the user", "has been asked", "as discussed"                         | The fact, without the conversation around it                                                                                                     |
+| A restatement of a committed plan, or an audit against it                             | A link to the plan as the source of truth                                                                                                        |
+| Test-plan boilerplate: checked lint, type check, suite counts                         | Delete; CI reports these. Keep unchecked steps and evidence CI cannot show                                                                       |
+| Noise about unrelated tests or flaky runs                                             | Delete, or a link to the issue that tracks the flake                                                                                             |
+| Template sections answered "No" with a justification                                  | Remove the section where the template allows it                                                                                                  |
+| Comments about the description's own revisions                                        | Delete                                                                                                                                           |
+| Citation chains: "reference [39] cited therein, which is…"                            | The citation that matters                                                                                                                        |
+| Counts that change with every commit: test counts, file counts                        | A description: "adds scrut coverage for the bundled script"                                                                                      |
 
 Under a parent continuation, keep every unchecked checklist item, including a reviewer to-do, and flag it instead of deleting it; the caller decides what happens to it.
 
