@@ -396,7 +396,7 @@ copilot-rounds-report: an owner must be a single login, got 'cboone client-org'
 
 ```scrut
 $ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --author 'cboone is:merged' --since 2026-09-29 2>&1
-copilot-rounds-report: --author must be a single login or @me, got 'cboone is:merged'
+copilot-rounds-report: --author must be a single login, @me, or a bot as app/NAME or NAME[bot], got 'cboone is:merged'
 [1]
 ```
 
@@ -413,6 +413,22 @@ copilot-rounds-report: could not search for pull requests; /*/stale.json holds g
 ```scrut
 $ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 --save "${work}" 2>&1
 copilot-rounds-report: cannot write the --save file /* (glob)
+[1]
+```
+
+A bot author is accepted as `app/NAME` or `NAME[bot]`, and reaches the search as given.
+
+```scrut
+$ : > "${work}/calls.log" \
+>   && for bot in app/dependabot 'dependabot[bot]'; do STUB_GH_LOG="${work}/calls.log" stubbed --owner cboone --since 2026-09-29 --author "${bot}" > /dev/null; done \
+>   && grep -o 'author:[^ ]*' "${work}/calls.log"
+author:app/dependabot
+author:dependabot[bot]
+```
+
+```scrut
+$ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --author 'app/dependabot[bot]' --since 2026-09-29 2>&1
+copilot-rounds-report: --author must be a single login, @me, or a bot as app/NAME or NAME[bot], got 'app/dependabot[bot]'
 [1]
 ```
 

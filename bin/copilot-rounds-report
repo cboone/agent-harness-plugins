@@ -46,7 +46,8 @@ readonly LONG_ROUNDS=5
 # GitHub search returns at most this many results for one query.
 readonly SEARCH_LIMIT=1000
 
-# A user or organization login; --author also takes @me and a [bot] suffix.
+# A user or organization login; --author also takes @me, and a bot as app/NAME
+# or NAME[bot].
 readonly LOGIN_PATTERN='^[A-Za-z0-9][A-Za-z0-9-]*$'
 
 # shellcheck disable=SC2016 # $q and $endCursor are GraphQL variables.
@@ -392,8 +393,11 @@ function main() {
     [[ "${searched}" == *" $(printf '%s' "${login}" | tr '[:upper:]' '[:lower:]') "* ]] \
       || die "--client-owner ${login} is not one of the --owner values"
   done
-  [[ "${author}" == "@me" || "${author%\[bot\]}" =~ ${LOGIN_PATTERN} ]] \
-    || die "--author must be a single login or @me, got '${author}'"
+  local author_login="${author#app/}"
+  [[ "${author_login}" == "${author}" ]] || [[ "${author_login}" != *"[bot]" ]] || author_login=""
+  author_login="${author_login%\[bot\]}"
+  [[ "${author}" == "@me" || "${author_login}" =~ ${LOGIN_PATTERN} ]] \
+    || die "--author must be a single login, @me, or a bot as app/NAME or NAME[bot], got '${author}'"
   [[ -n "${since}" ]] || die "--since is required"
   require_date "--since" "${since}"
   local range="on or after ${since}"
