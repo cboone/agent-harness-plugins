@@ -137,6 +137,13 @@ $ model '[{name: "fix/12-a", local: true, remote: false, worktree: false, at: "2
 fix/12-a local true remote true ahead 3 behind 1 at 2026-10-05T12:00:00Z
 ```
 
+## An uncounted remote copy stays uncounted beside a copy with nothing ahead
+
+```scrut
+$ model '[{name: "fix/12-a", local: true, remote: false, worktree: false, at: "2026-10-01T12:00:00Z", ahead: 0, behind: 2}, {name: "fix/12-a", local: false, remote: true, worktree: false, at: "2026-10-05T12:00:00Z", ahead: null, behind: null}] | join_branches("main") | .[] | "\(.name) ahead \(.ahead) behind \(.behind) carries work \(carries_work)"'
+fix/12-a ahead null behind null carries work true
+```
+
 ## A pipeline alone is started, from when the issue entered it
 
 ```scrut

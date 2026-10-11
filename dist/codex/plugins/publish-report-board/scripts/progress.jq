@@ -68,7 +68,9 @@ def pr_signal:
 # work pushed from elsewhere.
 def join_branches($default):
   group_by(.name)
-  | map((map(select(.ahead != null)) | max_by(.ahead)) as $counted
+  # An uncounted ref keeps the join uncounted unless a counted ref shows work.
+  | map((map(select(.ahead != null)) | max_by(.ahead)) as $max
+        | (if $max != null and ($max.ahead > 0 or all(.[]; .ahead != null)) then $max else null end) as $counted
         | {name: .[0].name,
            local: any(.[]; .local == true),
            remote: any(.[]; .remote == true),
