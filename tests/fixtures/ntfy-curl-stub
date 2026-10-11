@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# ntfy-curl-stub -- Test stub for the ntfy publish request push-notification makes.
+#
+# push-notification posts a JSON body on stdin as --data-binary @- and, when a
+# token is configured, its authorization header in a file named by -H @FILE.
+# The stub answers the way ntfy does, with the published message as JSON.
+#
+# STUB_CURL_LOG, when set, receives every argument on its own line, then the
+# body, then for a header file its contents check and mode. The check compares
+# the file against "Authorization: Bearer STUB_CURL_TOKEN". STUB_CURL_FAIL=1
+# makes the request fail with HTTP 401, as ntfy answers a rejected token.
+set -euo pipefail
+
+# Prints the permission bits of a file, with GNU stat first, because BSD stat
+# has no -c.
+function file_mode() {
+  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}"
+}
+
+function main() {
+  local header_file="" arg body
+  local -a args=("$@")
+  while [[ $# -gt 0 ]]; do
+    arg="${1}"
+    shift
+    case "${arg}" in
+      -H)
+        [[ "${1}" != @* ]] || header_file="${1#@}"
+        shift
+        ;;
+      *) ;;
+    esac
+  done
+  body="$(cat)"
+
+  if [[ -n "${STUB_CURL_LOG:-}" ]]; then
+    {
+      printf 'arg: %s\n' "${args[@]}"
+      printf 'body: %s\n' "${body}"
+      if [[ -n "${header_file}" ]]; then
+        local matches=false
+        [[ "$(< "${header_file}")" != "Authorization: Bearer ${STUB_CURL_TOKEN:-}" ]] || matches=true
+        printf 'header matches: %s, mode %s\n' "${matches}" "$(file_mode "${header_file}")"
+      fi
+    } >> "${STUB_CURL_LOG}"
+  fi
+
+  if [[ "${STUB_CURL_FAIL:-}" == "1" ]]; then
+    printf '{"code":40101,"http":401,"error":"unauthorized"}\n'
+    echo "curl: (22) The requested URL returned error: 401" >&2
+    exit 22
+  fi
+  printf '{"id":"stub123","time":1760000000,"event":"message"}\n'
+}
+
+main "$@"

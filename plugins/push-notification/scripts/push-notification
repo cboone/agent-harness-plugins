@@ -1,0 +1,418 @@
+#!/usr/bin/env bash
+# push-notification -- Send a push notification through a configured backend
+# Author: Christopher Boone
+# Date: 2026-10-11
+#
+# Backend interface. send and check normalize their input first, then call
+# the selected backend's functions, so a new backend adds three functions and
+# a case in known_backend rather than a new script:
+#
+#   backend_NAME_check    Validate the resolved settings. Print each problem
+#                         on stderr and return 1 when the backend cannot send.
+#   backend_NAME_status   Print one "key: value (source)" line per setting.
+#                         Secret values are printed only as "set" or "unset".
+#   backend_NAME_send     Send the message held in the MESSAGE_* globals, or
+#                         print the request instead when DRY_RUN is true.
+#                         Return 1 when the send fails.
+#
+# Message fields, already validated when a backend sees them:
+#   MESSAGE_TITLE      title, possibly empty
+#   MESSAGE_BODY       body, possibly empty; title and body are never both empty
+#   MESSAGE_PRIORITY   1 (min) to 5 (urgent), 3 being the default
+#   MESSAGE_TAGS       array of tags, possibly empty
+#   MESSAGE_CLICK      URL to open when the notification is tapped, possibly empty
+#
+# A backend never prints a secret setting or passes one on a command line,
+# where any user on the machine can read it in the process list.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+readonly EXIT_SEND_FAILED=1
+readonly EXIT_USAGE=2
+readonly EXIT_NOT_CONFIGURED=3
+
+readonly DEFAULT_BACKEND="ntfy"
+readonly DEFAULT_NTFY_SERVER="https://ntfy.sh"
+
+# Every key the config file may set. Each one is also the name of the
+# environment variable that overrides it.
+readonly CONFIG_KEYS="PUSH_NOTIFICATION_BACKEND NTFY_SERVER NTFY_TOPIC NTFY_TOKEN"
+
+# ntfy accepts topic names of 1 to 64 letters, digits, underscores and hyphens.
+readonly NTFY_TOPIC_PATTERN='^[-_A-Za-z0-9]{1,64}$'
+readonly URL_SCHEME_PATTERN='^[A-Za-z][A-Za-z0-9+.-]*:'
+
+CONFIG_FILE=""
+DRY_RUN=false
+MESSAGE_TITLE=""
+MESSAGE_BODY=""
+MESSAGE_PRIORITY=3
+MESSAGE_TAGS=()
+MESSAGE_CLICK=""
+TEMP_DIR=""
+
+# Resolved settings, set by resolve_settings. SOURCE_<KEY> names where each
+# came from: env, config, default or unset.
+SETTING_PUSH_NOTIFICATION_BACKEND=""
+SETTING_NTFY_SERVER=""
+SETTING_NTFY_TOPIC=""
+SETTING_NTFY_TOKEN=""
+
+function usage() {
+  cat << USAGE_TEXT
+Usage: ${SCRIPT_NAME} <command> [options]
+
+Send a push notification through the configured backend (ntfy).
+
+Commands:
+  send [options]   Send a notification
+  check            Report the resolved settings and whether they can send
+
+Send options:
+  --title TEXT       Notification title
+  --message TEXT     Notification body; "-" reads it from stdin
+  --priority LEVEL   min, low, default, high or urgent, or 1 to 5 (default: default)
+  --tag TAG          Tag or emoji shortcode; repeat for several
+  --click URL        URL to open when the notification is tapped
+  --dry-run          Print the request, without secrets, instead of sending it
+  -h, --help         Show this help
+
+A title, a message or both are required.
+
+Settings come from the config file, and an environment variable of the same
+name overrides each one:
+  PUSH_NOTIFICATION_BACKEND   Backend to use (default: ${DEFAULT_BACKEND})
+  NTFY_SERVER                 ntfy server URL (default: ${DEFAULT_NTFY_SERVER})
+  NTFY_TOPIC                  ntfy topic to publish to (required)
+  NTFY_TOKEN                  ntfy access token (optional)
+
+Config file: \${PUSH_NOTIFICATION_CONFIG}, or
+\${XDG_CONFIG_HOME:-\$HOME/.config}/push-notification/config. It holds
+KEY=value lines and is read, never sourced. A file that holds NTFY_TOKEN must
+be readable by its owner alone.
+
+Exit status: 0 sent, 1 send failed, 2 usage error, 3 not configured.
+
+Examples:
+  ${SCRIPT_NAME} check
+  ${SCRIPT_NAME} send --title "CI passed on #42" --click https://github.com/o/r/pull/42
+  echo "Review found 2 issues" | ${SCRIPT_NAME} send --title "Review done" --message -
+USAGE_TEXT
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-${EXIT_USAGE}}"
+}
+
+function require_tools() {
+  local tool
+  for tool in "$@"; do
+    if ! command -v "${tool}" > /dev/null 2>&1; then
+      case "${tool}" in
+        jq) die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/" "${EXIT_NOT_CONFIGURED}" ;;
+        *) die "${tool} is required but not found" "${EXIT_NOT_CONFIGURED}" ;;
+      esac
+    fi
+  done
+}
+
+function cleanup() {
+  if [[ -n "${TEMP_DIR}" ]]; then
+    rm -rf -- "${TEMP_DIR}"
+  fi
+}
+
+# Prints the permission bits of a file, with GNU stat first, because BSD stat
+# has no -c.
+function file_mode() {
+  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}"
+}
+
+function is_config_key() {
+  local key
+  for key in ${CONFIG_KEYS}; do
+    [[ "${key}" == "${1}" ]] && return 0
+  done
+  return 1
+}
+
+# Reads the config file into CONFIG_VALUE_<KEY> globals. Each line is KEY=value,
+# with optional matching quotes around the value; blank lines and lines starting
+# with # are skipped. The file is parsed rather than sourced, so nothing in it
+# runs.
+function read_config() {
+  CONFIG_FILE="${PUSH_NOTIFICATION_CONFIG:-${XDG_CONFIG_HOME:-${HOME}/.config}/push-notification/config}"
+  [[ -f "${CONFIG_FILE}" ]] || return 0
+  [[ -r "${CONFIG_FILE}" ]] || die "cannot read config file ${CONFIG_FILE}" "${EXIT_NOT_CONFIGURED}"
+
+  local line key value line_number=0
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    line_number=$((line_number + 1))
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [[ -z "${line}" || "${line}" == \#* ]] && continue
+    [[ "${line}" == *=* ]] || die "${CONFIG_FILE}:${line_number}: expected KEY=value" "${EXIT_NOT_CONFIGURED}"
+    key="${line%%=*}"
+    key="${key%"${key##*[![:space:]]}"}"
+    value="${line#*=}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    is_config_key "${key}" || die "${CONFIG_FILE}:${line_number}: unknown key ${key}" "${EXIT_NOT_CONFIGURED}"
+    if [[ "${value}" == \"*\" || "${value}" == \'*\' ]] && ((${#value} >= 2)); then
+      value="${value:1:${#value}-2}"
+    fi
+    printf -v "CONFIG_VALUE_${key}" '%s' "${value}"
+  done < "${CONFIG_FILE}"
+
+  if [[ -n "${CONFIG_VALUE_NTFY_TOKEN:-}" ]]; then
+    local mode
+    mode="$(file_mode "${CONFIG_FILE}")"
+    if (((8#${mode} & 8#077) != 0)); then
+      die "${CONFIG_FILE} holds NTFY_TOKEN but is readable by others (mode ${mode}); run: chmod 600 \"${CONFIG_FILE}\"" "${EXIT_NOT_CONFIGURED}"
+    fi
+  fi
+}
+
+# Sets SETTING_<KEY> and SOURCE_<KEY> for one key: the environment wins, then
+# the config file, then the default passed as the second argument.
+function resolve_setting() {
+  local key="${1}" default="${2:-}" config_name="CONFIG_VALUE_${1}"
+  if [[ -n "${!key:-}" ]]; then
+    printf -v "SETTING_${key}" '%s' "${!key}"
+    printf -v "SOURCE_${key}" '%s' "env"
+  elif [[ -n "${!config_name:-}" ]]; then
+    printf -v "SETTING_${key}" '%s' "${!config_name}"
+    printf -v "SOURCE_${key}" '%s' "config"
+  elif [[ -n "${default}" ]]; then
+    printf -v "SETTING_${key}" '%s' "${default}"
+    printf -v "SOURCE_${key}" '%s' "default"
+  else
+    printf -v "SETTING_${key}" '%s' ""
+    printf -v "SOURCE_${key}" '%s' "unset"
+  fi
+}
+
+function resolve_settings() {
+  read_config
+  resolve_setting PUSH_NOTIFICATION_BACKEND "${DEFAULT_BACKEND}"
+  resolve_setting NTFY_SERVER "${DEFAULT_NTFY_SERVER}"
+  resolve_setting NTFY_TOPIC
+  resolve_setting NTFY_TOKEN
+}
+
+function known_backend() {
+  case "${1}" in
+    ntfy) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+function selected_backend() {
+  known_backend "${SETTING_PUSH_NOTIFICATION_BACKEND}" \
+    || die "unknown backend ${SETTING_PUSH_NOTIFICATION_BACKEND} (known: ntfy)" "${EXIT_USAGE}"
+  printf '%s' "${SETTING_PUSH_NOTIFICATION_BACKEND}"
+}
+
+function print_setting() {
+  local key="${1}" label="${2}" secret="${3:-false}"
+  local value_name="SETTING_${key}" source_name="SOURCE_${key}" value
+  value="${!value_name}"
+  if [[ "${!source_name}" == "unset" ]]; then
+    printf "%s: unset\n" "${label}"
+    return 0
+  fi
+  [[ "${secret}" != true ]] || value="set"
+  printf '%s: %s (%s)\n' "${label}" "${value}" "${!source_name}"
+}
+
+# ---------------------------------------------------------------------------
+# ntfy backend
+#
+# The topic name is the only thing that guards a topic on a public server, so
+# it is treated like the token: never printed, and passed to jq through the
+# environment rather than its argument list.
+
+function ntfy_server() {
+  printf '%s' "${SETTING_NTFY_SERVER%/}"
+}
+
+function backend_ntfy_check() {
+  local status=0
+  if [[ ! "${SETTING_NTFY_SERVER}" =~ ^https?:// ]]; then
+    echo "${SCRIPT_NAME}: NTFY_SERVER must start with http:// or https://" >&2
+    status=1
+  fi
+  if [[ -z "${SETTING_NTFY_TOPIC}" ]]; then
+    echo "${SCRIPT_NAME}: NTFY_TOPIC is not set. Set it in ${CONFIG_FILE} or the environment." >&2
+    status=1
+  elif [[ ! "${SETTING_NTFY_TOPIC}" =~ ${NTFY_TOPIC_PATTERN} ]]; then
+    echo "${SCRIPT_NAME}: NTFY_TOPIC must be 1 to 64 letters, digits, underscores or hyphens" >&2
+    status=1
+  fi
+  return "${status}"
+}
+
+function backend_ntfy_status() {
+  print_setting NTFY_SERVER "server"
+  print_setting NTFY_TOPIC "topic" true
+  print_setting NTFY_TOKEN "token" true
+}
+
+# Prints the JSON publish request, with the topic taken from the environment.
+function ntfy_payload() {
+  local tags_json
+  tags_json="$(printf '%s\n' ${MESSAGE_TAGS[@]+"${MESSAGE_TAGS[@]}"} | jq -R . | jq -s -c 'map(select(length > 0))')"
+  NTFY_PAYLOAD_TOPIC="${SETTING_NTFY_TOPIC}" jq -n -c \
+    --arg title "${MESSAGE_TITLE}" \
+    --arg message "${MESSAGE_BODY}" \
+    --argjson priority "${MESSAGE_PRIORITY}" \
+    --argjson tags "${tags_json}" \
+    --arg click "${MESSAGE_CLICK}" \
+    '{topic: env.NTFY_PAYLOAD_TOPIC, title: $title, message: $message, priority: $priority, tags: $tags, click: $click}
+      | with_entries(select(.value != "" and .value != []))'
+}
+
+function backend_ntfy_send() {
+  local url payload
+  url="$(ntfy_server)/"
+  payload="$(ntfy_payload)"
+
+  if [[ "${DRY_RUN}" == true ]]; then
+    local authorization="none"
+    [[ -z "${SETTING_NTFY_TOKEN}" ]] || authorization="bearer token (hidden)"
+    jq -n -c --arg url "${url}" --arg authorization "${authorization}" --argjson payload "${payload}" \
+      '{backend: "ntfy", url: $url, authorization: $authorization, payload: ($payload | .topic = "(hidden)")}'
+    return 0
+  fi
+
+  local -a curl_args=(-sS --fail-with-body -X POST -H 'Content-Type: application/json')
+  if [[ -n "${SETTING_NTFY_TOKEN}" ]]; then
+    TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/push-notification.XXXXXX")"
+    local header_file="${TEMP_DIR}/authorization"
+    (umask 077 && printf 'Authorization: Bearer %s\n' "${SETTING_NTFY_TOKEN}" > "${header_file}")
+    curl_args+=(-H "@${header_file}")
+  fi
+
+  local response
+  if ! response="$(printf '%s' "${payload}" | curl "${curl_args[@]}" --data-binary @- "${url}" 2>&1)"; then
+    echo "${SCRIPT_NAME}: ntfy did not accept the notification: ${response}" >&2
+    return 1
+  fi
+
+  local id
+  id="$(jq -r '.id // empty' <<< "${response}" 2> /dev/null || true)"
+  if [[ -n "${id}" ]]; then
+    echo "Sent through ntfy to $(ntfy_server) (message ${id})"
+  else
+    echo "Sent through ntfy to $(ntfy_server)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Commands
+
+function priority_number() {
+  case "${1}" in
+    1 | min) echo 1 ;;
+    2 | low) echo 2 ;;
+    3 | default) echo 3 ;;
+    4 | high) echo 4 ;;
+    5 | urgent | max) echo 5 ;;
+    *) return 1 ;;
+  esac
+}
+
+function command_send() {
+  local message_from_stdin=false
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --title | --message | --priority | --tag | --click)
+        [[ $# -ge 2 ]] || die "${1} needs a value"
+        ;;
+      *) ;;
+    esac
+    case "${1}" in
+      --title) MESSAGE_TITLE="${2}" ;;
+      --message)
+        if [[ "${2}" == "-" ]]; then
+          message_from_stdin=true
+        else
+          MESSAGE_BODY="${2}"
+        fi
+        ;;
+      --priority)
+        MESSAGE_PRIORITY="$(priority_number "${2}")" \
+          || die "--priority must be min, low, default, high, urgent or 1 to 5, not ${2}"
+        ;;
+      --tag)
+        [[ -n "${2}" ]] || die "--tag needs a non-empty value"
+        MESSAGE_TAGS+=("${2}")
+        ;;
+      --click)
+        [[ "${2}" =~ ${URL_SCHEME_PATTERN} ]] || die "--click must be a URL with a scheme, such as https://"
+        MESSAGE_CLICK="${2}"
+        ;;
+      --dry-run)
+        DRY_RUN=true
+        shift
+        continue
+        ;;
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      *) die "unknown send option ${1}" ;;
+    esac
+    shift 2
+  done
+
+  if [[ "${message_from_stdin}" == true ]]; then
+    MESSAGE_BODY="$(cat)"
+  fi
+  [[ -n "${MESSAGE_TITLE}" || -n "${MESSAGE_BODY}" ]] || die "send needs --title, --message or both"
+
+  require_tools jq curl
+  resolve_settings
+  local backend
+  backend="$(selected_backend)"
+  "backend_${backend}_check" || exit "${EXIT_NOT_CONFIGURED}"
+  "backend_${backend}_send" || exit "${EXIT_SEND_FAILED}"
+}
+
+function command_check() {
+  [[ $# -eq 0 ]] || die "check takes no options"
+  resolve_settings
+  local backend
+  backend="$(selected_backend)"
+  local config_state="not found"
+  [[ ! -f "${CONFIG_FILE}" ]] || config_state="found"
+  printf 'config file: %s (%s)\n' "${CONFIG_FILE}" "${config_state}"
+  print_setting PUSH_NOTIFICATION_BACKEND "backend"
+  "backend_${backend}_status"
+  if "backend_${backend}_check"; then
+    echo "ready: yes"
+  else
+    echo "ready: no"
+    exit "${EXIT_NOT_CONFIGURED}"
+  fi
+}
+
+function main() {
+  trap cleanup EXIT
+  [[ $# -gt 0 ]] || {
+    usage >&2
+    exit "${EXIT_USAGE}"
+  }
+  local command="${1}"
+  shift
+  case "${command}" in
+    send) command_send "$@" ;;
+    check) command_check "$@" ;;
+    -h | --help) usage ;;
+    *) die "unknown command ${command}" ;;
+  esac
+}
+
+main "$@"
