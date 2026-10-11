@@ -207,7 +207,7 @@ Then report:
 - the commit, shown with `git log -1 --format='%h %s'`, or no commit with the skip condition or the exact error from step 6
 - any change a hook made beyond these edits
 - the PR or issue write, with its URL and result
-- edited files left uncommitted because they held the user's work or other changes, and paths dropped in step 1
+- edited files left uncommitted because they held the user's work or other changes, and paths dropped in step 1, except secret-bearing paths: say only that secret-bearing files were skipped
 - cut material worth moving elsewhere, with its suggested destination
 
 ## Parent Continuation Contract
