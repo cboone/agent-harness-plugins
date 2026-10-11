@@ -18,9 +18,7 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 
 - **`fetch_thread_index` in `resolve-copilot-threads` caps each thread at `comments(first: 100)` on purpose.** The index is a lookup table, not the audit's source of comments: `audit` reads every review comment through the paginated REST endpoint and looks each one up in it. A comment beyond the first 100 in a thread is missing from the index and is reported as `in no thread`, so the cap can mislabel a reason but cannot make the audit report a clean surface. Do not ask for the nested connection to be paginated.
 
-- **`notify` stops and launches a session's `alerter` without a per-session lock.** `fire_alerter_detached` runs one `pkill` on the session key, then launches the new `alerter`. Two hooks from one session that fire at the same moment can both launch, and the `WAIT_LIMIT` watchdog stops the extra one. A lock would add a stale-lock failure to every hook for a rare case, so do not ask for one.
-
-- **`notify`'s watchdog does not delay click-to-focus.** Its output goes to `/dev/null`, so the command substitution returns as soon as `alerter` exits and the click handler runs then, not when the watchdog's next poll ends.
+- **`notify` stops each `alerter` with `SIGKILL` after `WAIT_LIMIT` seconds on purpose.** `SIGKILL` leaves the delivered banner in Notification Center, while `SIGTERM` and `SIGINT` make `alerter` remove it. Each detached subshell stops only the `alerter` it launched, checked by PID and start time, so concurrent hooks need no lock or shared state. Do not ask for a gentler signal or for a lock.
 
 - **A fixture may `cd` after reading a `*_BIN` variable.** Those variables are absolute wherever scrut runs: the Makefile builds them from `$(CURDIR)`, and in CI the reusable `run-scrut-tests.yml` rewrites every `./`-prefixed `scrut-env` value in `.github/workflows/ci.yml` into an absolute path before exporting it. A `./plugins/...` value there never reaches a fixture as a relative path.
 

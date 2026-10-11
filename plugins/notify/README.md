@@ -28,7 +28,7 @@ Refresh the installed plugin after repository updates:
 codex plugin marketplace upgrade agent-harness-plugins
 ```
 
-The current stable Codex CLI supports all three events the plugin wires: `Stop`, `UserPromptSubmit`, and `PreToolUse` matching the `request_user_input` question tool. Questions use the same banner format, sound and click routing as Claude Code. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for what the plugin does not cover.
+The current stable Codex CLI supports all three events the plugin wires: `Stop`, `UserPromptSubmit`, and `PreToolUse` matching the `request_user_input` question tool. Questions use the same banner format and sound as Claude Code. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for what the plugin does not cover.
 
 `PermissionRequest` is intentionally not wired: it runs before automatic approval review decides whether a human prompt is needed. Keep native terminal attention as a fallback, without duplicating plugin completion alerts:
 
@@ -79,8 +79,8 @@ Delivers native macOS notifications so you can work in other apps while an agent
   - Question bodies show the first question, followed by `(+N more)` when there are several.
 - **Shared event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion. Claude's idle reminders are disabled.
 - **Session-specific groups** (Claude Code and Codex): banners from unrelated sessions do not replace one another. Completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored. OpenCode groups banners by event only.
-- **Visibility-aware completion** (Claude Code and Codex): completion alerts are suppressed when the host terminal application (one of those listed under click-to-focus) is frontmost and a focused tmux client displays the originating pane. If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
-- **Click-to-focus**: clicking the body of any notification activates the originating terminal app (auto-detected from `$TERM_PROGRAM`, supports Apple Terminal, iTerm2, Ghostty, WezTerm, VSCode, Alacritty) and, if you were inside tmux when the hook fired, switches the tmux client to the originating session, window, and pane. In Claude Code and Codex, only a session's latest notification responds to a click, and only for a limited time (see [Notes and caveats](#notes-and-caveats)).
+- **Visibility-aware completion** (Claude Code and Codex): completion alerts are suppressed when the host terminal application is frontmost and a focused tmux client displays the originating pane. The terminal is identified from `$TERM_PROGRAM`, which must be one of Apple Terminal (`Apple_Terminal`), iTerm2 (`iTerm.app`), Ghostty (`ghostty`), WezTerm (`WezTerm`), VS Code (`vscode`) or Alacritty (`alacritty`). If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
+- **Fire-and-forget delivery**: `alerter` is stopped shortly after it posts each banner (see [Notes and caveats](#notes-and-caveats)), so no process waits on the banner. Banners stay in Notification Center, but clicking one does not focus the originating terminal or tmux pane.
 
 ## When it fires
 
@@ -115,30 +115,10 @@ MCP tools appear by their tool name, as in `Approve batch?`, with the server nam
 | `session.error`      | `Error`           | `error.data.message` (or the error name)                                            | `Funk`  |
 | `session.idle`       | `Done`            | Summary of the last assistant message                                               | `Glass` |
 
-## Click-to-focus details
-
-When you click the body of a notification, the plugin runs [`scripts/focus-pane`](./scripts/focus-pane) with the captured terminal program and tmux state. The script does two things.
-
-**Activate the host terminal app** via `osascript -e 'tell application id "<bundle-id>" to activate'`. Bundle IDs are derived from `$TERM_PROGRAM`:
-
-| `$TERM_PROGRAM`  | App          |
-| ---------------- | ------------ |
-| `Apple_Terminal` | Terminal.app |
-| `iTerm.app`      | iTerm2       |
-| `ghostty`        | Ghostty      |
-| `WezTerm`        | WezTerm      |
-| `vscode`         | VS Code      |
-| `alacritty`      | Alacritty    |
-| (anything else)  | Terminal.app |
-
-**Switch the tmux client** if the hook fired inside tmux. Claude and Codex capture immutable session, window, and pane IDs using an explicit `TMUX_PANE` target. The detached process retains the originating tmux socket environment. OpenCode captures the session name and the window and pane indexes instead.
-
-Failures (closed pane, no client attached, missing terminal app) are silent: clicking a notification should never produce a visible error.
-
 ## Notes and caveats
 
-- `alerter` blocks waiting for user interaction, so every event launches it in a detached subshell. The harness is never held up. Completion markers are stored under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/`; deleting this cache resets deduplication.
-- A waiting `alerter` 26.5 keeps polling the macOS notification daemon, so Claude Code and Codex CLI bound how many wait. Each notification stops its session's waiting `alerter` processes (a suppressed completion alert does not), and a watchdog stops each one after 30 minutes. Both use `SIGKILL`, because `alerter` removes its banner on `SIGTERM` or `SIGINT`: the banner stays in Notification Center, but clicking it no longer focuses the pane. Set `NOTIFY_WAIT_LIMIT` in the harness's environment to change the limit, in whole seconds. OpenCode relies on `alerter`'s own 24-hour timeout, which removes the banner.
+- Every event launches `alerter` in a detached process, so the harness is never held up. Completion markers are stored under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/`; deleting this cache resets deduplication.
+- A waiting `alerter` 26.5 polls the macOS notification daemon several times a second, and the daemon's load grows quickly with the number of waiting processes. Every harness therefore stops each `alerter` 2 seconds after launch with `SIGKILL`, which leaves the delivered banner and its sound intact; `SIGTERM` and `SIGINT` would make `alerter` remove the banner. Set `NOTIFY_WAIT_LIMIT` in the harness's environment to change the grace period, in whole seconds, for example if banners go missing under heavy load. `alerter`'s own 24-hour timeout remains only as a backstop, and it removes the banner when it expires.
 - `scripts/notify` parses under macOS `/bin/bash` 3.2, which `#!/usr/bin/env bash` finds when Homebrew is not on `PATH`. A parse failure exits 2, which Claude Code treats as blocking the hook's event, so the test suite parses it with `/bin/bash`. CI runs on Linux, where `/bin/bash` is bash 5, so only local macOS runs check bash 3.2.
 - The transcript-based extractors (pending tool use, and the last assistant message when a Stop payload lacks the field) stream the transcript JSONL newest line first (`tac`, or `tail -r` on stock macOS) into one `jq` pass that stops at the current turn's prompt; a slash-command invocation starts a turn like a typed prompt. Time and memory follow the current turn rather than the file: a 20,000-line turn takes under a tenth of a second. A pending call is reduced to the fields its preview reads, so a 50 MB `Write` takes under half a second.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.

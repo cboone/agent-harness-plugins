@@ -5,7 +5,7 @@
 # Each hook event is a subcommand; reads the hook's JSON payload from stdin
 # and shells out to alerter with per-event title, subtitle, body, sound, group,
 # and per-harness icon. Titles name the action; the icon names the harness.
-# Events fire detached so the harness is not blocked on user interaction.
+# Events fire detached, and alerter is stopped once the banner is delivered.
 #
 # Must parse under macOS /bin/bash 3.2, what `env bash` finds without Homebrew.
 # A syntax error exits 2, and Claude Code treats exit 2 as blocking the event.
@@ -14,18 +14,19 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "${0}")"
 SCRIPT_DIR="$(cd "$(dirname "${0}")" && pwd)"
 ASSETS_DIR="${SCRIPT_DIR}/../assets"
-FOCUS_SCRIPT="${SCRIPT_DIR}/focus-pane"
-readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR FOCUS_SCRIPT
+readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR
 
 # Body length budget: a banner shows about two lines, an expanded alert about four.
 readonly BODY_LIMIT=140
 
-# alerter's own timeout, only a backstop: alerter removes the banner when it expires.
+# alerter's own timeout, a backstop for an alerter the delivery stop never
+# reaches: alerter removes the banner when it expires.
 readonly FIRE_TIMEOUT=86400
 
-# Seconds before the watchdog stops a waiting alerter, bounding its usernoted polling.
+# Seconds alerter gets to deliver its banner before it is stopped. A waiting
+# alerter polls usernoted, at a cost that grows with the number waiting.
 # The nine-digit cap keeps bash arithmetic from overflowing.
-WAIT_LIMIT=1800
+WAIT_LIMIT=2
 if [[ "${NOTIFY_WAIT_LIMIT:-}" =~ ^[1-9][0-9]{0,8}$ ]]; then
   WAIT_LIMIT="${NOTIFY_WAIT_LIMIT}"
 fi
@@ -228,13 +229,6 @@ function compute_subtitle() {
     task="$(compute_branch_suffix)"
   fi
   printf '%s · %s' "${repo}" "${task}"
-}
-
-function compute_tmux_state() {
-  if [[ -z "${TMUX_PANE:-}" ]]; then
-    return 0
-  fi
-  tmux display-message -t "${TMUX_PANE}" -p '#{session_id}|#{window_id}|#{pane_id}' 2> /dev/null || true
 }
 
 # -----------------------------------------------------------------------------
@@ -460,38 +454,24 @@ function plan_heading() {
 # alerter dispatch
 # -----------------------------------------------------------------------------
 
-# stop_session_alerters and stop_alerter use SIGKILL: alerter removes its banner on SIGTERM or SIGINT.
-
-# Matches the session key in --group. `[^ ]*` cannot cross the space in the
-# pattern itself, so a concurrent pkill never matches.
-function stop_session_alerters() {
-  pkill -KILL -f -- "--group [^ ]*-${SESSION_KEY}" 2> /dev/null || true
-}
-
-# Stops PID $1 only while its start time is still $2, so a reused PID, even a
-# later alerter from this session, is left alone.
+# Stops PID $1 with SIGKILL only while its start time is still $2, so a reused
+# PID is left alone. alerter removes its banner on SIGTERM or SIGINT, but
+# SIGKILL leaves it in Notification Center.
 function stop_alerter() {
   [[ -n "${2}" ]] || return 0
   [[ "$(ps -p "${1}" -o lstart= 2> /dev/null)" == "${2}" ]] || return 0
   kill -KILL "${1}" 2> /dev/null || true
 }
 
-# Fires alerter in a detached subshell that routes a body click to focus-pane,
-# so the harness is not blocked on user interaction. Groups are suffixed with
-# the session key. Stop groups fire once per turn (an atomic mkdir marker) and
-# are skipped while the originating pane is visible. An empty sound omits
-# --sound, so the notification is silent. Each notification first stops the
-# session's waiting alerters. A watchdog stops its own after WAIT_LIMIT.
+# Fires alerter in a detached subshell, so the harness is never blocked, and
+# stops it WAIT_LIMIT seconds later unless it has exited. Groups are suffixed
+# with the session key. Stop groups fire once per turn (an atomic mkdir
+# marker) and are skipped while the originating pane is visible. An empty
+# sound omits --sound, so the notification is silent.
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
 
-  local tmux_state session="" window="" pane=""
-  tmux_state="$(compute_tmux_state)"
-  if [[ -n "${tmux_state}" ]]; then
-    IFS='|' read -r session window pane <<< "${tmux_state}"
-  fi
-  local term_program="${TERM_PROGRAM:-}"
   group="${group}-${SESSION_KEY}"
   if [[ "${group}" == *-stop-* ]]; then
     # mkdir is atomic, including when concurrent Stop hooks arrive.
@@ -508,45 +488,23 @@ function fire_alerter_detached() {
     sound_args=(--sound "${sound}")
   fi
 
-  stop_session_alerters
-
   (
-    local result
-    result="$(
-      alerter \
-        --title "${title}" \
-        --subtitle "${subtitle}" \
-        --message "${message}" \
-        ${sound_args[@]+"${sound_args[@]}"} \
-        --group "${group}" \
-        --app-icon "${icon}" \
-        --timeout "${FIRE_TIMEOUT}" \
-        2> /dev/null &
-      pid=$!
-      # Watchdog. Its output goes to /dev/null so the substitution does not wait for it.
-      (
-        started="$(ps -p "${pid}" -o lstart= 2> /dev/null)" || started=""
-        waited=0
-        while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do
-          step=$((WAIT_LIMIT - waited < 5 ? WAIT_LIMIT - waited : 5))
-          sleep "${step}"
-          waited=$((waited + step))
-        done
-        stop_alerter "${pid}" "${started}"
-      ) > /dev/null 2>&1 &
-      wait "${pid}" || true
-    )" || true
-    case "${result}" in
-      *@CONTENTCLICKED*)
-        "${FOCUS_SCRIPT}" \
-          "${term_program}" \
-          "${session}" \
-          "${window}" \
-          "${pane}" \
-          > /dev/null 2>&1 || true
-        ;;
-      *) ;;
-    esac
+    alerter \
+      --title "${title}" \
+      --subtitle "${subtitle}" \
+      --message "${message}" \
+      ${sound_args[@]+"${sound_args[@]}"} \
+      --group "${group}" \
+      --app-icon "${icon}" \
+      --timeout "${FIRE_TIMEOUT}" &
+    pid=$!
+    started="$(ps -p "${pid}" -o lstart= 2> /dev/null)" || started=""
+    waited=0
+    while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do
+      sleep 1
+      waited=$((waited + 1))
+    done
+    stop_alerter "${pid}" "${started}"
   ) > /dev/null 2>&1 < /dev/null &
   # Best-effort detach. In non-interactive shells without job control,
   # `disown` can fail; under `set -e` that would abort the hook and skip
@@ -683,12 +641,16 @@ function do_stop() {
 # are visible. Unknown application or tmux state preserves notification delivery.
 function originating_pane_visible() {
   [[ -n "${TMUX_PANE:-}" && -n "${TMUX:-}" ]] || return 1
+  local bundle front clients
   case "${TERM_PROGRAM:-}" in
-    Apple_Terminal | iTerm.app | ghostty | WezTerm | vscode | alacritty) ;;
+    Apple_Terminal) bundle="com.apple.Terminal" ;;
+    iTerm.app) bundle="com.googlecode.iterm2" ;;
+    ghostty) bundle="com.mitchellh.ghostty" ;;
+    WezTerm) bundle="com.github.wez.wezterm" ;;
+    vscode) bundle="com.microsoft.VSCode" ;;
+    alacritty) bundle="org.alacritty" ;;
     *) return 1 ;;
   esac
-  local bundle front clients
-  bundle="$("${FOCUS_SCRIPT}" --bundle-id "${TERM_PROGRAM:-}")" || return 1
   front="$(osascript -l JavaScript -e 'ObjC.import("AppKit"); ObjC.unwrap($.NSWorkspace.sharedWorkspace.frontmostApplication.bundleIdentifier)' 2> /dev/null)" || return 1
   [[ "${front}" == "${bundle}" ]] || return 1
   clients="$(tmux list-clients -F '#{pane_id}|#{client_flags}' 2> /dev/null)" || return 1

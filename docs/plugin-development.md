@@ -72,7 +72,6 @@ plugins/notify/
 ├── opencode/
 │   └── index.ts
 └── scripts/
-    ├── focus-pane
     └── notify
 ```
 
