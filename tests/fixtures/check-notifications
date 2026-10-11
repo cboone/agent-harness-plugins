@@ -45,10 +45,12 @@ function wait_for_alerter_pid() {
   printf '%s' "${pid}"
 }
 
-# Polls for up to 3 seconds until process $1 is no longer running.
+# Polls for up to $2 tries of 0.02 seconds (default 150, 3 seconds) until
+# process $1 is no longer running. An empty PID fails.
 function wait_for_exit() {
   local count=0
-  while kill -0 "${1}" 2> /dev/null && [[ "${count}" -lt 150 ]]; do
+  [[ -n "${1}" ]] || return 1
+  while kill -0 "${1}" 2> /dev/null && [[ "${count}" -lt "${2:-150}" ]]; do
     sleep 0.02
     count=$((count + 1))
   done
@@ -85,15 +87,21 @@ function main() {
   export PATH="${test_dir}/bin:${PATH}"
   export XDG_CACHE_HOME="${test_dir}/cache"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
+  # Only the watchdog scenario sets a wait limit.
+  unset NOTIFY_WAIT_LIMIT
 
-  # NOTIFY_TEST_HOLD keeps the stub waiting, like an unanswered banner, and
-  # logs a SIGTERM, which makes the real alerter remove its banner. The trap
-  # is set before the call is logged, which is what the scenarios wait for.
+  # The stub logs any SIGTERM it receives, because SIGTERM makes the real
+  # alerter remove its banner. It sets that trap before logging its call,
+  # which is what the scenarios wait for. NOTIFY_TEST_HOLD also keeps it
+  # waiting, like an unanswered banner. alerter-decoy shares the stub's path
+  # prefix, so the EXIT trap stops it too.
   printf '%s\n' '#!/usr/bin/env bash' \
     'trap '\''echo TERM >> "${NOTIFY_TEST_LOG}.signals"; exit 143'\'' TERM' \
     'jq -nc --args '\''$ARGS.positional'\'' -- "$@" >> "${NOTIFY_TEST_LOG}"' \
     'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then for _ in {1..300}; do sleep 0.1; done; fi' \
     'printf "%s" "${NOTIFY_TEST_CLICK}"' > "${test_dir}/bin/alerter"
+  printf '%s\n' '#!/usr/bin/env bash' \
+    'for _ in {1..300}; do sleep 0.1; done' > "${test_dir}/bin/alerter-decoy"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
     'case "$1" in' \
@@ -102,7 +110,7 @@ function main() {
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
-  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript"
+  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/alerter-decoy" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript"
 
   # Subtitles name the repository and fall back to the branch suffix. An empty
   # template keeps a personal init.templateDir out of the sample repository.
@@ -371,6 +379,8 @@ function main() {
       [[ -s "${NOTIFY_TEST_LOG}" ]]
       ;;
   esac
+  # Assertions in the held-alerter scenarios end with `|| exit 1` because a
+  # failing [[ ]] does not trigger errexit in bash 3.2.
   local first
   case "${scenario}" in
     duplicate)
@@ -396,55 +406,57 @@ function main() {
     replace | other-session)
       local second next_payload='{"session_id":"session-one"}'
       first="$(wait_for_alerter_pid)"
-      [[ -n "${first}" ]]
+      [[ -n "${first}" ]] || exit 1
       [[ "${scenario}" == other-session ]] && next_payload='{"session_id":"session-two"}'
       printf '%s' "${next_payload}" | "${NOTIFY_BIN}" codex-turn-start
       printf '%s' "${next_payload}" | "${NOTIFY_BIN}" codex-stop
       wait_for_alerts 2
       second="$(wait_for_alerter_pid "${first}")"
-      [[ -n "${second}" ]]
+      [[ -n "${second}" ]] || exit 1
       if [[ "${scenario}" == replace ]]; then
-        wait_for_exit "${first}"
+        wait_for_exit "${first}" || exit 1
         # SIGTERM would make the real alerter remove its banner.
-        [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]]
+        [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
         echo "A new alert stops the session's waiting alerter without SIGTERM"
       else
         sleep 0.2
-        kill -0 "${first}"
+        kill -0 "${first}" || exit 1
         echo "Other sessions keep their waiting alerters"
       fi
       ;;
     held-duplicate)
       first="$(wait_for_alerter_pid)"
-      [[ -n "${first}" ]]
+      [[ -n "${first}" ]] || exit 1
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
       sleep 0.2
-      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 1 ]]
-      kill -0 "${first}"
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 1 ]] || exit 1
+      kill -0 "${first}" || exit 1
       echo "A skipped duplicate keeps the waiting alerter"
       ;;
     stale-pid)
       first="$(wait_for_alerter_pid)"
-      [[ -n "${first}" ]]
+      [[ -n "${first}" ]] || exit 1
       local decoy pid_file
-      # Names alerter like another session's process, without this session's key.
-      bash -c 'sleep 30; :' alerter-decoy &
+      # Its command line contains "alerter" but not this session's key, like
+      # another session's alerter or a reused PID.
+      alerter-decoy > /dev/null 2>&1 &
       decoy=$!
       pid_file="$(grep -lx "${first}" "${XDG_CACHE_HOME}"/agent-harness-notify/*/alerter.pid)"
       printf '%s\n' "${decoy}" > "${pid_file}"
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-turn-start
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
       wait_for_alerts 2
-      [[ -n "$(wait_for_alerter_pid "${decoy}")" ]]
-      kill -0 "${decoy}"
-      { kill "${decoy}" && wait "${decoy}"; } 2> /dev/null || true
+      [[ -n "$(wait_for_alerter_pid "${decoy}")" ]] || exit 1
+      kill -0 "${decoy}" || exit 1
+      { kill -KILL "${decoy}" && wait "${decoy}"; } 2> /dev/null || true
       echo "A PID that is not this session's alerter is left running"
       ;;
     watchdog)
       first="$(wait_for_alerter_pid)"
-      [[ -n "${first}" ]]
-      wait_for_exit "${first}"
-      [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]]
+      [[ -n "${first}" ]] || exit 1
+      # NOTIFY_WAIT_LIMIT is 2 seconds; allow 6 under parallel load.
+      wait_for_exit "${first}" 300 || exit 1
+      [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
       echo "The watchdog stops a waiting alerter without SIGTERM"
       ;;
     visible | subagent | permission-question)
