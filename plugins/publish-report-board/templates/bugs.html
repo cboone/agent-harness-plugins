@@ -353,6 +353,13 @@
       ];
     }
 
+    // The stage, carrier, and flags on one line, for report rows that name a
+    // bug without its full progress line.
+    function progressBrief(progress) {
+      if (!progress) return null;
+      return h("p", { class: "next-action" }, [stageTag(progress), " ", carrierLink(progress.carrier), " ", flagMarks(progress)]);
+    }
+
     // The user's own calls and the tracker's signals, beside the facts.
     const SOURCE_LABELS = { triage: "Your call", zenhub: "ZenHub", github: "GitHub" };
     function calls(entry) {
@@ -536,7 +543,7 @@
               const bug = byNumber.get(entry.item);
               return h("li", { class: "report-row", id: `bug-${bug.number}` }, [
                 ref(bug.number),
-                h("div", null, [h("p", { class: "report-title" }, bug.title), h("p", { class: "report-why" }, entry.why)]),
+                h("div", null, [h("p", { class: "report-title" }, bug.title), h("p", { class: "report-why" }, entry.why), progressBrief(bug.progress)]),
                 h("p", { class: "report-question" }, prose(entry.question)),
               ]);
             }),
@@ -562,7 +569,7 @@
           rows.push(
             h("tr", { id: `bug-${bug.number}` }, [
               h("td", null, ref(bug.number)),
-              h("td", null, bug.title),
+              h("td", null, [bug.title, progressBrief(bug.progress)]),
               h("td", { class: "mono" }, bug.assessment?.impact ?? ""),
             ]),
           );
@@ -646,7 +653,7 @@
               const bug = byNumber.get(entry.item);
               return h("li", { class: "report-row", id: `bug-${bug.number}` }, [
                 ref(bug.number),
-                h("p", { class: "report-title" }, bug.title),
+                h("div", null, [h("p", { class: "report-title" }, bug.title), progressBrief(bug.progress)]),
                 h("p", { class: "report-detail" }, prose(entry.reason)),
               ]);
             }),
