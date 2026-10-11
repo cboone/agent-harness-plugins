@@ -3,21 +3,19 @@ import type { TextPart } from "@opencode-ai/sdk";
 
 // Body length budget: a banner shows about two lines, an expanded alert about four.
 const BODY_LIMIT = 140;
+// alerter's own timeout, a backstop for an alerter the delivery stop never
+// reaches: alerter removes the banner when it expires.
 const FIRE_TIMEOUT = 86400;
+// Seconds alerter gets to deliver its banner before it is stopped; mirrors
+// WAIT_LIMIT in ../scripts/notify. A waiting alerter polls usernoted.
+const WAIT_LIMIT = /^[1-9][0-9]{0,8}$/.test(process.env.NOTIFY_WAIT_LIMIT ?? "") ? Number(process.env.NOTIFY_WAIT_LIMIT) : 2;
 
 const PANE_TITLE_DEFAULTS = new Set(["", "zsh", "bash", "fish", "sh", "tmux", "ssh", "nvim", "vim", "-zsh", "-bash", "Claude Code", "Codex", "OpenCode"]);
 
 const ICON_PATH = `${import.meta.dir}/../assets/opencode.png`;
-const FOCUS_SCRIPT = `${import.meta.dir}/../scripts/focus-pane`;
 
 type BunShell = PluginInput["$"];
 type Client = PluginInput["client"];
-
-interface TmuxState {
-  session: string;
-  window: string;
-  pane: string;
-}
 
 const seenPermissions = new Set<string>();
 const seenErrors = new Set<string>();
@@ -43,16 +41,14 @@ export const Notify: Plugin = async ({ $, client, directory }) => {
         const sessionID = event.properties.sessionID;
         const subtitle = await computeSubtitle($, directory);
         const reply = await lastAssistantText(client, sessionID);
-        const tmux = await computeTmuxState($);
 
-        fireAlerterDetached($, {
+        fireAlerterDetached({
           title: "Done",
           subtitle,
           message: summarizeReply(reply ?? "", BODY_LIMIT) || "Task completed",
           sound: "Glass",
           group: "opencode-stop",
           icon: ICON_PATH,
-          tmux,
         });
         return;
       }
@@ -72,17 +68,15 @@ export const Notify: Plugin = async ({ $, client, directory }) => {
         seenErrors.add(dedupKey);
 
         const subtitle = await computeSubtitle($, directory);
-        const tmux = await computeTmuxState($);
         const body = errorMessage || errorName || "Session error";
 
-        fireAlerterDetached($, {
+        fireAlerterDetached({
           title: "Error",
           subtitle,
           message: truncate(body.replace(/\n/g, " "), BODY_LIMIT),
           sound: "Funk",
           group: "opencode-error",
           icon: ICON_PATH,
-          tmux,
         });
         return;
       }
@@ -94,17 +88,15 @@ export const Notify: Plugin = async ({ $, client, directory }) => {
 
         const subtitle = await computeSubtitle($, directory);
         const root = await repoRoot($, directory);
-        const tmux = await computeTmuxState($);
         const tool = extractToolFromPermission(event, root, directory);
 
-        fireAlerterDetached($, {
+        fireAlerterDetached({
           title: tool.name ? `Approve ${tool.name}?` : "Needs approval",
           subtitle,
           message: tool.preview || "Needs permission",
           sound: "Funk",
           group: "opencode-permission",
           icon: ICON_PATH,
-          tmux,
         });
         return;
       }
@@ -119,35 +111,23 @@ interface AlerterArgs {
   sound: string;
   group: string;
   icon: string;
-  tmux: TmuxState | null;
 }
 
-function fireAlerterDetached($: BunShell, args: AlerterArgs): void {
-  const termProgram = process.env.TERM_PROGRAM ?? "";
-  const session = args.tmux?.session ?? "";
-  const window = args.tmux?.window ?? "";
-  const pane = args.tmux?.pane ?? "";
-
-  void (async () => {
-    try {
-      const result = await $`alerter \
-        --title ${args.title} \
-        --subtitle ${args.subtitle} \
-        --message ${args.message} \
-        --sound ${args.sound} \
-        --group ${args.group} \
-        --app-icon ${args.icon} \
-        --timeout ${String(FIRE_TIMEOUT)}`
-        .nothrow()
-        .quiet();
-      const stdout = result.text();
-      if (stdout.includes("@CONTENTCLICKED")) {
-        await $`${FOCUS_SCRIPT} ${termProgram} ${session} ${window} ${pane}`.nothrow().quiet();
-      }
-    } catch {
-      // Notification failures are silent: alerter not installed, sandbox, etc.
-    }
-  })();
+// Stops alerter with SIGKILL after WAIT_LIMIT seconds: alerter removes its
+// banner on SIGTERM or SIGINT, but SIGKILL leaves it in Notification Center.
+function fireAlerterDetached(args: AlerterArgs): void {
+  try {
+    const proc = Bun.spawn(["alerter", "--title", args.title, "--subtitle", args.subtitle, "--message", args.message, "--sound", args.sound, "--group", args.group, "--app-icon", args.icon, "--timeout", String(FIRE_TIMEOUT)], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
+    // FIRE_TIMEOUT caps the delay below setTimeout's 2^31 - 1 ms limit.
+    setTimeout(
+      () => {
+        if (proc.exitCode === null && proc.signalCode === null) proc.kill("SIGKILL");
+      },
+      Math.min(WAIT_LIMIT, FIRE_TIMEOUT) * 1000,
+    );
+  } catch {
+    // Notification failures are silent: alerter not installed, sandbox, etc.
+  }
 }
 
 async function repoRoot($: BunShell, directory: string): Promise<string> {
@@ -198,18 +178,6 @@ async function computeSubtitle($: BunShell, directory: string): Promise<string> 
   if (slashIdx >= 0) branch = branch.slice(slashIdx + 1);
 
   return `${repo} · ${branch}`;
-}
-
-async function computeTmuxState($: BunShell): Promise<TmuxState | null> {
-  const tmuxPane = process.env.TMUX_PANE;
-  if (!tmuxPane) return null;
-
-  const result = await $`tmux display-message -t ${tmuxPane} -p '#S|#I|#P'`.nothrow().quiet();
-  if (result.exitCode !== 0) return null;
-
-  const parts = result.text().trim().split("|");
-  if (parts.length !== 3) return null;
-  return { session: parts[0]!, window: parts[1]!, pane: parts[2]! };
 }
 
 // Returns the text of the current turn's last assistant message. The walk stops at
