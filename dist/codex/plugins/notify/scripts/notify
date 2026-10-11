@@ -510,7 +510,8 @@ function fire_alerter_detached() {
   (
     local result
     # The watchdog's output goes to /dev/null so the substitution does not
-    # wait for it. It is stopped as soon as alerter exits.
+    # wait for it. It polls in steps of up to 5 seconds and exits within one
+    # step of alerter, so it needs no signal of its own.
     result="$(
       alerter \
         --title "${title}" \
@@ -524,15 +525,18 @@ function fire_alerter_detached() {
       pid=$!
       printf '%s\n' "${pid}" > "${STATE_DIR}/alerter.pid" 2> /dev/null || true
       (
-        trap 'kill "${sleeper}" 2> /dev/null; exit 0' TERM
-        sleep "${WAIT_LIMIT}" &
-        sleeper=$!
-        wait "${sleeper}"
+        waited=0
+        while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do
+          step=$((WAIT_LIMIT - waited))
+          if [[ "${step}" -gt 5 ]]; then
+            step=5
+          fi
+          sleep "${step}"
+          waited=$((waited + step))
+        done
         stop_waiting_alerter "${pid}"
       ) > /dev/null 2>&1 &
-      watchdog=$!
       wait "${pid}" || true
-      kill "${watchdog}" 2> /dev/null || true
     )" || true
     case "${result}" in
       *@CONTENTCLICKED*)
