@@ -43,12 +43,12 @@ Two places it fits:
 
 ## Recommended Permissions
 
-This skill runs read-only Git and GitHub CLI commands to find its scope. To allow them without prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+This skill runs read-only Git and GitHub CLI commands to find its scope, every Git command in one hardened form that starts the same way, so one rule covers them. To allow them without prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(git branch --show-current)", "Bash(git symbolic-ref *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(ssh -G *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status *)", "Bash(git log *)", "Bash(git show *)", "Bash(git ls-files *)"]
+    "allow": ["Bash(git --no-pager -c core.fsmonitor=false *)", "Bash(ssh -G *)", "Bash(gh repo view *)", "Bash(gh pr list *)"]
   }
 }
 ```
