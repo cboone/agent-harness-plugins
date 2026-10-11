@@ -1,6 +1,6 @@
 # Clean Up Agent Config
 
-Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.
+Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, and Copilot.
 
 **Type:** Skill
 **Trigger:** `/clean-up-agent-config`
@@ -11,7 +11,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-Audits agent configuration files across Claude Code, OpenAI Codex, GitHub Copilot (CLI and code review), and OpenCode. Identifies duplications and misplaced settings, proposes a consolidated structure, handles the `settings.json` vs `settings.local.json` split, sets up `AGENTS.md` as the single source of truth with `CLAUDE.md` as a symlink, and takes advantage of tool-specific features like Copilot's path-scoped `.instructions.md` files.
+Audits agent configuration files across Claude Code, OpenAI Codex, and GitHub Copilot (CLI and code review). Identifies duplications and misplaced settings, proposes a consolidated structure, handles the `settings.json` vs `settings.local.json` split, sets up `AGENTS.md` as the single source of truth with `CLAUDE.md` as a symlink, and takes advantage of tool-specific features like Copilot's path-scoped `.instructions.md` files.
 
 Includes comprehensive reference documentation on all agent instruction and configuration file formats.
 

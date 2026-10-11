@@ -2,21 +2,21 @@
 name: clean-up-agent-config
 description: >-
   Review and reorganize agent instructions and config for Claude Code, Codex,
-  Copilot, and OpenCode, such as CLAUDE.md, AGENTS.md, settings, and
+  and Copilot, such as CLAUDE.md, AGENTS.md, settings, and
   copilot-instructions.md. Use for "clean up agent config" or deduplicating
   them.
 ---
 
 # Agent Config Cleanup
 
-Review, consolidate, and organize AI coding agent configuration and instruction files across four tools: Claude Code, OpenAI Codex, GitHub Copilot (CLI agent and code review), and OpenCode.
+Review, consolidate, and organize AI coding agent configuration and instruction files across three tools: Claude Code, OpenAI Codex, and GitHub Copilot (CLI agent and code review).
 
 ## Reference Documents
 
 Consult the reference files in this skill's `references/` directory for detailed information about each tool's file formats, precedence rules, and unique capabilities:
 
 - `references/agent-instruction-files.md` -- CLAUDE.md, AGENTS.md, copilot-instructions.md, SKILL.md comparison
-- `references/agent-config-files.md` -- settings.json, config.toml, opencode.json, VS Code settings comparison
+- `references/agent-config-files.md` -- settings.json, config.toml, VS Code settings comparison
 
 Read these references before starting work. They contain tool-specific details about file precedence, loading behavior, and cross-tool compatibility that inform every decision in this workflow.
 
@@ -52,8 +52,7 @@ Copilot reads path-scoped files only within or below `.github/instructions/`, an
 
 ```text
 repo/
-+-- .mcp.json                              # Shared MCP servers (Claude Code, OpenCode)
-+-- opencode.json                          # OpenCode project config (if used)
++-- .mcp.json                              # Shared MCP servers (Claude Code)
 +-- .claude/
 |   +-- settings.json                      # Team-shared: permissions, hooks, env vars
 |   +-- settings.local.json                # Personal: model, telemetry (gitignored)
@@ -65,7 +64,7 @@ repo/
 
 | Content type                                   | Location                                                                                 | Reason                                                                    |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Project overview, tech stack, commands         | `AGENTS.md`                                                                              | Read by all four tools                                                    |
+| Project overview, tech stack, commands         | `AGENTS.md`                                                                              | Read by all three tools                                                  |
 | Directory-scoped conventions                   | Subdirectory `AGENTS.md` (Codex, Copilot) and `CLAUDE.md` or symlink per subdir (Claude) | Scoped by directory; Claude requires `CLAUDE.md` in each scoped directory |
 | Claude-specific (MCP hints, subagent patterns) | `.claude/rules/*.md`                                                                     | Auto-loaded, Claude-only                                                  |
 | Copilot code review rules                      | `.github/copilot-instructions.md`                                                        | Copilot code review agent                                                 |
@@ -78,7 +77,6 @@ repo/
 | MCP servers (team)                             | `.mcp.json` at project root                                                              | Committed, shared                                                         |
 | MCP servers (personal)                         | `.claude/settings.local.json`                                                            | Gitignored                                                                |
 | Codex sandbox/approval policy                  | `.codex/config.toml`                                                                     | Codex-specific                                                            |
-| OpenCode model/instruction paths               | `opencode.json`                                                                          | OpenCode-specific                                                         |
 
 ---
 
@@ -109,7 +107,6 @@ Scan the repository for all known agent-related files.
 - `.claude/settings.local.json`
 - `.mcp.json`
 - `.codex/config.toml`
-- `opencode.json`
 
 #### Also check
 
@@ -380,23 +377,7 @@ project_doc_fallback_filenames = ["CLAUDE.md"]
 The `project_doc_fallback_filenames` line lets Codex fall back to CLAUDE.md when AGENTS.md is not present.
 If CLAUDE.md is a symlink to AGENTS.md, omit `project_doc_fallback_filenames` to avoid Codex ingesting the same instructions twice.
 
-#### 4i. opencode.json (if applicable)
 
-Only create if the team uses OpenCode. Reference the instruction files:
-
-```json
-{
-  "instructions": ["AGENTS.md"]
-}
-```
-
-Add glob patterns for subdirectory AGENTS.md files in monorepos:
-
-```json
-{
-  "instructions": ["AGENTS.md", "packages/*/AGENTS.md"]
-}
-```
 
 ### Phase 5: Verify
 
@@ -461,13 +442,6 @@ Add glob patterns for subdirectory AGENTS.md files in monorepos:
 - **Also reads:** AGENTS.md (root + subdirs) and CLAUDE.md (root) as fallbacks. If both AGENTS.md and copilot-instructions.md exist, Copilot uses both.
 - **Keep short:** GitHub advises about 1,000 lines at most per instruction file, since shorter files are more likely to be fully processed. Put critical rules first.
 - **Zero root footprint:** Everything lives in .github/, which already exists in most GitHub repos.
-
-### OpenCode
-
-- **Reads AGENTS.md natively.** If both AGENTS.md and CLAUDE.md exist, only AGENTS.md is used.
-- **Custom paths:** `instructions` array in opencode.json supports glob patterns (e.g., `packages/*/AGENTS.md`).
-- **MCP servers:** Configured in opencode.json under `mcpServers`, same format as Claude Code's .mcp.json.
-- **Provider-agnostic:** Supports Claude, OpenAI, Gemini, and local models. Model config is always personal, not team-shared.
 
 ---
 
