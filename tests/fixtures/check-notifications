@@ -351,7 +351,7 @@ function main() {
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
     click) export NOTIFY_TEST_CLICK="@CONTENTCLICKED" ;;
     replace | other-session | held-duplicate | stale-pid) export NOTIFY_TEST_HOLD=1 ;;
-    watchdog) export NOTIFY_TEST_HOLD=1 NOTIFY_WAIT_LIMIT=1 ;;
+    watchdog) export NOTIFY_TEST_HOLD=1 NOTIFY_WAIT_LIMIT=2 ;;
     *) ;;
   esac
   if [[ "${action}" == cc-permission ]]; then
