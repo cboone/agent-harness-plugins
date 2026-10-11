@@ -208,6 +208,9 @@ else
   # finish derives these, and would silently overwrite them.
   | ((("schemaVersion", "affinityIgnored") | . as $k | select($d | has($k)) | "\(.): derived by backlog-gather finish; leave it out of the analysis data"),
      (select(($d.contention | type) == "object" and ($d.contention | has("claims"))) | "contention.claims: derived from the areas the issues list; leave it out of the analysis data"),
+     # The progress comes from the gathered repository, so the board must name it.
+     (select($d.repo != null and (($d.repo | tostring | same_repo($gather.repo)) | not)) | "repo: \($d.repo) is not the gathered repository, \($gather.repo)"),
+     (select($d.repoUrl != null and (($d.repoUrl | tostring | ascii_downcase | rtrimstr("/")) != ($gather.repoUrl | ascii_downcase))) | "repoUrl: \($d.repoUrl) is not the gathered repository URL, \($gather.repoUrl)"),
      ($d.issues | to_entries[] | .key as $i | .value
       | if (type != "object") or ((.number | is_int) | not) then "issues[\($i)]: expected an object with an issue number"
         else

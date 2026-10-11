@@ -282,10 +282,12 @@ Affinity signals ignored for uniformity: none
 ## Finish refuses analysis data that does not fit the gather
 
 ```scrut
-$ config_with && jq '.issues[1].areas = ["lexer"] | .issues[0].progress = null | .schemaVersion = 2 | .contention.claims = [] | .issues += [{number: 99, title: "Gone", milestone: null}] | .issues |= map(select(.number != 41)) | .areas += [{name: "empty", paths: []}]' "${BACKLOG_GATHER_DATA_DIR}/analysis.json" > "${work}/bad.json" && backlog finish "${work}/gather.json" "${work}/bad.json" "${work}/out.json" 2>&1 | sed "s|${work}|WORK|g"
+$ config_with && jq '.issues[1].areas = ["lexer"] | .issues[0].progress = null | .schemaVersion = 2 | .contention.claims = [] | .issues += [{number: 99, title: "Gone", milestone: null}] | .issues |= map(select(.number != 41)) | .areas += [{name: "empty", paths: []}] | .repo = "acme/gadgets" | .repoUrl = "https://github.com/acme/gadgets"' "${BACKLOG_GATHER_DATA_DIR}/analysis.json" > "${work}/bad.json" && backlog finish "${work}/gather.json" "${work}/bad.json" "${work}/out.json" 2>&1 | sed "s|${work}|WORK|g"
 backlog-gather: WORK/bad.json does not fit the gather:
   - schemaVersion: derived by backlog-gather finish; leave it out of the analysis data
   - contention.claims: derived from the areas the issues list; leave it out of the analysis data
+  - repo: acme/gadgets is not the gathered repository, acme/widgets
+  - repoUrl: https://github.com/acme/gadgets is not the gathered repository URL, https://github.com/acme/widgets
   - #1: progress is derived by backlog-gather finish; leave it out of the analysis data
   - #2 lists the area lexer, which is not in areas
   - area empty: paths must be a non-empty list of path patterns
