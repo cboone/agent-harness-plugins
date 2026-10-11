@@ -64,7 +64,7 @@ repo/
 
 | Content type                                   | Location                                                                                 | Reason                                                                    |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Project overview, tech stack, commands         | `AGENTS.md`                                                                              | Read by all three tools                                                  |
+| Project overview, tech stack, commands         | `AGENTS.md`                                                                              | Read by all three tools                                                   |
 | Directory-scoped conventions                   | Subdirectory `AGENTS.md` (Codex, Copilot) and `CLAUDE.md` or symlink per subdir (Claude) | Scoped by directory; Claude requires `CLAUDE.md` in each scoped directory |
 | Claude-specific (MCP hints, subagent patterns) | `.claude/rules/*.md`                                                                     | Auto-loaded, Claude-only                                                  |
 | Copilot code review rules                      | `.github/copilot-instructions.md`                                                        | Copilot code review agent                                                 |
@@ -376,8 +376,6 @@ project_doc_fallback_filenames = ["CLAUDE.md"]
 
 The `project_doc_fallback_filenames` line lets Codex fall back to CLAUDE.md when AGENTS.md is not present.
 If CLAUDE.md is a symlink to AGENTS.md, omit `project_doc_fallback_filenames` to avoid Codex ingesting the same instructions twice.
-
-
 
 ### Phase 5: Verify
 
