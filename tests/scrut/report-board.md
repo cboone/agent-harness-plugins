@@ -1198,8 +1198,9 @@ $ function isolated_tree() {
 The render stops before writing anything.
 
 ```scrut
-$ dir="$(isolated_tree)" && printf '<title>x</title>\n' > "${dir}/templates/backlog-triage.html" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; ls "${dir}"
+$ dir="$(isolated_tree)" && printf '<title>x</title>\n' > "${dir}/templates/backlog-triage.html" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; ls "${dir}"
 report-board: */backlog-triage.html is missing the __BOARD_TITLE__ or "__BOARD_DATA__" placeholder (glob)
+exit 1
 scripts
 templates
 ```
@@ -1243,7 +1244,9 @@ name only begins with style, would write the stylesheet into the page as text,
 and a second one would be left behind in the page.
 
 ```scrut
-$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<stylesheet>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<stylesheet>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */</stylesheet>' '<style data="/* __BOARD_STYLES__ */"></style>' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
+exit 1
 report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
 exit 1
 report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
@@ -1408,9 +1411,12 @@ report-board: starter takes an output path
 
 ## Starter usage error exit code
 
+With no output path and with two.
+
 ```scrut
-$ "${REPORT_BOARD_BIN}" starter one.html two.html > /dev/null 2>&1
-[2]
+$ "${REPORT_BOARD_BIN}" starter > /dev/null 2>&1; echo "exit $?"; "${REPORT_BOARD_BIN}" starter one.html two.html > /dev/null 2>&1; echo "exit $?"
+exit 2
+exit 2
 ```
 
 ## Extract from a page inside a host skeleton
