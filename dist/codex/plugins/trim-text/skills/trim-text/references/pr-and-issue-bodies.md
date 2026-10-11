@@ -24,7 +24,7 @@ Lean means no padding, not no reasoning. Keep what makes the change reviewable:
 | Cut                                                                | Instead                                                                          |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | A description of the commits or the branch history                 | The net change. A commit that reverted an earlier one leaves nothing to describe |
-| Restating the title, the diff, or what CI reports                  | Delete it. "Renames the test file" is visible in the diff                        |
+| Restating the diff or what CI reports                              | Delete it. "Renames the test file" is visible in the diff                        |
 | A file-by-file inventory                                           | A few bullets grouped by change                                                  |
 | The investigation story: "How this surfaced", "found by…"          | The finding, stated once                                                         |
 | Out-of-scope findings written up as prose                          | Links to filed issues, under the section the repository uses for follow-ups      |
@@ -38,13 +38,13 @@ Lean means no padding, not no reasoning. Keep what makes the change reviewable:
 | Citation chains: "reference [39] cited therein, which is…"         | The citation that matters                                                        |
 | Counts that change with every commit: test counts, file counts     | A description: "adds scrut coverage for the bundled script"                      |
 
-Under a parent continuation, keep every unchecked checklist item, including a reviewer to-do, and flag it instead of deleting it: the calling skill rejects a body that loses one.
+Under a parent continuation, keep every unchecked checklist item, including a reviewer to-do, and flag it instead of deleting it; the caller decides what happens to it.
 
 Bold used for emphasis or as bullet lead-ins goes too, unless the repository's own template uses it.
 
 ## Stays true
 
-A body is written once, but merges and review fixes keep changing what it should say. Check every claim against the current diff, not the draft's memory of it: a removed input still listed, a release target that moved, or a behavior a later commit reverted. A claim the diff no longer supports is a rewrite or a delete, even when it is short; under a parent continuation, flag it with the correction instead (see "Preserve meaning" in the skill).
+A body is written once, but merges and review fixes keep changing what it should say. Check every claim against the current diff, not the draft's memory of it: a removed input still listed, a release target that moved, or a behavior a later commit reverted. A claim the diff no longer supports is a rewrite or a delete, even when it is short (see "Preserve meaning" in the skill for the parent-continuation case).
 
 ## Preserve
 
@@ -56,7 +56,7 @@ A body is written once, but merges and review fixes keep changing what it should
 
 ## Verify
 
-Compare the final body with the original under "Preserve meaning", and confirm every issue reference and closing keyword is unchanged. For a published body, read it back after the write and confirm it matches the body written, as step 4 of the skill describes.
+Confirm every issue reference and closing keyword is unchanged.
 
 ## Worked examples
 

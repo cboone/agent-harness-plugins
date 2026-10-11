@@ -4,9 +4,9 @@ Applies to `AGENTS.md`, `CLAUDE.md`, `SKILL.md` bodies and routing descriptions,
 
 ## What leads
 
-**The behavior required**, as an imperative: "Name plan files `YYYY-MM-DD-slug.md`", not "Plans should be given names that…". A rule whose whole job is a constraint leads with the constraint.
+**The behavior required**, as an imperative: "Name plan files `YYYY-MM-DD-slug.md`", not "Plans should be given names that…".
 
-One sentence per rule is the default. Add a reason only when the agent would otherwise misapply the rule or argue with it. Keep examples only for the cases the agent would otherwise misclassify: "including 'quick'" earns its place in a rule against work estimates, because the agent would not count it as one.
+Add a reason only when the agent would otherwise misapply the rule or argue with it. Keep examples only for the cases the agent would otherwise misclassify: "including 'quick'" earns its place in a rule against work estimates, because the agent would not count it as one.
 
 ## Lean toward keeping
 
