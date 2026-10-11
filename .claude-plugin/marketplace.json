@@ -260,7 +260,7 @@
         "name": "Christopher Boone"
       },
       "category": "ci-and-release",
-      "description": "Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way.",
+      "description": "Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["ci", "copilot", "github", "pull-requests", "workflow"],
       "license": "MIT",

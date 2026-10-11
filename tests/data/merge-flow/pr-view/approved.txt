@@ -1,0 +1,3 @@
+{"state":"OPEN","reviewDecision":"REVIEW_REQUIRED","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":null}
+{"state":"OPEN","reviewDecision":"REVIEW_REQUIRED","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":null}
+{"state":"OPEN","reviewDecision":"APPROVED","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":null}

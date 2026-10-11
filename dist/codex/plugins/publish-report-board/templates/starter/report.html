@@ -1,0 +1,165 @@
+<title>Report title</title>
+<meta name="color-scheme" content="light dark" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" />
+<style>
+  /* __BOARD_STYLES__ */
+</style>
+<!--
+  Starter for a report laid out by hand; the sample text says what each part
+  is for. Replace it, drop parts the report does not need, and repeat the rest.
+  design-conventions.md says how each part is used. Page-specific rules go in a
+  second style element after this one, so the shared rules match every board's.
+-->
+<div class="board">
+  <header class="head">
+    <div class="masthead">
+      <div class="masthead-title">
+        <p class="label">Report type · owner</p>
+        <h1 class="repo"><a href="https://github.com/OWNER/REPO">Subject of the report</a></h1>
+      </div>
+      <div class="when">
+        <time class="when-time" datetime="2026-01-01T12:00Z">1 Jan 2026, 12:00 UTC</time>
+        <p><a href="https://github.com/OWNER/REPO/tree/main">main</a> @ <a href="https://github.com/OWNER/REPO/commit/0123456789abcdef">01234567</a></p>
+        <p class="when-age">Laid out by hand</p>
+      </div>
+    </div>
+    <!-- One filled count, for what the lead section lists. At most one accent. A fact cell holds a date, a ratio, or a state word. -->
+    <dl class="counts">
+      <div class="count count--primary">
+        <dt>Start now</dt>
+        <dd>2</dd>
+      </div>
+      <div class="count count--accent">
+        <dt>In progress</dt>
+        <dd>1</dd>
+      </div>
+      <div class="count">
+        <dt>Planned</dt>
+        <dd>4</dd>
+      </div>
+      <div class="count count--fact">
+        <dt>Deadline</dt>
+        <dd>3 Feb</dd>
+      </div>
+      <div class="count count--open">
+        <dt>Items reviewed</dt>
+        <dd>12</dd>
+      </div>
+    </dl>
+    <p class="summary">One or two sentences that answer what to do next and name the one constraint that shapes the answer, with references such as <a href="https://github.com/OWNER/REPO/issues/1">#1</a> linked to their source.</p>
+  </header>
+  <main class="board-main">
+    <section class="section section--lead" aria-labelledby="lead-heading">
+      <div class="section-head">
+        <h2 class="section-title" id="lead-heading">Start now</h2>
+        <p class="section-note">What this section claims, in one line, with no dated time words.</p>
+      </div>
+      <div class="aside">
+        <p class="label aside-label">Method</p>
+        <p class="aside-text">How the findings were reached, or a caveat on them. At most one per section, after the section head. For a caveat that changes how to act, add aside--warn and say so in words.</p>
+      </div>
+      <ol class="ruled">
+        <li class="rank-row">
+          <p class="rank" aria-hidden="true">01</p>
+          <div class="rank-main">
+            <p class="rank-line"><span class="tag tag--primary">Start now</span><a class="num" href="https://github.com/OWNER/REPO/issues/1">#1</a><span>The item's own title</span></p>
+            <p class="rank-headline">The row's main claim: the next concrete step, or why this comes first.</p>
+            <p class="rank-detail">Supporting detail in a sentence or two, naming what it frees or what it collides with.</p>
+          </div>
+          <div class="rank-side">
+            <dl class="facts">
+              <dt>Where</dt>
+              <dd>The component or system</dd>
+              <dt>Evidence</dt>
+              <dd><span class="fact fact--unsure">Not yet confirmed</span></dd>
+            </dl>
+          </div>
+        </li>
+        <li class="rank-row">
+          <p class="rank" aria-hidden="true">02</p>
+          <div class="rank-main">
+            <p class="rank-line"><span class="tag tag--primary">Start now</span><a class="num" href="https://github.com/OWNER/REPO/issues/2">#2</a><span>Another item's title</span></p>
+            <p class="rank-headline">Each row leads with its claim, never with a restated title.</p>
+          </div>
+          <div class="rank-side">
+            <dl class="facts">
+              <dt>Where</dt>
+              <dd>The component or system</dd>
+            </dl>
+          </div>
+        </li>
+      </ol>
+    </section>
+    <section class="section section--tier section--accent" aria-labelledby="tier-heading">
+      <div class="section-head">
+        <h2 class="section-title" id="tier-heading">In progress</h2>
+        <p class="section-note">The second tier: what is current or contended.</p>
+      </div>
+      <ol class="ruled">
+        <li class="rank-row rank-row--tier">
+          <p class="rank" aria-hidden="true">01</p>
+          <div class="rank-main">
+            <p class="rank-line"><span class="tag tag--accent">In progress</span><a class="num" href="https://github.com/OWNER/REPO/issues/3">#3</a><span>The item's own title</span></p>
+            <p class="rank-headline">What remains, and what it waits on.</p>
+          </div>
+          <div class="rank-side">
+            <dl class="facts">
+              <dt>Blocks</dt>
+              <dd><a href="https://github.com/OWNER/REPO/issues/4">#4</a></dd>
+            </dl>
+          </div>
+        </li>
+      </ol>
+    </section>
+    <!-- Everything above acts; everything below is reference. A narrative report where nothing ranks drops this divider and the filled count. -->
+    <p class="fold label" role="separator" aria-label="Report">Report</p>
+    <section class="section" aria-labelledby="open-heading">
+      <div class="section-head">
+        <h2 class="section-title" id="open-heading">Not yet known</h2>
+        <p class="section-note">What is still open, with the one thing to learn first.</p>
+      </div>
+      <ol class="ruled">
+        <li class="report-row">
+          <a class="num" href="https://github.com/OWNER/REPO/issues/5">#5</a>
+          <div>
+            <p class="report-title">The item's own title</p>
+            <p class="report-why">one report · no reproduction</p>
+          </div>
+          <p class="report-question">The one question to answer first?</p>
+        </li>
+      </ol>
+    </section>
+    <section class="section" aria-labelledby="planned-heading">
+      <div class="section-head">
+        <h2 class="section-title" id="planned-heading">Planned</h2>
+        <p class="section-note">Reference rows that need no ranking, in a table that scrolls on its own at phone width.</p>
+      </div>
+      <div class="table-wrap ruled">
+        <table class="ref-table">
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Title</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="num"><a href="https://github.com/OWNER/REPO/issues/6">#6</a></td>
+              <td>The item's own title</td>
+              <td class="mono">Queued</td>
+            </tr>
+            <tr>
+              <td class="num"><a href="https://github.com/OWNER/REPO/issues/7">#7</a></td>
+              <td>Another item's title</td>
+              <td class="mono">Queued</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <footer class="footer">Laid out by hand on 1 Jan 2026, 12:00 UTC against <a href="https://github.com/OWNER/REPO/tree/main">main</a> at <a href="https://github.com/OWNER/REPO/commit/0123456789abcdef">01234567</a>. The sources stay the source of truth; this page is a snapshot.</footer>
+</div>
