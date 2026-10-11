@@ -20,17 +20,16 @@ readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR FOCUS_SCRIPT
 # Body length budget: a banner shows about two lines, an expanded alert about four.
 readonly BODY_LIMIT=140
 
-# alerter's own timeout (24h). alerter removes its banner when this expires,
-# so it is only a backstop behind WAIT_LIMIT. ../opencode/index.ts uses the
-# same value and has no WAIT_LIMIT.
+# alerter's own timeout (24h): a backstop that also removes the banner.
+# ../opencode/index.ts uses the same value.
 readonly FIRE_TIMEOUT=86400
 
-# Seconds a detached alerter may wait before the watchdog stops it (default
-# 30 minutes). NOTIFY_WAIT_LIMIT overrides it; anything but a positive integer
-# of up to nine digits falls back to the default. alerter 26.5 polls usernoted
-# while it waits, so this bounds that load.
-WAIT_LIMIT="${NOTIFY_WAIT_LIMIT:-1800}"
-[[ "${WAIT_LIMIT}" =~ ^[1-9][0-9]{0,8}$ ]] || WAIT_LIMIT=1800
+# Seconds before the watchdog stops a waiting alerter, which polls usernoted
+# while it waits. NOTIFY_WAIT_LIMIT overrides it with up to nine digits.
+WAIT_LIMIT=1800
+if [[ "${NOTIFY_WAIT_LIMIT:-}" =~ ^[1-9][0-9]{0,8}$ ]]; then
+  WAIT_LIMIT="${NOTIFY_WAIT_LIMIT}"
+fi
 readonly WAIT_LIMIT
 
 # Reduces a reply to plain prose for a banner body; ../opencode/index.ts
@@ -462,12 +461,21 @@ function plan_heading() {
 # alerter dispatch
 # -----------------------------------------------------------------------------
 
-# Stops alerter PID $1 if its command line still names alerter and this
-# session's key, so a stale or reused PID is left alone. SIGKILL is used
-# because alerter removes its banner on SIGTERM or SIGINT; the banner stays in
-# Notification Center and only click-to-focus is lost.
-function stop_waiting_alerter() {
-  [[ "${1}" =~ ^[0-9]+$ ]] || return 0
+# These stop alerter with SIGKILL: alerter removes its banner on SIGTERM or
+# SIGINT, so only SIGKILL keeps it in Notification Center. Click-to-focus is
+# lost.
+
+# Stops every waiting alerter whose group carries this session's key. `[^ ]*`
+# cannot cross the space inside the pattern, so pkill never matches a
+# concurrent pkill's own arguments.
+function stop_session_alerters() {
+  pkill -KILL -f -- "--group [^ ]*-${SESSION_KEY}" 2> /dev/null || true
+}
+
+# Stops alerter PID $1 if it is still running with this session's key, so a
+# reused PID is left alone.
+function stop_alerter() {
+  kill -0 "${1}" 2> /dev/null || return 0
   [[ "$(ps -ww -p "${1}" -o command= 2> /dev/null)" == *alerter*"${SESSION_KEY}"* ]] || return 0
   kill -KILL "${1}" 2> /dev/null || true
 }
@@ -476,12 +484,8 @@ function stop_waiting_alerter() {
 # so the harness is not blocked on user interaction. Groups are suffixed with
 # the session key. Stop groups fire once per turn (an atomic mkdir marker) and
 # are skipped while the originating pane is visible. An empty sound omits
-# --sound, so the notification is silent. alerter's PID is recorded in
-# alerter.pid, and the next notification this session fires (a skipped Stop
-# does not count) stops that alerter, so waiting alerters do not build up per
-# session. A watchdog stops each alerter after WAIT_LIMIT. The PID is written
-# from the detached subshell, so hooks that fire at nearly the same moment can
-# miss or overwrite each other's PID; WAIT_LIMIT still bounds those alerters.
+# --sound, so the notification is silent. Each notification first stops the
+# session's waiting alerters, and a watchdog stops its own after WAIT_LIMIT.
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
@@ -508,7 +512,7 @@ function fire_alerter_detached() {
     sound_args=(--sound "${sound}")
   fi
 
-  stop_waiting_alerter "$(cat "${STATE_DIR}/alerter.pid" 2> /dev/null || true)"
+  stop_session_alerters
 
   (
     local result
@@ -523,21 +527,17 @@ function fire_alerter_detached() {
         --timeout "${FIRE_TIMEOUT}" \
         2> /dev/null &
       pid=$!
-      printf '%s\n' "${pid}" > "${STATE_DIR}/alerter.pid" 2> /dev/null || true
-      # Watchdog: stops alerter after WAIT_LIMIT. It polls in steps of up to 5
-      # seconds, so it exits on its own within one step after alerter does.
-      # Its output goes to /dev/null so the substitution does not wait for it.
+      # Watchdog: polls in steps of up to 5 seconds, so it exits soon after
+      # alerter. Its output goes to /dev/null so the substitution does not
+      # wait for it.
       (
         waited=0
         while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do
-          step=$((WAIT_LIMIT - waited))
-          if [[ "${step}" -gt 5 ]]; then
-            step=5
-          fi
+          step=$((WAIT_LIMIT - waited < 5 ? WAIT_LIMIT - waited : 5))
           sleep "${step}"
           waited=$((waited + step))
         done
-        stop_waiting_alerter "${pid}"
+        stop_alerter "${pid}"
       ) > /dev/null 2>&1 &
       wait "${pid}" || true
     )" || true
