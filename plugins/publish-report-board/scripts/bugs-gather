@@ -660,7 +660,7 @@ $config as $c
        | {number: $b.number,
           assignees: $b.assignees,
           claims: [($b.labels[] | select(same_text($c.claimLabels)) | "claimed with the \(.) label"),
-                   ($b.zenhub.pipeline // null | select(. != null) | select(. as $p | $c.claimPipelines | index($p)) | "claimed in the \(.) pipeline")],
+                   ($b.zenhub.pipeline // empty | select(. as $p | $c.claimPipelines | index($p)) | "claimed in the \(.) pipeline")],
           author: $b.author,
           commented: any($b.commenters[]?; .login == $gather.viewer and (.at | epoch) >= $gathered - $comment_window),
           active: active_reasons($areas; $gather.viewerFiles.active),
@@ -1334,9 +1334,8 @@ function cmd_gather() {
     > "${TEMP_DIR}/gather.json"
   write_atomic "${output_file}" "${TEMP_DIR}/gather.json"
 
-  jq -r '
-    def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
-    "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(counted(.counts.open; "open bug"; "open bugs")), \(.counts.withFix) with an open fix, \(.counts.inProgress) in progress, \(.counts.outsideReporters) from outside reporters; \(.counts.closed) closed in the last \(.recentDays) days"
+  jq -r "${PROGRESS_DEFS}"'
+    "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(plural(.counts.open; "open bug"; "open bugs")), \(.counts.withFix) with an open fix, \(.counts.inProgress) in progress, \(.counts.outsideReporters) from outside reporters; \(.counts.closed) closed in the last \(.recentDays) days"
   ' "${output_file}"
   if [[ -s "${TEMP_DIR}/local-notice.txt" ]]; then
     cat -- "${TEMP_DIR}/local-notice.txt" >&2

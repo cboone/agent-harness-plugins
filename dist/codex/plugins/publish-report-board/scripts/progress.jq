@@ -128,7 +128,7 @@ def progress_of($item; $branches; $c; $now; $host):
   # A merged pull request that only mentions the issue counts while a progress
   # label or pipeline says work on it was under way. Without one, a mention is
   # usually a follow-up the pull request left open, not finished work.
-  | [($item.merged[] | select(.closes or $marked)) ] as $merged
+  | [$item.merged[] | select(.closes or $marked)] as $merged
   | [($merged | sort_by(.mergedAt | epoch) | reverse | .[]
       | {carrier: {pr: .number}, stage: "close-out", signal: "pull request #\(.number) merged \(.mergedAt | utc | .[0:10])",
          lastActivity: (.mergedAt | utc), since: (.mergedAt | utc), nextMove: "author", nextAction: "close or split"}),

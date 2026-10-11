@@ -1552,10 +1552,15 @@
       ];
     }
 
+    function ownerText(owner) {
+      if (owner === "you") return "You";
+      if (owner === "unknown") return "Claimed, owner unknown";
+      return `@${owner}`;
+    }
+
     function affinityNote(affinity, tag = "p") {
       if (!affinity?.owner) return null;
-      const who =
-        affinity.owner === "you" ? "You" : affinity.owner === "unknown" ? "Claimed, owner unknown" : `@${affinity.owner}`;
+      const who = ownerText(affinity.owner);
       const reasons = affinity.reasons ?? [];
       return h(tag, { class: "affinity" }, [hidden("Affinity: "), who, reasons.length ? ` · ${reasons.join(", ")}` : ""]);
     }
@@ -1733,6 +1738,7 @@
     // Start now
     function startRow(pick, index) {
       const n = pick.issue;
+      const issue = byNumber.get(n);
       const lane = laneOf.get(n);
       const companions = riders.get(n) ?? [];
       return h("li", { class: "start-row" }, [
@@ -1746,11 +1752,11 @@
           h("dt", null, "Lane"),
           h("dd", { class: "fact-lane" }, laneName(lane)),
           pick.touches ? [h("dt", null, "Touches"), h("dd", null, pick.touches)] : null,
-          anyMilestone ? [h("dt", null, "Milestone"), h("dd", null, chip(byNumber.get(n).milestone))] : null,
-          byNumber.get(n).affinity?.owner
+          anyMilestone ? [h("dt", null, "Milestone"), h("dd", null, chip(issue.milestone))] : null,
+          issue.affinity?.owner
             ? [
                 h("dt", null, "Affinity"),
-                h("dd", null, [affinityNote(byNumber.get(n).affinity, "span"), pick.despiteOwner ? h("p", null, prose(pick.despiteOwner)) : null]),
+                h("dd", null, [affinityNote(issue.affinity, "span"), pick.despiteOwner ? h("p", null, prose(pick.despiteOwner)) : null]),
               ]
             : null,
         ]),

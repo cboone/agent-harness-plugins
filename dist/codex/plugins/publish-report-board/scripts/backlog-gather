@@ -199,10 +199,9 @@ readonly DERIVE_FILTER="${PROGRESS_DEFS}"'
 # Checks analysis data against a gather. Takes $gather and the data as input;
 # emits one line per problem.
 # shellcheck disable=SC2016
-readonly FINISH_CHECK_FILTER='
+readonly FINISH_CHECK_FILTER="${PROGRESS_DEFS}"'
 def is_text: type == "string" and test("\\S");
 def is_int: type == "number" and . == floor;
-def as_list: if type == "array" then . else [] end;
 def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
 
 if type != "object" then "the board data must be a JSON object"
@@ -623,11 +622,10 @@ function cmd_gather() {
   fi
 
   jq -r "${PROGRESS_DEFS}"'
-    def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
     [.issues[] | .progress | select(. != null)] as $all
     | [stage_order[] as $s | ([$all[] | select(.stage == $s)] | length) as $n | select($n > 0) | "\($n) \($s)"] as $by_stage
     | ([$all[] | .flags[]] | group_by(.) | map("\(length) \(.[0])")) as $flags
-    | "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(counted(.issues | length; "open issue"; "open issues")); \(if ($by_stage | length) > 0 then $by_stage | join(", ") else "nothing in progress" end)",
+    | "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(plural(.issues | length; "open issue"; "open issues")); \(if ($by_stage | length) > 0 then $by_stage | join(", ") else "nothing in progress" end)",
       "Flags: \(if ($flags | length) > 0 then $flags | join(", ") else "none" end)",
       "Affinity signals ignored for uniformity: \(if (.affinityIgnored | length) > 0 then .affinityIgnored | join(", ") else "none" end)"
   ' "${output_file}"
@@ -652,10 +650,9 @@ function cmd_finish() {
   fi
   jq --slurpfile gather "${gather_file}" "\$gather[0] as \$gather | ${FINISH_FILTER}" "${data_file}" > "${TEMP_DIR}/board.json"
   write_atomic "${output_file}" "${TEMP_DIR}/board.json"
-  jq -r '
-    def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
+  jq -r "${PROGRESS_DEFS}"'
     [.issues[] | .affinity.owner] as $owners
-    | "\(counted(.issues | length; "issue"; "issues")): \([$owners[] | select(. == "you")] | length) yours, \([$owners[] | select(. != null and . != "you" and . != "unknown")] | length) owned by others, \([$owners[] | select(. == "unknown")] | length) claimed by no one known; \(counted(.contention.claims // [] | length; "claim"; "claims")) derived from areas"
+    | "\(plural(.issues | length; "issue"; "issues")): \([$owners[] | select(. == "you")] | length) yours, \([$owners[] | select(. != null and . != "you" and . != "unknown")] | length) owned by others, \([$owners[] | select(. == "unknown")] | length) claimed by no one known; \(plural(.contention.claims // [] | length; "claim"; "claims")) derived from areas"
   ' "${output_file}"
 }
 

@@ -1088,10 +1088,15 @@
       ];
     }
 
+    function ownerText(owner) {
+      if (owner === "you") return "You";
+      if (owner === "unknown") return "Claimed, owner unknown";
+      return `@${owner}`;
+    }
+
     function affinityNote(affinity, tag = "p") {
       if (!affinity?.owner) return null;
-      const who =
-        affinity.owner === "you" ? "You" : affinity.owner === "unknown" ? "Claimed, owner unknown" : `@${affinity.owner}`;
+      const who = ownerText(affinity.owner);
       const reasons = affinity.reasons ?? [];
       return h(tag, { class: "affinity" }, [hidden("Affinity: "), who, reasons.length ? ` · ${reasons.join(", ")}` : ""]);
     }
