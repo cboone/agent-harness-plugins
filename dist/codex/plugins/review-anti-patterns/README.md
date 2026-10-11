@@ -19,7 +19,7 @@ It never edits; nothing but its instructions enforces that unless you run it som
 
 ## Requirements
 
-- A Git repository with an `origin` remote. The skill finds the default branch from `origin/HEAD`, falling back to the [GitHub CLI](https://cli.github.com/), which also reads the pull request body when the branch has an open pull request.
+- A Git repository with an `origin` remote. The skill finds the default branch from `origin/HEAD`, falling back to the [GitHub CLI](https://cli.github.com/). The GitHub CLI also reads the open pull request's body; without it, the report says the body was not reviewed.
 
 ## Usage
 
@@ -47,7 +47,7 @@ This skill runs read-only Git and GitHub CLI commands to find its scope. To allo
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh repo view *)", "Bash(gh pr view *)", "Bash(git symbolic-ref *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status *)", "Bash(git log *)", "Bash(git show *)", "Bash(git ls-files *)"]
+    "allow": ["Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(git branch --show-current)", "Bash(git symbolic-ref *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status *)", "Bash(git log *)", "Bash(git show *)", "Bash(git ls-files *)"]
   }
 }
 ```
