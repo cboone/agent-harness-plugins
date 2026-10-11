@@ -53,7 +53,7 @@ This skill reads PR and issue bodies with the GitHub CLI and runs read-only Git 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git status *)", "Bash(git --no-pager diff *)", "Bash(git show *)", "Bash(git symbolic-ref *)", "Bash(git branch --show-current)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(grep -Iq *)", "Bash(mktemp -u *)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git status *)", "Bash(git --no-pager diff *)", "Bash(git show *)", "Bash(git symbolic-ref *)", "Bash(git config --get *)", "Bash(git remote)", "Bash(git branch --show-current)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(grep -Iq *)", "Bash(mktemp -u *)"]
   }
 }
 ```

@@ -171,6 +171,7 @@ Then reread the result as a whole: removing units can leave a dangling "this", a
 
 **A PR or issue:** show a before-and-after diff and the URL recorded in step 1, then ask before writing. Use a structured question tool when the session offers one; otherwise ask in plain text and wait for the reply. On approval:
 
+1. Read the body again with the step 1 command. If it differs from the body you trimmed, someone edited it in the meantime: show a new diff against the live body and ask again, or stop.
 1. Generate a temporary path with `mktemp -u "${TMPDIR:-/tmp}/gh-body-XXXXXX"` and write the new body to that exact path with a file-writing tool. Wait for the write to finish.
 1. As a separate step, run `gh pr edit <url> --body-file <file>` or `gh issue edit <url> --body-file <file>`.
 1. Read the body back with the matching command, `gh pr view <url> --json body --jq '.body'` or `gh issue view <url> --json body --jq '.body'`, and confirm it matches the file that was written, ignoring trailing newlines.
@@ -188,7 +189,7 @@ If the edit fails, the read-back command fails, or the stored body differs, repo
 
 ### 6. Commit
 
-Applies to paths only. Skip it with `--no-commit`, when nothing was edited, when a step 5 check still fails because of an edit made here, on a detached HEAD, on the base branch, or when the base branch cannot be determined. Find the base branch with `git symbolic-ref --quiet --short refs/remotes/origin/HEAD`, removing the `origin/` prefix, falling back to `gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'` with the repository as an argument in a fork. Never push.
+Applies to paths only. Skip it with `--no-commit`, when nothing was edited, when a step 5 check still fails because of an edit made here, on a detached HEAD, on the base branch, or when the base branch cannot be determined. Find the base branch from the remote the current branch tracks (`git config --get "branch.$branch.remote"`, with `$branch` from `git branch --show-current`), else `origin`, else the only remote `git remote` lists: run `git symbolic-ref --quiet --short "refs/remotes/$remote/HEAD"` and remove the `$remote/` prefix, falling back to `gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'` with the repository as an argument in a fork. Never push.
 
 Commit only the edited files that step 4 recorded as clean, after confirming with `git --no-pager diff --no-ext-diff --no-textconv --no-relative HEAD -- ":(top,literal)$path"` that each holds only this run's edits. Name the files as `":(top,literal)$path"` pathspecs after `--`, so the commit leaves anything the user staged alone. A file holding other changes stays uncommitted and goes in the report. Before committing, record each committable file's hash with `git hash-object -- "./$path"`. Also record a snapshot: `git status --porcelain=v1 -z --untracked-files=all :/`, plus `git hash-object` of each path it lists that still exists as a file. If any hash fails, report that path as unverified.
 
