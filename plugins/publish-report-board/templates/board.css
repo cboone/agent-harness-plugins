@@ -1,14 +1,5 @@
-/* Every report board's styles. report-board render inlines this sheet into
-   each template's style element, and report-board starter into the starter
-   page, so a published page stays one file.
-
-   IBM Plex Sans for text and Plex Mono for numbers and labels. The light
-   theme is Graphite and orange, the dark theme Night. Primary fills the one
-   count that matters most and colors the ranks of the rows it counts. The
-   accent marks the second tier: High priority, what can run now, contention
-   cells, and work in progress. Fix is a muted green for a change that
-   resolves the item. In the light theme blue is reserved for focus; in the
-   dark theme primary takes the light blue the focus ring also uses.
+/* Every report board's styles. report-board render and starter write this
+   sheet into each page's style element, so a published page stays one file.
    Components use tokens only. */
 :root {
   color-scheme: light;
@@ -327,8 +318,7 @@ a.tag:hover {
   grid-auto-flow: column;
 }
 
-/* --count-size sets a count's figure, and a fact cell's in proportion, so a
-   breakpoint that resizes counts changes this one value. */
+/* A count's figure size; a fact cell scales from it. */
 .count {
   --count-size: 40px;
   display: flex;
@@ -376,8 +366,8 @@ a.tag:hover {
   color: var(--muted);
 }
 
-/* A fact, not a count: a date, a ratio, or a state word. Never filled. Set
-   smaller than a count, on a line as tall as a count's, and free to wrap. */
+/* A date, ratio, or state word: smaller than a count, on a count's line
+   height, and free to wrap. Never filled. */
 .count--fact dd {
   font-size: calc(var(--count-size) * 0.6);
   line-height: var(--count-size);
@@ -847,8 +837,7 @@ a.tag:hover {
   font-size: 13px;
 }
 
-/* Aside: a method, source, or caveat as one more ruled row, never a
-   callout. A warning turns its rule and label stale and says so in words. */
+/* Aside: a method, source, or caveat as a ruled row, never a callout. */
 .aside {
   display: flex;
   flex-direction: column;
@@ -863,7 +852,7 @@ a.tag:hover {
   border-top-color: var(--stale);
 }
 
-/* Set with .label, a size smaller. */
+/* Used with .label. */
 .aside-label {
   font-size: 11px;
 }
@@ -900,8 +889,7 @@ a.tag:hover {
   border-bottom: 1px solid var(--rule);
 }
 
-/* Sized to its text, so its underline sits under the number rather than at
-   the foot of a row that wraps to two lines. */
+/* Hugs its text, so the underline stays under the number on a two-line row. */
 .report-row .num {
   justify-self: start;
   align-self: start;
