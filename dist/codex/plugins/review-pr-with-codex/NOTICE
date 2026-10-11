@@ -1,0 +1,20 @@
+review-pr-with-codex
+Copyright (c) Christopher Boone
+
+This plugin is part of agent-harness-plugins and, apart from the material
+described below, is licensed under the MIT License; see LICENSE at the
+repository root.
+
+The aspect instructions in skills/review-pr-with-codex/references/aspects/,
+and the review workflow and report format in
+skills/review-pr-with-codex/SKILL.md, are adapted from pr-review-toolkit:
+
+  pr-review-toolkit
+  Copyright Anthropic
+  https://github.com/anthropics/claude-plugins-official
+  Licensed under the Apache License, Version 2.0; see LICENSE-APACHE.
+
+The adapted files were modified: the agent prompts were condensed and rewritten
+as aspect instructions for Codex, given a shared JSON output contract and
+severity scale, made read-only except for the simplify aspect, and pointed at
+AGENTS.md as well as CLAUDE.md. Each modified file carries a notice saying so.
