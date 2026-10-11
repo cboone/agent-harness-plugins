@@ -426,6 +426,20 @@ copilot-rounds-report: --author needs a value
 ```
 
 ```scrut
+$ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --client-owner client-org --since 2026-09-29 2>&1
+copilot-rounds-report: --client-owner client-org is not one of the --owner values
+[1]
+```
+
+An input path that starts with `-` is read as a file, not as an option.
+
+```scrut
+$ (cd "${work}" && cp "${pages}" ./-pages.json \
+>   && "${COPILOT_ROUNDS_REPORT_BIN}" "${args[@]}" --input -pages.json | sed -n 5p)
+Pull requests matched: 4. With a Copilot round: 3. Copilot notices in place of a review, not counted as rounds: 1.
+```
+
+```scrut
 $ (set -o pipefail; "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 extra 2>&1 | tail -n 1)
 copilot-rounds-report: unexpected argument 'extra'
 [1]

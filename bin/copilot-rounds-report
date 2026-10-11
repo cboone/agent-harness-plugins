@@ -379,10 +379,18 @@ function main() {
     esac
   done
 
+  command -v jq > /dev/null || die "jq is required"
   [[ ${#owners[@]} -gt 0 ]] || die "at least one --owner is required"
   local login
   for login in "${owners[@]}" ${client_owners[@]+"${client_owners[@]}"}; do
     [[ "${login}" =~ ${LOGIN_PATTERN} ]] || die "an owner must be a single login, got '${login}'"
+  done
+  # A client owner outside the searched owners would leave the client row empty.
+  local searched
+  searched=" $(printf '%s ' "${owners[@]}" | tr '[:upper:]' '[:lower:]')"
+  for login in ${client_owners[@]+"${client_owners[@]}"}; do
+    [[ "${searched}" == *" $(printf '%s' "${login}" | tr '[:upper:]' '[:lower:]') "* ]] \
+      || die "--client-owner ${login} is not one of the --owner values"
   done
   [[ "${author}" == "@me" || "${author%\[bot\]}" =~ ${LOGIN_PATTERN} ]] \
     || die "--author must be a single login or @me, got '${author}'"
@@ -398,7 +406,7 @@ function main() {
   fi
   [[ -z "${save_file}" || -z "${input_file}" ]] || die "--save and --input cannot be combined"
   if [[ -n "${save_file}" ]] && {
-    [[ ! -w "$(dirname "${save_file}")" ]] \
+    [[ ! -w "$(dirname -- "${save_file}")" ]] \
       || [[ -e "${save_file}" && ! (-f "${save_file}" && -w "${save_file}") ]]
   }; then
     die "cannot write the --save file ${save_file}"
@@ -414,8 +422,9 @@ function main() {
   local pages fetch_status=0
   if [[ -n "${input_file}" ]]; then
     [[ -f "${input_file}" ]] || die "no such input file ${input_file}"
-    pages="$(cat "${input_file}")"
+    pages="$(cat -- "${input_file}")"
   else
+    command -v gh > /dev/null || die "gh is required unless --input is given"
     pages="$(fetch_pages "${search}")" || fetch_status=$?
     if [[ -n "${save_file}" ]]; then
       printf '%s\n' "${pages}" > "${save_file}" || die "could not write ${save_file}"
