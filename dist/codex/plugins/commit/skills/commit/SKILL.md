@@ -146,7 +146,7 @@ Analyze the diff to generate a commit message:
 
 #### Trim the body
 
-When the message has a body, split off its trailing lines first: the run of lines at the end in which every line is a trailer such as `Signed-off-by:` or `Claude-Session:` or a closing line such as `fixes #42`, whether or not a blank line precedes it. Issue references inside the prose stay in it. When no prose remains, record the trim as nothing to trim. Otherwise, invoke the `trim-text` skill on the remaining prose, passing this continuation block after it:
+When the message has a body, split off its trailing lines first: the run of lines at the end in which every line is a trailer such as `Signed-off-by:` or `Claude-Session:` or a closing line such as `fixes #42`, whether or not a blank line precedes it. Issue references inside the prose stay in it. When no prose remains, keep the drafted body unchanged and record the trim as nothing to trim. Otherwise, invoke the `trim-text` skill on the remaining prose, passing this continuation block after it:
 
 ```text
 Parent continuation:
@@ -155,7 +155,7 @@ Parent continuation:
 - Profile: none
 ```
 
-When `Status` is `success`, use the returned `Trimmed text` as the prose, then append one blank line and the split-off block exactly as drafted. Use the drafted prose instead when the status is anything else, when the trimmed prose is empty, when it adds or drops an issue reference, a closing keyword, or a trailer-like line, or when any code span, code block, or link target in the drafted prose is missing or changed. Record the outcome, along with any `Flagged` and `Cut material` lines, and report it in step 7, or with the error if the commit fails. If the `trim-text` skill is not installed, record the trim as skipped.
+When `Status` is `success`, use the returned `Trimmed text` as the prose, then append one blank line and the split-off block exactly as drafted. Use the drafted body unchanged, block included, when the status is anything else, when the trimmed prose is empty, when it adds or drops an issue reference, a closing keyword, or a trailer-like line, or when any code span, code block, or link target in the drafted prose is missing or changed. Record the outcome, along with any `Flagged` and `Cut material` lines, and report it in step 7, or with the error if the commit fails. If the `trim-text` skill is not installed, record the trim as skipped.
 
 ### 6. Create the Commit
 
