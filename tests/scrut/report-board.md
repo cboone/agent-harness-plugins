@@ -1175,12 +1175,30 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && ln -s "${REPORT_BOARD_BIN
 report-board: rendered 7 issues in 3 lanes to */board.html (glob)
 ```
 
+## A copy of the script with templates of its own
+
+The cases below run a copy of the script beside a templates directory each one
+fills, so the shipped templates are never touched.
+
+```scrut
+$ function isolated_tree() {
+>   local dir
+>   dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   mkdir -p "${dir}/scripts" "${dir}/templates/starter"
+>   cp "${REPORT_BOARD_BIN}" "${dir}/scripts/"
+>   printf '%s' "${dir}"
+> }
+> function shipped() {
+>   printf '%s/../templates/%s' "$(dirname "${REPORT_BOARD_BIN}")" "${1}"
+> }
+```
+
 ## A template missing a placeholder
 
 The render stops before writing anything.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && printf '<title>x</title>\n' > "${dir}/templates/backlog-triage.html" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; ls "${dir}"
+$ dir="$(isolated_tree)" && printf '<title>x</title>\n' > "${dir}/templates/backlog-triage.html" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; ls "${dir}"
 report-board: */backlog-triage.html is missing the __BOARD_TITLE__ or "__BOARD_DATA__" placeholder (glob)
 scripts
 templates
@@ -1204,14 +1222,14 @@ Starter writes the stylesheet through the same function as render without
 validating board data.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp -R "$(dirname "${REPORT_BOARD_BIN}")/../templates/starter" "${dir}/templates/" && printf '%s\n' 'a::after { content: "\2022 & ${x} \\ %s"; }' > "${dir}/templates/board.css" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && grep -c -F 'a::after { content: "\2022 & ${x} \\ %s"; }' "${dir}/report.html"
+$ dir="$(isolated_tree)" && cp "$(shipped starter/report.html)" "${dir}/templates/starter/" && printf '%s\n' 'a::after { content: "\2022 & ${x} \\ %s"; }' > "${dir}/templates/board.css" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && grep -c -F 'a::after { content: "\2022 & ${x} \\ %s"; }' "${dir}/report.html"
 1
 ```
 
 ## A template missing the styles placeholder
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && templates="$(dirname "${REPORT_BOARD_BIN}")/../templates" && cp "${templates}/board.css" "${dir}/templates/" && grep -v -F '__BOARD_STYLES__' "${templates}/backlog-triage.html" > "${dir}/templates/backlog-triage.html" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && grep -v -F '__BOARD_STYLES__' "$(shipped backlog-triage.html)" > "${dir}/templates/backlog-triage.html" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; ls "${dir}"
 report-board: */backlog-triage.html is missing the /* __BOARD_STYLES__ */ placeholder (glob)
 exit 1
 scripts
@@ -1224,7 +1242,7 @@ A placeholder outside the style element would write the stylesheet into the
 page as text, and a second one would be left behind in the page.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${dir}/scripts" "${dir}/templates/starter" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp "$(dirname "${REPORT_BOARD_BIN}")/../templates/board.css" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
 report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
 exit 1
 report-board: */report.html holds the /* __BOARD_STYLES__ */ placeholder more than once (glob)
@@ -1238,14 +1256,14 @@ templates
 HTML reads tag names in any letter case, so the placement check does too.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${dir}/scripts" "${dir}/templates/starter" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && printf 'a { color: red; }\n' > "${dir}/templates/board.css" && printf '<STYLE>/* __BOARD_STYLES__ */</STYLE>\n' > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && cat "${dir}/report.html"
+$ dir="$(isolated_tree)" && printf 'a { color: red; }\n' > "${dir}/templates/board.css" && printf '<STYLE>/* __BOARD_STYLES__ */</STYLE>\n' > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && cat "${dir}/report.html"
 <STYLE>a { color: red; }</STYLE>
 ```
 
 ## A missing stylesheet
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp "$(dirname "${REPORT_BOARD_BIN}")/../templates/backlog-triage.html" "${dir}/templates/" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped backlog-triage.html)" "${dir}/templates/" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; ls "${dir}"
 report-board: cannot read */templates/board.css (glob)
 exit 1
 scripts
@@ -1259,7 +1277,7 @@ would capture one of them, and a closing style tag, in any letter case, would
 end the element early.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp "$(dirname "${REPORT_BOARD_BIN}")/../templates/backlog-triage.html" "${dir}/templates/" && for css in '/* __BOARD_TITLE__ */' 'a { content: "__BOARD_DATA__"; }' '</style><p>' '</STYLE><p>'; do printf '%s\n' "${css}" > "${dir}/templates/board.css" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped backlog-triage.html)" "${dir}/templates/" && for css in '/* __BOARD_TITLE__ */' 'a { content: "__BOARD_DATA__"; }' '</style><p>' '</STYLE><p>'; do printf '%s\n' "${css}" > "${dir}/templates/board.css" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; done; ls "${dir}"
 report-board: */board.css holds __BOARD_TITLE__, which would capture the value meant for it (glob)
 exit 1
 report-board: */board.css holds "__BOARD_DATA__", which would capture the value meant for it (glob)
@@ -1356,7 +1374,7 @@ report-board: the output path is empty; name the page file to write
 ## A missing starter page
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp "$(dirname "${REPORT_BOARD_BIN}")/../templates/board.css" "${dir}/templates/" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; ls "${dir}"
 report-board: cannot read */templates/starter/report.html (glob)
 exit 1
 scripts
@@ -1366,7 +1384,7 @@ templates
 ## Starter refuses a stylesheet that would break the page
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp -R "$(dirname "${REPORT_BOARD_BIN}")/../templates/starter" "${dir}/templates/" && printf '</style><p>\n' > "${dir}/templates/board.css" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped starter/report.html)" "${dir}/templates/starter/" && printf '</style><p>\n' > "${dir}/templates/board.css" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; ls "${dir}"
 report-board: */board.css holds a closing style tag, which would end the style element early (glob)
 exit 1
 scripts
