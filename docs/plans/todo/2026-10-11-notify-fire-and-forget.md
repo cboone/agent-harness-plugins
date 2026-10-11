@@ -4,7 +4,7 @@
 
 Every notify alert leaves an `alerter` waiting so a banner click can focus the originating pane. Each waiting `alerter` 26.5 polls `usernoted` every 0.2 seconds, and the cost grows roughly with the square of the number waiting: a dozen across sessions saturated `usernoted` and used about three cores. #591 bounded each session to one waiting `alerter` plus a 30-minute watchdog, which is not enough with many sessions. Click-to-focus is no longer needed, and `SIGKILL` about a second after launch still delivers the banner, with sound, and leaves it in Notification Center. So every harness should launch `alerter`, wait a short delivery grace period, and stop it with `SIGKILL`.
 
-Classification: feature (breaking). Commit prefix `feat`. The plan file is renamed to `docs/plans/todo/2026-10-11-notify-fire-and-forget.md` after approval.
+Classification: feature (breaking). Commit prefix `feat`.
 
 ## Decision: `NOTIFY_WAIT_LIMIT`
 

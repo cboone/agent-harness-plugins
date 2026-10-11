@@ -76,7 +76,6 @@ function main() {
   mkdir "${test_dir}/bin"
   export NOTIFY_TEST_LOG="${test_dir}/alerts"
   NOTIFY_TEST_STUB="${test_dir}/bin/alerter"
-  export NOTIFY_TEST_TMUX_LOG="${test_dir}/tmux"
   export NOTIFY_TEST_FRONT="com.example.background"
   export NOTIFY_TEST_VISIBLE="%99|attached,focused,UTF-8"
   export NOTIFY_TEST_TITLE="✳ Sample task"
@@ -95,9 +94,8 @@ function main() {
     'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then for _ in {1..300}; do sleep 0.1; done; fi' \
     > "${test_dir}/bin/alerter"
   printf '%s\n' '#!/usr/bin/env bash' \
-    'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
     'case "$1" in' \
-    'display-message) if [[ "$*" == *pane_id* ]]; then printf '\''$3|@12|%%7\\n'\''; else printf "%s\\n" "${NOTIFY_TEST_TITLE}"; fi ;;' \
+    'display-message) printf "%s\\n" "${NOTIFY_TEST_TITLE}" ;;' \
     'list-clients) printf "%s\\n" "${NOTIFY_TEST_VISIBLE}" ;;' \
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
@@ -349,13 +347,14 @@ function main() {
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
-    delivery) export NOTIFY_TEST_HOLD=1 NOTIFY_WAIT_LIMIT=1 ;;
+    delivery) export NOTIFY_TEST_HOLD=1 ;;
     *) ;;
   esac
   if [[ "${action}" == cc-permission ]]; then
     payload="$(jq -nc --arg path "${transcript}" --arg message "${message}" \
       '{session_id: "session-one", transcript_path: $path} + (if $message == "" then {} else {message: $message} end)')"
   fi
+  local started="${SECONDS}"
   printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
   # Polls for up to 3 seconds for the detached alerter stub to log its call.
   local count=0
@@ -397,11 +396,14 @@ function main() {
       echo "Separate sessions retain separate banners"
       ;;
     delivery)
-      # NOTIFY_WAIT_LIMIT is 1 second; allow 6 under parallel load.
+      # The default grace period is 2 seconds; allow 6 under parallel load.
       poll 300 not_running "${first}" || exit 1
+      # Whole-second SECONDS still shows at least 1 after a 2-second wait.
+      [[ $((SECONDS - started)) -ge 1 ]] || exit 1
       # SIGTERM would make the real alerter remove its banner.
       [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
-      echo "Alerter stops after delivery without SIGTERM"
+      [[ "$(jq -r '.[index("--timeout") + 1]' "${NOTIFY_TEST_LOG}")" == 86400 ]] || exit 1
+      echo "Alerter stops after the grace period without SIGTERM"
       ;;
     visible | subagent | permission-question)
       # Gives a detached alerter time to appear before asserting none did.

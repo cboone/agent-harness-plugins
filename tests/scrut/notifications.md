@@ -571,9 +571,9 @@ Tink
 codex.png
 ```
 
-## Alerter stops after delivery
+## Alerter stops after the grace period
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" delivery
-Alerter stops after delivery without SIGTERM
+Alerter stops after the grace period without SIGTERM
 ```
