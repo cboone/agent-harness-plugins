@@ -3,12 +3,16 @@ import type { TextPart } from "@opencode-ai/sdk";
 
 // Body length budget: a banner shows about two lines, an expanded alert about four.
 const BODY_LIMIT = 140;
-// alerter's own timeout, a backstop for an alerter the delivery stop never
-// reaches: alerter removes the banner when it expires.
+// alerter's own timeout, a backstop for when the WAIT_LIMIT stop never runs:
+// alerter removes the banner when it expires.
 const FIRE_TIMEOUT = 86400;
-// Seconds alerter gets to deliver its banner before it is stopped; mirrors
-// WAIT_LIMIT in ../scripts/notify. A waiting alerter polls usernoted.
-const WAIT_LIMIT = /^[1-9][0-9]{0,8}$/.test(process.env.NOTIFY_WAIT_LIMIT ?? "") ? Number(process.env.NOTIFY_WAIT_LIMIT) : 2;
+// Seconds alerter gets to post its banner before it is stopped, capped at 60;
+// mirrors WAIT_LIMIT in ../scripts/notify. A waiting alerter polls usernoted,
+// at a cost that grows with the number waiting.
+const WAIT_LIMIT = /^[1-9][0-9]{0,8}$/.test(process.env.NOTIFY_WAIT_LIMIT ?? "") ? Math.min(Number(process.env.NOTIFY_WAIT_LIMIT), 60) : 2;
+// Runs alerter ("$@" after the limit) and stops it with SIGKILL after $1
+// seconds unless it has exited.
+const STOP_SCRIPT = 'limit=$1; shift; alerter "$@" & pid=$!; waited=0; while [ "$waited" -lt "$limit" ] && kill -0 "$pid" 2> /dev/null; do sleep 1; waited=$((waited + 1)); done; kill -0 "$pid" 2> /dev/null && kill -KILL "$pid"';
 
 const PANE_TITLE_DEFAULTS = new Set(["", "zsh", "bash", "fish", "sh", "tmux", "ssh", "nvim", "vim", "-zsh", "-bash", "Claude Code", "Codex", "OpenCode"]);
 
@@ -113,18 +117,14 @@ interface AlerterArgs {
   icon: string;
 }
 
-// Stops alerter with SIGKILL after WAIT_LIMIT seconds: alerter removes its
-// banner on SIGTERM or SIGINT, but SIGKILL leaves it in Notification Center.
+// Launches alerter through a detached sh that stops it with SIGKILL after
+// WAIT_LIMIT seconds unless it has exited, so the stop still runs when OpenCode
+// exits first. alerter removes its banner on SIGTERM or SIGINT, but SIGKILL
+// leaves it in Notification Center.
 function fireAlerterDetached(args: AlerterArgs): void {
   try {
-    const proc = Bun.spawn(["alerter", "--title", args.title, "--subtitle", args.subtitle, "--message", args.message, "--sound", args.sound, "--group", args.group, "--app-icon", args.icon, "--timeout", String(FIRE_TIMEOUT)], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
-    // FIRE_TIMEOUT caps the delay below setTimeout's 2^31 - 1 ms limit.
-    setTimeout(
-      () => {
-        if (proc.exitCode === null && proc.signalCode === null) proc.kill("SIGKILL");
-      },
-      Math.min(WAIT_LIMIT, FIRE_TIMEOUT) * 1000,
-    );
+    const proc = Bun.spawn(["/bin/sh", "-c", STOP_SCRIPT, "notify-alerter", String(WAIT_LIMIT), "--title", args.title, "--subtitle", args.subtitle, "--message", args.message, "--sound", args.sound, "--group", args.group, "--app-icon", args.icon, "--timeout", String(FIRE_TIMEOUT)], { stdin: "ignore", stdout: "ignore", stderr: "ignore", detached: true });
+    proc.unref();
   } catch {
     // Notification failures are silent: alerter not installed, sandbox, etc.
   }
