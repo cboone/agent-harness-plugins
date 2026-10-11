@@ -14,7 +14,7 @@ requests and one merged in the last month, and filed every bug but one. The
 config names a test-only token variable holding a sample value, and the
 Makefile unsets the real ZenHub token variable, so no test can reach ZenHub.
 `bugs` takes settings (`NAME=value`) first, then the command, and runs outside
-any checkout, so the gather reads only the branches GitHub holds. `variant`
+any checkout, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request. `variant`
 copies the GitHub fixtures with a jq filter applied to every open bug the open
 searches return, and prints the copy's directory. The gather time is fixed at
 2026-10-15T16:00:00Z.
@@ -204,7 +204,7 @@ src/deps/axios.js via commit * (glob)
 
 ```scrut
 $ repo="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (cd "${repo}" && git init -q -b main && git remote add origin https://evilgithub.com/acme/widgets.git && bugs gather "${work}/config.json" "${work}/lookalike.json" 2>&1 > /dev/null | grep 'origin is') && jq -c '.checkout' "${work}/lookalike.json"
-bugs-gather: this checkout's origin is https://evilgithub.com/acme/widgets.git, not acme/widgets, so the gather reads only the branches GitHub holds
+bugs-gather: this checkout's origin is https://evilgithub.com/acme/widgets.git, not acme/widgets, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request
 false
 ```
 
@@ -219,7 +219,7 @@ It says so once the gather is written, so a gather that stops shows only why.
 
 ```scrut
 $ bugs gather "${work}/config.json" "${work}/outside.json" 2>&1 > /dev/null | grep checkout
-bugs-gather: not inside a checkout of acme/widgets, so the gather reads only the branches GitHub holds
+bugs-gather: not inside a checkout of acme/widgets, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request
 ```
 
 ## People outside the repository count as users, and bots do not

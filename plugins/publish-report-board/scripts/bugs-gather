@@ -1042,24 +1042,24 @@ function gather_local() {
   : > "${TEMP_DIR}/local-notice.txt"
   local url email base refname committed author name kind counts behind ahead path worktree
   if ! command -v git > /dev/null 2>&1; then
-    printf '%s: git is not installed, so the gather reads only the branches GitHub holds\n' "${SCRIPT_NAME}" >> "${TEMP_DIR}/local-notice.txt"
+    printf '%s: git is not installed, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' "${SCRIPT_NAME}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
   fi
   if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    printf '%s: not inside a checkout of %s, so the gather reads only the branches GitHub holds\n' "${SCRIPT_NAME}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
+    printf '%s: not inside a checkout of %s, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' "${SCRIPT_NAME}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
   fi
   if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then
-    printf '%s: this checkout'"'"'s origin is %s, not %s, so the gather reads only the branches GitHub holds\n' \
+    printf '%s: this checkout'"'"'s origin is %s, not %s, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' \
       "${SCRIPT_NAME}" "${url:-missing}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
   fi
   base="refs/remotes/origin/${default_branch}"
   if ! git rev-parse --verify --quiet "${base}" > /dev/null; then
-    printf '%s: origin/%s is missing from this checkout, so the gather reads only the branches GitHub holds; run git fetch --prune origin to read local branches too\n' \
+    printf '%s: origin/%s is missing from this checkout, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request; run git fetch --prune origin to read local branches too\n' \
       "${SCRIPT_NAME}" "${default_branch}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
