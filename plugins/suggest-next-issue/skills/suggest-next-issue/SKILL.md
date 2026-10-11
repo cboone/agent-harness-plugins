@@ -53,6 +53,9 @@ gh pr list --state merged --limit 300 --json number,title,body,mergedAt,closingI
 gh api user --jq '.login'
 git config user.email
 git log --branches --remotes=origin --no-merges --since='30 days ago' --fixed-strings --regexp-ignore-case --author="$(git config user.email)" --name-only --format='commit %h %cI'
+# Files changed on each of the user's branches with unmerged work, for tier 1
+# affinity; run once per branch the listings above show as theirs and unmerged
+git diff --name-only "origin/DEFAULT_BRANCH...BRANCH"
 
 # Project context
 gh repo view --json description,defaultBranchRef
