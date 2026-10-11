@@ -14,16 +14,17 @@ This plan is the integration record for work that spans this repository and a pr
 - Each built-in sound maps to one role: Glass to `stop`, Funk to `permission`, Tink to `attention`.
 - Contract between the two sides: files named `<prefix>-<role>-<n>.aiff` in `~/Library/Sounds`, `<n>` from `0` without gaps, the same count for every role. notify counts from `0` to the first gap and falls back to the built-in sound for a role with no files.
 - Opt-in through `NOTIFY_SOUND_SET=<prefix>`; unset keeps today's sounds. The generated set uses the prefix `notify-chime`.
+- Several timbres share the hash: the slot index covers every timbre and scale degree combination (four timbres by ten degrees), so a repository's roles share both timbre and pitch, and the naming contract does not change. Chosen on 2026-10-11.
 - Installation: the generation project renders, converts to 16-bit AIFF and installs the files. Dotfiles only set `NOTIFY_SOUND_SET`. Chosen on 2026-10-11.
 
 ## Work items
 
-| Item                                | Where                  | Status                                  |
-| ----------------------------------- | ---------------------- | --------------------------------------- |
-| Sound-set selection in notify, #595 | this repository        | waiting for #594                        |
-| Catalog entry for the chime set     | private catalog        | merged                                  |
-| Chime generation and install        | private generation lab | built; waiting for the listening choice |
-| Set `NOTIFY_SOUND_SET`              | dotfiles               | open                                    |
+| Item                                | Where                  | Status                                      |
+| ----------------------------------- | ---------------------- | ------------------------------------------- |
+| Sound-set selection in notify, #595 | this repository        | waiting for #594                            |
+| Catalog entry for the chime set     | private catalog        | merged                                      |
+| Chime generation and install        | private generation lab | adding timbres; second listening round next |
+| Set `NOTIFY_SOUND_SET`              | dotfiles               | open                                        |
 
 ## Sequencing
 
@@ -39,10 +40,11 @@ This plan is the integration record for work that spans this repository and a pr
 - [ ] With `NOTIFY_SOUND_SET` unset, alerts keep Glass, Funk and Tink.
 - [ ] Real alerts from two repositories with different slots play their own variants, from Claude Code and from at least one other harness.
 - [ ] Two worktrees of one repository play the same variant.
-- [ ] Several overlapping alerts sound consonant and do not clip.
+- [ ] Several overlapping alerts sound consonant and do not clip, including alerts with different timbres.
 
 ## Log
 
 - 2026-10-11: Filed #595 and the two private generation issues. Custom sound playback verified.
 - 2026-10-11: Started planning sessions for the catalog entry and the generation work. #595 waits for #594 to merge; the #594 session reports when its PR opens and merges.
 - 2026-10-11: Catalog entry merged. Generation experiment and installer built; listening grids rendered for a timbre, decay and key choice. A duplicate catalog PR from the generation session is open.
+- 2026-10-11: First listening round chose three timbres, each with its own decay, and asked for a fourth with a sonar-ping quality, all four in the hash. Duplicate catalog PR closed.
