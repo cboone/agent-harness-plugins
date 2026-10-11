@@ -116,12 +116,13 @@ function require_date() {
 # main shell.
 function fetch_pages() {
   local search="${1}"
-  local query_dir
 
+  # Global within the subshell: the EXIT trap reads it after this function
+  # returns. The trap expands it then, so no path character reaches the trap's
+  # own code.
   query_dir="$(mktemp -d "${TMPDIR:-/tmp}/copilot-rounds.XXXXXX")" \
     || die "could not create a temporary directory"
-  # shellcheck disable=SC2064 # Expand now: query_dir is local to this function.
-  trap "rm -rf '${query_dir}'" EXIT
+  trap 'rm -rf "${query_dir}"' EXIT
   printf '%s\n' "${QUERY}" > "${query_dir}/copilot-rounds.graphql" \
     || die "could not write the search query"
 
