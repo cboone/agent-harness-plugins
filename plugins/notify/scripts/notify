@@ -20,12 +20,11 @@ readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR FOCUS_SCRIPT
 # Body length budget: a banner shows about two lines, an expanded alert about four.
 readonly BODY_LIMIT=140
 
-# alerter's own timeout (24h): a backstop that also removes the banner.
-# ../opencode/index.ts uses the same value.
+# alerter's own timeout, only a backstop: alerter removes the banner when it expires.
 readonly FIRE_TIMEOUT=86400
 
-# Seconds before the watchdog stops a waiting alerter, which polls usernoted
-# while it waits. NOTIFY_WAIT_LIMIT overrides it with up to nine digits.
+# Seconds before the watchdog stops a waiting alerter, bounding its usernoted polling.
+# The nine-digit cap keeps bash arithmetic from overflowing.
 WAIT_LIMIT=1800
 if [[ "${NOTIFY_WAIT_LIMIT:-}" =~ ^[1-9][0-9]{0,8}$ ]]; then
   WAIT_LIMIT="${NOTIFY_WAIT_LIMIT}"
@@ -461,19 +460,15 @@ function plan_heading() {
 # alerter dispatch
 # -----------------------------------------------------------------------------
 
-# These stop alerter with SIGKILL: alerter removes its banner on SIGTERM or
-# SIGINT, so only SIGKILL keeps it in Notification Center. Click-to-focus is
-# lost.
+# Both stop alerter with SIGKILL: alerter removes its banner on SIGTERM or SIGINT.
 
-# Stops every waiting alerter whose group carries this session's key. `[^ ]*`
-# cannot cross the space inside the pattern, so pkill never matches a
-# concurrent pkill's own arguments.
+# Matches the session key in --group. `[^ ]*` cannot cross the space in the
+# pattern itself, so a concurrent pkill never matches.
 function stop_session_alerters() {
   pkill -KILL -f -- "--group [^ ]*-${SESSION_KEY}" 2> /dev/null || true
 }
 
-# Stops alerter PID $1 if it is still running with this session's key, so a
-# reused PID is left alone.
+# The command-line check leaves a reused PID alone.
 function stop_alerter() {
   kill -0 "${1}" 2> /dev/null || return 0
   [[ "$(ps -ww -p "${1}" -o command= 2> /dev/null)" == *alerter*"${SESSION_KEY}"* ]] || return 0
@@ -485,7 +480,7 @@ function stop_alerter() {
 # the session key. Stop groups fire once per turn (an atomic mkdir marker) and
 # are skipped while the originating pane is visible. An empty sound omits
 # --sound, so the notification is silent. Each notification first stops the
-# session's waiting alerters, and a watchdog stops its own after WAIT_LIMIT.
+# session's waiting alerters. A watchdog stops its own after WAIT_LIMIT.
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
@@ -527,9 +522,7 @@ function fire_alerter_detached() {
         --timeout "${FIRE_TIMEOUT}" \
         2> /dev/null &
       pid=$!
-      # Watchdog: polls in steps of up to 5 seconds, so it exits soon after
-      # alerter. Its output goes to /dev/null so the substitution does not
-      # wait for it.
+      # Watchdog. Its output goes to /dev/null so the substitution does not wait for it.
       (
         waited=0
         while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do

@@ -32,8 +32,7 @@ function write_transcript() {
   transcript_tool_use "${1}" tool-1 "${2}" "${3}"
 }
 
-# Runs the command in $2... every 0.02 seconds, up to $1 more times, until it
-# succeeds; fails if it never does.
+# Retries the command in $2... every 0.02 seconds, up to $1 times, until it succeeds.
 function poll() {
   local tries="${1}"
   shift
@@ -78,7 +77,7 @@ function main() {
   # printf %q escapes the path, so a TMPDIR holding quotes or shell
   # metacharacters cannot break out of the trap command.
   printf -v quoted_test_dir '%q' "${test_dir}"
-  # Held alerter stubs are stopped too, including when an assertion fails.
+  # Also stops held alerter stubs, even after a failed assertion.
   # shellcheck disable=SC2064
   trap "[[ -z \${NOTIFY_TEST_HOLD:-} ]] || pkill -KILL -f ${quoted_test_dir}/bin/alerter 2> /dev/null || true; rm -rf ${quoted_test_dir}" EXIT
   : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
@@ -93,13 +92,12 @@ function main() {
   export PATH="${test_dir}/bin:${PATH}"
   export XDG_CACHE_HOME="${test_dir}/cache"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
-  # Only the watchdog scenario sets a wait limit.
+  # Keeps a developer's NOTIFY_WAIT_LIMIT out of the scenarios.
   unset NOTIFY_WAIT_LIMIT
 
-  # The stub logs any SIGTERM it receives, because SIGTERM makes the real
-  # alerter remove its banner. It sets that trap before logging its call,
-  # which is what the scenarios wait for. NOTIFY_TEST_HOLD also keeps it
-  # waiting, like an unanswered banner.
+  # The stub logs SIGTERM, which makes the real alerter remove its banner.
+  # The trap is set before the call is logged, since scenarios wait for that log.
+  # NOTIFY_TEST_HOLD keeps the stub waiting like an unanswered banner.
   printf '%s\n' '#!/usr/bin/env bash' \
     'trap '\''echo TERM >> "${NOTIFY_TEST_LOG}.signals"; exit 143'\'' TERM' \
     'jq -nc --args '\''$ARGS.positional'\'' -- "$@" >> "${NOTIFY_TEST_LOG}"' \
@@ -382,8 +380,7 @@ function main() {
       [[ -s "${NOTIFY_TEST_LOG}" ]]
       ;;
   esac
-  # Held-alerter assertions end with `|| exit 1` because a failing [[ ]] does
-  # not trigger errexit in bash 3.2.
+  # `|| exit 1` on held-alerter assertions: a failing [[ ]] does not trigger errexit in bash 3.2.
   local first=""
   if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then
     poll 150 find_held_pid || exit 1
