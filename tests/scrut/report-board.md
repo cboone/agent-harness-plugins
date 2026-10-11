@@ -1238,11 +1238,16 @@ templates
 
 ## A styles placeholder out of place
 
-A placeholder outside the style element would write the stylesheet into the
-page as text, and a second one would be left behind in the page.
+A placeholder outside the style element, including one inside an element whose
+name only begins with style, would write the stylesheet into the page as text,
+and a second one would be left behind in the page.
 
 ```scrut
-$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped board.css)" "${dir}/templates/" && for page in '<style></style>/* __BOARD_STYLES__ */' '<stylesheet>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */</stylesheet>' '<style>/* __BOARD_STYLES__ */ /* __BOARD_STYLES__ */</style>'; do printf '%s\n' "${page}" > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
+exit 1
+report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
+exit 1
 report-board: */report.html places the /* __BOARD_STYLES__ */ placeholder outside a style element (glob)
 exit 1
 report-board: */report.html holds the /* __BOARD_STYLES__ */ placeholder more than once (glob)
@@ -1273,14 +1278,17 @@ templates
 ## A stylesheet that would break the page
 
 The stylesheet goes in before the title and data, so a placeholder inside it
-would capture one of them, and a closing style tag, in any letter case, would
-end the element early.
+would capture one of them, the board-data marker would send extract into the
+stylesheet, and a closing style tag, in any letter case, would end the element
+early.
 
 ```scrut
-$ dir="$(isolated_tree)" && cp "$(shipped backlog-triage.html)" "${dir}/templates/" && for css in '/* __BOARD_TITLE__ */' 'a { content: "__BOARD_DATA__"; }' '</style><p>' '</STYLE><p>'; do printf '%s\n' "${css}" > "${dir}/templates/board.css" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; done; ls "${dir}"
+$ dir="$(isolated_tree)" && cp "$(shipped backlog-triage.html)" "${dir}/templates/" && for css in '/* __BOARD_TITLE__ */' 'a { content: "__BOARD_DATA__"; }' '/* id="board-data"> */' '</style><p>' '</STYLE><p>'; do printf '%s\n' "${css}" > "${dir}/templates/board.css" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; echo "exit $?"; done; ls "${dir}"
 report-board: */board.css holds __BOARD_TITLE__, which would capture the value meant for it (glob)
 exit 1
 report-board: */board.css holds "__BOARD_DATA__", which would capture the value meant for it (glob)
+exit 1
+report-board: */board.css holds id="board-data", which extract would read as the board data (glob)
 exit 1
 report-board: */board.css holds a closing style tag, which would end the style element early (glob)
 exit 1

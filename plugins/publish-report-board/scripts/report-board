@@ -989,7 +989,8 @@ function available_boards() {
 }
 
 # Prints the shared stylesheet, refusing one that holds the title or data
-# placeholder, which it goes in ahead of, or a closing style tag in any case.
+# placeholder, which it goes in ahead of, the board-data marker extract looks
+# for, or a closing style tag in any case.
 # Runs in a command substitution, which ignores errexit, so a failed read exits
 # explicitly; nocasematch stays inside it.
 function read_stylesheet() {
@@ -1002,6 +1003,9 @@ function read_stylesheet() {
       die "${E_INVALID}" "${STYLESHEET} holds ${marker}, which would capture the value meant for it"
     fi
   done
+  if [[ "${styles}" == *"${DATA_MARKER}"* ]]; then
+    die "${E_INVALID}" "${STYLESHEET} holds ${DATA_MARKER}, which extract would read as the board data"
+  fi
   shopt -s nocasematch
   if [[ "${styles}" == *"${STYLE_CLOSE}"* ]]; then
     die "${E_INVALID}" "${STYLESHEET} holds a closing style tag, which would end the style element early"
@@ -1014,7 +1018,7 @@ function read_stylesheet() {
 function require_styles_placeholder() {
   local page_file="${1}"
   local text="${2}"
-  local before after
+  local before after opened closed
 
   if [[ "${text}" != *"${STYLES_PLACEHOLDER}"* ]]; then
     die "${E_INVALID}" "${page_file} is missing the ${STYLES_PLACEHOLDER} placeholder"
@@ -1024,8 +1028,11 @@ function require_styles_placeholder() {
   if [[ "${after}" == *"${STYLES_PLACEHOLDER}"* ]]; then
     die "${E_INVALID}" "${page_file} holds the ${STYLES_PLACEHOLDER} placeholder more than once"
   fi
+  opened="${before##*<[Ss][Tt][Yy][Ll][Ee]}"
+  closed="${after#*</[Ss][Tt][Yy][Ll][Ee]}"
+  # A tag name ends at whitespace or ">", so <stylesheet> is no style element.
   shopt -s nocasematch
-  if [[ "${before}" != *"<style"* || "${before##*<[Ss][Tt][Yy][Ll][Ee]}" == *"${STYLE_CLOSE}"* || "${after}" != *"${STYLE_CLOSE}"* ]]; then
+  if [[ "${before}" != *"<style"* || "${opened}" != [[:space:]\>]* || "${opened}" == *"${STYLE_CLOSE}"* || "${after}" != *"${STYLE_CLOSE}"* || "${closed}" != [[:space:]\>]* ]]; then
     die "${E_INVALID}" "${page_file} places the ${STYLES_PLACEHOLDER} placeholder outside a style element"
   fi
   shopt -u nocasematch
