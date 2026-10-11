@@ -6,7 +6,9 @@ Some checklist items cannot be settled by reading. Whether a workflow expression
 
 - **Run only what the project already supports.** A check counts as supported when the tool is installed and the project already uses it: a Makefile target, a package script, a CI step, a configuration file, or an initialized working directory. Do not install a tool, add configuration, or initialize anything to make a check possible.
 - **Run only read-only checks.** A check that writes files in the repository, changes the index, deploys, sends a request that changes remote state, or needs credentials the session does not have is not run. `terraform init` writes `.terraform/`, so it is not a read-only check, and `terraform validate` runs only where a working directory is already initialized.
-- **Prefer the project's own command.** When the project wraps a tool in `make lint` or a package script, run that command over the scope's files instead of calling the tool directly, so its configuration and version apply.
+- **Run tests so they write nothing.** A test runner is allowed, because a test that never ran settles nothing, but many runners write by default: Jest writes new snapshots unless given `--ci`, pytest writes `.pytest_cache/` unless given `-p no:cacheprovider`, and coverage tools write reports. Use the flags that stop those writes, leave coverage off, and compare `git status --porcelain --ignored` before and after the run. Report anything the run left behind, and report a test whose runner cannot run without writing as unverified.
+- **Run only trusted code.** A test, a Makefile target or a package script executes the repository's code, including the code under review. Run one only when the changes are the user's own or a fix the calling workflow made. For anyone else's changes, such as a contributor's pull request, report every check that would execute repository code as unverified. Linters and validators that only read files, such as `actionlint` or `jq empty`, are fine either way.
+- **Prefer the project's own command, in check mode.** When the project wraps a tool in `make lint` or a package script, run that command over the scope's files instead of calling the tool directly, so its configuration and version apply. Use a variant that only reports: a target that runs `--fix` or `--write` edits files, so call the tool's check mode directly when the project has no reporting-only target.
 - **Report every check.** Each one is either run, with its result, or unverified, with the command that would settle it and the reason it was not run. A check that was not run is never reported as passed.
 
 ## By platform
@@ -22,7 +24,7 @@ Some checklist items cannot be settled by reading. Whether a workflow expression
 | Dockerfiles                  | `hadolint`                                                                                                                       |
 | GraphQL queries              | the project's schema validator, or one read-only query through `gh api graphql` for GitHub, confirming the response has no error |
 | Documented commands          | each command run once as written, when it is read-only, or its `--help` to confirm every flag exists                             |
-| Tests the change adds        | the test run on its own, confirming from the runner's output that it ran and how many cases it ran                               |
+| Tests the change adds        | the test run on its own with the runner's non-writing flags, confirming from its output that it ran and how many cases it ran    |
 | Tests that claim to catch X  | unverified in this review; planting the defect is an edit. Suggest the `plant-defects` skill                                     |
 | Agent skills and prose files | the project's own validators for them, such as a plugin or cross-reference validator                                             |
 
