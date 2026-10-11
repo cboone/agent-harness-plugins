@@ -16,10 +16,12 @@
 #                      with no results
 #   graphql/repository-NAME.json
 #                      gh api graphql with repository.graphql
-#   graphql/pulls-KIND.json
-#                      gh api graphql with pulls.graphql, where KIND is open
-#                      or merged, read from the qualifiers in q; a missing
-#                      file answers with no results
+#   graphql/pulls-open.json
+#                      gh api graphql with open-pulls.graphql; a missing file
+#                      answers with no open pull requests
+#   graphql/pulls-merged.json
+#                      gh api graphql with pulls.graphql, the merged search;
+#                      a missing file answers with no results
 #
 # An api call with no response file fails the way gh does for a missing
 # resource. STUB_GH_API_FAIL names one KEY that fails with a permission error
@@ -137,9 +139,10 @@ function do_graphql() {
   fi
 
   local key
-  if [[ "${query_name}" == "pulls" ]]; then
+  if [[ "${query_name}" == "open-pulls" ]]; then
+    key="pulls-open"
+  elif [[ "${query_name}" == "pulls" ]]; then
     case " ${search_text} " in
-      *" is:open "*) key="pulls-open" ;;
       *" is:merged "*) key="pulls-merged" ;;
       *) die "unexpected pull request search ${search_text}" ;;
     esac
@@ -168,6 +171,8 @@ function do_graphql() {
     cat "${file}"
   elif [[ "${query_name}" == "search" || "${query_name}" == "pulls" ]]; then
     printf '[{"data":{"search":{"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}]\n'
+  elif [[ "${query_name}" == "open-pulls" ]]; then
+    printf '[{"data":{"repository":{"pullRequests":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}}]\n'
   else
     echo "gh: Could not resolve to a Repository with the name ${repo_name}." >&2
     exit 1

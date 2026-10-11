@@ -1,0 +1,56 @@
+# One page of a repository's open pull requests, every author's: each can
+# carry a bug its branch names, and the files of the current user's own are
+# the areas they are working in now. The connection has no result cap, unlike
+# search. gh api graphql --paginate supplies $endCursor.
+query ($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(states: OPEN, first: 25, after: $endCursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        number
+        title
+        url
+        state
+        isDraft
+        createdAt
+        updatedAt
+        mergedAt
+        mergeable
+        mergeStateStatus
+        headRefName
+        reviewDecision
+        reviewRequests(first: 1) {
+          totalCount
+        }
+        latestReviews(last: 1) {
+          nodes {
+            submittedAt
+          }
+        }
+        author {
+          login
+        }
+        commits(last: 1) {
+          nodes {
+            commit {
+              statusCheckRollup {
+                state
+              }
+            }
+          }
+        }
+        files(first: 100) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            path
+          }
+        }
+      }
+    }
+  }
+}

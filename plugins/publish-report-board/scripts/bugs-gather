@@ -35,9 +35,10 @@
 # it to keep every window fixed. BUGS_GATHER_HOST replaces the host name a
 # local branch is reported on.
 #
-# Run from a checkout of the repository, gather also reads its local branches
-# and the current user's commits; anywhere else it reads the branches GitHub
-# holds.
+# Run from a checkout of the repository, gather also reads its local branches,
+# worktrees, and the current user's commits; anywhere else, or in a checkout
+# whose origin is another repository or lacks the default branch, it reads the
+# branches GitHub holds and says so.
 set -euo pipefail
 
 # Prints the directory holding this script, following symlinks so the queries
@@ -308,7 +309,8 @@ $config.bots as $bots
         truncated: [(select($n.labels.pageInfo.hasNextPage == true) | "labels"),
                     (select($n.assignees.pageInfo.hasNextPage == true) | "assignees"),
                     (select($n.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests"),
-                    (select($n.timelineItems.pageInfo.hasPreviousPage == true) | "cross-references")]
+                    (select($n.timelineItems.pageInfo.hasPreviousPage == true) | "cross-references"),
+                    (select(($n.comments.totalCount // 0) > ($n.comments.nodes | as_list | length)) | "comments")]
       }
   )
 '
@@ -347,11 +349,12 @@ def lookup_error: (.path // []) | length == 1 and (.[0] | type == "string" and t
 def unexpected_errors: [.errors[]? | select(lookup_error | not)];
 '
 
-# Reduces the slurped pages of a pull request search to a list, each pull
-# request with its changed files. Takes $pages.
+# Reduces the slurped pages of a pull request search, or of the open pull
+# request connection, to a list, each pull request with its changed files.
+# Takes $pages.
 # shellcheck disable=SC2016
 readonly PULLS_FILTER="${COMMON_DEFS}"'
-[$pages[] | .data.search.nodes[] | select(. != null and .__typename == "PullRequest")
+[$pages[] | (.data.search.nodes[]? | select(. != null and .__typename == "PullRequest")), (.data.repository.pullRequests.nodes[]? | select(. != null))
  | pr_of + {files: [.files.nodes | as_list | .[] | .path], filesTruncated: (.files.pageInfo.hasNextPage == true)}]
 | unique_by(.number)
 '
@@ -991,9 +994,15 @@ function github_search() {
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/search.graphql" -f "q=${query}"
 }
 
-# Searches a repository's pull requests: every open one, and the current
-# user's merged ones. The merged search names the user as @me, so neither
-# needs a login first, and both run beside the others.
+# Reads every open pull request in a repository, page by page.
+function github_open_pulls() {
+  local repo="${1}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/open-pulls.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
+}
+
+# Searches the current user's merged pull requests in a repository. The query
+# names the user as @me, so the search needs no login first and runs beside
+# the others.
 function github_pulls() {
   local query="${1}"
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/pulls.graphql" -f "q=${query}"
@@ -1038,27 +1047,37 @@ function remote_matches() {
 function gather_local() {
   local repo="${1}" default_branch="${2}" since="${3}"
   local output="${TEMP_DIR}/local.json"
+  # Notices about local state go to TEMP_DIR/local-notice.txt, which gather
+  # prints once the board data is written, so a gather that stops shows only
+  # why it stopped.
+  : > "${TEMP_DIR}/local-notice.txt"
   local url email base refname committed author name kind counts behind ahead path worktree
+  if ! command -v git > /dev/null 2>&1; then
+    printf '%s: git is not installed, so the gather reads only the branches GitHub holds\n' "${SCRIPT_NAME}" >> "${TEMP_DIR}/local-notice.txt"
+    printf 'null' > "${output}"
+    return 0
+  fi
   if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    printf '%s: not inside a checkout of %s, so the gather reads only the branches GitHub holds\n' "${SCRIPT_NAME}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
   fi
   if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then
     printf '%s: this checkout'"'"'s origin is %s, not %s, so the gather reads only the branches GitHub holds\n' \
-      "${SCRIPT_NAME}" "${url:-missing}" "${repo}" >&2
+      "${SCRIPT_NAME}" "${url:-missing}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
   fi
   base="refs/remotes/origin/${default_branch}"
   if ! git rev-parse --verify --quiet "${base}" > /dev/null; then
     printf '%s: origin/%s is missing from this checkout, so the gather reads only the branches GitHub holds; run git fetch --prune origin to read local branches too\n' \
-      "${SCRIPT_NAME}" "${default_branch}" >&2
+      "${SCRIPT_NAME}" "${default_branch}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
   fi
-  email="$(git config user.email 2> /dev/null || true)"
+  email="$(git config user.email || true)"
   if [[ -z "${email}" ]]; then
-    printf '%s: git user.email is not set here, so no branch or commit in this checkout counts as yours for affinity\n' "${SCRIPT_NAME}" >&2
+    printf '%s: git user.email is not set here, so no branch or commit in this checkout counts as yours for affinity\n' "${SCRIPT_NAME}" >> "${TEMP_DIR}/local-notice.txt"
   fi
   : > "${TEMP_DIR}/local-branches.tsv"
   : > "${TEMP_DIR}/local-files.tsv"
@@ -1098,8 +1117,8 @@ function gather_local() {
   if [[ -n "${email}" ]]; then
     # Each commit starts with a record separator, which no file name holds. An
     # email address ignores case, and git matches --author with case unless
-    # told otherwise.
-    git log --all --since="${since}" --fixed-strings --regexp-ignore-case --author="${email}" --name-only --format=$'\x1e%h\t%cI' > "${TEMP_DIR}/local-commits.txt" \
+    # told otherwise. The refs read are the ones backlog-gather reads.
+    git log --branches --remotes=origin --no-merges --since="${since}" --fixed-strings --regexp-ignore-case --author="${email}" --name-only --format=$'\x1e%h\t%cI' > "${TEMP_DIR}/local-commits.txt" \
       || die "${E_INVALID}" "cannot read your recent commits in this checkout"
   else
     : > "${TEMP_DIR}/local-commits.txt"
@@ -1223,7 +1242,7 @@ function cmd_gather() {
   make_temp_dir
 
   start_job repository github_repository "${repo}"
-  start_job pulls-open github_pulls "repo:${repo} is:pr is:open"
+  start_job pulls-open github_open_pulls "${repo}"
   start_job pulls-merged github_pulls "repo:${repo} is:pr author:@me is:merged merged:>=${work_since}"
   # A comma between labels matches any of them. An issue type takes one name
   # per search, so each configured type runs as its own pair of searches.
@@ -1244,12 +1263,23 @@ function cmd_gather() {
     || die "${E_INVALID}" "cannot read the repository ${repo}"
   [[ "$(jq -r '.data.repository.isArchived' "${TEMP_DIR}/repository.json")" != true ]] \
     || die "${E_INVALID}" "${repo} is archived; its bugs cannot change, so there is nothing to sync"
+  local default_branch
+  default_branch="$(jq -r '.data.repository.defaultBranchRef.name // empty' "${TEMP_DIR}/repository.json")"
+  [[ -n "${default_branch}" ]] || die "${E_INVALID}" "${repo} has no default branch"
 
   local search_file search_name kind
   printf '[]' > "${TEMP_DIR}/searches.json"
+  # Every open pull request must arrive, or a bug it carries would read as not
+  # in progress. GitHub search stops at 1000 results and then reports no
+  # further page, so a merged search that returned fewer than it counted was
+  # cut short.
+  jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls-open.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
+  jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/pulls-merged.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the search for your merged pull requests came back without a result count"
+  jq -e '([.[] | .data.search.nodes | length] | add // 0) >= .[0].data.search.issueCount' "${TEMP_DIR}/pulls-merged.json" > /dev/null \
+    || die "${E_INVALID}" "the search for your merged pull requests was cut short, so the areas you worked in would be missing some files"
   for kind in open merged; do
-    jq -e '([.[] | .data.search.nodes | length] | add // 0) >= (.[0].data.search.issueCount // 0)' "${TEMP_DIR}/pulls-${kind}.json" > /dev/null \
-      || die "${E_INVALID}" "the search for ${kind} pull requests was cut short, so a bug or an area you work in would miss some of them"
     jq -n --slurpfile pages "${TEMP_DIR}/pulls-${kind}.json" "\$pages[0] as \$pages | ${PULLS_FILTER}" > "${TEMP_DIR}/pulls-${kind}.list"
   done
   jq -n --slurpfile open "${TEMP_DIR}/pulls-open.list" --slurpfile merged "${TEMP_DIR}/pulls-merged.list" \
@@ -1262,7 +1292,7 @@ function cmd_gather() {
   if jq -e '.data.repository.refs.pageInfo.hasNextPage == true' "${TEMP_DIR}/repository.json" > /dev/null; then
     printf '%s: GitHub listed only the 100 most recently committed branches, so an older branch past the cut marks no bug\n' "${SCRIPT_NAME}" >&2
   fi
-  gather_local "${repo}" "$(jq -r '.data.repository.defaultBranchRef.name' "${TEMP_DIR}/repository.json")" "${work_since}"
+  gather_local "${repo}" "${default_branch}" "${work_since}"
 
   for search_file in "${TEMP_DIR}"/search-*.json; do
     search_name="$(basename -- "${search_file}" .json)"
@@ -1284,7 +1314,7 @@ function cmd_gather() {
   local truncated
   truncated="$(jq -r '.[] | select(.truncated | length > 0) | "  - #\(.number): \(.truncated | join(" and "))"' "${TEMP_DIR}/bugs.json")"
   if [[ -n "${truncated}" ]]; then
-    printf '%s: GitHub cut these lists short, so a label or a fix past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${truncated}" >&2
+    printf '%s: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:\n%s\n' "${SCRIPT_NAME}" "${truncated}" >&2
   fi
 
   if [[ "${has_zenhub}" == true ]]; then
@@ -1308,6 +1338,9 @@ function cmd_gather() {
     def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
     "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(counted(.counts.open; "open bug"; "open bugs")), \(.counts.withFix) with an open fix, \(.counts.inProgress) in progress, \(.counts.outsideReporters) from outside reporters; \(.counts.closed) closed in the last \(.recentDays) days"
   ' "${output_file}"
+  if [[ -s "${TEMP_DIR}/local-notice.txt" ]]; then
+    cat -- "${TEMP_DIR}/local-notice.txt" >&2
+  fi
   report_moved "${config}" "${output_file}"
 }
 

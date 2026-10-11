@@ -1,13 +1,110 @@
 [
   {
     "data": {
-      "search": {
-        "issueCount": 2,
-        "pageInfo": { "hasNextPage": false, "endCursor": null },
-        "nodes": [
-          { "__typename": "PullRequest", "number": 40, "title": "Fix for the bug", "url": "https://github.com/acme/widgets/pull/40", "state": "OPEN", "isDraft": false, "createdAt": "2026-10-09T10:00:00Z", "updatedAt": "2026-10-14T15:00:00Z", "mergedAt": null, "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN", "headRefName": "16-election-day", "reviewDecision": "APPROVED", "reviewRequests": { "totalCount": 0 }, "latestReviews": { "nodes": [{ "submittedAt": "2026-10-14T16:00:00Z" }] }, "author": { "login": "alice" }, "commits": { "nodes": [{ "commit": { "statusCheckRollup": { "state": "SUCCESS" } } }] }, "files": { "pageInfo": { "hasNextPage": false }, "nodes": [{ "path": "src/elections/dates.js" }, { "path": "CHANGELOG.md" }] } },
-          { "__typename": "PullRequest", "number": 44, "title": "Keep sessions alive across Auth0 refreshes", "url": "https://github.com/acme/widgets/pull/44", "state": "OPEN", "isDraft": false, "createdAt": "2026-10-13T10:00:00Z", "updatedAt": "2026-10-14T10:00:00Z", "mergedAt": null, "mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN", "headRefName": "17-auth0-signouts", "reviewDecision": "REVIEW_REQUIRED", "reviewRequests": { "totalCount": 0 }, "latestReviews": { "nodes": [] }, "author": { "login": "alice" }, "commits": { "nodes": [{ "commit": { "statusCheckRollup": { "state": "SUCCESS" } } }] }, "files": { "pageInfo": { "hasNextPage": false }, "nodes": [{ "path": "src/auth/session.js" }] } }
-        ]
+      "repository": {
+        "pullRequests": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": null
+          },
+          "nodes": [
+            {
+              "number": 40,
+              "title": "Fix for the bug",
+              "url": "https://github.com/acme/widgets/pull/40",
+              "state": "OPEN",
+              "isDraft": false,
+              "createdAt": "2026-10-09T10:00:00Z",
+              "updatedAt": "2026-10-14T15:00:00Z",
+              "mergedAt": null,
+              "mergeable": "MERGEABLE",
+              "mergeStateStatus": "CLEAN",
+              "headRefName": "16-election-day",
+              "reviewDecision": "APPROVED",
+              "reviewRequests": {
+                "totalCount": 0
+              },
+              "latestReviews": {
+                "nodes": [
+                  {
+                    "submittedAt": "2026-10-14T16:00:00Z"
+                  }
+                ]
+              },
+              "author": {
+                "login": "alice"
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "SUCCESS"
+                      }
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "src/elections/dates.js"
+                  },
+                  {
+                    "path": "CHANGELOG.md"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 44,
+              "title": "Keep sessions alive across Auth0 refreshes",
+              "url": "https://github.com/acme/widgets/pull/44",
+              "state": "OPEN",
+              "isDraft": false,
+              "createdAt": "2026-10-13T10:00:00Z",
+              "updatedAt": "2026-10-14T10:00:00Z",
+              "mergedAt": null,
+              "mergeable": "UNKNOWN",
+              "mergeStateStatus": "UNKNOWN",
+              "headRefName": "17-auth0-signouts",
+              "reviewDecision": "REVIEW_REQUIRED",
+              "reviewRequests": {
+                "totalCount": 0
+              },
+              "latestReviews": {
+                "nodes": []
+              },
+              "author": {
+                "login": "alice"
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "SUCCESS"
+                      }
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "src/auth/session.js"
+                  }
+                ]
+              }
+            }
+          ]
+        }
       }
     }
   }

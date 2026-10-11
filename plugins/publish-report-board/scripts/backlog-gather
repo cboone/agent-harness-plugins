@@ -443,9 +443,8 @@ function origin_is() {
 }
 
 # Writes TEMP_DIR/branches.json, one entry per local branch and origin branch,
-# and TEMP_DIR/active.tsv, the files the viewer changed on open branches. A
-# branch with no commits beyond the default branch carries no unmerged work,
-# so it counts only while a worktree has it checked out.
+# with whether a worktree has it checked out, and TEMP_DIR/active.tsv, the
+# files changed on the viewer's branches with commits beyond the default one.
 function gather_branches() {
   local default="${1}"
   local email="${2}"
@@ -481,9 +480,9 @@ function gather_branches() {
       worktree=true
     fi
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${name}" "${is_local}" "${worktree}" "${at}" "${ahead}" "${behind}" >> "${TEMP_DIR}/branches.tsv"
-    # Every local branch is the viewer's own work; an origin branch is when
-    # its last commit is.
-    if [[ "${ahead}" -gt 0 ]] && [[ "${is_local}" == true || (-n "${email}" && "$(printf '%s' "${author}" | tr '[:upper:]' '[:lower:]')" == "<$(printf '%s' "${email}" | tr '[:upper:]' '[:lower:]')>") ]]; then
+    # A branch is the viewer's when its last commit is, as bugs-gather
+    # decides it, so a teammate's branch checked out for review is not.
+    if [[ "${ahead}" -gt 0 && -n "${email}" && "$(printf '%s' "${author}" | tr '[:upper:]' '[:lower:]')" == "<$(printf '%s' "${email}" | tr '[:upper:]' '[:lower:]')>" ]]; then
       git diff --name-only "${base}...${ref}" > "${changed_file}" || die "${E_INVALID}" "cannot list the files changed on ${ref}"
       while IFS= read -r path; do
         [[ -n "${path}" ]] && printf '%s\tbranch %s\n' "${path}" "${name}" >> "${TEMP_DIR}/active.tsv"
@@ -616,19 +615,17 @@ function cmd_gather() {
   if [[ -n "${cut_short}" ]]; then
     printf '%s: these pull requests close more than 20 issues, so an issue past the cut misses them:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
   fi
-  cut_short="$(
-    jq -r '.[] | .data.repository.pullRequests.nodes[] | select(.files.pageInfo.hasNextPage == true) | "  - pull request #\(.number)"' "${TEMP_DIR}/pulls.json"
-    jq -r '.[] | .data.search.nodes[] | select(.files.pageInfo.hasNextPage == true) | "  - pull request #\(.number)"' "${TEMP_DIR}/merged.json"
-  )"
+  cut_short="$(jq -r -n --slurpfile pulls "${TEMP_DIR}/pulls.json" --slurpfile merged "${TEMP_DIR}/merged.json" '
+    ($pulls[0][] | .data.repository.pullRequests.nodes[]), ($merged[0][] | .data.search.nodes[])
+    | select(.files.pageInfo.hasNextPage == true) | "  - pull request #\(.number)"')"
   if [[ -n "${cut_short}" ]]; then
     printf '%s: these pull requests change more than 100 files, so affinity reads only the first 100:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
   fi
 
-  jq -r '
+  jq -r "${PROGRESS_DEFS}"'
     def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
-    def stages: ["started", "branch", "draft", "awaiting-review", "needs-author", "ready-to-merge", "close-out"];
     [.issues[] | .progress | select(. != null)] as $all
-    | [stages[] as $s | ([$all[] | select(.stage == $s)] | length) as $n | select($n > 0) | "\($n) \($s)"] as $by_stage
+    | [stage_order[] as $s | ([$all[] | select(.stage == $s)] | length) as $n | select($n > 0) | "\($n) \($s)"] as $by_stage
     | ([$all[] | .flags[]] | group_by(.) | map("\(length) \(.[0])")) as $flags
     | "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(counted(.issues | length; "open issue"; "open issues")); \(if ($by_stage | length) > 0 then $by_stage | join(", ") else "nothing in progress" end)",
       "Flags: \(if ($flags | length) > 0 then $flags | join(", ") else "none" end)",

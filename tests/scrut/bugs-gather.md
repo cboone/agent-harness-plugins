@@ -77,8 +77,8 @@ labels matches any of them, and each issue type runs as its own search.
 
 ```scrut
 $ log="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs STUB_GH_LOG="${log}" gather "${work}/config.json" "${work}/logged.json" > /dev/null && sort "${log}"
+gh api graphql open-pulls owner=acme name=widgets
 gh api graphql pulls q=repo:acme/widgets is:pr author:@me is:merged merged:>=2026-09-15
-gh api graphql pulls q=repo:acme/widgets is:pr is:open
 gh api graphql repository owner=acme name=widgets
 gh api graphql search q=repo:acme/widgets is:issue is:closed closed:>=2026-10-08 label:"bug"
 gh api graphql search q=repo:acme/widgets is:issue is:closed closed:>=2026-10-08 type:"Bug"
@@ -204,6 +204,13 @@ src/deps/axios.js via commit * (glob)
 ```scrut
 $ jq -c '[.checkout, .host]' "${work}/gather.json"
 [false,"testhost"]
+```
+
+It says so once the gather is written, so a gather that stops shows only why.
+
+```scrut
+$ bugs gather "${work}/config.json" "${work}/outside.json" 2>&1 > /dev/null | grep checkout
+bugs-gather: not inside a checkout of acme/widgets, so the gather reads only the branches GitHub holds
 ```
 
 ## People outside the repository count as users, and bots do not
@@ -889,7 +896,7 @@ bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/scored.js
 
 ```scrut
 $ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 12) | .labels.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/labels-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
-bugs-gather: GitHub cut these lists short, so a label or a fix past the cut is missing:
+bugs-gather: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:
   - #12: labels
 exit 0
 ```

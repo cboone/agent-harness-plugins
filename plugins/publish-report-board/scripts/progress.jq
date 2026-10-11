@@ -2,8 +2,8 @@
 # skills/publish-report-board/references/progress-model.md, as jq definitions.
 # backlog-gather and bugs-gather each read this file and put it ahead of their
 # own filters, so an issue reads the same on both boards. Each script turns
-# what it gathered into the shapes these definitions take; the rules live only
-# here.
+# what it gathered into the shapes these definitions take; the derivation
+# rules live only here.
 
 def as_list: if type == "array" then . else [] end;
 # An ISO 8601 time as seconds since the epoch, accepting a fraction and either
@@ -33,7 +33,7 @@ def bot_branch: test("^(dependabot|renovate)/");
 # checkout-4.2.2 and update-to-v9 name nothing.
 def names_issue($n):
   (bot_branch | not)
-  and any(split("/")[]; test("^([a-z]+[-_]|issues?|gh|#)?\($n)([-_]|$)"; "i"));
+  and any(split("/")[]; test("^([a-z]+[-_]|issue|gh|#)?\($n)([-_]|$)"; "i"));
 
 # The stage an open pull request reaches. It takes the shape both gathers
 # build: isDraft, mergeable, reviewDecision, checks (the rollup state),
@@ -100,7 +100,7 @@ def branch_signal:
 # The merged pull requests in $repo that link an open issue, read from the
 # issue as GitHub returns it, each {number, mergedAt, closes}. A closing
 # reference, which includes a manual link, closes it; a cross-reference closes
-# it only with a closing keyword. A manual link that was removed leaves the
+# it only with a closing keyword. GitHub drops a removed manual link from the
 # closing references, so the timeline's connect events are not read.
 def merged_links($repo):
   [(.closedByPullRequestsReferences.nodes | as_list | .[] | . + {closes: true}),
