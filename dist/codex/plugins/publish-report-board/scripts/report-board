@@ -141,6 +141,7 @@ def progress_problems($at):
   if . == null then empty
   elif type != "object" then "\($at): progress must be an object, or null when the issue has no stage"
   else
+    (["stage", "carrier", "signal", "lastActivity", "since", "nextMove", "nextAction", "flags", "host", "extraCarriers"] - keys | .[] | "\($at): progress.\(.) is required, null where the model allows it"),
     check(.stage | IN(stages[]); "\($at): progress.stage must be one of \(stages | join(", "))"),
     check(.carrier | carrier_ok; "\($at): progress.carrier must name exactly one of pr, branch, label, or pipeline"),
     check(.signal | is_text; "\($at): progress.signal is required, the gathered signal in words"),
@@ -163,6 +164,7 @@ def progress_problems($at):
 def affinity_problems($at):
   if type != "object" then "\($at): affinity is required, with owner, kind, tier, and reasons"
   else
+    (["owner", "kind", "tier", "reasons"] - keys | .[] | "\($at): affinity.\(.) is required, null where the model allows it"),
     check(.owner | absent_or(is_text and test("^\\S+$")); "\($at): affinity.owner must be you, a login, unknown, or null"),
     check(.kind | absent_or(IN("explicit", "implicit")); "\($at): affinity.kind must be explicit, implicit, or null"),
     check((.owner == null) == (.kind == null); "\($at): affinity.owner and affinity.kind are both set or both null"),

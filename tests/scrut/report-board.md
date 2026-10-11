@@ -1237,6 +1237,19 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## Progress and affinity carry every field, null where the model allows it
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(107; .progress = (progress("branch"; {"branch": "fix/107"}) | del(.since, .host)) | .affinity |= del(.tier))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: progress.since is required, null where the model allows it
+  - #107: progress.host is required, null where the model allows it
+  - #107: affinity.tier is required, null where the model allows it
+  - #107: implicit affinity needs a tier of 1, 2, or 3
+  - startNow #101: lane L1 already has #107 in progress (branch on fix/107), and a serial lane runs one branch at a time
+[1]
+```
+
 ## Every issue carries progress
 
 An issue with no stage carries null, so data that skipped `backlog-gather
