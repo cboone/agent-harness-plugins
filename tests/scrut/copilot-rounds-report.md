@@ -6,14 +6,14 @@ The fixture holds two search pages for a search that matched four pull requests.
 
 ## Setup
 
-`stubbed` runs the script with `gh` answered by the stub, and `report` adds the owners, range and author of the baseline analysis. `variant` writes a copy of the fixture changed by a jq filter to `${work}/variant.json`, and `replay` reruns the script with `--input` on that file, whichever case wrote it.
+`stubbed` runs the script with `gh` answered by the stub from the fixture directory, or from `STUB_GH_DIR` when a case sets it, and `report` adds the owners, range and author of the baseline analysis. `variant` writes a copy of the fixture changed by a jq filter to `${work}/variant.json`, and `replay` reruns the script with `--input` on that file, whichever case wrote it.
 
 ```scrut {fail_fast: true}
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && mkdir "${work}/bin" "${work}/tmp" && ln -s "${GH_STUB_BIN}" "${work}/bin/gh" \
 >   && pages="${COPILOT_ROUNDS_REPORT_DATA_DIR}/graphql/copilot-rounds.json" \
 >   && args=(--owner cboone --owner client-org --since 2026-09-29 --until 2026-10-09 --author cboone) \
->   && function stubbed() { PATH="${work}/bin:${PATH}" STUB_GH_DIR="${COPILOT_ROUNDS_REPORT_DATA_DIR}" "${COPILOT_ROUNDS_REPORT_BIN}" "$@"; } \
+>   && function stubbed() { PATH="${work}/bin:${PATH}" STUB_GH_DIR="${STUB_GH_DIR:-${COPILOT_ROUNDS_REPORT_DATA_DIR}}" "${COPILOT_ROUNDS_REPORT_BIN}" "$@"; } \
 >   && function report() { stubbed "${args[@]}" "$@"; } \
 >   && function variant() { jq "${1}" "${pages}" > "${work}/variant.json"; } \
 >   && function replay() { "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 --input "${work}/variant.json"; } \
@@ -62,6 +62,16 @@ Pull requests matched: 4. With a Copilot round: 3. Copilot notices in place of a
 | cboone/tool#1 | 4 | 3 | Approval recommended |
 | client-org/app#8 | 2 | 1 | Needs a closer look |
 | client-org/app#7 | 1 | 0 | Approval recommended |
+```
+
+## Previously missed findings count toward severity
+
+With the previously missed finding rated High, round 3's High share is all of it.
+
+```scrut
+$ variant '.[1].data.search.nodes[0].reviews.nodes[3].body |= sub("Medium severity"; "High severity")' \
+>   && replay | grep '^| 3 '
+| 3 | 1 | 1 | 1.0 | 100% of 1 | 0 |
 ```
 
 ## Without client owners, only the total row is reported
@@ -205,12 +215,8 @@ copilot-rounds-report: warning: 2 Copilot rounds list findings or badges the rep
 A failed search stops the report rather than printing an empty one, and leaves no temporary files behind.
 
 ```scrut
-$ STUB_GH_GRAPHQL_FAIL=copilot-rounds TMPDIR="${work}/tmp" report 2>&1 | tail -n 1
+$ (set -o pipefail; STUB_GH_GRAPHQL_FAIL=copilot-rounds TMPDIR="${work}/tmp" report 2>&1 | tail -n 1)
 copilot-rounds-report: could not search for pull requests
-```
-
-```scrut
-$ STUB_GH_GRAPHQL_FAIL=copilot-rounds TMPDIR="${work}/tmp" report > /dev/null 2>&1
 [1]
 ```
 
@@ -268,12 +274,8 @@ copilot-rounds-report: expected a non-empty array of search pages
 ```
 
 ```scrut
-$ printf '[{"data":' > "${work}/variant.json" && replay 2>&1 | tail -n 1
+$ (set -o pipefail; printf '[{"data":' > "${work}/variant.json" && replay 2>&1 | tail -n 1)
 copilot-rounds-report: the search response is not valid JSON
-```
-
-```scrut
-$ printf '[{"data":' > "${work}/variant.json" && replay > /dev/null 2>&1
 [1]
 ```
 
@@ -318,7 +320,7 @@ A fetched response is saved before it is checked, so a failed search can be insp
 ```scrut
 $ mkdir -p "${work}/errors/graphql" \
 >   && jq '.[1].errors = [{"message": "Something went wrong"}]' "${pages}" > "${work}/errors/graphql/copilot-rounds.json" \
->   && PATH="${work}/bin:${PATH}" STUB_GH_DIR="${work}/errors" "${COPILOT_ROUNDS_REPORT_BIN}" "${args[@]}" --save "${work}/failed.json" 2>&1; \
+>   && STUB_GH_DIR="${work}/errors" report --save "${work}/failed.json" 2>&1; \
 >   jq -r '.[1].errors[0].message' "${work}/failed.json"
 copilot-rounds-report: a search page holds GraphQL errors: Something went wrong
 Something went wrong
@@ -415,11 +417,7 @@ copilot-rounds-report: --author needs a value
 ```
 
 ```scrut
-$ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 extra 2>&1 | tail -n 1
+$ (set -o pipefail; "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 extra 2>&1 | tail -n 1)
 copilot-rounds-report: unexpected argument 'extra'
-```
-
-```scrut
-$ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 extra > /dev/null 2>&1
 [1]
 ```
