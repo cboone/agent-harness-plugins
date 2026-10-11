@@ -1014,9 +1014,10 @@ function read_stylesheet() {
 }
 
 # Exits unless the styles placeholder appears once, alone in a style element:
-# only whitespace between it and the opening tag's ">" and the closing tag, and
-# an opening tag whose attributes hold no "<" or ">" and balanced quotes. Tag
-# names match in any case, as HTML reads them.
+# only whitespace between it and the opening tag's ">" and the closing tag, an
+# opening tag whose attributes hold no "<" or ">" and balanced quotes, and no
+# HTML comment left open before it. Tag names match in any case, as HTML reads
+# them.
 function require_styles_placeholder() {
   local page_file="${1}"
   local text="${2}"
@@ -1042,6 +1043,7 @@ function require_styles_placeholder() {
   if [[ "${before}" != *"<style"* || "${after}" != *"${STYLE_CLOSE}"* || "${tag}" != *">" ]] \
     || [[ "${tag%>}" != "" && "${tag%>}" != [[:space:]]* ]] \
     || [[ "${tag%>}" == *[\<\>]* || -n "${gap//[[:space:]]/}" || "${closed}" != [[:space:]\>]* ]] \
+    || [[ "${before}" == *"<!--"* && "${before##*<!--}" != *"-->"* ]] \
     || ((${#double_quotes} % 2 || ${#single_quotes} % 2)); then
     die "${E_INVALID}" "${page_file} must hold the ${STYLES_PLACEHOLDER} placeholder alone in a style element"
   fi
