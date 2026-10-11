@@ -769,8 +769,15 @@ def work_text:
      else tojson end) as $carrier
   | "\(stage_of) on \($carrier)";
 def flags_of: (.progress | if type == "object" then (.flags | if type == "array" then map(tostring) else [] end) else [] end);
-def owner_of: (.affinity | if type == "object" then .owner else null end);
-def owner_text: if . == null then "none" elif . == "you" or . == "unknown" then tostring else "@\(.)" end;
+def affinity_of:
+  (.affinity | if type == "object" and .owner != null
+    then {owner, kind, tier, reasons: (.reasons | if type == "array" then map(tostring) else [] end)}
+    else null end);
+def owner_text: if . == "you" or . == "unknown" then tostring else "@\(.)" end;
+# The owner and how it holds the issue: "you at tier 2" or "@ana explicitly".
+def affinity_text:
+  if . == null then "none"
+  else (.owner | owner_text) + (if .kind == "implicit" and .tier != null then " at tier \(.tier)" elif .kind == "explicit" then " explicitly" else "" end) end;
 def legacy_board: (.schemaVersion // null) == null;
 def progress_entries($pairs; describe):
   entry("Started"; [$pairs[] | select((.now | stage_of) != null and (.was | stage_of) == null) | "\(.now | describe) (\(.now | work_text))"]),
@@ -778,7 +785,9 @@ def progress_entries($pairs; describe):
   entry("No longer in progress"; [$pairs[] | select((.now | stage_of) == null and (.was | stage_of) != null) | "\(.now | describe) (was \(.was | stage_of))"]),
   entry("Flags raised"; [$pairs[] | ((.now | flags_of) - (.was | flags_of)) as $f | select(($f | length) > 0) | "\(.now | describe) (\($f | join(", ")))"]),
   entry("Flags cleared"; [$pairs[] | ((.was | flags_of) - (.now | flags_of)) as $f | select(($f | length) > 0) | "\(.now | describe) (\($f | join(", ")))"]),
-  entry("Affinity changed"; [$pairs[] | (.now | owner_of) as $n | (.was | owner_of) as $w | select($n != $w) | "\(.now | describe) (\($w | owner_text) to \($n | owner_text))"]);
+  entry("Affinity changed"; [$pairs[] | (.now | affinity_of) as $n | (.was | affinity_of) as $w | select($n != $w)
+    | ($w | affinity_text) as $wt | ($n | affinity_text) as $nt
+    | "\(.now | describe) (\(if $wt != $nt then "\($wt) to \($nt)" else "\($nt), new reasons" end))"]);
 def progress_report($old; $pairs; describe):
   if $old | legacy_board then "- Progress model changed: stage moves are reported from the next sync."
   else progress_entries($pairs; describe) end;

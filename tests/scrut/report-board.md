@@ -1270,7 +1270,19 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DAT
 - No longer in progress: #105 docs: fix broken links (was branch)
 - Flags raised: #101 parser: replace the tokenizer (behind)
 - Flags cleared: #105 docs: fix broken links (quiet)
-- Affinity changed: #107 cli: color output (you to none)
+- Affinity changed: #107 cli: color output (you at tier 1 to none)
+```
+
+## Compare reports affinity that changes while the owner stays
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/previous.json" && jq '(.issues[] | select(.number == 107) | .affinity) |= (.tier = 2) | (.issues[] | select(.number == 101) | .affinity) = {owner: "you", kind: "explicit", tier: null, reasons: ["assigned"]}' "${dir}/previous.json" > "${dir}/current.json" && jq '(.issues[] | select(.number == 101) | .affinity) = {owner: "you", kind: "implicit", tier: 1, reasons: ["parser changed"]}' "${dir}/previous.json" > "${dir}/previous-101.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous-101.json" "${dir}/current.json" | grep 'Affinity changed'
+- Affinity changed: #101 parser: replace the tokenizer (you at tier 1 to you explicitly); #107 cli: color output (you at tier 1 to you at tier 2)
+```
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/previous.json" && jq '(.issues[] | select(.number == 107) | .affinity.reasons) = ["changes on feature/colors touch src/cli/**"]' "${dir}/previous.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | grep 'Affinity changed'
+- Affinity changed: #107 cli: color output (you at tier 1, new reasons)
 ```
 
 ## Compare against a board from before the progress model
