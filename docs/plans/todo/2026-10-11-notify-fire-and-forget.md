@@ -68,6 +68,16 @@ Its only remaining use, `--bundle-id`, moves into `notify`.
 - `/bin/bash -n plugins/notify/scripts/notify` (covered by scrut).
 - Manual on macOS: pipe a sample payload to `notify codex-stop` and `cc-question` with real `alerter`; confirm the banner and sound appear, the banner remains in Notification Center, and `pgrep -fl alerter` is empty after about 3 seconds.
 
+### Manual results (2026-10-11)
+
+Run with Homebrew's unpatched `alerter` 26.5 first on `PATH`, ahead of the locally patched build from #454.
+
+- `cc-question`: the banner appeared, one `alerter` was running at 1 second, and none remained at 4 seconds.
+- `codex-stop`: the banner appeared, and no `alerter` remained at 4 seconds.
+- Five `cc-question` alerts from separate sessions fired back to back: all five banners appeared and stayed in Notification Center, and no `alerter` remained at 4 seconds.
+- Alerts fired within the same moment play a single sound. macOS appears to merge the sounds before the stop applies.
+- OpenCode was not checked by hand. Its detached `sh` stop was checked with Bun 1.4.2 and a stub `alerter`.
+
 ## Follow-up
 
 - #454 (locally patched `alerter`) can be revisited once this lands; note it in the PR.
