@@ -314,7 +314,7 @@ $ "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/bugs.json" "$(board_wi
 - Stage moved: #27 Callback returns 500 for invalid logins (draft to awaiting-review)
 - No longer in progress: #12 Token refresh bounces users to the dashboard (was started)
 - Flags raised: #13 Partner pages drop campaigns with null flags (local); #28 Profile form sends a request per keystroke (stale)
-- Affinity changed: #18 A test break blocks the axios security update (@mallory to none)
+- Affinity changed: #18 A test break blocks the axios security update (@mallory explicitly to none)
 ```
 
 ## Compare against a board from before the progress model
