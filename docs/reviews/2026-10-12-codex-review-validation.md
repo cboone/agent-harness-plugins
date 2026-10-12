@@ -31,10 +31,10 @@ A standalone code aspect completed over the full committed, unstaged and untrack
 
 The original restricted test reported a remaining child. Process inspection itself was denied in that environment. With process access enabled, the original fixture stopped; no repository defect was inferred from the restricted result alone. Cleanup now enumerates observed descendants, signals them with TERM, polls for stopped or terminated state, and explicitly reports inspection failure or a bounded-wait expiry as incomplete cancellation.
 
-| Planted defect                                                      | Instrument expected to catch it               | Observed result | Regression coverage                                 |
-| ------------------------------------------------------------------- | --------------------------------------------- | --------------- | --------------------------------------------------- |
-| Omit descendant termination while stopping the parent               | Cancellation process and delayed-write checks | Pending         | `tests/scrut/codex-aspects.md`, stopping the helper |
-| Omit descendant termination and remove the active-process assertion | Delayed-write sentinel check                  | Pending         | Same cancellation case                              |
+| Planted defect                                                      | Instrument expected to catch it               | Observed result                                                                           | Regression coverage                                 |
+| ------------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Omit descendant termination while stopping the parent               | Cancellation process and delayed-write checks | Expected failure: child remained active and delayed write occurred; 72 of 73 cases passed | `tests/scrut/codex-aspects.md`, stopping the helper |
+| Omit descendant termination and remove the active-process assertion | Delayed-write sentinel check                  | Expected failure: delayed-write sentinel existed; 72 of 73 cases passed                   | Same cancellation case                              |
 
 Unobserved descendants and processes created during shutdown remain a limitation. A helper exit is not proof that arbitrary detached work stopped. Incomplete cancellation prevents further edits and a complete review verdict.
 
