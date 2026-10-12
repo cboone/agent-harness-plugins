@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Review Dependabot configuration and triage open Dependabot pull requests, applying configuration fixes or PR actions as approved.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["configuration", "dependabot", "dependencies", "github", "security"],
+  "license": "MIT",
+  "name": "dependabot",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

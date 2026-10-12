@@ -21,7 +21,7 @@ It reads four sources:
 1. **The pull request**: its body, conversation comments, review bodies, and inline review comments.
 1. **Documents**: out-of-scope sections of plans and review documents the branch touches or the work references, and the bodies of the issues the branch addresses.
 
-It then drops what is not really a deferral (hedges, rejected alternatives, concerns fixed later in the work, concerns you declined) and what is already tracked, which it finds through the source's cross-reference timeline and a search of the tracker. It errs toward proposing too little: a missed concern costs one manual `/create-issue`, while a wrong one costs triage.
+It then drops what is not really a deferral (hedges, rejected alternatives, concerns fixed later in the work, concerns you declined) and what is already tracked, which it finds through the source's cross-reference timeline and a search of the tracker. It errs toward proposing too little: a missed concern costs one manual `/use-git:create-issue`, while a wrong one costs triage.
 
 ### The proposal is not optional
 
@@ -29,7 +29,7 @@ Nothing is filed until you have seen the batch. Each proposed issue shows its ti
 
 ### Filing and cross-referencing
 
-Approved issues are filed one at a time, in order. Each body is written to a temporary file, the same pattern [Create Issue](../create-issue/README.md) uses, and checked after creation. Labels come only from those the repository already has, and never from status or automation labels. When disclosure permits it, each body links back to its source pull request or issue, and one summary comment lists the publishable filings. Without a source link, duplicate checks use the destination's published concern and newest-issues listing. The local report retains every filed URL and its destination visibility.
+Approved issues are filed one at a time, in order. Each body is written to a temporary file, the same pattern [Create Issue](../use-git/README.md#create-issue) uses, and checked after creation. Labels come only from those the repository already has, and never from status or automation labels. When disclosure permits it, each body links back to its source pull request or issue, and one summary comment lists the publishable filings. Without a source link, duplicate checks use the destination's published concern and newest-issues listing. The local report retains every filed URL and its destination visibility.
 
 ### Repositories
 
@@ -77,9 +77,9 @@ The write rules (`gh issue create`, `gh issue edit`, and the two comment command
 
 ## See Also
 
-- [Create Issue](../create-issue/README.md): file a single issue; this skill's filing mechanics follow its pattern
+- [Create Issue](../use-git/README.md#create-issue): file a single issue; this skill's filing mechanics follow its pattern
 - [PR](../pr/README.md): open the pull request, listing the filed issues as follow-ups
 - [Review Branch](../review-branch/README.md): its saved review documents are one of the sources read
-- [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): its summary comments record the deferred findings this skill picks up
+- [Resolve Copilot PR Feedback](../monitor-pr/README.md#monitor-prresolve-copilot-feedback): its summary comments record the deferred findings this skill picks up
 - [Address Issue](../address-issue/README.md): work on an issue this skill filed
 - [All plugins](../../README.md)

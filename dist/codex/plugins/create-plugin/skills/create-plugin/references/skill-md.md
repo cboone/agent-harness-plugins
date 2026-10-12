@@ -56,7 +56,7 @@ Every harness routes on this description: `bin/build-codex-marketplace` copies `
 ```yaml
 description: >-
   Merge the base branch into the current branch, resolve conflicts, and push.
-  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
+  Use for "merge main" or "sync with main"; to rebase, use sync-with-main:rebase.
 ```
 
 **Style guide skill:**

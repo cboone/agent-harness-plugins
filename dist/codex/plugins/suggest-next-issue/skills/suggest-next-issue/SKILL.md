@@ -1,15 +1,17 @@
 ---
 name: suggest-next-issue
 description: >-
-  Recommend which open GitHub issue to work on next, with reasoning. Use for
-  "suggest next issue", "what should I work on next", or "prioritize issues", or
-  to find work that can run in parallel or avoids a claimed resource.
+  Give a focused recommendation for the next open GitHub issue, with reasoning.
+  Use for "what should I work on next" or work that avoids claimed resources;
+  for a full backlog board, use publish-report-board.
 argument-hint: "[--label <name>] [--parallel-only] [filters...]"
 ---
 
 # Suggest Next Issue
 
 Analyze open GitHub issues and recommend what to work on next.
+
+Give a focused terminal answer. For a persistent view of the full backlog, lanes, dependencies and work in progress, use the `publish-report-board` skill's backlog-triage board. Both use the shared progress model to distinguish available work from work in progress.
 
 ## Options
 
@@ -75,7 +77,7 @@ If the user specified `--include-prs`, the open pull request list above already 
 
 Also read the repo's README and any roadmap or project documentation to understand project goals.
 
-**Read the exclusive-resource claims.** Some work cannot run in parallel because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `create-worktree` and `address-issue-in-worktree` record those claims in the main worktree's `.claude/worktree-resources.local.json`. Resolve it from the first record of `git worktree list --porcelain -z`, whose `worktree` field is always the main worktree, and open the file with the Read tool:
+**Read the exclusive-resource claims.** Some work cannot run in parallel because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `workmux:create-worktree` and `workmux:start-issue` record those claims in the main worktree's `.claude/worktree-resources.local.json`. Resolve it from the first record of `git worktree list --porcelain -z`, whose `worktree` field is always the main worktree, and open the file with the Read tool:
 
 ```bash
 git worktree list --porcelain -z
@@ -184,7 +186,7 @@ Then, when any resource is claimed, list who holds what: the resource, the branc
 
 ### 6. Offer to Start Work
 
-End with an offer to create a worktree for the chosen issue via the `address-issue-in-worktree` skill. Example:
+End with an offer to create a worktree for the chosen issue via the `workmux:start-issue` skill. Example:
 
 ```text
 Ready to start on one of these? Just say "start issue #N" or pick a number from the list.
@@ -246,7 +248,7 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 **Exclusive resources held:**
 
 - `logic` -- feature/14-improve-notifications, claimed 2026-09-12T18:04:11Z
-- `simulator` -- fix/99-old-thing (stale: that claim no longer matches a live worktree, clear it with `/create-worktree --release-resource simulator`)
+- `simulator` -- fix/99-old-thing (stale: that claim no longer matches a live worktree, clear it with `/workmux:create-worktree --release-resource simulator`)
 
 #9 and #12 both need `logic` for verification, so they are better started once #14 is done.
 

@@ -44,6 +44,6 @@ This skill runs git, GitHub CLI, and Lake commands that trigger permission promp
 ## See Also
 
 - [Write Lean Code](../write-lean-code/README.md): Lean naming, proof, and module conventions
-- [Write Lean Tests](../write-lean-tests/README.md): compile-time API regression test conventions
+- [Write Lean Tests](../write-lean-code/README.md#additional-workflows): compile-time API regression test conventions
 - [Write Formalization Roadmap](../write-formalization-roadmap/README.md): roadmap structure for formalization projects
 - [All plugins](../../README.md)
