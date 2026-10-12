@@ -19,12 +19,12 @@ This plan is the integration record for work that spans this repository and a pr
 
 ## Work items
 
-| Item                                | Where                  | Status                         |
-| ----------------------------------- | ---------------------- | ------------------------------ |
-| Sound-set selection in notify, #595 | this repository        | implemented locally; no PR yet |
-| Catalog entry for the chime set     | private catalog        | merged                         |
-| Chime generation and install        | private generation lab | installed; PR open             |
-| Set `NOTIFY_SOUND_SET`              | dotfiles               | open                           |
+| Item                                | Where                  | Status                                        |
+| ----------------------------------- | ---------------------- | --------------------------------------------- |
+| Sound-set selection in notify, #595 | this repository        | implemented locally; no PR yet                |
+| Catalog entry for the chime set     | private catalog        | merged                                        |
+| Chime generation and install        | private generation lab | installed; PR open                            |
+| Set `NOTIFY_SOUND_SET`              | dotfiles               | committed; takes effect once #595 is released |
 
 ## Sequencing
 
