@@ -228,7 +228,7 @@ Invoke the `sync-with-main:merge` skill:
 sync-with-main:merge
 
 Parent continuation:
-- Caller: monitor-pr
+- Caller: monitor-pr:monitor
 - Resume target: Step 3, take a fresh state snapshot.
 - On clean merge and push: Continue immediately to Step 3 without asking the user for confirmation.
 - On conflicts requiring a decision, or on any question raised: Stop the watch and escalate per Step 9.
@@ -266,7 +266,7 @@ gh run view <run-id> --log-failed
   lint-and-fix --no-push
 
   Parent continuation:
-  - Caller: monitor-pr
+  - Caller: monitor-pr:monitor
   - Resume target: Step 6c, push the fix, then Step 3, take a fresh state snapshot.
   - On lint success: Continue immediately to Step 6c without asking the user for confirmation.
   - On lint failure or skipped required lint work: Stop the watch and escalate per Step 9.
@@ -342,7 +342,7 @@ Invoke the `monitor-pr:resolve-copilot-feedback` skill:
 monitor-pr:resolve-copilot-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id>
 
 Parent continuation:
-- Caller: monitor-pr
+- Caller: monitor-pr:monitor
 - Resume target: Step 3, take a fresh state snapshot.
 - On Completed or No unresolved Copilot feedback: Return the final summary comment URL, its Reviews read line and any originating review URLs, then continue immediately to Step 3 without asking the user for confirmation.
 - On Partial or Failed: Stop the watch and escalate per Step 9, unless a failure row names REVIEW_ID as a Copilot notice; then reclassify it as a notice per Step 3 and continue at Step 4.

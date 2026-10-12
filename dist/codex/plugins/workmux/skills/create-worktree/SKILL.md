@@ -3,7 +3,7 @@ name: create-worktree
 description: >-
   Create a worktree, branch, and tmux window with workmux for an issue or task.
   Use for "create worktree" or "spin up a worktree", or to list or release
-  resource claims; to plan an issue there, use address-issue-in-worktree.
+  resource claims; to plan an issue there, use workmux:start-issue.
 argument-hint: "<issue-number...|description> [--issue <n>...|--no-issue] [--branch <name>] [--base <branch>] [--resource <name>] [--fan-out|--each|--separate] | --list-resources | --release-resource <name>"
 ---
 
@@ -229,7 +229,7 @@ These show the path form only. The runnable invocations, with their arguments, a
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
-**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the scripts with `**/create-worktree/**/scripts/compose-issue-prompt`, `**/create-worktree/**/scripts/launch-workmux` and `**/create-worktree/**/scripts/manage-resource-claims`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use those absolute paths for the rest of the session.
+**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the scripts with `**/workmux/**/scripts/compose-issue-prompt`, `**/workmux/**/scripts/launch-workmux` and `**/workmux/**/scripts/manage-resource-claims`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use those absolute paths for the rest of the session.
 
 In the examples below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launch-workmux` are shorthand for the full **quoted paths** shown above.
 

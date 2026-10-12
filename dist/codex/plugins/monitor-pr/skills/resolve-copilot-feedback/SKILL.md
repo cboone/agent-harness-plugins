@@ -45,7 +45,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" fetch OWNER REPO PR
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
-**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/resolve-copilot-pr-feedback/**/scripts/resolve-copilot-threads`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
+**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/monitor-pr/**/scripts/resolve-copilot-threads`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
 
 The examples below abbreviate that path to just `resolve-copilot-threads` for readability. They are not literal commands: expand the abbreviation when you run one, so every invocation is `bash`, then the **double-quoted** absolute path, then the arguments shown.
 
@@ -410,7 +410,7 @@ This step prevents CI failures from lint issues introduced while resolving feedb
    lint-and-fix --no-push
 
    Parent continuation:
-   - Caller: resolve-copilot-pr-feedback
+   - Caller: monitor-pr:resolve-copilot-feedback
    - Resume target: Step 6, push changes, re-fetch Copilot threads, then Step 7 summary comment.
    - On lint success: Continue immediately to Step 6 without asking the user for confirmation.
    - On lint failure or skipped required lint work: Record a workflow failure, skip Step 6 push and verification, then continue directly to the required terminal summary path in Step 7 because PR context exists.
