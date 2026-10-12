@@ -10,7 +10,7 @@ On ntfy.sh, a topic is public to anyone who knows its name, so the name works li
 printf 'agent-%s\n' "$(openssl rand -hex 12)"
 ```
 
-A self-hosted ntfy server with access control can use any name, protected by an access token instead.
+On a self-hosted server with access control, the name need not be random, because account permissions protect the topic. It still has to be 1 to 64 letters, digits, underscores or hyphens.
 
 ## 2. Subscribe on the phone
 

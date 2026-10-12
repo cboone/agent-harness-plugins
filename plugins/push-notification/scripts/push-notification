@@ -134,10 +134,10 @@ function cleanup() {
   fi
 }
 
-# Prints the permission bits of a file, with GNU stat first, because BSD stat
-# has no -c.
+# Prints the permission bits of a file, following a symlink to the file it
+# names, with GNU stat first, because BSD stat has no -c.
 function file_mode() {
-  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}"
+  stat -L -c '%a' "${1}" 2> /dev/null || stat -L -f '%Lp' "${1}"
 }
 
 function is_config_key() {

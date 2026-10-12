@@ -136,6 +136,18 @@ $ printf '%s\n' 'NTFY_SERVER=https://ntfy.example.com' | write_config 644
 ready: yes
 ```
 
+A config file reached through a symlink is checked by the file it names, so
+a link to a private file is accepted.
+
+```scrut
+$ (umask 077 && printf '%s\n' 'NTFY_TOPIC=linked-topic' > "${work}/linked-config")
+> mkdir -p "${work}/via-link/push-notification"
+> ln -s "${work}/linked-config" "${work}/via-link/push-notification/config"
+> pn XDG_CONFIG_HOME="${work}/via-link" check | grep -e '^topic' -e '^ready'
+topic: set (config)
+ready: yes
+```
+
 ## Unknown keys and malformed lines are rejected with their line number
 
 ```scrut
@@ -398,6 +410,16 @@ curl: (22) The requested URL returned error: 401
 ```scrut
 $ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
 0
+```
+
+A transport failure is never a confirmation, even when a valid confirmation
+arrived before the connection failed.
+
+```scrut
+$ pn STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='{"id":"m1","event":"message","topic":"sample-topic"}' send --title Done 2>&1
+push-notification: ntfy did not confirm the notification: {"id":"m1","event":"message","topic":"(topic hidden)"}
+curl: (22) The requested URL returned error: 401
+[1]
 ```
 
 A failure body that echoes the topic or token back has both replaced before
