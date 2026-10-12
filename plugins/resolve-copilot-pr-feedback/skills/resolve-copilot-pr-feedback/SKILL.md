@@ -309,7 +309,7 @@ Resolve a thread only when its handling is complete: Nitpick, Outdated and Defer
 
 ### 4. Handle Each Category
 
-Before the first edit, confirm that the required `lint-and-fix` and `review-anti-patterns` skills are available. If either is missing, record a workflow-level failure naming it and its install command (`/plugin install NAME@agent-harness-plugins` in Claude Code or `codex plugin add NAME@agent-harness-plugins` in Codex), and go to step 9 before changing anything. Then record `git rev-parse HEAD` as `FIX_BASE`. Steps 5 to 7 run only when **the run has changed files**: `git diff --quiet FIX_BASE --` exits nonzero or `git status --porcelain` prints anything. The run commits as it goes, so a clean working tree alone does not mean nothing changed. When nothing changed, go straight to step 8.
+Before the first edit, confirm that the required `lint-and-fix` and `review-anti-patterns` skills are available. If either is missing, record a workflow-level failure naming it and its install command (`/plugin install NAME@agent-harness-plugins` in Claude Code or `codex plugin add NAME@agent-harness-plugins` in Codex), and go to step 9 before changing anything. Do the same, naming the files, when `git status --porcelain` prints anything: `lint-and-fix` commits every modified file, so work already in the tree would be committed and pushed as this run's. Then record `git rev-parse HEAD` as `FIX_BASE`. Steps 5 to 7 run only when **the run has changed files**: `git diff --quiet FIX_BASE --` exits nonzero or `git status --porcelain` prints anything. The run commits as it goes, so a clean working tree alone does not mean nothing changed. When nothing changed, go straight to step 8.
 
 #### Nitpicks (`[nitpick]` prefix)
 
@@ -436,7 +436,7 @@ Parent continuation:
 
 1. **Review the fix range.** Record `git rev-parse HEAD` as `REVIEWED_HEAD`, then invoke the `review-anti-patterns` skill with `RANGE` set to `FIX_BASE..REVIEWED_HEAD`.
 1. **Act on each Important finding.** Fix the real ones as Valid Concerns items 3 to 6 describe, fixing the class and committing; these findings have no thread to resolve. A finding that a check fixed more than once should become an allowlist or structural parse is a sibling chain: handle it per [Sibling Chains](#sibling-chains) instead of implementing it. Decline a finding only with a rationale, such as one outside the pull request's stated scope or threat model. Nits are listed, not fixed.
-1. **Record the review** for step 9's `### Fix review` section. A review that returns `complete: false` is not a failure; what it did not cover goes in that section.
+1. **Record the review** for step 9's `### Fix review` section. A review whose `not_reviewed` lists a file changed in its range leaves that file unreviewed: record it as a standing Important finding, which step 8's push gate holds. Anything else a `complete: false` review did not cover goes in that section without blocking.
 
 ### 6. Sweep for Consistency
 
@@ -461,10 +461,10 @@ Parent continuation:
 ### 8. Close, Push and Verify
 
 1. **Closing review.** When `git diff --no-ext-diff --no-textconv REVIEWED_HEAD` shows anything beyond formatting and whitespace, invoke the `review-anti-patterns` skill once more with `RANGE` set to `REVIEWED_HEAD..HEAD`. That range holds step 5's fixes, step 6's corrections and lint's commits. Record the review in `### Fix review`, and fix nothing it reports. Do not review a third time.
-1. **Push gate.** Push only when no workflow-level failure is recorded and the closing review left no Important finding standing. Otherwise record each standing finding under `Remaining Required Action` and go to step 9: Valid and Incorrect threads stay open, and the pull request body stays unchanged.
+1. **Push gate.** Push only when no workflow-level failure is recorded and neither review left an Important finding standing. Otherwise record each standing finding under `Remaining Required Action` and go to step 9: Valid and Incorrect threads stay open, and the pull request body stays unchanged.
 1. **Push:** `git push`
 1. **Resolve each Valid or Incorrect thread** whose commit this push carried, using the script.
-1. **Apply the pull request body correction** step 6 prepared, if any, with the tmpfile pattern from [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments), using the `copilot-body-` prefix and `gh pr edit PR_NUMBER --repo OWNER/REPO --body-file TMPFILE`.
+1. **Apply the pull request body correction** step 6 prepared, if any. Read the body again first: if it differs from the body step 6 read, someone edited it since, so leave it unchanged and put the correction under `Remaining Required Action`. Otherwise apply it with the tmpfile pattern from [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments), using the `copilot-body-` prefix and `gh pr edit PR_NUMBER --repo OWNER/REPO --body-file TMPFILE`. A failed edit is a workflow-level failure: keep the corrected body in the local output and under `Remaining Required Action` for a retry.
 1. Re-fetch to confirm all Copilot threads resolved:
 
    ```bash
@@ -478,9 +478,9 @@ Parent continuation:
 1. Determine terminal workflow status and counts:
    - **No unresolved Copilot feedback**: the initial `fetch` returned `[]`, `fetch-reviews` and `audit` both exited successfully, `fetch-reviews` with `--head` returned a Copilot review whose `commitId` is the current `headRefOid` and which step 1d read as a review rather than a notice, every review it returned was read and is listed under `Reviews read`, those reviews stated no concern other than `Previously handled` ones and no-concern text, no review was skipped with a warning, no prior row was carried forward as unsettled, and `audit` reported nothing `uncovered`. Never use this status without having run `fetch-reviews` and `audit` and read the reviews they returned. An empty `fetch-reviews` is not "nothing to process": if Copilot has not reviewed the current head, record a workflow-level failure that says so instead.
    - **Completed**: Every fetched thread, review-body concern, carried-forward row and uncovered item was handled according to its category, `fetch-reviews` and `audit` both exited successfully, every review `fetch-reviews` returned and every review it skipped with a warning was read and is listed under `Reviews read`, a caller's `REVIEW_ID`, if given, is among them, no failed or pending items remain, and any required code changes were pushed. Advisory items do not prevent this status. A failed `audit` is a workflow-level failure, because the items it would have reported went unread.
-   - **Partial**: At least one item was handled, but one or more items, replies, resolutions, tracking items, instruction updates, lint runs, pushes, or verification checks failed or remain pending, or a workflow-level failure was recorded, or a sibling was left `Pending` per Sibling Chains, even when nothing else was handled
+   - **Partial**: At least one item was handled, but one or more items, replies, resolutions, tracking items, instruction updates, lint runs, pushes, pull request body corrections, or verification checks failed or remain pending, or a workflow-level failure was recorded, or a sibling was left `Pending` per Sibling Chains, even when nothing else was handled
    - **Failed**: The workflow could not fetch or process feedback, or no required processing step succeeded. This includes a run whose only Copilot review for the current head is a notice: nothing was reviewed.
-1. Track feedback metrics separately from workflow-level failures. Feedback metrics cover fetched, resolved, pending, failed, deferred, code-change, review-body, uncovered, advisory and previously handled items. Workflow-level failures cover non-thread steps such as instruction updates, follow-up tracking, lint runs, pushes, verification checks, and a Copilot notice or unreadable body in place of a review.
+1. Track feedback metrics separately from workflow-level failures. Feedback metrics cover fetched, resolved, pending, failed, deferred, code-change, review-body, uncovered, advisory and previously handled items. Workflow-level failures cover non-thread steps such as instruction updates, follow-up tracking, lint runs, pushes, pull request body corrections, verification checks, and a Copilot notice or unreadable body in place of a review.
 1. Proceed to step 9 before claiming completion
 
 ### 9. Post PR Summary Comment
