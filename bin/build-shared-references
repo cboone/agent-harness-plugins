@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Copies reference files that skills in more than one plugin read.
+#
+# A skill can read only the files its own plugin ships, so a reference that two
+# plugins share lives in one of them and is copied, byte for byte, into the
+# other. SHARED_REFERENCES lists each source and its copy.
+#
+# Usage:
+#   build-shared-references          write every copy that is missing or stale
+#   build-shared-references --check  report missing or stale copies, write none
+#
+# Every source is checked before anything is written, so a missing source
+# leaves the committed copies untouched. Paths resolve against the current
+# working directory, which must be the repository root.
+set -euo pipefail
+
+# Sort order and messages must not depend on the caller's locale.
+export LC_ALL=C
+
+# Each entry is SOURCE|COPY, both relative to the repository root.
+SHARED_REFERENCES=(
+  "plugins/publish-report-board/skills/publish-report-board/references/progress-model.md|plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md"
+)
+readonly SHARED_REFERENCES
+
+errors=0
+
+function error() {
+  echo "::error::$1"
+  errors=$((errors + 1))
+}
+
+function usage_error() {
+  echo "build-shared-references: $1" >&2
+  echo "Usage: build-shared-references [--check]" >&2
+  exit 2
+}
+
+function main() {
+  local check=false
+  case "${1:-}" in
+    "") ;;
+    --check) check=true ;;
+    *) usage_error "unknown argument '${1}'" ;;
+  esac
+  [[ $# -le 1 ]] || usage_error "expected at most one argument"
+
+  if [[ ! -d plugins ]]; then
+    echo "build-shared-references: no plugins/ directory in $(pwd)" >&2
+    exit 2
+  fi
+
+  local entry source copy written=0
+  for entry in "${SHARED_REFERENCES[@]}"; do
+    source="${entry%%|*}"
+    copy="${entry#*|}"
+    if [[ ! -f "${source}" ]]; then
+      error "Shared reference source '${source}' is missing; restore it, or remove its entry from bin/build-shared-references"
+    elif [[ "${check}" == true ]]; then
+      if [[ ! -f "${copy}" ]]; then
+        error "Shared reference copy '${copy}' is missing; run make build"
+      elif ! cmp -s "${source}" "${copy}"; then
+        error "Shared reference copy '${copy}' does not match its source '${source}'; edit the source, not the copy, and run make build"
+      fi
+    fi
+  done
+
+  if ((errors > 0)); then
+    echo "${errors} shared reference error(s) found."
+    exit 1
+  fi
+  [[ "${check}" == false ]] || return 0
+
+  for entry in "${SHARED_REFERENCES[@]}"; do
+    source="${entry%%|*}"
+    copy="${entry#*|}"
+    if ! cmp -s "${source}" "${copy}"; then
+      mkdir -p "${copy%/*}"
+      cp "${source}" "${copy}"
+      written=$((written + 1))
+    fi
+  done
+
+  echo "Shared references: ${#SHARED_REFERENCES[@]} copied (${written} written)."
+}
+
+main "$@"

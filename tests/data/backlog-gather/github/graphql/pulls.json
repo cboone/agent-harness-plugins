@@ -1,0 +1,405 @@
+[
+  {
+    "data": {
+      "repository": {
+        "pullRequests": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": "p1"
+          },
+          "nodes": [
+            {
+              "number": 40,
+              "title": "Fix #4",
+              "url": "https://github.com/acme/widgets/pull/40",
+              "headRefName": "feature/4-work",
+              "isDraft": true,
+              "reviewDecision": null,
+              "mergeable": "MERGEABLE",
+              "mergeStateStatus": "CLEAN",
+              "createdAt": "2026-10-10T09:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "reviewRequests": {
+                "totalCount": 0
+              },
+              "latestReviews": {
+                "nodes": []
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "SUCCESS"
+                      }
+                    }
+                  }
+                ]
+              },
+              "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 4,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "src/pr40.c"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 50,
+              "title": "Fix #5",
+              "url": "https://github.com/acme/widgets/pull/50",
+              "headRefName": "feature/5-work",
+              "isDraft": false,
+              "reviewDecision": "REVIEW_REQUIRED",
+              "mergeable": "MERGEABLE",
+              "mergeStateStatus": "CLEAN",
+              "createdAt": "2026-10-10T09:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ana"
+              },
+              "reviewRequests": {
+                "totalCount": 0
+              },
+              "latestReviews": {
+                "nodes": []
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "SUCCESS"
+                      }
+                    }
+                  }
+                ]
+              },
+              "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 5,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "docs/guide.md"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 60,
+              "title": "Fix #6",
+              "url": "https://github.com/acme/widgets/pull/60",
+              "headRefName": "feature/6-work",
+              "isDraft": false,
+              "reviewDecision": "REVIEW_REQUIRED",
+              "mergeable": "MERGEABLE",
+              "mergeStateStatus": "CLEAN",
+              "createdAt": "2026-10-10T09:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "reviewRequests": {
+                "totalCount": 1
+              },
+              "latestReviews": {
+                "nodes": []
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "PENDING"
+                      }
+                    }
+                  }
+                ]
+              },
+              "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 6,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "src/pr60.c"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 70,
+              "title": "Fix #7",
+              "url": "https://github.com/acme/widgets/pull/70",
+              "headRefName": "feature/7-work",
+              "isDraft": false,
+              "reviewDecision": null,
+              "mergeable": "MERGEABLE",
+              "mergeStateStatus": "CLEAN",
+              "createdAt": "2026-10-10T09:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "reviewRequests": {
+                "totalCount": 0
+              },
+              "latestReviews": {
+                "nodes": []
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "PENDING"
+                      }
+                    }
+                  }
+                ]
+              },
+              "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 7,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "src/pr70.c"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 80,
+              "title": "Fix #8",
+              "url": "https://github.com/acme/widgets/pull/80",
+              "headRefName": "feature/8-work",
+              "isDraft": false,
+              "reviewDecision": "APPROVED",
+              "mergeable": "CONFLICTING",
+              "mergeStateStatus": "DIRTY",
+              "createdAt": "2026-10-10T09:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "reviewRequests": {
+                "totalCount": 0
+              },
+              "latestReviews": {
+                "nodes": [
+                  {
+                    "submittedAt": "2026-10-15T08:00:00Z"
+                  }
+                ]
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "SUCCESS"
+                      }
+                    }
+                  }
+                ]
+              },
+              "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 8,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "src/pr80.c"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 90,
+              "title": "Fix #9",
+              "url": "https://github.com/acme/widgets/pull/90",
+              "headRefName": "feature/9-work",
+              "isDraft": false,
+              "reviewDecision": "CHANGES_REQUESTED",
+              "mergeable": "MERGEABLE",
+              "mergeStateStatus": "CLEAN",
+              "createdAt": "2026-10-10T09:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "reviewRequests": {
+                "totalCount": 0
+              },
+              "latestReviews": {
+                "nodes": []
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "FAILURE"
+                      }
+                    }
+                  }
+                ]
+              },
+              "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 9,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "src/pr90.c"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 100,
+              "title": "Fix #10",
+              "url": "https://github.com/acme/widgets/pull/100",
+              "headRefName": "fix/10-ready",
+              "isDraft": false,
+              "reviewDecision": "APPROVED",
+              "mergeable": "UNKNOWN",
+              "mergeStateStatus": "BEHIND",
+              "createdAt": "2026-10-10T09:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "reviewRequests": {
+                "totalCount": 0
+              },
+              "latestReviews": {
+                "nodes": []
+              },
+              "commits": {
+                "nodes": [
+                  {
+                    "commit": {
+                      "statusCheckRollup": {
+                        "state": "SUCCESS"
+                      }
+                    }
+                  }
+                ]
+              },
+              "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 13,
+                    "repository": {
+                      "nameWithOwner": "acme/other"
+                    }
+                  }
+                ]
+              },
+              "files": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "path": "src/pr100.c"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

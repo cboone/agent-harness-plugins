@@ -15,7 +15,13 @@
     "reproduced": null,
     "gist": "Bug 10 in one sentence.",
     "nextStep": "Fix bug 10.",
-    "question": null
+    "question": null,
+    "areas": [
+      {
+        "name": "api",
+        "paths": ["src/api/"]
+      }
+    ]
   },
   {
     "number": 11,
@@ -33,7 +39,13 @@
     "reproduced": null,
     "gist": "Bug 11 in one sentence.",
     "nextStep": "Fix bug 11.",
-    "question": null
+    "question": null,
+    "areas": [
+      {
+        "name": "api",
+        "paths": ["src/api/"]
+      }
+    ]
   },
   {
     "number": 12,
@@ -123,7 +135,13 @@
     "reproduced": null,
     "gist": "Bug 16 in one sentence.",
     "nextStep": "Fix bug 16.",
-    "question": null
+    "question": null,
+    "areas": [
+      {
+        "name": "elections",
+        "paths": ["src/elections/**"]
+      }
+    ]
   },
   {
     "number": 17,

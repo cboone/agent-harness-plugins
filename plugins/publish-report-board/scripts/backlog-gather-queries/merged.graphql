@@ -1,0 +1,26 @@
+# One page of a search for the viewer's recently merged pull requests, with
+# the files each changed, for implicit affinity.
+query ($q: String!, $endCursor: String) {
+  search(query: $q, type: ISSUE, first: 50, after: $endCursor) {
+    issueCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      __typename
+      ... on PullRequest {
+        number
+        mergedAt
+        files(first: 100) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            path
+          }
+        }
+      }
+    }
+  }
+}

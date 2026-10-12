@@ -12,6 +12,14 @@
     "extra": ["ZenHub workspace ws123", "closed bugs from the last 7 days"]
   },
   "summary": "Stop the pledge crash first; #11 and #25 expose and lose data on public pages, and #15 is due before the send window opens on 2026-10-20.",
+  "schemaVersion": 2,
+  "affinityIgnored": ["filed"],
+  "areas": [
+    {
+      "name": "auth",
+      "paths": ["src/auth/**"]
+    }
+  ],
   "criticalWarn": 5,
   "readyLimit": 8,
   "triage": [
@@ -96,7 +104,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "production-observed",
@@ -113,7 +120,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 77
+      "score": 77,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 11,
@@ -130,7 +144,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "code-reading",
@@ -147,7 +160,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 87
+      "score": 87,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 12,
@@ -164,7 +184,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": "the In Progress pipeline",
       "assessment": {
         "environment": "production",
         "evidence": "production-observed",
@@ -181,7 +200,27 @@
         "question": null
       },
       "overridden": [],
-      "score": 49
+      "score": 49,
+      "progress": {
+        "stage": "started",
+        "carrier": {
+          "pipeline": "In Progress"
+        },
+        "signal": "the In Progress pipeline",
+        "lastActivity": "2026-10-10T12:00:00Z",
+        "since": null,
+        "nextMove": "author",
+        "nextAction": "open a branch",
+        "flags": [],
+        "host": null,
+        "extraCarriers": []
+      },
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 13,
@@ -198,7 +237,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "unknown",
         "evidence": "code-reading",
@@ -215,7 +253,14 @@
         "question": "Does production hold null flags?"
       },
       "overridden": [],
-      "score": 51
+      "score": 51,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 14,
@@ -232,7 +277,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "user-report",
@@ -249,7 +293,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 80
+      "score": 80,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 15,
@@ -266,7 +317,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "development",
         "evidence": "code-reading",
@@ -283,7 +333,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 49
+      "score": 49,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 16,
@@ -306,7 +363,6 @@
         "checks": "SUCCESS",
         "reviewDecision": "APPROVED"
       },
-      "inProgress": "fix #40",
       "assessment": {
         "environment": "production",
         "evidence": "code-reading",
@@ -323,7 +379,28 @@
         "question": null
       },
       "overridden": [],
-      "score": 94
+      "score": 94,
+      "progress": {
+        "stage": "ready-to-merge",
+        "carrier": {
+          "pr": 40
+        },
+        "signal": "pull request #40, approved, checks passing",
+        "lastActivity": "2026-10-10T12:00:00Z",
+        "since": "2026-10-08T09:00:00Z",
+        "nextMove": "author",
+        "nextAction": "merge it",
+        "flags": [],
+        "host": null,
+        "extraCarriers": []
+      },
+      "affinity": {
+        "owner": "you",
+        "kind": "implicit",
+        "tier": 1,
+        "reasons": ["changes on fix/16-login touch src/auth/**"]
+      },
+      "areas": ["auth"]
     },
     {
       "number": 17,
@@ -340,7 +417,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "user-report",
@@ -357,7 +433,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 47
+      "score": 47,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 18,
@@ -374,7 +457,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "development",
         "evidence": "reproduced",
@@ -391,7 +473,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 61
+      "score": 61,
+      "progress": null,
+      "affinity": {
+        "owner": "mallory",
+        "kind": "explicit",
+        "tier": null,
+        "reasons": ["assigned"]
+      }
     },
     {
       "number": 19,
@@ -408,7 +497,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "production-observed",
@@ -425,7 +513,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 29
+      "score": 29,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 20,
@@ -442,7 +537,6 @@
       "outsidePeople": 2,
       "reactions": 4,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "unknown",
         "evidence": "user-report",
@@ -459,7 +553,14 @@
         "question": "Which page is wrong?"
       },
       "overridden": [],
-      "score": 55
+      "score": 55,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 21,
@@ -476,7 +577,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "production-observed",
@@ -493,7 +593,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 39
+      "score": 39,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 22,
@@ -510,7 +617,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "development",
         "evidence": "reproduced",
@@ -527,7 +633,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 16
+      "score": 16,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 23,
@@ -544,7 +657,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "unknown",
         "evidence": "unknown",
@@ -561,7 +673,14 @@
         "question": "Is PDF size causing failures?"
       },
       "overridden": [],
-      "score": 19
+      "score": 19,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 24,
@@ -578,7 +697,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "reproduced",
@@ -595,7 +713,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 29
+      "score": 29,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 25,
@@ -612,7 +737,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "user-report",
@@ -629,7 +753,14 @@
         "question": null
       },
       "overridden": ["environment", "evidence"],
-      "score": 80
+      "score": 80,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 26,
@@ -646,7 +777,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "production",
         "evidence": "reproduced",
@@ -663,7 +793,14 @@
         "question": null
       },
       "overridden": [],
-      "score": 26
+      "score": 26,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 27,
@@ -686,7 +823,6 @@
         "checks": null,
         "reviewDecision": null
       },
-      "inProgress": "draft fix #42",
       "assessment": {
         "environment": "production",
         "evidence": "user-report",
@@ -703,7 +839,31 @@
         "question": null
       },
       "overridden": [],
-      "score": 59
+      "score": 59,
+      "progress": {
+        "stage": "draft",
+        "carrier": {
+          "pr": 42
+        },
+        "signal": "pull request #42, draft",
+        "lastActivity": "2026-10-10T12:00:00Z",
+        "since": null,
+        "nextMove": "author",
+        "nextAction": "mark it ready for review",
+        "flags": [],
+        "host": null,
+        "extraCarriers": [
+          {
+            "label": "in progress"
+          }
+        ]
+      },
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 28,
@@ -726,7 +886,6 @@
         "checks": "FAILURE",
         "reviewDecision": null
       },
-      "inProgress": "fix #43",
       "assessment": {
         "environment": "production",
         "evidence": "production-observed",
@@ -743,7 +902,27 @@
         "question": null
       },
       "overridden": [],
-      "score": 38
+      "score": 38,
+      "progress": {
+        "stage": "needs-author",
+        "carrier": {
+          "pr": 43
+        },
+        "signal": "pull request #43, checks failing",
+        "lastActivity": "2026-10-10T12:00:00Z",
+        "since": null,
+        "nextMove": "author",
+        "nextAction": "fix the checks",
+        "flags": [],
+        "host": null,
+        "extraCarriers": []
+      },
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 29,
@@ -760,7 +939,6 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": null,
       "assessment": {
         "environment": "unknown",
         "evidence": "unknown",
@@ -777,7 +955,14 @@
         "question": "What does the epic still hold?"
       },
       "overridden": [],
-      "score": 19
+      "score": 19,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     }
   ],
   "critical": [
@@ -1011,7 +1196,7 @@
   "ready": [
     {
       "item": 16,
-      "group": "ship",
+      "group": "ready-to-merge",
       "why": "in progress",
       "signals": [
         {
@@ -1067,7 +1252,7 @@
     },
     {
       "item": 27,
-      "group": "in-progress",
+      "group": "draft",
       "why": "in progress",
       "signals": [
         {
@@ -1136,7 +1321,7 @@
     },
     {
       "item": 28,
-      "group": "review",
+      "group": "needs-author",
       "why": "in progress",
       "signals": [
         {

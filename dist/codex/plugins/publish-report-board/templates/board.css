@@ -26,6 +26,7 @@
   --bar-blocked: #e4e4e0;
   --hatch: rgb(27 28 30 / 28%);
   --hit: #f6e2d3;
+  --stage-wait: #a8430b;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -51,6 +52,7 @@
     --bar-blocked: #22262c;
     --hatch: rgb(233 236 240 / 26%);
     --hit: #2b2418;
+    --stage-wait: #f2b45a;
   }
 }
 
@@ -76,6 +78,7 @@
   --bar-blocked: #22262c;
   --hatch: rgb(233 236 240 / 26%);
   --hit: #2b2418;
+  --stage-wait: #f2b45a;
 }
 
 *,
@@ -248,6 +251,128 @@ a:focus-visible {
 
 a.tag:hover {
   text-decoration: underline;
+}
+
+/* Each stage has a border form as well as a color, so it reads in grayscale:
+   dashed started, dotted branch, double draft, solid review, hatched needs
+   author, filled ready to merge, struck-through close-out. */
+.stage {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1.5px solid currentColor;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stage--started {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.stage--branch {
+  border-style: dotted;
+  color: var(--body);
+}
+
+.stage--draft {
+  padding: 0 5px;
+  border-style: double;
+  border-width: 3px;
+  color: var(--body);
+}
+
+.stage--awaiting-review {
+  color: var(--stage-wait);
+}
+
+.stage--needs-author {
+  background-image: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, currentColor 22%, transparent) 3px 5px);
+  color: var(--stale);
+}
+
+.stage--ready-to-merge {
+  border-color: var(--fix);
+  background: var(--fix);
+  color: var(--ground);
+}
+
+.stage--close-out {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+a.stage:hover {
+  border-color: currentColor;
+  text-decoration: underline;
+}
+
+a.stage--ready-to-merge:hover {
+  border-color: var(--fix);
+}
+
+.flags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  vertical-align: 1px;
+}
+
+.flag {
+  padding: 0 4px;
+  border: 1px dashed currentColor;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.flag--quiet {
+  color: var(--stage-wait);
+}
+
+.flag--stale,
+.flag--conflict {
+  border-style: solid;
+  color: var(--stale);
+}
+
+.next-action {
+  color: var(--body);
+  font-size: 13.5px;
+}
+
+.affinity {
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.stage-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage-strip a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: none;
+}
+
+.stage-strip .num {
+  font-size: 15px;
 }
 
 /* Header */
@@ -551,10 +676,13 @@ a.tag:hover {
   color: var(--accent);
 }
 
-.fix-line {
+/* The stage, carrier, flags, and next action beside an urgent bug. */
+.progress-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px 10px;
-  background: var(--fix-ground);
-  color: var(--fix);
+  border-left: 3px solid var(--rule);
   font-size: 13px;
 }
 
@@ -580,6 +708,7 @@ a.tag:hover {
 
 .ready-col-head {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--rule);
@@ -608,7 +737,7 @@ a.tag:hover {
 .carrier {
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--fix);
+  color: var(--body);
 }
 
 .more {
@@ -621,6 +750,59 @@ a.tag:hover {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 8px;
+}
+
+/* In flight */
+.flight {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-top: 18px;
+}
+
+.flight-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flight-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+  font-size: inherit;
+}
+
+.flight-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 6px 24px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.flight-row:last-child {
+  border-bottom: none;
+}
+
+.flight-issue {
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.flight-carrier {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.flight-next {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 /* Lane bars */
@@ -827,9 +1009,13 @@ a.tag:hover {
   overflow-wrap: anywhere;
 }
 
-.item-title .tag {
-  margin-left: 8px;
+.item-title .stage {
   vertical-align: 1px;
+}
+
+.item-title .affinity {
+  display: block;
+  margin-top: 2px;
 }
 
 .item-deps {
@@ -1218,6 +1404,10 @@ a.tag:hover {
 
 /* Lane rows stack below 800px, where five columns leave titles too narrow. */
 @media (max-width: 800px) {
+  .flight-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .cols {
     display: none;
   }

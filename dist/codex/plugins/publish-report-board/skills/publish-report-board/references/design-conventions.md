@@ -5,7 +5,7 @@ Boards read as one system because they share one set of design rules. The `backl
 ## Principles
 
 - **Summary before detail.** The masthead, count strip, and summary answer "what do I do next". A reader who stops there still knows.
-- **Rows, not cards.** Content is numbered rows between rules. Nothing sits in a filled box except the one filled count, the lead tier's tags, the fix line, and contended matrix cells.
+- **Rows, not cards.** Content is numbered rows between rules. Nothing sits in a filled box except the one filled count, the lead tier's tags, a ready-to-merge stage tag, and contended matrix cells.
 - **One filled block.** One color fills one count-strip cell and carries through to the ranks and tags of the rows it counts. The accent marks the second tier. Everything else is ink, body, or muted.
 - **State in form as well as color.** Every state a reader acts on has a shape, and color only reinforces it.
 - **The board summarizes; the reader acts in the source.** Every reference links to where it lives.
@@ -35,12 +35,15 @@ Both themes are defined as tokens. Light values sit on `:root`; dark values sit 
 | `--bar-blocked`         | `#e4e4e0`            | `#22262c`            | The ground under a blocked segment's hatch; the soft rule value  |
 | `--hatch`               | 28% ink              | 26% ink              | The 135-degree stripe of a waiting or unfinished shape           |
 | `--hit`                 | `#f6e2d3`            | `#2b2418`            | Ground of a contended matrix cell                                |
+| `--stage-wait`          | `#a8430b`            | `#f2b45a`            | An awaiting-review stage and a quiet flag; the accent's value    |
 
 Every board names the filled block `--primary` and the accent `--accent`, whatever the lead tier is called on the page, such as Critical or Start now. Blue is reserved for focus, except in the dark theme, where the filled block takes the same light blue as the focus ring.
 
 Every text pair a board sets passes 4.5:1 in both themes; the tightest is `--accent` text on `--hit` in the light theme. The focus ring passes 4.5:1 against `--ground`, and at least 4:1 against `--hit` and `--fix-ground`, above the 3:1 a non-text indicator needs. Check a new pairing before using it.
 
-Never add a series hue or another semantic color. `--aging` and the `--bar-*` tokens name roles for colors already in the palette, not new hues. Red (`--stale`) and green (`--fix`) already carry fixed meanings and always appear with words.
+Stages take their color from these tokens and never rely on it alone: ready to merge takes `--fix`, awaiting review `--stage-wait`, needs author `--stale`, and the earlier stages and close-out stay neutral.
+
+Never add a series hue or another semantic color. `--aging`, `--stage-wait`, and the `--bar-*` tokens name roles for colors already in the palette, not new hues. Red (`--stale`) and green (`--fix`) already carry fixed meanings and always appear with words.
 
 ## Type
 
@@ -50,10 +53,11 @@ Never add a series hue or another semantic color. `--aging` and the `--bar-*` to
 
 ## Layout
 
-- **Summary before detail.** A masthead carries an eyebrow label naming the board type and owner, the repository as a large heading, and the sync time, branch, commit, and live age on the right, over a heavy rule. A count strip follows, then one or two sentences of summary, then the sections, most actionable first.
+- **Summary before detail.** A masthead carries an eyebrow label naming the board type and owner, the repository as a large heading, and the sync time, branch, commit, and live age on the right, over a heavy rule. A count strip follows, then a strip of work by stage when any work is under way, then one or two sentences of summary, then the sections, most actionable first.
 - **One filled block in the count strip**, for the count that matters most: Critical on a bugs board, Start now on a backlog board. The other counts stay plain beside it; at most one more colors its label with the accent, as High priority does on a bugs board. A total that frames the others, such as Open bugs, can be muted. Do not color several figures by meaning.
 - **A count-strip cell can hold a fact instead of a count**, such as a date, a ratio, or a state word, set smaller than a count. A fact cell is never filled.
 - **Every section opens with a heading and a one-line note** that says what the section claims, not what it contains. Section names and notes are neutral, without dated time words such as "today" or "this week", which go stale between syncs; "Start now" names an action, not a date.
+- **Work in flight is drawn by stage.** Every issue or bug with progress carries its stage tag, its carrier, its flags, and its next action, and a stage strip under the counts links each stage to its rows. A backlog board lists that work in an In flight section above Start now, grouped by stage, closest to done first and close-out last, as Ready to go orders a bugs board, and keeps each issue in its lane as well, because lane order and capacity depend on it. A bugs board has no separate section: Ready to go groups by stage, and Critical and High priority rows carry the stage beside their facts.
 - **Rows, not cards.** What to act on is a list of numbered rows separated by rules, with the row's main claim as its headline and its supporting facts in a narrow column beside it: the next action on a bugs board, the reasons for the pick on a backlog board. On a bugs board, grouped lists such as Ready to go sit in columns.
 - **A double rule labeled Report** divides what to act on from the reference material below it. The sections sit in a `main` landmark between the header, which holds the masthead, count strip, and summary, and the footer, and the divider carries its label for screen readers, since a separator's own text is not read. A narrative report where nothing ranks, such as an incident brief, drops the filled block and the divider and keeps the rest.
 - **One column of content**, at most 1200 pixels wide with a side gutter of `clamp(16px, 4vw, 48px)`, that reflows to narrower grids at tablet and phone widths: rows stack their side columns beneath them, and the count strip wraps to three columns. Wide tables scroll inside their own container, so the page never scrolls sideways.
@@ -81,7 +85,7 @@ The templates apply it this way:
 - Lane segments that can run now are solid, queued ones are outlined, and blocked ones carry a hatch.
 - An issue with no milestone gets a dashed chip.
 - A soft ordering link gets a dashed underline; a hard one, "waits on" or "unblocks", keeps a solid one.
-- An issue in progress carries an "In progress" tag that names its branch.
+- Each stage has a border form of its own: dashed for started, dotted for a branch, double for a draft, solid for awaiting review, hatched for needs author, filled for ready to merge, and struck through for close-out. A flag is a small dashed mark, solid when it reports stale work or a conflict.
 - Order is numbered only where it is real. Serial lanes number their steps; lanes with no order show a dot.
 - On a bugs board, a Critical row has a filled tag and a High priority row an outlined one; a bug to confirm first carries a dashed tag; a fact nobody has confirmed is italic with a dashed underline, a fact the triage note set carries a dot, and an expired triage entry is struck through and tagged.
 
@@ -95,7 +99,7 @@ Show a key wherever three or more states appear together. Never use soft colored
 
 ## Links and Interaction
 
-Every issue number, milestone, branch, and commit links to its source, including issue numbers written into prose, and the contention matrix links every component it lists. The footprint beside a lane or a pick stays prose, naming components the matrix links. The board summarizes; the reader acts in the source, so every row is one click away from it.
+Every issue number, milestone, branch, pull request, and commit links to its source, as do issue numbers written into prose and the carrier of work in progress when it is a branch or a pull request. The contention matrix links every component it lists. The footprint beside a lane or a pick stays prose, naming components the matrix links. The board summarizes; the reader acts in the source, so every row is one click away from it.
 
 - Links rest on a `--link-rule` underline, muted at 45 percent opacity, that turns `currentColor` on hover. The link text keeps its color.
 - Focus is always visible: a 2-pixel `--focus` outline offset by 2 pixels.
