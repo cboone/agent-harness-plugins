@@ -134,8 +134,8 @@ function cleanup() {
   fi
 }
 
-# Prints the permission bits of a file, following a symlink to the file it
-# names, with GNU stat first, because BSD stat has no -c.
+# Prints a file's permission bits, following a symlink. GNU stat first: BSD
+# stat has no -c.
 function file_mode() {
   stat -L -c '%a' "${1}" 2> /dev/null || stat -L -f '%Lp' "${1}"
 }
@@ -148,14 +148,12 @@ function is_config_key() {
   return 1
 }
 
-# Prints the closest ancestor of a path that exists or is a symlink, broken or
-# not, so a missing default config can be told apart from one hidden behind a
-# file, a broken link or a closed directory.
+# Prints the closest ancestor that exists or is a symlink, broken or not, so a
+# missing config can be told apart from one that cannot be reached.
 function nearest_existing_ancestor() {
   local path="${1}"
   while [[ -n "${path}" && ! -e "${path}" && ! -L "${path}" ]]; do
-    # A relative path runs out of slashes before it runs out of components,
-    # and then the current directory is its last ancestor.
+    # A relative path ends at the current directory.
     [[ "${path}" == */* ]] || {
       path="."
       break
@@ -165,16 +163,13 @@ function nearest_existing_ancestor() {
   printf '%s' "${path:-/}"
 }
 
-# Reads the config file into CONFIG_VALUE_<KEY> globals. Each line is KEY=value,
-# with optional matching quotes around the value; blank lines and lines starting
-# with # are skipped. The file is parsed rather than sourced, so nothing in it
-# runs.
+# Reads KEY=value lines, with optional quotes, into CONFIG_VALUE_<KEY> globals.
+# Parsed, never sourced, so nothing in the file runs.
 function read_config() {
   CONFIG_FILE="${PUSH_NOTIFICATION_CONFIG:-${XDG_CONFIG_HOME:-${HOME}/.config}/push-notification/config}"
   if [[ ! -f "${CONFIG_FILE}" ]]; then
-    # Only a default path that does not exist yet may be skipped. A path named
-    # explicitly that is missing, or any path that exists but cannot be the
-    # file, would otherwise fall back to ntfy.sh without its server or token.
+    # Only a missing default path may be skipped. Anything else would fall back
+    # to ntfy.sh without the server or token the file was meant to hold.
     [[ -z "${PUSH_NOTIFICATION_CONFIG:-}" ]] \
       || die "PUSH_NOTIFICATION_CONFIG names ${CONFIG_FILE}, which is not a file; fix the path or unset it" "${EXIT_NOT_CONFIGURED}"
     if [[ -e "${CONFIG_FILE}" || -L "${CONFIG_FILE}" ]]; then
@@ -218,9 +213,8 @@ function read_config() {
   fi
 }
 
-# Sets SETTING_<KEY> and SOURCE_<KEY> for one key: a non-empty environment
-# variable wins, then the config file, then the default passed as the second
-# argument.
+# Sets SETTING_<KEY> and SOURCE_<KEY>: a non-empty environment variable wins,
+# then the config file, then the default in the second argument.
 function resolve_setting() {
   local key="${1}" default="${2:-}" config_name="CONFIG_VALUE_${1}"
   if [[ -n "${!key:-}" ]]; then
@@ -274,9 +268,8 @@ function print_setting() {
 # ---------------------------------------------------------------------------
 # ntfy backend
 #
-# The topic name is the only thing that guards a topic on a public server, so
-# it is treated like the token: never printed unredacted, and passed to jq through the
-# environment rather than its argument list.
+# The topic name is all that guards a topic on a public server, so it is
+# handled like the token.
 
 function ntfy_server() {
   printf '%s' "${SETTING_NTFY_SERVER%/}"
@@ -308,8 +301,8 @@ function backend_ntfy_status() {
 # may echo them back, such as a partial publish answer or a proxy error.
 function ntfy_redact() {
   local text="${1}" topic="${SETTING_NTFY_TOPIC}" token="${SETTING_NTFY_TOKEN}"
-  # The longer value goes first, so a topic that occurs inside the token, or
-  # the other way round, cannot leave part of the longer one behind.
+  # Longer value first, so a topic inside the token, or the reverse, leaves no
+  # part of either.
   if ((${#topic} > ${#token})); then
     [[ -z "${topic}" ]] || text="${text//"${topic}"/(topic hidden)}"
     [[ -z "${token}" ]] || text="${text//"${token}"/(token hidden)}"
@@ -334,8 +327,8 @@ function ntfy_payload() {
       | with_entries(select(.value != "" and .value != []))'
 }
 
-# Every step is checked explicitly, because a caller that tests this
-# function's status turns off errexit inside it.
+# Checks every step itself: the caller tests its status, which turns off
+# errexit inside it.
 function backend_ntfy_send() {
   local url payload
   url="$(ntfy_server)/"
@@ -356,8 +349,7 @@ function backend_ntfy_send() {
     return 0
   fi
 
-  # The timeouts keep a server that stops answering from holding up the
-  # caller, which reports the send as unconfirmed and carries on.
+  # Timeouts, so a server that stops answering cannot hold up the caller.
   local -a curl_args=(-sS --fail-with-body --connect-timeout "${NTFY_CONNECT_TIMEOUT}" --max-time "${NTFY_MAX_TIME}"
     -X POST -H 'Content-Type: application/json')
   if [[ -n "${SETTING_NTFY_TOKEN}" ]]; then
@@ -373,29 +365,25 @@ function backend_ntfy_send() {
     curl_args+=(-H "@${header_file}")
   fi
 
-  # After a transport failure the server may still have published the
-  # message, so a failure here means unconfirmed, not undelivered.
+  # The server may have published before the transport failed, so this means
+  # unconfirmed, not undelivered.
   local response
   if ! response="$(printf '%s' "${payload}" | curl "${curl_args[@]}" --data-binary @- "${url}" 2>&1)"; then
     echo "${SCRIPT_NAME}: ntfy did not confirm the notification: $(ntfy_redact "${response}")" >&2
     return 1
   fi
 
-  # ntfy confirms a publish by answering with the message: event "message",
-  # its id, and the topic. Anything else, such as a proxy page or an error
-  # object that carries an id of its own, leaves delivery unconfirmed. The
-  # answer itself is not printed, because it holds the topic; failure text and
-  # server errors are printed only after ntfy_redact.
-  # jq's own message tells a response that is not JSON from a jq that could
-  # not run, so it is relayed rather than replaced.
+  # Only one ntfy message event for this topic, with an id, confirms the
+  # publish. The answer holds the topic, so only redacted error text is printed.
+  # jq's own message tells non-JSON apart from a jq that could not run.
   local parse_error status=0
   parse_error="$(jq empty 2>&1 <<< "${response}")" || status=$?
   if ((status != 0)); then
     echo "${SCRIPT_NAME}: could not read the answer from ${url} as JSON (jq exited ${status}: $(ntfy_redact "${parse_error%%$'\n'*}")), so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
     return 1
   fi
-  # jq reads every top-level value in the answer, so a confirmation followed by
-  # an error would otherwise pass; a publish answer is exactly one value.
+  # One value only: jq reads each top-level value, so a confirmation followed
+  # by an error would otherwise pass.
   local value_count
   value_count="$(jq -s 'length' <<< "${response}")" || value_count=""
   if [[ "${value_count}" != "1" ]]; then
