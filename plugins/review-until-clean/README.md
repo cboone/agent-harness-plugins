@@ -21,7 +21,7 @@ The loop is only worth running if a clean result means something. Four rules mak
 
 1. **Every round reviews the whole scope.** Committed branch changes, staged changes, unstaged changes, and untracked files, every round. The common failure in an agent review loop is that the agent fixes a finding and the next round quietly reviews only its own patch, so the code the first round never reached is never reviewed at all.
 1. **The loop knows each round's mode.** A reviewer either reports findings, which the loop fixes, or edits the code itself. The loop tells which by checking the snapshot as the reviewer returns. A round in which the reviewer changed the code is never clean; the next round reviews what it left.
-1. **A run that does not finish is never clean.** A CLI must exit 0 with stdout that is not empty, and a skill or command must report that it completed. A reviewer that crashes, times out, returns nothing, or stops partway ends the run as `failed`. Silence is the same shape as success, and that is exactly the failure this rule exists to catch.
+1. **A run that does not finish is never clean.** A CLI must exit 0 with stdout that holds a non-whitespace character, and a skill or command must report that it completed. A reviewer that crashes, times out, returns nothing, or stops partway ends the run as `failed`. Silence is the same shape as success, and that is exactly the failure this rule exists to catch.
 1. **A clean result is bound to a content snapshot.** The snapshot covers every file in scope by content. Any edit after the review invalidates the clean result, so a run cannot report clean for code that no longer exists.
 
 ### Choosing a reviewer

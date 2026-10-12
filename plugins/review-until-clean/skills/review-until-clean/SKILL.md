@@ -35,7 +35,7 @@ Everything below exists to keep these true. A step that would break one is wrong
 
 1. **Every round reviews the whole scope.** Committed branch changes, staged, unstaged, and untracked, every round. Never only the latest patch. Whether the reviewer reached all of it is verified from its report, and a round that cannot show it did says so in its coverage.
 1. **The loop knows each round's mode.** A reviewer either reports findings or edits the code itself. The loop observes which from the snapshot, and decides whether the round is clean from that mode's signal. An edit round is never clean.
-1. **A run that does not finish is never clean.** A shell command counts as finished only when it exits 0 with stdout that is not empty, and a skill or command only when its report says it completed. Silence, an error, or output that is cut off ends the run as `failed`.
+1. **A run that does not finish is never clean.** A shell command counts as finished only when it exits 0 with stdout holding a non-whitespace character, and a skill or command only when its report says it completed. Silence, an error, or output that is cut off ends the run as `failed`.
 1. **A clean result is bound to a content snapshot.** Any edit after the review invalidates it.
 
 ## The helper script

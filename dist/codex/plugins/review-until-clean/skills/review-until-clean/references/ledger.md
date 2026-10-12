@@ -19,16 +19,22 @@ When that file already exists, from an earlier run on the same branch and day, a
 Reserve the name before moving the ledger onto it, because checking for a free name and then moving is a race: two runs on the same branch and day can both see the same name free, and the second move overwrites the first ledger. Create the destination with `noclobber` set, which fails when the name already exists, take the next suffix on each failure, and only then move the ledger onto the name you reserved:
 
 ```bash
+mkdir -p docs/reviews || exit 1
 n=1
 dest="docs/reviews/${stem}.md"
-until (set -o noclobber && : > "${dest}") 2> /dev/null; do
+until bash -c 'set -C && : > "$1"' reserve "${dest}"; do
+  [[ -e "${dest}" ]] || exit 1
   n=$((n + 1))
   dest="docs/reviews/${stem}-${n}.md"
 done
 mv -f "${ledger_tmp}" "${dest}"
 ```
 
-`stem` is `<date>-<branch>-until-clean`, and `ledger_tmp` is the ledger's temporary path. The `-f` is safe here: the file it replaces is the empty one this run just created.
+`stem` is `<date>-<branch>-until-clean`, and `ledger_tmp` is the ledger's temporary path. Three details matter:
+
+- **A failed create counts as a taken name only when the name exists.** A missing or unwritable `docs/reviews/` fails every create, and reading each failure as a taken name would loop forever. So create the directory first, and on any other failure stop and report the ledger's temporary path instead of saving it.
+- **The create runs under `bash`.** Under zsh's `CLOBBER_EMPTY` option, `noclobber` still truncates an existing empty file, and an empty file is exactly what a reservation is, so a second run could take a name the first has just reserved.
+- **The `-f` is safe.** The file it replaces is the empty one this run just created.
 
 The `-until-clean` suffix keeps the file clear of `review-branch`, which writes `<date>-<branch>.md` and overwrites it. Two skills silently overwriting each other's reviews would lose work.
 

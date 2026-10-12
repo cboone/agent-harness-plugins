@@ -6,7 +6,7 @@ When the loop may report clean, when it must not, and how it ends otherwise.
 
 A round is clean when **all four** hold. Any one of them missing is not clean.
 
-1. **The review finished.** A shell command exited zero with stdout that is not empty; a skill or command produced a report saying it completed. Structured output parsed, and, for a reviewer that echoes what it reviewed, the echoed value is this round's. `./reviewers.md` lists the signals for each kind.
+1. **The review finished.** A shell command exited zero with output, which `./reviewers.md` defines as stdout holding a non-whitespace character; a skill or command produced a report saying it completed. Structured output parsed, and, for a reviewer that echoes what it reviewed, the echoed value is this round's. `./reviewers.md` lists the signals for each kind.
 1. **It was a report round.** The snapshot taken as the reviewer returned is the one the round started from. An edit round changed the code it reviewed, so its verdict is about code that no longer exists.
 1. **Nothing is left undeclined at or above the threshold.** Findings below `--severity`, and findings carried as declined, do not block.
 1. **The snapshot still matches.** Recomputed at the moment of the decision, not taken from the start of the round.
