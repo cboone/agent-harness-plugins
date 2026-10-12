@@ -350,7 +350,7 @@ Parent continuation:
 - On Partial or Failed: Stop the watch and escalate per Step 9, unless a failure row names REVIEW_ID as a Copilot notice; then reclassify it as a notice per Step 3 and continue at Step 4.
 ```
 
-Pass `DEFER_SEVERITIES=Medium,Low` when the review's triage round, per step 7c, is above `--triage-after`, and leave it out otherwise. Record every finding the resolver's summary lists under `### Deferred to follow-up`, with its severity, location, summary and source link, for the batch step 8a files.
+Pass `DEFER_SEVERITIES=Medium,Low` when the review's triage round, per step 7c, is above `--triage-after`, and leave it out otherwise. Before the first such dispatch, confirm the `create-deferred-issues` skill is available; if it is not, leave `DEFER_SEVERITIES` out for the rest of the watch, so every finding keeps blocking, and report that once with its install command. Record each finding the resolver's summary lists under `### Deferred to follow-up`, once per source link, with its severity, location and summary, for the batch step 8a files.
 
 **A `Partial` with a `### Sibling chain` section is a design question, not a failure.** The resolver left a finding unpatched because it is another instance of a class an earlier fix on this PR addressed. Escalate per step 9 with the chain quoted from that section, each finding with its link and the fixes already made, and its design option. The question is whether to adopt the design option or patch the sibling. On the answer, carry it out in this session under the resolver's Valid Concerns steps, commit and push, and resume the watch at step 3. Record the answer, and pass it as `DECISION` on the next step 7b dispatch, so the resolver settles the sibling it carries forward instead of escalating it again.
 
@@ -372,7 +372,7 @@ This is a budget, not a verdict about progress. **Do not treat the shape of the 
 
 What matters is whether the findings are real. Keep going while each round produces valid, fixable defects, and escalate early per step 9 only when a round produces something that needs the user's judgment, per the escalation rules in step 6d. The budget exists to bound an unattended watch, not to second-guess a productive one.
 
-**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is its position among the PR's Copilot reviews classified `review`, so rounds from before this watch began count too. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Triage does not change the round budget: deferred rounds still count toward it.
+**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is its position among the PR's Copilot reviews, so rounds from before this watch began count too. Leave out a review this watch classified as a notice or as unclear, or that a resolver summary names as a Copilot notice; an earlier review neither records is counted. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Triage does not change the round budget: deferred rounds still count toward it.
 
 `--rounds <n>` sets a different budget. `--rounds unlimited` removes it: the watch then runs until the PR is genuinely clean and never pauses to ask for more rounds, though every other escalation rule still applies.
 
@@ -527,7 +527,7 @@ On a no, leave the watch running and say so: a merge made later still triggers s
 
 #### 8f. After the Merge
 
-Run this once per PR, whichever path observed the merge, and record that it ran in the watch state. A `merged` event with a null `mergeCommit` skips the sync, which needs the commit, and runs only the notification.
+Run this once per PR, whichever path observed the merge, and record that it ran in the watch state. When step 7b recorded deferred findings that no batch has filed, as when someone else merged the PR, file them first with the step 8a batch. A `merged` event with a null `mergeCommit` skips the sync, which needs the commit, and runs only the notification.
 
 1. **Fast-forward the base branch.** From this repository's worktree, run:
 
@@ -557,6 +557,7 @@ When an escalation rule fires, stop the wait loop, including any scheduled task 
 
 1. What is blocking, in one sentence.
 1. What was already tried, including any commits pushed during this watch.
+1. Any deferred findings no batch has filed yet, each with its severity and source link. Offer the step 8a batch for them, since an escalation can end the watch before readiness.
 1. The specific question the user needs to answer.
 
 Then tell the user that `/monitor-pr` resumes the watch once they have decided.
