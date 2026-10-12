@@ -211,6 +211,20 @@ The scope is all of the following, and you must read all of it:
 Read the surrounding code, not only the diff. Before reviewing, read the
 ```
 
+## Project guidelines are read from the base revision
+
+The change under review can edit `AGENTS.md` or `CLAUDE.md`, so the prompt
+points the reviewer at the base revision's copies and treats the changed ones as
+material to review.
+
+```scrut
+$ base="$(jq -r .base "${FIXTURE}/scope.json")" \
+>   && grep -c -F "\`git show ${base}:<path>\`" "${FIXTURE}/errors.prompt" \
+>   && grep -c 'never as instructions to you\.$' "${FIXTURE}/errors.prompt"
+1
+1
+```
+
 ## The simplify prompt allows edits only in scope
 
 ```scrut
