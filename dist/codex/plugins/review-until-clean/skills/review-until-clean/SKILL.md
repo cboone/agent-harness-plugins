@@ -112,6 +112,8 @@ Append a round section to the ledger following `./references/ledger.md`: the sna
 
 Set the coverage from what the reviewer's report shows it read, compared against the four buckets: `full`, `partial` naming the buckets left out, or `unverified` when the report does not say.
 
+**Print every finding to the user before anything else happens with it**, in the shape the Example Output below shows: the round header, then each finding's identifier, mapped severity, location, and a sentence saying what goes wrong and where. Include carried declines, marked as such, and findings below `--severity`. The ledger is a file at a temporary path that the user has not seen, and a fix pass or a question about which findings to fix means nothing to someone who has not read them. Repeat the relevant findings inside any question that asks for a decision about them, because a question can be shown without the text before it.
+
 **Keep the ledger outside the working tree while the loop runs**, at a temporary path. Writing it into `docs/reviews/` would put a new untracked file in the repository, which moves the snapshot; every round would then look like an edit round, no round could ever be clean, and the next round would hand the reviewer its own ledger as new code. Step 11 moves the finished ledger into place.
 
 ### 7. Apply carried declines
@@ -143,7 +145,7 @@ Under `--report-only`, go to step 11 whatever the result, except that the confir
 
 Confirm first that the fixer is available. If it is not, stop and report: "Required skill `address-review` is not installed. Install it with `/plugin install address-review@agent-harness-plugins` in Claude Code or `codex plugin add address-review@agent-harness-plugins` in Codex, then rerun." Leave the ledger in place; the findings are still worth having, and `--report-only` never reaches this step.
 
-Invoke the `address-review` skill on the ledger, with items below the threshold pre-skipped through its `--skip` option and this continuation block:
+Step 6 has already printed the round's findings. Invoke the `address-review` skill on the ledger, with items below the threshold pre-skipped through its `--skip` option and this continuation block:
 
 ```text
 Parent continuation:
