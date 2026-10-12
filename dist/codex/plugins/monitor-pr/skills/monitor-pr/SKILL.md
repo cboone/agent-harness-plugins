@@ -25,7 +25,7 @@ The user may provide these options inline:
 - **--interval `<duration>`**: Override adaptive pacing with a fixed wait (e.g., `--interval 10m`)
 - **--ticks `<n|unlimited>`**: Limit foreground polling, including scheduler fallbacks, to `n` ticks before producing a resumable checkpoint. The default is 3; `unlimited` keeps the foreground turn active until a terminal condition or escalation
 - **--rounds `<n|unlimited>`**: Change the Copilot round budget from its default of 10. `--rounds unlimited` commits to running until the PR is genuinely clean, however many rounds that takes, and never pauses to ask for more
-- **--triage-after `<n|never>`**: Triage late Copilot rounds. From round `n + 1`, only High findings block; Medium and Low findings are deferred to one batch of follow-up issues, filed at readiness, or earlier if the watch escalates or the PR merges first. The default is 5; `never` lets every finding block, however late the round
+- **--triage-after `<n|never>`**: From Copilot round `n + 1`, defer Medium and Low findings to follow-up issues instead of fixing them, per step 7c. The default is 5; `never` lets every finding block
 - **--confirm-clean**: Require two consecutive clean Copilot reviews rather than one. After the first clean review, request another explicitly and wait for it
 - **--no-fix**: Observe and report only. Never push, never invoke a fixing skill, never request a review, and never merge or act on a merge
 
@@ -40,14 +40,13 @@ The repair loop ends when all four axes are clean at the same time, and step 8 t
 | Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`. `BLOCKED` counts as clean but must be reported, per the rule below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | PR state     | `OPEN` and not merged or closed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
-Seven rules that follow from this and are easy to get wrong:
+Six rules that follow from this and are easy to get wrong:
 
 - **A review-body finding the resolver has already handled stays in the review body, and the axis is still clean.** Review bodies are immutable, so the finding is there for as long as the review exists; it never goes away the way an open thread does. What clears it is step 7b's record of having processed that review `id`, not a later read of the body. Waiting for the body to change would hold a finished PR open forever. Audit items behave the same way: a Copilot comment on the PR stays there, and step 7b's record of its id under a `Completed` or `No unresolved Copilot feedback` outcome is what clears it.
 - **A review processed with any other outcome never becomes clean, and never waits.** Only `Completed` and `No unresolved Copilot feedback` clear a review's findings. A `Partial` or `Failed` outcome leaves the axis dirty, while the once-per-review `id` guard in step 4 stops the review from being sent to step 7b again, so no later tick can change anything. Escalate per step 9 instead of falling through to the wait branch. This matters on a resumed watch: the original outcome already escalated and ended the watch, and the checkpoint restores the guard, so the wait branch is exactly where such a review would otherwise land.
 - **A Copilot review against an older SHA does not count.** Copilot reviews are pinned to the commit they ran against, so every push this skill makes invalidates the previous review by construction. A fix always sends the loop back around.
 - **A Copilot notice is not a review.** Copilot posts "encountered an error and was unable to review this pull request", and a report that every changed file was excluded, through the review API. Each is pinned to the head like a review and carries no verdict and no findings, which is exactly what a clean review looks like. Reading the whole body, once per review `id`, tells them apart, as [classifying a review](#classifying-a-copilot-review) describes. A review classified `notice` or `unclear` never satisfies the Copilot axis, and never counts toward `--confirm-clean`.
 - **`reviewDecision` does not gate readiness.** A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready. Report `reviewDecision` in every status line and in the terminal report so an outstanding human objection stays visible. It matters only after readiness: step 8b uses it, with the rulesets and agent instructions, to decide whether the merge offer waits for an approval.
-- **A late-round deferral does not block.** Under `--triage-after`, the resolver resolves the thread of a deferred finding and lists the finding for the follow-up batch, so the Copilot axis reads it like any handled finding. The batch is filed per step 8a; it never holds the axis open.
 - **`BLOCKED` does not gate either, but it must be reported.** Requiring `mergeStateStatus` to be `CLEAN` would be the stricter reading of "ready to merge", and it is deliberately not what this skill does: on a repository whose branch protection requires an approving review, nothing the skill can do will ever satisfy it, so the watch would run until its round budget expired and then report failure on a PR that is finished. Treat `BLOCKED` as ready-with-a-caveat instead. **A terminal report that omits an active `BLOCKED` state is wrong**, because it tells the user the PR is ready to merge when GitHub will refuse the merge. Name the state and say what is unsatisfied.
 
 ## Dependabot PRs
@@ -70,8 +69,8 @@ Under `--no-fix`, report the rebase request that would have been posted instead 
 
 ## Skill dependencies
 
-- **Required:** `create-deferred-issues`, `lint-and-fix`, `merge-main`, `resolve-copilot-pr-feedback`
-- **Optional:** None
+- **Required:** `lint-and-fix`, `merge-main`, `resolve-copilot-pr-feedback`
+- **Optional:** `create-deferred-issues`
 
 ## Workflow
 
@@ -341,7 +340,7 @@ The run check is what separates "Copilot has not started" from "Copilot is mid-r
 Invoke the `resolve-copilot-pr-feedback` skill:
 
 ```text
-resolve-copilot-pr-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id> [DEFER_SEVERITIES=Medium,Low] [DECISION="<answer>"]
+resolve-copilot-pr-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id> [DEFER_SEVERITIES=Medium,Low]
 
 Parent continuation:
 - Caller: monitor-pr
@@ -350,9 +349,9 @@ Parent continuation:
 - On Partial or Failed: Stop the watch and escalate per Step 9, unless a failure row names REVIEW_ID as a Copilot notice; then reclassify it as a notice per Step 3 and continue at Step 4.
 ```
 
-Pass `DEFER_SEVERITIES=Medium,Low` when the review's triage round, per step 7c, is above `--triage-after`, and leave it out otherwise. Before the first such dispatch, confirm the `create-deferred-issues` skill is available; if it is not, leave `DEFER_SEVERITIES` out for the rest of the watch, so every finding keeps blocking, and report that once with its install command. Record each finding the resolver's summary lists under `### Deferred to follow-up`, once per source link, with its severity, location and summary, for the batch step 8a files.
+Pass `DEFER_SEVERITIES=Medium,Low` when the review's triage round, per step 7c, is above `--triage-after`. Leave it out when `create-deferred-issues` is not installed, so every finding keeps blocking, and say so once with its install command.
 
-**A `Partial` with a `### Sibling chain` section is a design question, not a failure.** The resolver left a finding unpatched because it is another instance of a class an earlier fix on this PR addressed. Escalate per step 9 with the chain quoted from that section, each finding with its link and the fixes already made, and its design option. The question is whether to adopt the design option or patch the sibling. On the answer, carry it out in this session under the resolver's Valid Concerns steps, commit and push, and resume the watch at step 3. Record the answer, and pass it as `DECISION` on the next step 7b dispatch, naming the commit that carried it out, so the resolver settles the sibling it carries forward instead of escalating it again.
+**A `Partial` with a `### Sibling chain` section is a design question, not a failure.** Escalate per step 9, quoting that section, and ask whether to adopt its design option or patch the sibling. Once the answer is carried out and pushed, the next review goes to the resolver as usual, and it settles the sibling against the new code.
 
 Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's script calls require all three and it does not document how to derive them, so supplying them here saves it from re-deriving them or asking the user. Pass `REVIEW_ID`, the review this dispatch is for: the resolver must read it and list it under `Reviews read`. **A clearing outcome whose `Reviews read` line does not list `REVIEW_ID` does not clear that review.** Treat it like a `Partial` outcome and escalate per step 9, because nothing shows the review was read.
 
@@ -372,7 +371,7 @@ This is a budget, not a verdict about progress. **Do not treat the shape of the 
 
 What matters is whether the findings are real. Keep going while each round produces valid, fixable defects, and escalate early per step 9 only when a round produces something that needs the user's judgment, per the escalation rules in step 6d. The budget exists to bound an unattended watch, not to second-guess a productive one.
 
-**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is its position among the PR's Copilot reviews, so rounds from before this watch began count too. Leave out a review this watch classified as a notice or as unclear, or that a resolver summary names as a Copilot notice; an earlier review neither records is counted. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Triage does not change the round budget: deferred rounds still count toward it.
+**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round counts the PR's Copilot reviews from before this watch began, so count those once at step 1, leaving out any a resolver summary names as a Copilot notice, and add this watch's rounds. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Deferred rounds still count toward the round budget.
 
 `--rounds <n>` sets a different budget. `--rounds unlimited` removes it: the watch then runs until the PR is genuinely clean and never pauses to ask for more rounds, though every other escalation rule still applies.
 
@@ -420,21 +419,21 @@ If the plugin-root path was not substituted, locate `**/monitor-pr/**/scripts/me
 1. **If the resolver's summary for the current head lists `Requests for human review`, lead with them.** Write "Ready, with N advisory requests for human review" in place of a bare "Ready", and quote each request with its review link. Copilot raises these on changes it judges sensitive, and they never block the watch, so this report is the place they reach the user before a merge.
 1. **If `mergeStateStatus` is `BLOCKED`, say so before offering to merge.** State that GitHub will refuse the merge until the branch protection requirement is met, and name it if `reviewDecision` identifies it (a required approving review being the usual case). Offering a merge without that caveat presents a PR as ready when it is not yet mergeable.
 1. If the PR is a draft, say so; step 8e offers to mark it ready, since GitHub refuses to merge a draft.
-1. **If step 7b recorded deferred findings that no batch has filed, file them as one batch before step 8b.** This is the step 8a batch that step 8f and step 9 also run. List each with its severity, location and source link, then invoke the `create-deferred-issues` skill with that list, so its proposal is the single approval for every follow-up issue of the watch:
+1. **File the deferred findings as one batch.** When any resolver summary on the PR lists findings under `### Deferred to follow-up`, invoke the `create-deferred-issues` skill once, before step 8b. It collects them from those summaries and drops any already tracked, so its proposal is the single approval for the watch's follow-up issues:
 
    ```text
    create-deferred-issues
 
-   Deferred by monitor-pr late-round triage: <one line per finding, with severity, location, summary and source link>
+   Include the findings listed under `### Deferred to follow-up` in this PR's Copilot Feedback Summary comments.
 
    Parent continuation:
    - Caller: monitor-pr
-   - Resume target: RESUME
-   - On completion: Report the `Deferred issues:` outcome with any filed issues and any already-tracked or unfileable findings, and continue at RESUME.
-   - On filing failure: Report the findings left unfiled with their source links, and continue at RESUME.
+   - Resume target: the step that ran the batch, step 8b or step 8f.
+   - On completion: Report the `Deferred issues:` outcome and continue at the resume target.
+   - On filing failure: Report the findings left unfiled and continue at the resume target.
    ```
 
-   `RESUME` is step 8b here, step 8f's first item from step 8f, and the escalation's question from step 9. Record each finding's result, its issue URL, declined or failed, and never offer a finding with a result again. Append the filed issues, and any finding left unfiled, to the report. A finding the user declines stays recorded in the resolver's summary comment.
+   Append the outcome to the report.
 
 #### 8b. Settle the Merge Policy
 
@@ -527,7 +526,7 @@ On a no, leave the watch running and say so: a merge made later still triggers s
 
 #### 8f. After the Merge
 
-Run this once per PR, whichever path observed the merge, and record that it ran in the watch state. When step 7b recorded deferred findings that no batch has filed, as when someone else merged the PR, file them first with the step 8a batch. A `merged` event with a null `mergeCommit` skips the sync, which needs the commit, and runs only the notification.
+Run this once per PR, whichever path observed the merge, and record that it ran in the watch state. When the watch never reached step 8a, run its deferred-issue batch first, resuming here. A `merged` event with a null `mergeCommit` skips the sync, which needs the commit, and runs only the notification.
 
 1. **Fast-forward the base branch.** From this repository's worktree, run:
 
@@ -557,7 +556,7 @@ When an escalation rule fires, stop the wait loop, including any scheduled task 
 
 1. What is blocking, in one sentence.
 1. What was already tried, including any commits pushed during this watch.
-1. Any deferred findings no batch has filed yet, each with its severity and source link. Offer the step 8a batch for them, since an escalation can end the watch before readiness.
+1. Any findings deferred under `--triage-after`, listed from the resolver's `### Deferred to follow-up` sections with their links. The deferred-issue batch files them at readiness or after the merge.
 1. The specific question the user needs to answer.
 
 Then tell the user that `/monitor-pr` resumes the watch once they have decided.
