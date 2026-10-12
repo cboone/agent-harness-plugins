@@ -305,7 +305,7 @@ A review-body concern that step 1d settled as **Matched** takes the category of 
 bash resolve-copilot-threads resolve THREAD_ID
 ```
 
-Resolve a thread only when its handling is complete. A Nitpick, Outdated or Deferred thread is resolved in step 4 as its section says. A thread whose handling commits a change, Valid or Incorrect, is resolved in step 8, after that change is pushed, so a run that stops before the push never leaves a thread resolved over a fix that exists only locally. A sibling left `Pending` is never resolved.
+Resolve a thread only when its handling is complete: Nitpick, Outdated and Deferred threads in step 4, as their sections say; Valid and Incorrect threads in step 8, after their commits are pushed. Never resolve a sibling left `Pending`.
 
 ### 4. Handle Each Category
 
@@ -369,7 +369,7 @@ The cleanup must be a separate Bash tool call: each tool invocation runs uncondi
 
 #### Valid Concerns
 
-Copilot names one instance of a problem. Fixing only that instance leaves its siblings for the next round, which is how one finding turns into a chain of rounds. So fix the class:
+Copilot names one instance of a problem; fix its whole class:
 
 1. **Read the context** around the flagged line: the whole function, rule or section it sits in.
 1. **Check for a sibling chain first**, per [Sibling Chains](#sibling-chains). If this finding is a sibling of one fixed in an earlier run on this PR, stop here and follow that section instead of patching. Findings of one class that arrive in the same run are not a chain: fix them together below.
@@ -379,19 +379,15 @@ Copilot names one instance of a problem. Fixing only that instance leaves its si
 1. Commit the fix as a new commit (do NOT push yet; steps 5 to 7 run first).
 1. Leave the thread open: step 8 resolves it after the push.
 
-The summary row's disposition names the class and every extra site fixed beyond the one Copilot flagged, so the next round's reviewer and the user can see the class was closed rather than one line patched.
-
 #### Sibling Chains
 
-A sibling of a finding fixed in an earlier run on this PR is a second instance of the same class: the same function, check or rule, failing for another input form, another branch, or another configuration path. Its arrival means the previous fix closed one instance, not the class, and a third patch usually invites a fourth finding.
-
-To tell, read the prior summaries from step 1c and the PR's commits before `FIX_BASE`: a Valid row recorded `Resolved` or `Fixed`, or a fix commit, for the same function, check or rule, with a different input or branch, makes this finding a sibling. Also count a finding that pushes the same concern one step further, such as each round assuming a more hostile input or environment than the last.
+A sibling is a second instance of the class of a finding fixed in an earlier run on this PR: the same function, check or rule failing for another input form, branch or configuration path, or the same concern pushed one step further, such as each round assuming a more hostile input or environment than the last. To detect one, look for a Valid row recorded `Resolved` or `Fixed` in the step 1c prior summaries, or a fix commit among the PR's commits before `FIX_BASE`, on the same function, check or rule.
 
 For a sibling, thread or review-body alike:
 
 1. **Do not patch it.** Record it with Category `Valid` and Outcome `Pending`. For a thread, leave it unresolved and reply to it naming the chain: the earlier findings and fixes, and the design option below. A review-body finding has no thread, so its summary row is the record.
 1. **Propose one design option** that would close the class instead of the instance: an allowlist of exact accepted forms, a structural parser, a narrower contract that stops promising the property, one shared implementation instead of copies, or an explicit threat model or scope statement in the documentation when the findings keep widening what the code must defend against.
-1. **End the run with `Partial`**, even when the sibling was the only finding. The summary's `### Sibling chain` section quotes each finding in the chain with its link, names the fixes already made, and states the design option, and its `Remaining Required Action` asks the user to choose between the design option and patching the sibling. `monitor-pr` escalates on `Partial`, so the chain reaches the user as a design question rather than another patch.
+1. **End the run with `Partial`**, even when the sibling was the only finding. Report the chain in step 9's `### Sibling chain` section, and in `Remaining Required Action` ask the user to choose between the design option and patching the sibling.
 
 Patch a sibling only when the user, told of the chain, asks for that patch. When the user chooses the design option, implement it under the Valid Concerns steps above, as one fix for the whole class. A later run that carries the `Pending` sibling forward without such a decision in its invocation records it `Pending` again and ends `Partial`.
 
@@ -428,7 +424,7 @@ Every review-body finding gets a row in the step 9 summary and in the local audi
 
 Skip this step when the run has changed no files, per step 4's test.
 
-A fix that changes behavior leaves every description of the old behavior wrong, and Copilot reads the documentation as closely as the code. So before anything is pushed:
+Before anything is pushed:
 
 1. **List what the fixes changed** that something else might describe: each identifier, option or flag, default, count, path, status or field name, and stated behavior. Read it from `git diff FIX_BASE` (with `--no-ext-diff --no-textconv`).
 1. **Search for each one** in the repository's documentation, plans, READMEs, help text, code comments and agent instructions, and in the pull request body (`gh pr view PR_NUMBER --repo OWNER/REPO --json body`).
@@ -438,10 +434,10 @@ A fix that changes behavior leaves every description of the old behavior wrong, 
 
 Skip this step when the run has changed no files, per step 4's test.
 
-Copilot reviews the code a fix adds as closely as the code it was asked about, and most findings after the first round are in fix code no local review saw. So review the fixes before pushing them, once, without looping:
+Review the fixes before pushing them, at most twice, without looping:
 
 1. **Confirm that the `review-anti-patterns` skill is available.** If it is not, record a workflow-level failure: "Required skill `review-anti-patterns` is not installed. Install it with `/plugin install review-anti-patterns@agent-harness-plugins` in Claude Code or `codex plugin add review-anti-patterns@agent-harness-plugins` in Codex, then rerun." Leave the fix commits local, skip step 8's push, and go to step 9.
-1. **Review the fix range.** Where the session can run a read-only subagent, run the review there, so the review cannot edit what it reviews; otherwise run it in this session. Invoke the `review-anti-patterns` skill with `--range FIX_BASE..HEAD` and no `--run-checks`, since the checkout holds the whole pull request and not only these fixes, passing this continuation block:
+1. **Review the fix range**: invoke the `review-anti-patterns` skill, in a read-only subagent where the session has one, otherwise in this session. Omit `--run-checks`, since the checkout holds the whole pull request, and pass this continuation block:
 
    ```text
    review-anti-patterns --range FIX_BASE..HEAD
@@ -468,7 +464,7 @@ Copilot reviews the code a fix adds as closely as the code it was asked about, a
 
    Do not fix anything this review reports, and do not review a third time. When it reports an Important finding still standing, do not push: record the finding under `Remaining Required Action` and record the review per the next item, then skip step 7 and step 8's push and go to step 9, which reports the run `Partial`.
 
-1. **Record the review** for step 9's `### Fix review` section: each range reviewed, the findings fixed, the findings declined with their rationale, and what the review reported as unverified, not reviewed, or excluded. A review that returns `complete: false` is not a failure, but what it did not cover goes in that section.
+1. **Record the review** for step 9's `### Fix review` section, including anything it reported as excluded. A review that returns `complete: false` is not a failure; what it did not cover goes in that section.
 
 ### 7. Lint and Fix
 
@@ -476,7 +472,7 @@ Copilot reviews the code a fix adds as closely as the code it was asked about, a
 
 This step prevents CI failures from lint issues introduced while resolving feedback.
 
-1. **Check for changes**: skip this step only when the run has changed no files, per step 4's test, as when only nitpicks were resolved or threads replied to. A clean working tree is not enough: steps 4 to 6 commit as they go, so committed fixes still need linting.
+1. **Check for changes**: skip this step only when the run has changed no files, per step 4's test, as when only nitpicks were resolved or threads replied to.
 1. **Invoke the `lint-and-fix` skill** with `--no-push`:
 
    ```text
@@ -499,7 +495,7 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 Do not run this step if step 6 or step 7 stopped the push: a missing or failed fix review, an Important finding still standing after the second review, a lint failure, or skipped required lint work. In that case, go directly to step 9 and report why in the final summary; Valid and Incorrect threads stay open and the pull request body unchanged.
 
 1. **Push any changes:** `git push`
-1. **Resolve each Valid or Incorrect thread** whose commit this push carried, using the script. Leave a sibling `Pending` thread open.
+1. **Resolve each Valid or Incorrect thread** whose commit this push carried, using the script.
 1. **Apply the pull request body correction** step 5 prepared, if any, with the tmpfile pattern from [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments): `mktemp -u "${TMPDIR:-/tmp}/copilot-body-XXXXXX"`, write the body with the Write tool, then, as a separate call, `gh pr edit PR_NUMBER --repo OWNER/REPO --body-file TMPFILE`, and remove the tmpfile in another separate call.
 1. Re-fetch to confirm all Copilot threads resolved:
 
