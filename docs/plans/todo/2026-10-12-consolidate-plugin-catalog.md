@@ -42,12 +42,18 @@ Decisions taken during planning:
 
 ## Changes
 
+### 0. Namespaced cross-reference support
+
+- Before migrating callers, extend `bin/check-cross-references` to recognize `plugin:skill` and `/plugin:skill` in invocation references, compositions, near-miss warnings and dependency declarations. Resolve a qualified name to `plugins/PLUGIN/skills/SKILL/SKILL.md`; preserve existing bare-name behavior for unchanged callers.
+- Keep dependency declaration, resolution and use checks consistent: qualified names must identify the named plugin and skill, and compositions must remain declared under `## Skill dependencies`.
+- Update `docs/plugin-development.md` with the qualified-name syntax and resolution rules. Add scrut cases in `tests/scrut/check-cross-references.md` for valid qualified references and declarations, missing plugins, missing skills, undeclared compositions, unused declarations and retained bare-name behavior.
+
 ### 1. `workmux` plugin
 
 - Create `plugins/workmux/` with skills `create-worktree` (from `create-worktree`) and `start-issue` (from `address-issue-in-worktree`), and one copy of `launch-workmux`, `compose-issue-prompt` and `manage-resource-claims` in `scripts/`.
 - Update each `SKILL.md` `name`, description routing ("to plan an issue there, use `workmux:start-issue`"), argument hints and cross-references between the two skills. Keep `/address-issue` in the composed launch prompt.
 - Delete `plugins/create-worktree/` and `plugins/address-issue-in-worktree/`.
-- Tests: point `tests/scrut/compose-issue-prompt.md`, `manage-resource-claims.md` and the `Makefile` env wiring at `plugins/workmux/scripts/`; delete the three copy-drift testcases in `tests/scrut/repo-tooling.md`.
+- Tests: point `tests/scrut/compose-issue-prompt.md`, `manage-resource-claims.md`, the `Makefile`'s `SCRUT_ENV` and `.github/workflows/ci.yml`'s `scrut-env` at `plugins/workmux/scripts/`; delete the three copy-drift testcases in `tests/scrut/repo-tooling.md`. Remove obsolete duplicate helper variables from both environment lists, retaining each surviving helper registration.
 - Docs: delete the byte-identical-copies paragraph at `docs/plugin-development.md:51`, keeping the `review-scope` paragraph after it (reworded so it no longer says "the same way"); narrow `plugins/AGENTS.md:7` to the `review-scope` pair.
 - Category `issues-and-worktrees`.
 
@@ -56,7 +62,7 @@ Decisions taken during planning:
 - Rename `plugins/monitor-pr/skills/monitor-pr/` to `skills/monitor/`; move `resolve-copilot-pr-feedback`'s skill to `skills/resolve-copilot-feedback/`. Keep one `scripts/resolve-copilot-threads`, plus `merge-flow`.
 - `monitor`'s routing keeps the merge-and-sync step (from #583) separate from Copilot handling, and invokes `monitor-pr:resolve-copilot-feedback` where it invoked the old skill.
 - Keep the catalog description from #583 and extend it to cover resolving Copilot threads on demand.
-- Delete `plugins/resolve-copilot-pr-feedback/`, the `resolve-copilot-threads` drift testcase in `repo-tooling.md`, and its `Makefile` wiring; repoint `tests/scrut/resolve-copilot-threads.md`.
+- Delete `plugins/resolve-copilot-pr-feedback/` and the `resolve-copilot-threads` drift testcase in `repo-tooling.md`; repoint `tests/scrut/resolve-copilot-threads.md` and its helper registration to `plugins/monitor-pr/scripts/resolve-copilot-threads` in both `SCRUT_ENV` and CI's `scrut-env`. Remove the obsolete duplicate registration from both lists.
 
 ### 3. `sync-with-main` plugin
 
@@ -65,7 +71,7 @@ Decisions taken during planning:
 
 ### 4. `dependabot` plugin
 
-- Create `plugins/dependabot/` with skills `review-config` and `triage-prs`; carry over `triage-dependabot-prs`' scripts and repoint `tests/scrut/dependabot-prs.md` and its `Makefile` wiring.
+- Create `plugins/dependabot/` with skills `review-config` and `triage-prs`; carry over `triage-dependabot-prs`' scripts and repoint `tests/scrut/dependabot-prs.md` and its helper registration in both `SCRUT_ENV` and CI's `scrut-env`.
 - Delete both old plugins. Category `ci-and-release`.
 
 ### 5. `use-git` gains `create-issue`
@@ -83,7 +89,7 @@ Each folded plugin becomes a reference, mode or section of its host, and its dir
 - `write-lean-tests` into `write-lean-code` as a reference, merging its review checklist into the host's.
 - `optimize-runner-usage` into `set-up-ci` as a section the generated workflows follow; `refresh-project-scaffolding` audits against it.
 - `add-community-files` into `scaffold-new-repo` as an optional step.
-- `set-up-review-config`: drop the bundled `write-lean-tests` checklist and update `references/guides.md`; `make build` regenerates the checklists.
+- `set-up-review-config`: remove the separate `write-lean-tests` entry from `references/guides.md`; `make build` removes its bundled checklist and regenerates the merged `write-lean-code` checklist. Bump `set-up-review-config` from 1.0.2 to 1.0.3 for the changed shipped references and checklists, alongside the host guide's minor bump; re-check the starting version against `main` before bumping.
 
 ### 7. `suggest-next-issue` reposition
 
@@ -92,11 +98,12 @@ Each folded plugin becomes a reference, mode or section of its host, and its dir
 
 ### 8. Callers and catalog surfaces
 
-- `bin/check-cross-references` (rule 19) reports every stale reference. Known callers include `address-issue`, `address-review`, `bootstrap-project`, `create-deferred-issues`, `create-plugin`, `pin-everything`, `plant-defects`, `pr`, `refresh-project-scaffolding`, `release`, `review-anti-patterns`, `review-colleague-pr`, `scaffold-*`, `set-up-linters`, `set-up-review-config`, `suggest-next-issue`, `trim-text`, `upgrade-everything`, `write-bash-scripts`, `write-formalization-roadmap`, `write-go-code`, `write-manual-verification-plan` and `wtaf`. Each caller whose skill text changes takes a patch bump.
+- Use the namespaced support from section 0 when updating callers and dependency declarations; rule 19 checks supported reference forms, and the retired-identity checks below cover other mentions. Known callers include `address-issue`, `address-review`, `bootstrap-project`, `create-deferred-issues`, `create-plugin`, `pin-everything`, `plant-defects`, `pr`, `refresh-project-scaffolding`, `release`, `review-anti-patterns`, `review-colleague-pr`, `scaffold-*`, `set-up-linters`, `set-up-review-config`, `suggest-next-issue`, `trim-text`, `upgrade-everything`, `write-bash-scripts`, `write-formalization-roadmap`, `write-go-code`, `write-manual-verification-plan` and `wtaf`. Each caller whose shipped skill text, references or generated checklists change takes a patch bump unless a larger bump is already required by this plan.
 - `.claude-plugin/marketplace.json` entries and categories; root `README.md` catalog rows; each new or host plugin's README, with descriptions matching the catalog verbatim and linking to `#install`.
 - Root `README.md`: add a "Moved and removed plugins" section with the name mapping, and point former users to the new install commands.
 - `plugins/AGENTS.md`, `docs/plugin-development.md` examples, and any `AGENTS.md` mention of the old names.
 - `.github/copilot-instructions.md` and `.github/instructions/`: any rules that name moved scripts or plugins.
+- `.github/workflows/ci.yml`: migrate all affected `scrut-env` paths alongside `SCRUT_ENV`, checking that local and CI registrations cover the same surviving helpers.
 
 ### 9. Build, validate, commit
 
@@ -113,5 +120,7 @@ Each folded plugin becomes a reference, mode or section of its host, and its dir
 
 - `make test-all` passes, including rule 18 (script references resolve inside each plugin) and rule 19 (cross-references).
 - `jq '.plugins | length' .claude-plugin/marketplace.json` reports 58.
-- No file outside `docs/plans/`, `docs/reviews/` and the README mapping names a removed plugin: `grep -rlw` for each old name over `plugins/`, `bin/`, `tests/`, `docs/plugin-development.md`, `AGENTS.md` and `.github/`.
+- Search `plugins/`, `bin/`, `tests/`, `docs/plugin-development.md`, `AGENTS.md` and `.github/` for retired identities: deleted `plugins/OLD/` and `dist/codex/plugins/OLD/` paths, old plugin installation commands, old qualified invocations and obsolete bare invocation forms. Also inspect current README content outside the migration mapping. No operational reference to a retired identity remains; plans, reviews, migration documentation and tests that intentionally assert rejection are allowed.
+- Retain `create-worktree` and `create-issue` as skill directory and frontmatter names in their new plugins, and allow their new qualified invocations. Do not use whole-word absence of every former plugin name as an acceptance criterion.
+- Local `SCRUT_ENV` and CI `scrut-env` use the new helper paths, with no registrations pointing into deleted plugin directories.
 - In a scratch Claude Code session with the branch's marketplace installed, `/workmux:start-issue`, `/monitor-pr:resolve-copilot-feedback`, `/sync-with-main:rebase`, `/dependabot:triage-prs` and `/use-git:create-issue` each load.
