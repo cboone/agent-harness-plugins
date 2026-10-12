@@ -416,13 +416,13 @@
         "name": "Christopher Boone"
       },
       "category": "ci-and-release",
-      "description": "Review a repository's Dependabot setup (dependabot.yml coverage and validity, grouping, labels, commit messages, and the repository settings and secrets Dependabot depends on), then apply the fixes the user selects.",
+      "description": "Review Dependabot configuration and triage open Dependabot pull requests, applying configuration fixes or PR actions as approved.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["configuration", "dependabot", "dependencies", "github", "security"],
       "license": "MIT",
-      "name": "review-dependabot-config",
+      "name": "dependabot",
       "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/review-dependabot-config"
+      "source": "./dist/codex/plugins/dependabot"
     },
     {
       "author": {
@@ -618,19 +618,6 @@
       "name": "suggest-next-issue",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/suggest-next-issue"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "ci-and-release",
-      "description": "Triage a repository's open Dependabot pull requests into safe to merge, needs refresh, needs testing, needs work, hold, superseded, or outdated, backed by evidence, then merge, rebase, or close them as the user approves.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["dependabot", "dependencies", "github", "pull-requests", "security", "triage"],
-      "license": "MIT",
-      "name": "triage-dependabot-prs",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/triage-dependabot-prs"
     },
     {
       "author": {

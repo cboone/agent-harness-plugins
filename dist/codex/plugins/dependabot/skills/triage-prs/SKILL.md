@@ -1,5 +1,5 @@
 ---
-name: triage-dependabot-prs
+name: triage-prs
 description: >-
   Sort open Dependabot PRs by merge safety, then merge, rebase, or close them as
   approved. Use for "triage dependabot PRs" or "are these Dependabot PRs safe to
@@ -13,13 +13,13 @@ Put every open Dependabot pull request in the current repository into exactly on
 
 Dependabot PRs look uniform and are not. A green check can be reporting on a base that no longer exists. A `MERGEABLE` PR can downgrade a dependency the default branch has already moved past. A grouped PR can carry a production-server major among a handful of patches. CI can fail only because Dependabot runs cannot read the repository's secrets, or pass only because nothing it runs touches the changed files. Merging on the strength of a green check or a `MERGEABLE` badge misses all of these, so this skill gathers the evidence that separates them.
 
-This skill triages PRs. To review the Dependabot configuration and the repository settings behind it, use the `review-dependabot-config` skill.
+This skill triages PRs. To review the Dependabot configuration and the repository settings behind it, use the `dependabot:review-config` skill.
 
 ## Options
 
 The user may provide these options inline:
 
-- **`<pr-number>...`**: Triage only these PRs (e.g., `/triage-dependabot-prs 107 110`)
+- **`<pr-number>...`**: Triage only these PRs (e.g., `/dependabot:triage-prs 107 110`)
 - **--repo `OWNER/REPO`**: Triage this repository instead of the one the `origin` remote points at
 - **--verify**: Run local verification (`./references/verification.md`) for every PR headed for Needs testing before reporting, so those PRs can be promoted or demoted on evidence
 - **--report-only**: Report and stop. Offer no actions
@@ -120,7 +120,7 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
    - **Merge rules**: `gh api --paginate 'repos/OWNER/REPO/rules/branches/DEFAULT?per_page=100' --jq '.[]'`, which pages through every rule that applies. Rulesets can require reviews, restrict `allowed_merge_methods`, and block merges while `branches/DEFAULT/protection` returns 404, so read the rules endpoint rather than protection alone.
    - **Policy**: the repository's `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md`, for held majors, freezes, a required merge method, and commit conventions. Also `git grep -n "held at" origin/DEFAULT -- .github/` for held-major comments on pinned actions, read from the default branch rather than whatever the working tree has checked out.
 
-1. **No open Dependabot PRs**: report that, list `unclearedAlerts` (alerts with no PR, which usually means a transitive dependency its parent pins exactly), and if the repository has no Dependabot config, suggest the `review-dependabot-config` skill. Stop.
+1. **No open Dependabot PRs**: report that, list `unclearedAlerts` (alerts with no PR, which usually means a transitive dependency its parent pins exactly), and if the repository has no Dependabot config, suggest the `dependabot:review-config` skill. Stop.
 
 ### 3. Collect Evidence
 
@@ -184,7 +184,7 @@ Print the report in the terminal, in the shape shown in [Reporting Format](#repo
 1. One table per non-empty category, in precedence order, with the PR, update, type, security, deciding evidence, and recommended action.
 1. Merge order.
 1. Verification the Needs testing PRs require, concretely: which command, which consumer to grep, which release note to read.
-1. Configuration observations, if any, handed to the `review-dependabot-config` skill: a PR regenerated for a directory that should be excluded, "labels could not be found" comments from Dependabot, security-only PRs in a repository with no config, CI failing only on secrets Dependabot cannot read.
+1. Configuration observations, if any, handed to the `dependabot:review-config` skill: a PR regenerated for a directory that should be excluded, "labels could not be found" comments from Dependabot, security-only PRs in a repository with no config, CI failing only on secrets Dependabot cannot read.
 
 ### 6. Offer Actions
 
@@ -237,7 +237,7 @@ Carry out the selected actions per `./references/actions.md`:
 
 1. Summarize under these headings, with PR links, skipping empty ones: Merged, Rebase requested, Closed, Issues created, Held, Left for the user, Failed.
 1. Suggest follow-ups where the triage found causes rather than symptoms:
-   - the `review-dependabot-config` skill, for the configuration observations from step 5
+   - the `dependabot:review-config` skill, for the configuration observations from step 5
    - the `upgrade-everything` skill, when several PRs fight over one lockfile and a single package-manager upgrade on a branch would replace them
 
 ## Reporting Format
@@ -265,7 +265,7 @@ Merge order: #103, #102. #101 shares ci.yml with #102 and will need `@dependabot
 
 Needs testing: #108 sinon 13 -> 22. Run the unit suite locally on the PR head; CI only lints package.json changes.
 
-Config: Dependabot commented on #108 that the label `javascript` could not be found. See /review-dependabot-config.
+Config: Dependabot commented on #108 that the label `javascript` could not be found. See /dependabot:review-config.
 ```
 
 ## Error Handling

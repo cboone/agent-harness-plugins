@@ -64,7 +64,7 @@ Once the PR merges, the skill fetches the base branch from the remote that names
 Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops rebasing it, and a later `@dependabot recreate` throws the push away. So on a PR authored by Dependabot the skill never pushes:
 
 - A conflicted or out-of-date branch gets a `@dependabot rebase` comment, once per head, instead of `sync-with-main:merge`.
-- A failing check is diagnosed but not repaired, and the watch stops there. A failure caused by a secret that Dependabot runs cannot read is reported as an environment problem, pointing at [Review Dependabot Config](../review-dependabot-config/README.md). Anything else points at [Triage Dependabot PRs](../triage-dependabot-prs/README.md).
+- A failing check is diagnosed but not repaired, and the watch stops there. A failure caused by a secret that Dependabot runs cannot read is reported as an environment problem, pointing at [Review Dependabot Config](../dependabot/README.md). Anything else points at [Triage Dependabot PRs](../dependabot/README.md).
 - The Copilot axis counts as clean unless a Copilot review of the current head states a concern, leaves an open thread, or reads as unclear, or the audit reports Copilot feedback outside threads and review bodies, any of which escalates. With no resolver to run, the watch reads the review body in full itself; the probe and that read are reads, so the Dependabot path sees what Copilot found without running a skill that would push. The skill never requests or waits for a review, since every rebase leaves any earlier review behind.
 
 #### What does not gate
@@ -134,7 +134,7 @@ Four notes on these rules. **The script rules are deliberately path-agnostic**: 
 - [Resolve Copilot PR Feedback](../monitor-pr/README.md): the Copilot half of the loop, invoked once a review lands on the current head
 - [Merge Main](../sync-with-main/README.md): invoked when the branch falls behind or conflicts with its base
 - [Lint and Fix](../lint-and-fix/README.md): invoked to repair lint and format failures
-- [Triage Dependabot PRs](../triage-dependabot-prs/README.md): decide what to do with a Dependabot PR before watching it
+- [Triage Dependabot PRs](../dependabot/README.md): decide what to do with a Dependabot PR before watching it
 - [All plugins](../../../../README.md)
 
 ## monitor-pr:resolve-copilot-feedback

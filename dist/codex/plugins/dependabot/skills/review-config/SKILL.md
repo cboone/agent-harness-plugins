@@ -1,5 +1,5 @@
 ---
-name: review-dependabot-config
+name: review-config
 description: >-
   Review dependabot.yml and Dependabot settings, then apply selected fixes. Use
   for "review dependabot config"; for PRs, use triage-dependabot-prs.
@@ -12,7 +12,7 @@ Review how Dependabot is set up for the current repository, in the file and in t
 
 A Dependabot config fails quietly. An ecosystem nobody listed gets no updates and no warning. A label that does not exist is dropped from every PR. A directory added after the config was written is never scanned. A job that needs a secret fails on every Dependabot PR, which teaches everyone to ignore red checks on those PRs. None of it shows up until someone goes looking, so this skill goes looking.
 
-This skill reviews configuration. To work through the open Dependabot PRs themselves, use the `triage-dependabot-prs` skill. To write a first config from the house baseline, this skill hands off to the `pin-everything` skill.
+This skill reviews configuration. To work through the open Dependabot PRs themselves, use the `dependabot:triage-prs` skill. To write a first config from the house baseline, this skill hands off to the `pin-everything` skill.
 
 ## Options
 
@@ -103,7 +103,7 @@ Every finding records:
 - **Evidence**: the file and line, API response, or PR comment that shows it
 - **Fix**: the concrete change, and whether it is a local edit or an outward-facing change
 
-When the repository has open Dependabot PRs, glance at them for evidence of config problems: comments from Dependabot saying labels could not be found, PRs for directories that should be excluded, or checks that fail only on Dependabot runs. Leave triaging the PRs to the `triage-dependabot-prs` skill.
+When the repository has open Dependabot PRs, glance at them for evidence of config problems: comments from Dependabot saying labels could not be found, PRs for directories that should be excluded, or checks that fail only on Dependabot runs. Leave triaging the PRs to the `dependabot:triage-prs` skill.
 
 ### 5. Report
 
@@ -114,7 +114,7 @@ Print the report in the terminal, in the shape shown in [Reporting Format](#repo
 1. **Settings table**: alerts, security updates, Dependabot secrets, merge rules.
 1. **Findings**, grouped by severity, numbered for selection.
 1. **Untracked surfaces**, with a pointer to the `pin-everything` skill's version-audit step and the `upgrade-everything` skill.
-1. **Open PRs**, if step 4 saw config symptoms in them, pointing to the `triage-dependabot-prs` skill.
+1. **Open PRs**, if step 4 saw config symptoms in them, pointing to the `dependabot:triage-prs` skill.
 
 When there are no findings above Suggestion, say so plainly.
 

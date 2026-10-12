@@ -85,7 +85,7 @@ The question: would these checks fail if the update broke something?
   - an OIDC or workload identity exchange that is refused
   - a checkout of a private repository or submodule that fails authentication
 
-  Confirm by checking whether the same job passes on the default branch. Mark the PR's CI as uninformative, and pass the finding to the `review-dependabot-config` skill.
+  Confirm by checking whether the same job passes on the default branch. Mark the PR's CI as uninformative, and pass the finding to the `dependabot:review-config` skill.
 
 - **Vacuous passes.** The checks run but cannot see the change:
   - the changed files are excluded by the tool's ignore file (`.prettierignore`, `.markdownlintignore`, `.eslintignore`)

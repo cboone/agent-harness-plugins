@@ -31,9 +31,9 @@ The premise of the PR is gone. Any one of these matches:
 - **The manifest, lockfile, or workflow it updates no longer exists** on the default branch.
 - **The ecosystem was migrated away**, such as a `pip` PR in a project that moved to `uv`, or an `npm` PR after a switch to `pnpm` workspaces where the old lockfile is gone.
 - **The directory is out of scope**: excluded in `dependabot.yml`, vendored, or a subtree whose dependencies another repository manages.
-- **The base branch is gone or retired.** It no longer exists, or it is not the default branch and there is evidence nobody merges to it: its last commit is old (`gh api repos/OWNER/REPO/commits/BASE --jq .commit.committer.date`), the repository's docs or the user say it is retired, or its release line is end of life. A missing `target-branch` entry alone proves nothing, since a release branch can take updates that only a past config aimed at it: report the missing entry as a config finding for the `review-dependabot-config` skill, and classify the PR by the other categories.
+- **The base branch is gone or retired.** It no longer exists, or it is not the default branch and there is evidence nobody merges to it: its last commit is old (`gh api repos/OWNER/REPO/commits/BASE --jq .commit.committer.date`), the repository's docs or the user say it is retired, or its release line is end of life. A missing `target-branch` entry alone proves nothing, since a release branch can take updates that only a past config aimed at it: report the missing entry as a config finding for the `dependabot:review-config` skill, and classify the PR by the other categories.
 
-Action: close and delete the branch. If `dependabot.yml` would regenerate the PR, say so and hand the fix to the `review-dependabot-config` skill.
+Action: close and delete the branch. If `dependabot.yml` would regenerate the PR, say so and hand the fix to the `dependabot:review-config` skill.
 
 ## 3. Hold
 
