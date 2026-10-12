@@ -32,7 +32,7 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A skill can ship executable helpers too. `workmux:start-issue`, `workmux:create-worktree`, `publish-report-board`, `push-notification`, `monitor-pr:resolve-copilot-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
+A skill can ship executable helpers too. `workmux:start-issue`, `workmux:create-worktree`, `publish-report-board`, `push-notification`, `monitor-pr:resolve-copilot-feedback`, and `dependabot:triage-prs` each bundle a `scripts/` directory that the skill body invokes:
 
 ```text
 plugins/workmux/

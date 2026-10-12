@@ -129,7 +129,7 @@ jobs:
         REVIEW_CORPUS_FIXTURE_BIN=./tests/fixtures/review-corpus-fixture
         REPO_ROOT=./
         LAUNCH_WORKMUX_BIN=./plugins/workmux/scripts/launch-workmux
-        DEPENDABOT_PRS_BIN=./plugins/triage-dependabot-prs/scripts/dependabot-prs
+        DEPENDABOT_PRS_BIN=./plugins/dependabot/scripts/dependabot-prs
         DEPENDABOT_PRS_DATA_DIR=./tests/data/dependabot-prs
         GH_STUB_BIN=./tests/fixtures/gh-stub
         GIT_WORKTREE_STUB_BIN=./tests/fixtures/git-worktree-stub

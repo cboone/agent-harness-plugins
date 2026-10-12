@@ -47,7 +47,7 @@ Compare against open Dependabot PRs. An alert with no PR usually means one of th
 - **No patched version exists yet** (`patched` is null).
 - **Security updates are disabled or paused.**
 
-Report these as Warnings with the likely cause. Fixing the dependency is outside a config review; the `triage-dependabot-prs` skill reports the same alerts alongside the PRs.
+Report these as Warnings with the likely cause. Fixing the dependency is outside a config review; the `dependabot:triage-prs` skill reports the same alerts alongside the PRs.
 
 ## Dependabot secrets
 

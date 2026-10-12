@@ -185,7 +185,7 @@ After all tools have run, print a summary:
   - Make an initial commit if the repo is new.
   - Push to the remote and verify CI passes.
   - When `set-up-review-config` ran, open the setup as a pull request: Copilot reads review skills from a pull request's head branch, so that pull request is already reviewed with the new config.
-  - When the plan marked the Dependabot config as already set up, run `/review-dependabot-config` to check that the config covers everything the repository uses.
+  - When the plan marked the Dependabot config as already set up, run `/dependabot:review-config` to check that the config covers everything the repository uses.
 
 ## Error Handling
 

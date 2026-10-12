@@ -48,5 +48,5 @@ Orchestrates these tools:
 - [Set-Up Linters](../set-up-linters/README.md): linter and formatter setup only
 - [Set-Up Review Config](../set-up-review-config/README.md): review checklists for automated pull request reviewers only
 - [Pin Everything](../pin-everything/README.md): the full pinning pass, beyond the Dependabot config bootstrap writes
-- [Review Dependabot Config](../review-dependabot-config/README.md): review an existing Dependabot config and its repository settings
+- [Review Dependabot Config](../dependabot/README.md): review an existing Dependabot config and its repository settings
 - [All plugins](../../README.md)

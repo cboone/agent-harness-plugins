@@ -18,7 +18,7 @@ This is the maintenance companion to `bootstrap-project`: bootstrap sets things 
 ## Skill dependencies
 
 - **Required:** None
-- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `clean-up-agent-config`, `optimize-runner-usage`, `pin-everything`, `review-dependabot-config`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
+- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `clean-up-agent-config`, `optimize-runner-usage`, `pin-everything`, `dependabot:review-config`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
 
 ## Workflow
 
@@ -132,10 +132,10 @@ For each confirmed update item, choose a strategy based on scope:
 | Community file outdated (e.g., CoC version)                                                                     | **Full re-run**: invoke the `add-community-files` skill                                                  |
 | Missing file from a detected tool                                                                               | **Full re-run**: invoke the original skill                                                               |
 | No Dependabot config                                                                                            | **Full re-run**: invoke the `pin-everything` skill with `--scope dependabot`                             |
-| Dependabot config fails a check (a missing ecosystem or directory, no `version: 2`, or both file names present) | **Delegate**: invoke the `review-dependabot-config` skill, which merges the fix into the existing config |
+| Dependabot config fails a check (a missing ecosystem or directory, no `version: 2`, or both file names present) | **Delegate**: invoke the `dependabot:review-config` skill, which merges the fix into the existing config |
 | Review config drift (a changed checklist, a new file type, a missing managed file, or an unpinned link)         | **Full re-run**: invoke the `set-up-review-config` skill, which replaces only its managed content        |
 
-For full tool re-runs, all detected tools are skills. Invoke those skills. If one is not installed, record that update as "skipped: not installed" with the skill's installation command, report it apart from the applied updates, and continue with the rest. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `set-up-review-config`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `review-dependabot-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
+For full tool re-runs, all detected tools are skills. Invoke those skills. If one is not installed, record that update as "skipped: not installed" with the skill's installation command, report it apart from the applied updates, and continue with the rest. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `set-up-review-config`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `dependabot:review-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
 
 Process updates in this order (matching the bootstrap-project execution order):
 
@@ -149,7 +149,7 @@ Process updates in this order (matching the bootstrap-project execution order):
 1. `set-up-installers` (distribution)
 1. `add-scrut-cli-tests` (testing)
 1. `set-up-review-config` (review checklists, once the file types and CI checks above are final)
-1. `pin-everything` or `review-dependabot-config` (Dependabot config, once every workflow and manifest above is in place)
+1. `pin-everything` or `dependabot:review-config` (Dependabot config, once every workflow and manifest above is in place)
 1. `optimize-runner-usage` (CI optimization)
 1. `clean-up-agent-config` (agent config)
 
@@ -461,7 +461,7 @@ Must include language-specific entries appropriate for the detected project type
 - A config exists whenever the repository has `.github/workflows/*.yml` or `*.yaml` files, a manifest from the table below, or a manifest of another ecosystem Dependabot supports, such as `deno.json`, `pom.xml`, `build.gradle`, `*.csproj`, `pubspec.yaml`, `Chart.yaml`, `*.tf`, or `.pre-commit-config.yaml` (the [supported ecosystems page](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) has the full list). Absent: `Needs update`, fixed by `pin-everything --scope dependabot`, which writes a block for every supported ecosystem the repository uses
 - Only one of the two file names exists
 - `version: 2` is set
-- Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `review-dependabot-config` skill checks the full set:
+- Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `dependabot:review-config` skill checks the full set:
 
 | Found                                                                                     | Expected `package-ecosystem`         |
 | ----------------------------------------------------------------------------------------- | ------------------------------------ |
@@ -482,7 +482,7 @@ Must include language-specific entries appropriate for the detected project type
 
 - A composite action outside `.github/workflows/` whose `action.yml` references other actions has its directory in the `github-actions` entry
 
-These checks only establish that the config exists and covers what is present. For anything deeper (validity, groups, labels, commit messages, and the repository settings Dependabot depends on), and for the fix itself when coverage is incomplete, invoke the `review-dependabot-config` skill.
+These checks only establish that the config exists and covers what is present. For anything deeper (validity, groups, labels, commit messages, and the repository settings Dependabot depends on), and for the fix itself when coverage is incomplete, invoke the `dependabot:review-config` skill.
 
 ## Reference: Agent Config Checks (clean-up-agent-config)
 
