@@ -81,7 +81,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ### See Also
 
-- [Triage Dependabot PRs](../dependabot/README.md): work through the open Dependabot PRs this config produces
+- [Triage Dependabot PRs](#dependabottriage-prs): work through the open Dependabot PRs this config produces
 - [Pin Everything](../pin-everything/README.md): write the baseline config, and audit the version pins Dependabot cannot see
 - [Refresh Project Scaffolding](../refresh-project-scaffolding/README.md): detect a missing or incomplete config among other scaffolding drift
 - [Optimize Runner Usage](../set-up-ci/README.md): cut the CI cost of Dependabot PR volume
@@ -172,8 +172,8 @@ The `gh pr comment`, `close`, `merge`, and `review` rules allow writes to your r
 
 ### See Also
 
-- [Review Dependabot Config](../dependabot/README.md): review the `dependabot.yml` and repository settings behind these PRs
+- [Review Dependabot Config](#dependabotreview-config): review the `dependabot.yml` and repository settings behind these PRs
 - [Monitor PR](../monitor-pr/README.md): watch a single refreshed Dependabot PR until it is ready to merge
 - [Upgrade Everything](../upgrade-everything/README.md): replace several PRs that fight over one lockfile with a single package-manager upgrade
-- [Create Issue](../use-git/README.md): track a Needs work or Hold upgrade
+- [Create Issue](../use-git/README.md#create-issue): track a Needs work or Hold upgrade
 - [All plugins](../../README.md)

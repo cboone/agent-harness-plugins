@@ -119,6 +119,6 @@ The skill never uses plain `--force`, and never force-pushes the default branch.
 
 ### See Also
 
-- [Merge Main](../sync-with-main/README.md): merge the base branch into the current branch instead of rebasing
+- [Merge Main](#sync-with-mainmerge): merge the base branch into the current branch instead of rebasing
 - [Review Branch](../review-branch/README.md): summarize what changed on the current branch
 - [All plugins](../../README.md)

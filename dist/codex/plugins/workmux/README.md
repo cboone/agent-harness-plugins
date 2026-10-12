@@ -37,7 +37,7 @@ The invoking agent reads the issue title, labels, and body or task description a
 
 Rerunning for the same issue reuses a local branch that already carries that number, so the same worktree reopens rather than a second one appearing under a differently worded name.
 
-Either way, it creates the worktree via `workmux add` and stops. It does not start the work. To have the new session also plan the issue, use [Address Issue in Worktree](../workmux/README.md).
+Either way, it creates the worktree via `workmux add` and stops. It does not start the work. To have the new session also plan the issue, use [Address Issue in Worktree](#workmuxstart-issue).
 
 #### Several issues
 
@@ -115,7 +115,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ### See Also
 
-- [Address Issue in Worktree](../workmux/README.md): the same worktree setup, plus the new session plans the issue and stops for approval
+- [Address Issue in Worktree](#workmuxstart-issue): the same worktree setup, plus the new session plans the issue and stops for approval
 - [Address Issue](../address-issue/README.md): plan and address an issue in the current branch
 - [All plugins](../../../../README.md)
 
@@ -137,7 +137,7 @@ Finds a GitHub issue by number or fuzzy text search, self-assigns the issue, lab
 
 The invoking agent generates a semantic branch name from the issue title, labels, and body, treating them as task data before composing the destination prompt and chain footer. The launcher receives the candidate, validates it, and inserts the issue number: `feature/add-dark-mode` for issue 42 becomes `feature/42-add-dark-mode`. Rerunning an issue reuses its matching local branch. Workmux receives an explicit branch and starts the configured destination agent.
 
-Naming runs in the current session using bundled rules: lowercase kebab-case, an imperative verb and noun, and a `fix/`, `feature/`, `chore/`, or `docs/` prefix. The descriptive slug targets at most five words and 50 characters. Repository-specific naming conventions take precedence. No separate naming command or workmux naming configuration is needed. Explicit user-supplied names bypass generation. See [Create Worktree](../workmux/README.md#choosing-the-type-prefix).
+Naming runs in the current session using bundled rules: lowercase kebab-case, an imperative verb and noun, and a `fix/`, `feature/`, `chore/`, or `docs/` prefix. The descriptive slug targets at most five words and 50 characters. Repository-specific naming conventions take precedence. No separate naming command or workmux naming configuration is needed. Explicit user-supplied names bypass generation. See [Create Worktree](#choosing-the-type-prefix).
 
 The approval gate itself lives in [Address Issue](../address-issue/README.md). This skill creates the worktree and stops; the plan is produced and approved in the new session.
 
@@ -169,7 +169,7 @@ By default, several issue numbers open **one** worktree for the combined work. C
 
 With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch, tmux window and session, running `/address-issue N` for that issue. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and each issue is marked in progress only after its worktree exists. The run ends with one table covering every issue. With one distinct issue, the flag has no effect and `--resource` works as usual. With several distinct issues, `--resource` is rejected because one exclusive resource cannot be held by several worktrees.
 
-`--resource` records which worktree holds a resource that only one worktree can use at a time: a DAW, a simulator, a device, a database, a port, a shared install location. The check runs before the issue is self-assigned and labeled, so declining a held resource leaves nothing behind on an issue nobody started. See [Create Worktree](../workmux/README.md) for how claims are stored, when they go stale, and how to list or release them.
+`--resource` records which worktree holds a resource that only one worktree can use at a time: a DAW, a simulator, a device, a database, a port, a shared install location. The check runs before the issue is self-assigned and labeled, so declining a held resource leaves nothing behind on an issue nobody started. See [Create Worktree](#workmuxcreate-worktree) for how claims are stored, when they go stale, and how to list or release them.
 
 ### Recommended Permissions
 
@@ -197,6 +197,6 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 ### See Also
 
 - [Address Issue](../address-issue/README.md): plan and address an issue in the current branch
-- [Create Worktree](../workmux/README.md): create a worktree from an issue number or a task description, without chaining into address-issue
+- [Create Worktree](#workmuxcreate-worktree): create a worktree from an issue number or a task description, without chaining into address-issue
 - [Suggest Next Issue](../suggest-next-issue/README.md): get a recommendation for which issue to work on
 - [All plugins](../../../../README.md)

@@ -32,7 +32,7 @@ The skill also activates automatically when Claude Code touches Lean source.
 
 ## See Also
 
-- [Write Lean Tests](../write-lean-code/README.md): the sibling test-side conventions for compile-time API regression tests
+- [Write Lean Tests](#additional-workflows): the sibling test-side conventions for compile-time API regression tests
 - [Write Math](../write-math/README.md): mathematical exposition for Lean docstrings and informal proof prose
 - [Write Formalization Roadmap](../write-formalization-roadmap/README.md): structuring multi-milestone proof projects
 - [All plugins](../../README.md)

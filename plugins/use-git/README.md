@@ -36,7 +36,7 @@ The skill also activates automatically when Claude Code detects work involving g
 
 - [Commit](../commit/README.md): smart git commits with conventional commit messages
 - [PR](../pr/README.md): commit, push, and create a pull request in one step
-- [Create Issue](../use-git/README.md): create GitHub issues using the tmpfile pattern
+- [Create Issue](#create-issue): create GitHub issues using the tmpfile pattern
 - [All plugins](../../README.md)
 
 ## Create issue
@@ -84,6 +84,6 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ### See Also
 
-- [Address Issue in Worktree](../workmux/README.md): Start working on an existing issue in an isolated worktree
+- [Address Issue in Worktree](../workmux/README.md#workmuxstart-issue): Start working on an existing issue in an isolated worktree
 - [Suggest Next Issue](../suggest-next-issue/README.md): Get recommendations on which issue to tackle next
 - [All plugins](../../README.md)

@@ -14,7 +14,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 Analyzes open issues in context (current branches, pull requests, issue labels, assignments, recent work, project goals, and dependencies), excludes issues already in progress, reports how far along each one is and whose move comes next, weighs assignments and recent work in an area as a weak ownership signal, then categorizes the remaining candidates as safe to parallelize, narrow scope, high impact, unblocks others, or overdue. Provides specific reasoning for each recommendation so you can make an informed decision.
 
-It also reads the exclusive-resource claims recorded by [Create Worktree](../workmux/README.md) and [Address Issue in Worktree](../workmux/README.md), so an issue whose verification needs a resource another worktree is holding is flagged rather than recommended blind. The summary ends with who holds what, which is the half of the picture the issue list cannot show.
+It also reads the exclusive-resource claims recorded by [Create Worktree](../workmux/README.md#workmuxcreate-worktree) and [Address Issue in Worktree](../workmux/README.md#workmuxstart-issue), so an issue whose verification needs a resource another worktree is holding is flagged rather than recommended blind. The summary ends with who holds what, which is the half of the picture the issue list cannot show.
 
 ## Usage
 
@@ -50,6 +50,6 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## See Also
 
-- [Address Issue in Worktree](../workmux/README.md): start working on the suggested issue
-- [Create Worktree](../workmux/README.md): claim, list, and release the exclusive resources this skill reports on
+- [Address Issue in Worktree](../workmux/README.md#workmuxstart-issue): start working on the suggested issue
+- [Create Worktree](../workmux/README.md#workmuxcreate-worktree): claim, list, and release the exclusive resources this skill reports on
 - [All plugins](../../README.md)

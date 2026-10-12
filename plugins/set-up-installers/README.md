@@ -48,7 +48,7 @@ Pass an argument to skip the selection prompt:
 
 ## See Also
 
-- [Add GoReleaser Homebrew](../set-up-installers/README.md): add GoReleaser with Homebrew tap publishing (release pipeline)
+- [Add GoReleaser Homebrew](#additional-workflows): add GoReleaser with Homebrew tap publishing (release pipeline)
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): scaffold a full Go CLI project (includes GoReleaser)
 - [All plugins](../../README.md)
 

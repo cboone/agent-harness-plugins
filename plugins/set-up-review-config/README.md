@@ -64,5 +64,5 @@ If you already have a `permissions.allow` array, merge these entries into it. Th
 
 - [Set-Up Linters](../set-up-linters/README.md): configure the linters and formatters whose findings reviewers are told to skip
 - [Refresh Project Scaffolding](../refresh-project-scaffolding/README.md): audit installed review config for drift
-- [Resolve Copilot PR Feedback](../monitor-pr/README.md): process the review comments that follow
+- [Resolve Copilot PR Feedback](../monitor-pr/README.md#monitor-prresolve-copilot-feedback): process the review comments that follow
 - [All plugins](../../README.md)

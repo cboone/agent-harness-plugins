@@ -35,7 +35,7 @@ If the request doesn't imply a type (e.g., just "create a plugin"), ask. If ambi
 The plugin name must be:
 
 - **Kebab-case** (e.g., `write-go-code`, `suggest-next-issue`)
-- **Verb-noun preferred** (e.g., `monitor-pr:resolve-copilot-feedback`, `suggest-next-issue`)
+- **Verb-noun preferred** (e.g., `monitor-pr`, `suggest-next-issue`)
 - **Descriptive** of what the plugin does
 - **Unique** within the `plugins/` directory
 
