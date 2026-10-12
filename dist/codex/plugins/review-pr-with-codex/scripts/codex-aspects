@@ -2,18 +2,14 @@
 # codex-aspects -- Render, run and validate the review-pr-with-codex aspects.
 set -euo pipefail
 
-# Make `set -e` apply inside command substitutions too. Bash leaves this off by
-# default, which is why a multi-command function called as `$(...)` can fail
-# halfway and still return the last command's success.
+# Make `set -e` apply inside command substitutions, where Bash supports it.
 shopt -s inherit_errexit 2> /dev/null || true
 
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
-# The aspect instructions ship beside the skill, two levels up from this
-# script. They are found relative to the script rather than through
-# ${CLAUDE_PLUGIN_ROOT}, so the lookup also works in Codex CLI, where that
-# placeholder is not substituted in skills.
+# Found relative to this script rather than ${CLAUDE_PLUGIN_ROOT}, which Codex
+# CLI does not substitute in skills.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
 ASPECTS_DIR="${CODEX_ASPECTS_DIR:-${SCRIPT_DIR}/../skills/review-pr-with-codex/references/aspects}"
 readonly SCRIPT_DIR ASPECTS_DIR
@@ -25,29 +21,24 @@ DEFAULT_MODEL="gpt-6.1-sol"
 DEFAULT_EFFORT="medium"
 readonly DEFAULT_MODEL DEFAULT_EFFORT
 
-# Linux caps a single execve argument at 128 KiB. The prompt is passed to
-# `codex exec` as one argument, because stdin has to stay /dev/null, so a
-# prompt near that cap is refused here with a clear message instead of failing
-# as a raw shell error after the other aspects have started.
+# Linux caps one execve argument at 128 KiB, and the prompt is one argument
+# because stdin must stay /dev/null. A prompt near the cap is refused before
+# any run starts, with a clear message instead of a raw shell error.
 MAX_PROMPT_BYTES=120000
 readonly MAX_PROMPT_BYTES
 
-# Exit status when every argument was valid but at least one aspect run
-# failed. It differs from 1, a usage or environment error, so a caller can tell
-# "the review could not start" from "the review ran and some of it failed".
+# Exit status when the review ran but an aspect failed, distinct from 1, a
+# usage or environment error.
 EXIT_ASPECT_FAILED=3
 readonly EXIT_ASPECT_FAILED
 
-# The `codex exec` processes `run` has started and not yet waited for. A
-# global rather than a local of cmd_run, because the EXIT trap below runs after
-# cmd_run's locals are gone.
+# The `codex exec` processes `run` has started and not yet waited for. Global,
+# because the EXIT trap runs after cmd_run's locals are gone.
 RUNNING_PIDS=()
 
 # Stops every Codex run still going, with its direct children, and waits for
-# them. Without it, stopping this helper while it waits leaves the runs going on
-# their own, and a simplify run keeps write access and goes on editing after
-# the caller has measured its changes. pkill -P reaches the processes a run has
-# started itself; Codex stops the rest of its tree when it receives TERM.
+# them, so a cancelled simplify run cannot keep editing. pkill -P reaches a
+# run's own children; Codex stops the rest of its tree on TERM.
 function stop_running_codex() {
   local pid
 
@@ -63,10 +54,9 @@ function stop_running_codex() {
   RUNNING_PIDS=()
 }
 
-# A private directory for every temporary file, created by main once the
-# arguments are known. One directory rather than a list of files, because
-# prompts are rendered in command substitutions: a subshell can create a file
-# in it, but could not add that file to a list the parent removes.
+# Private directory for every temporary file, created by main. A directory
+# rather than a list of files, because prompts render in command substitutions,
+# whose files a list in the parent could not track.
 TMP_DIR=""
 
 function cleanup() {
@@ -78,12 +68,9 @@ function cleanup() {
   return 0
 }
 
-# One EXIT trap covers every way out: a normal return, a `die` partway through,
-# and a fatal signal such as TERM, since Bash runs the EXIT trap before a fatal
-# signal ends the shell. Measured on Bash 5 and on macOS Bash 3.2: TERM sent to
-# the helper stops its runs, and the helper still exits 143. Bash does not run
-# it when a command substitution's subshell exits, so a prompt rendered in one
-# leaves TMP_DIR in place for the next.
+# Covers a normal return, a `die`, and a fatal signal such as TERM, which Bash
+# 3.2 and 5 both run the EXIT trap for. It does not run when a command
+# substitution's subshell exits, so TMP_DIR survives prompt rendering.
 trap cleanup EXIT
 
 function usage() {
@@ -182,9 +169,8 @@ function require_scope_file() {
   [[ -n "${scope}" ]] || die "--scope is required"
   [[ -f "${scope}" ]] || die "scope file '${scope}' does not exist"
 
-  # Every field the prompt and the change report read is checked here, so a
-  # truncated or hand-edited scope stops the command instead of rendering a
-  # prompt that covers less than the scope claims. Two rules go beyond types:
+  # Checks every field the prompt and the change report read, so a truncated or
+  # hand-edited scope stops here. Two rules go beyond types:
   #
   # - A non-empty committed bucket needs a base, since without one the
   #   committed diff is left out of the prompt with no error.
@@ -288,12 +274,9 @@ function print_schema() {
 SCHEMA_TEXT
 }
 
-# valid_output: a structural check of an output object against the schema
-# above, in jq, because no JSON Schema validator can be assumed on the user's
-# machine. It checks what the report depends on: the exact key sets, the types,
-# the enumerations, the ranges and the path rule. The path rule is safe_path
-# rather than the schema's pattern, since jq has no trouble expressing "no
-# segment is . or .." directly.
+# valid_output: the schema above, checked in jq, since no JSON Schema validator
+# can be assumed on the user's machine. Paths use safe_path rather than the
+# schema's pattern, which jq can express directly.
 #
 # The $ names are jq variables and the single quotes keep them from the shell.
 # shellcheck disable=SC2016
@@ -320,9 +303,9 @@ VALIDATE_DEFS="${JQ_PATH_DEFS}"'
 '
 readonly VALIDATE_DEFS
 
-# Prints one status object for an aspect's output. The checks run in the order
-# a failure would occur, and every one of them is a failure: a run that wrote
-# nothing must never read as a review that found nothing.
+# Prints one status object for an aspect's output, checking in the order a
+# failure would occur. A run that wrote nothing must never read as a review that
+# found nothing.
 #
 # `exit_code` is empty when the output came from a subagent, which has no
 # process status of its own; the remaining checks then carry the weight.
@@ -337,11 +320,9 @@ function aspect_status() {
   elif [[ ! -s "${output}" ]]; then
     reason="the output file is empty"
   else
-    # One jq program checks the content, and it reads the file as a list of
-    # values first. jq reads a file as a stream and `jq -e` reports on the last
-    # value, so checks run over the stream would pass an invalid object
-    # followed by a valid one. A parse error stops jq with a non-zero status,
-    # which is the not-JSON case.
+    # Reads the file as a list of values: over the raw stream, `jq -e` reports
+    # on the last value, so an invalid object followed by a valid one would
+    # pass. A parse error exits non-zero, which is the not-JSON case.
     reason="$(jq -n -r --arg aspect "${aspect}" --arg snapshot "${snapshot}" "${VALIDATE_DEFS}"'
       [inputs] as $values
       | if ($values | length) == 0 then "the output is not JSON"
@@ -370,12 +351,10 @@ function aspect_status() {
     || die "could not build the status for the ${aspect} aspect"
 }
 
-# Every function from here to render_prompt checks each command it runs with
-# `|| die` instead of relying on `set -e`. `cmd_run` calls render_prompt inside
-# a command substitution, and macOS ships Bash 3.2, which has no
-# inherit_errexit: there, `set -e` is off inside `$(...)`, so an unreadable
-# aspect file or a failed jq query would otherwise leave a prompt with a part
-# missing and a zero exit status, and Codex would review against it.
+# From here to render_prompt, every command is checked with `|| die`, not left
+# to `set -e`. cmd_run renders prompts in command substitutions, where macOS
+# Bash 3.2 turns `set -e` off, so a failed read would otherwise send Codex an
+# incomplete prompt.
 
 # Prints the scope as prompt lines. An empty bucket is left out rather than
 # listed, because naming a command that returns nothing invites the reviewer to
@@ -433,9 +412,8 @@ function render_scope() {
   [[ -z "${unreadable_link}" ]] || die "could not read the symlink ${unreadable_link}"
 }
 
-# Drops the single-line HTML comments an aspect file carries for attribution,
-# which are for people reading the source, not for the reviewer, and the blank
-# lines before the first heading.
+# Prints an aspect's instructions without its attribution comment, which is for
+# people reading the source, or the blank lines before the first heading.
 function aspect_body() {
   local aspect="${1}"
   local file="${ASPECTS_DIR}/${aspect}.md"
@@ -641,9 +619,8 @@ function cmd_run() {
   top_level="$(physical_dir "${top_level}")"
   out_physical="$(physical_dir "${out_dir}")"
 
-  # Prompts, outputs and logs written inside the work tree would be new
-  # untracked files: they would change the scope the review is reading and turn
-  # up in the next review as code to review.
+  # Prompts, outputs and logs written inside the work tree would join the scope
+  # under review.
   if [[ "${out_physical}" == "${top_level}" || "${out_physical}" == "${top_level}/"* ]]; then
     die "--out-dir must be outside the working tree"
   fi
@@ -744,15 +721,12 @@ function cmd_changes() {
   before_tree="$(jq -r '.tree' "${before}")"
   after_tree="$(jq -r '.tree' "${after}")"
 
-  # The tree objects are review-scope's content digests of the whole working
-  # tree, so diffing them lists every path whose content, as Git would store it
-  # after normalization, changed between the two reads, whichever bucket it
-  # sits in. The plumbing `git diff-tree` is used rather than `git diff`
-  # because it ignores the user's `diff.*` settings: with `diff.renames`, git
-  # names only a renamed file's new path, hiding the removed source from
-  # outside_scope, and with `diff.relative`, it hides every change outside the
-  # current subdirectory. The output goes to a file first so git's exit status
-  # is checked rather than hidden behind jq's.
+  # review-scope's trees digest the whole working tree, so diffing them lists
+  # every path whose content, as Git would store it, changed in any bucket.
+  # Plumbing `git diff-tree` ignores the user's diff.* settings: diff.renames
+  # would hide a renamed file's old path, and diff.relative every change
+  # outside the current directory. Output goes to a file so git's exit status
+  # is checked, not hidden behind jq's.
   raw="$(mktemp "${TMP_DIR}/changes.XXXXXX")" \
     || die "could not create a temporary file for the tree comparison"
   if ! git diff-tree -r -z --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
