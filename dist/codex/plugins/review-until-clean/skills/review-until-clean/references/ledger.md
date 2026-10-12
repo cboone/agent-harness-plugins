@@ -54,14 +54,14 @@ Reviewer reply, verbatim:
 ...
 ````
 
-An edit round records the paths whose content moved while the reviewer ran, and any findings it also reported, inside fenced `text` blocks, never as list items:
+An edit round records the paths whose content moved while the reviewer ran, and any findings it also reported, inside fenced `text` blocks, never as list items. Write each path as a JSON string, one per line, so a path holding a newline or a backtick stays on its line, and size each fence by the rule in `./reviewers.md`, one backtick longer than the longest run inside:
 
 ````markdown
 Changed while the reviewer ran:
 
 ```text
-src/session.ts
-src/token.ts
+"src/session.ts"
+"src/token.ts"
 ```
 
 Findings reported in the edit round, not queued:
@@ -125,11 +125,11 @@ A finding leaves the loop through one of these. There is no sixth state where it
 
 A declined finding is still a defect in the reviewer's eyes, so the next round raises it again. Without a rule, the loop then spends every remaining round on a question that was settled.
 
-Once a round's findings are recorded, match them against the declines already in this run's ledger, by location and substance rather than by wording, since the reviewer will phrase it differently. A match is recorded as declined, carrying the original reason and the round it was first declined in. It does not go to `address-review`, and it does not block a clean result.
+Once a round's findings are recorded, match them against the declines already in this run's ledger and in the earlier ledgers of the same branch in `docs/reviews/`, by location and substance rather than by wording, since the reviewer will phrase it differently. A match is recorded as declined, carrying the original reason and the round it was first declined in. It does not go to `address-review`, and it does not block a clean result.
 
 A round whose only findings at or above the threshold are carried declines is **clean-with-declines**. That is a real terminal state, not a failure: the reviewer has nothing new to say, and the open disagreements are written down.
 
-Declines carry within one run. A decline recorded in an earlier run's ledger is not carried into a new run; raise the finding fresh, and decline it again if the reason still holds.
+A decline from an earlier run carries the same way, naming the ledger and the finding it came from, so a settled question is not asked again in every run. The branch's ledgers are those named `<date>-<branch>-until-clean*.md` for this branch.
 
 Do not carry a decline across a change to the code it was about. If the finding's location changed in the interim, raise it fresh; the reason it was declined may no longer hold.
 
