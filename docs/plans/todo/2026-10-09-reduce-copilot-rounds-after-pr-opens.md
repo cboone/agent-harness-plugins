@@ -80,7 +80,7 @@ Findings per review by round: 1.1, 0.8, 0.9, 0.7, 0.9, 0.6, 0.8 for rounds 1 to 
 
 ### Phase 2: `review-anti-patterns` skill
 
-1. New plugin via the `create-plugin` skill, starting at `1.0.0`, with catalog entry, README and Codex/OpenCode mirrors from `make build`.
+1. New plugin via the `create-plugin` skill, starting at `1.0.0`, with catalog entry, README and Codex mirror from `make build`.
 1. `SKILL.md`: options `--range <rev-range>` (default: merge base with the default branch through the working tree), `--files <paths>` and `--severity important|nit`. Workflow: resolve the scope, read the changed hunks with enough surrounding context to see parallel paths, walk the checklist, return findings with the evidence each item asked for, and never edit.
 1. `references/checklist.md`: the thirteen patterns as reviewer questions, each with what settles it and a short example from the analysis. Group them into code, agent prose and docs consistency so a scope that is all Markdown skips what cannot apply.
 1. `references/mechanical-checks.md`: commands that settle the platform pattern where the project has them, such as `terraform validate`, `gcloud ... --validate-only`, `actionlint`, GraphQL schema validation, running each documented command once, and `plant-defects` for tests that cannot fail. The skill runs only checks the project already supports and reports the rest as unverified.
@@ -92,7 +92,7 @@ All in `plugins/resolve-copilot-pr-feedback/skills/resolve-copilot-pr-feedback/S
 1. **Fix the class.** In step 4's Valid Concerns and the review-body Valid row: before editing, state the general problem behind the finding, search the branch and its consumers for every instance (same shape elsewhere, parallel branches, mirror copies, callers), and fix them together. The summary row names the class and the extra sites fixed.
 1. **Escalate sibling chains.** New rule in step 4: when a finding is a sibling of one this PR already fixed, record it, do not patch it, and end with a `Partial` status that names the chain and proposes a design option. `monitor-pr` already escalates on `Partial`.
 1. **Consistency sweep.** New step between 4 and 5: list each identifier, flag, count, path and stated behavior the fixes changed, search docs, plans, READMEs, comments and the PR body for them, and correct whatever disagrees. Edit the PR body with `gh pr edit --body-file` when it disagrees.
-1. **Review the fixes.** New step before step 5: run `review-anti-patterns --range <head-before-fixes>..HEAD` and fix Important findings, then review only the lines that second fix changed. Findings it declines go in the summary with a rationale. This step is skipped when the run changed no files.
+1. **Review the fixes.** New step before step 5: run `review-anti-patterns --range <head-before-fixes>..HEAD` without `--run-checks`, since the checkout holds the whole pull request and not only the resolver's fixes, so checks that execute repository code stay unverified unless the user opts in; then fix Important findings, then review only the lines that second fix changed. Findings it declines go in the summary with a rationale. This step is skipped when the run changed no files.
 1. Skill dependencies: add `review-anti-patterns` as required.
 1. README: describe the three new steps and the escalation.
 1. Version: `2.0.0` to `2.1.0`.
