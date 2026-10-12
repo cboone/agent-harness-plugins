@@ -21,7 +21,7 @@ This plan is the integration record for work that spans this repository and a pr
 
 | Item                                | Where                  | Status                                        |
 | ----------------------------------- | ---------------------- | --------------------------------------------- |
-| Sound-set selection in notify, #595 | this repository        | implemented locally; no PR yet                |
+| Sound-set selection in notify, #595 | this repository        | merged (#619, notify 4.1.0)                   |
 | Catalog entry for the chime set     | private catalog        | merged                                        |
 | Chime generation and install        | private generation lab | installed; PR open                            |
 | Set `NOTIFY_SOUND_SET`              | dotfiles               | committed; takes effect once #595 is released |
@@ -38,7 +38,8 @@ This plan is the integration record for work that spans this repository and a pr
 
 - [x] A custom sound in `~/Library/Sounds` plays through `alerter --sound` (2026-10-11).
 - [ ] With `NOTIFY_SOUND_SET` unset, alerts keep Glass, Funk and Tink.
-- [ ] Real alerts from two repositories with different slots play their own variants, from both Claude Code and Codex CLI.
+- [x] Real Claude Code Stop alerts from two repositories play different chimes (2026-10-12).
+- [ ] The same from Codex CLI.
 - [ ] Two worktrees of one repository play the same variant.
 - [ ] Several overlapping alerts sound consonant and do not clip, including alerts with different timbres.
 
@@ -53,3 +54,4 @@ This plan is the integration record for work that spans this repository and a pr
 - 2026-10-12: #594 merged (#607), unblocking #595. Second listening round chose F# minor pentatonic one octave lower (F#4 to E6, ten degrees), all four timbres with the bar kept, and a sonar ping with a faint short echo.
 - 2026-10-12: Chime set installed: 120 files (40 per role), 16-bit mono AIFF, 1.65 s; the level was raised toward Tink's. #595 implemented on its branch.
 - 2026-10-12: Range confirmed one octave lower again, F#3 to E5, after a side-by-side comparison with F#4 to E6; the installed set already uses it. Level set just below Tink. Generation PR open.
+- 2026-10-12: #595 merged as #619 (notify 4.1.0). Dotfiles opt in. Real Stop alerts through the installed plugin from two repositories played two different chimes.
