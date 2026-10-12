@@ -2,6 +2,8 @@
 
 Issue: [#586](https://github.com/cboone/agent-harness-plugins/issues/586). Classification: chore (breaking for anyone who installed a merged, folded or renamed plugin by name).
 
+Status: completed on 2026-10-12.
+
 ## Context
 
 The catalog has 70 plugins on `main` at `b89fff26`. Several pairs ship byte-identical script copies only because rule 18 of `bin/validate-plugins` requires each `SKILL.md`'s `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside its own plugin. Others always travel together, and a few small plugins mostly restate a larger one. This plan merges the first two groups into multi-skill plugins, folds the third into their hosts, and repositions `suggest-next-issue`. `wtaf` already ships two skills, so the multi-skill layout is established.
@@ -124,3 +126,12 @@ Each folded plugin becomes a reference, mode or section of its host, and its dir
 - Retain `create-worktree` and `create-issue` as skill directory and frontmatter names in their new plugins, and allow their new qualified invocations. Do not use whole-word absence of every former plugin name as an acceptance criterion.
 - Local `SCRUT_ENV` and CI `scrut-env` use the new helper paths, with no registrations pointing into deleted plugin directories.
 - In a scratch Claude Code session with the branch's marketplace installed, `/workmux:start-issue`, `/monitor-pr:resolve-copilot-feedback`, `/sync-with-main:rebase`, `/dependabot:triage-prs` and `/use-git:create-issue` each load.
+
+## Completion record
+
+- Implemented sections 0 through 8, with signed source commits and separate generated-mirror commits. Canonical sources remain under `plugins/`; `make build` regenerated the Codex mirror and bundled checklists.
+- The catalog contains 58 plugins and 62 skills. All retired plugin roots are absent from both the canonical tree and the generated mirror. Changed surviving plugins have forward version bumps; new plugins start at `1.0.0`. The version audit used `main` at `b89fff26`, confirmed against GitHub on the completion date.
+- `make test-all` passed all 26 scrut documents. The initial restricted run could not inspect processes or confirm child-process cleanup; the run with normal process access passed. After removing redundant second-copy cases, focused reruns passed 10 prompt-composition, 96 resource-claim and 62 launcher cases. Final `make lint validate` and whitespace checks passed.
+- The five destination plugins installed from the branch's marketplace into an isolated temporary project. A load-only Claude Code session successfully invoked all five qualified skills listed above from their installed cache paths, without running their workflows. A separate compatibility check confirmed that the retained bare names `create-worktree` and `create-issue` still resolve; the migration documentation records that behavior.
+- The shared progress-model source and generated copy remain identical. Review-scope sharing, scaffold license references and notification documentation remain the listed follow-ups.
+- All branch commit signatures were verified. No push, pull request, release, worktree launch or GitHub issue creation was performed by the validation sessions.
