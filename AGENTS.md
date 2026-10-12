@@ -2,15 +2,15 @@
 
 ## Project overview
 
-This is the canonical source for Claude Code plugins (skills and hooks), with committed generated mirrors for Codex CLI and OpenCode. See [README.md](README.md) for installation and the catalog.
+This is the canonical source for Claude Code plugins (skills and hooks), with a committed generated mirror for Codex CLI. See [README.md](README.md) for installation and the catalog.
 
 ## Critical constraints
 
-- Edit canonical sources in `plugins/<name>/`. Never hand-edit `dist/`, `.agents/` or `set-up-review-config`'s `references/checklists/` copies of each style guide's `references/review-checklist.md`; regenerate with `make build` and commit the results when source changes affect them.
+- Edit canonical sources in `plugins/<name>/`. Never hand-edit `dist/`, `.agents/`, `set-up-review-config`'s `references/checklists/` copies of each style guide's `references/review-checklist.md`, or `suggest-next-issue`'s copy of `publish-report-board`'s `references/progress-model.md`; regenerate with `make build` and commit the results when source changes affect them.
 - `.claude-plugin/marketplace.json` is the catalog of record. Each plugin's `.claude-plugin/plugin.json` is its sole version source; a `.codex-plugin/plugin.json` mirrors that version when present. New plugins start at `1.0.0`; wording/fixes are patch changes, new capabilities are minor changes, and breaking changes are major changes.
 - After merging, rebasing or before creating a PR, use the repository's [check-versions skill](.claude/skills/check-versions/SKILL.md).
 - Merge PRs with merge commits only (`gh pr merge --merge`). The repository disables squash and rebase merging.
-- Root and plugin README descriptions match the catalog description verbatim. Preserve root README anchors `install`, `using-with-opencode` and `codex-cli-known-limitations`; plugin READMEs always link to `install` and link to the other anchors when relevant.
+- Root and plugin README descriptions match the catalog description verbatim. Preserve root README anchors `install` and `codex-cli-known-limitations`; plugin READMEs always link to `install` and link to the other anchor when relevant.
 
 ## Navigation and scoped instructions
 
@@ -31,7 +31,7 @@ Node and Yarn are pinned in `.tool-versions` and `package.json`; use Yarn throug
 make help
 make lint          # markdownlint, prettier, shellcheck, shfmt, actionlint
 make validate      # JSON, manifests, catalog, mirrors and cross-references
-make build         # regenerate bundled review checklists and the Codex and OpenCode mirrors
+make build         # regenerate bundled review checklists and the Codex mirror
 make test-scrut    # documents in parallel; SCRUT_JOBS=1 runs them in sequence
 make test-all      # lint, validate and scrut
 ```
@@ -61,7 +61,7 @@ MIT; see `LICENSE`.
 - Rules under a checklist's Important heading are P1. All other checklist rules are P2 or lower.
 - Start each finding with the checklist name and the rule name, for example `write-bash-scripts: Strict mode`.
 - Do not report what these CI checks already report: `markdownlint-cli2`, `prettier`, `shellcheck`, `shfmt`, `actionlint`, `bin/validate-json`, `bin/validate-plugins`, the `make build` generated-mirror drift check, `scrut`.
-- Do not review these paths: `yarn.lock`, `dist/`, `.agents/`, `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/`, `docs/plans/done/`, `.github/skills/code-review/*.md` except `SKILL.md`.
+- Do not review these paths: `yarn.lock`, `dist/`, `.agents/`, `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/`, `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`, `docs/plans/done/`, `.github/skills/code-review/*.md` except `SKILL.md`.
 - Claude Code Review takes its severities from `REVIEW.md`.
 - Rules outside this block take precedence over it.
 

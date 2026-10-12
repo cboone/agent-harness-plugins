@@ -1,0 +1,57 @@
+# One page of a GitHub search for the current user's pull requests in one
+# repository merged within the affinity window, whose changed files are the
+# areas the user has worked in. gh api graphql --paginate supplies $endCursor.
+query ($q: String!, $endCursor: String) {
+  search(query: $q, type: ISSUE, first: 25, after: $endCursor) {
+    issueCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      __typename
+      ... on PullRequest {
+        number
+        title
+        url
+        state
+        isDraft
+        createdAt
+        updatedAt
+        mergedAt
+        mergeable
+        mergeStateStatus
+        headRefName
+        reviewDecision
+        reviewRequests(first: 1) {
+          totalCount
+        }
+        latestReviews(last: 1) {
+          nodes {
+            submittedAt
+          }
+        }
+        author {
+          login
+        }
+        commits(last: 1) {
+          nodes {
+            commit {
+              statusCheckRollup {
+                state
+              }
+            }
+          }
+        }
+        files(first: 100) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            path
+          }
+        }
+      }
+    }
+  }
+}

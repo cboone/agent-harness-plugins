@@ -54,11 +54,8 @@ jobs:
         run: |
           bin/build-review-checklists
           bin/build-codex-marketplace
-          bin/build-opencode-mirror
-          # `git diff` compares the worktree to the index and ignores untracked
-          # files, so a newly added plugin skill produced a brand-new untracked
-          # symlink under dist/opencode/skills/ and still reported clean.
-          # `git status --porcelain` catches additions as well as edits.
+          # `git status --porcelain`, unlike `git diff`, also reports untracked
+          # files, such as a new plugin's uncommitted root under dist/codex/plugins/.
           drift="$(git status --porcelain dist/ .agents/ plugins/set-up-review-config/skills/set-up-review-config/references/checklists/)"
           if [[ -n "${drift}" ]]; then
             echo "::error::Generated files are out of date; run make build"
@@ -114,6 +111,7 @@ jobs:
       scrut-env: |
         CHECK_CROSS_REFERENCES_BIN=./bin/check-cross-references
         BUILD_REVIEW_CHECKLISTS_BIN=./bin/build-review-checklists
+        BUILD_SHARED_REFERENCES_BIN=./bin/build-shared-references
         REVIEW_CHECKLIST_FIXTURE_BIN=./tests/fixtures/review-checklist-fixture
         BUILD_CODEX_MARKETPLACE_BIN=./bin/build-codex-marketplace
         CODEX_TRANSLATION_FIXTURE_BIN=./tests/fixtures/codex-translation-fixture
@@ -147,6 +145,9 @@ jobs:
         RECORD_TRAFFIC_DATA_DIR=./tests/data/record-traffic
         BUGS_GATHER_BIN=./plugins/publish-report-board/scripts/bugs-gather
         BUGS_GATHER_DATA_DIR=./tests/data/bugs-gather
+        BACKLOG_GATHER_BIN=./plugins/publish-report-board/scripts/backlog-gather
+        BACKLOG_GATHER_DATA_DIR=./tests/data/backlog-gather
+        BACKLOG_GATHER_GH_STUB_BIN=./tests/fixtures/backlog-gather-gh-stub
         CURL_STUB_BIN=./tests/fixtures/curl-stub
         RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
         MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads

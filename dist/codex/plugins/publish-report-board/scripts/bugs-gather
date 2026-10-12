@@ -31,8 +31,12 @@
 #       could not be read or written
 #   2 - Usage error, or a required tool is missing
 #
-# BUGS_GATHER_NOW, an ISO 8601 UTC time, replaces the current time; tests use
-# it to keep every window fixed.
+# BUGS_GATHER_NOW (ISO 8601 UTC) and BUGS_GATHER_HOST override the current
+# time and the host name, for fixed test output.
+#
+# In a checkout of the repository, gather also reads local branches, worktrees,
+# and the current user's commits. Elsewhere it reads only the branches GitHub
+# holds, and says why.
 set -euo pipefail
 
 # Prints the directory holding this script, following symlinks so the queries
@@ -57,10 +61,18 @@ readonly QUERY_DIR="${SCRIPT_DIR}/bugs-gather-queries"
 readonly E_INVALID=1
 readonly E_USAGE=2
 
+# The progress model and affinity rules, shared with backlog-gather.
+if [[ ! -r "${SCRIPT_DIR}/progress.jq" ]]; then
+  printf '%s: %s is missing; reinstall publish-report-board\n' "${SCRIPT_NAME}" "${SCRIPT_DIR}/progress.jq" >&2
+  exit "${E_USAGE}"
+fi
+PROGRESS_DEFS="$(< "${SCRIPT_DIR}/progress.jq")"
+readonly PROGRESS_DEFS
+
 readonly ZENHUB_URL='https://api.zenhub.com/public/graphql'
 # A chunk this size keeps one aliased ZenHub request well inside its limits.
 readonly ZENHUB_CHUNK=100
-readonly CACHE_VERSION=2
+readonly CACHE_VERSION=3
 # The host every search and config path assumes. gh reaches other hosts
 # through GH_HOST, which this script does not support.
 readonly GITHUB_HOST='github.com'
@@ -78,6 +90,8 @@ SAVE_LOCK=""
 CONFIG=""
 # Read from the variable the config names, once per gather.
 ZENHUB_TOKEN=""
+# The machine a local branch is reported on. Set by gather.
+HOST_NAME=""
 JOB_PIDS=()
 JOB_NAMES=()
 
@@ -97,20 +111,29 @@ def text_list: type == "array" and length > 0 and all(.[]; is_text);
 def name_list: type == "array" and all(.[]; is_text);
 # The keys a config may carry; any other is a typo that would otherwise be
 # ignored without a word.
-def config_keys: ["repo", "timeZone", "bugLabels", "bugTypes", "urgentLabels", "regressionLabels", "parkLabels", "urgentPipelines", "containerLevels", "bots", "recentDays", "criticalWarn", "readyLimit", "deadlineDays", "progressLabels", "progressPipelines", "weights", "zenhub", "triageNote", "triageGit"];
+def config_keys: ["repo", "timeZone", "bugLabels", "bugTypes", "urgentLabels", "regressionLabels", "parkLabels", "urgentPipelines", "containerLevels", "bots", "recentDays", "criticalWarn", "readyLimit", "deadlineDays", "progressLabels", "progressPipelines", "claimLabels", "claimPipelines", "quietDays", "staleDays", "affinityWorkDays", "affinityCommentDays", "uniformityShare", "uniformityMinimum", "weights", "zenhub", "triageNote", "triageGit"];
 # Weight groups keyed by an assessment value, and the single weights. A
 # pipeline weight takes any pipeline name.
 def weight_groups: {impact: ["security", "data-loss", "money", "access", "core-flow", "degraded", "cosmetic", "internal", "unknown"], surface: ["public", "signed-in", "admin", "internal", "unknown"], reach: ["all", "many", "some", "few", "unknown"], evidence: ["user-report", "production-observed", "reproduced", "code-reading", "unknown"]};
 def weight_scalars: ["timeSensitive", "mitigated", "urgent", "sprint", "regression", "outsidePerson", "outsideCap", "reaction", "reactionCap"];
+# Affinity weights for bugs the current user owns and bugs someone else owns.
+def affinity_keys: ["you", "other"];
 def weight_problems:
   to_entries[] | .key as $k | .value as $v
   | if (weight_groups | has($k)) then
       (if ($v | type) != "object" then "weights.\($k): expected a number per \($k) value"
        else ($v | to_entries[] | .key as $wk | if (weight_groups[$k] | index($wk)) == null then "weights.\($k).\(.key): expected one of \(weight_groups[$k] | join(", "))" elif (.value | type) != "number" then "weights.\($k).\(.key): expected a number" else empty end) end)
+    elif $k == "affinity" then
+      (if ($v | type) != "object" then "weights.affinity: expected a number for you and for other"
+       else ($v | to_entries[] | .key as $ak | if (affinity_keys | index($ak)) == null then "weights.affinity.\(.key): expected one of \(affinity_keys | join(", "))" elif (.value | type) != "number" then "weights.affinity.\(.key): expected a number" else empty end) end)
     elif $k == "pipelines" then
       (if ($v | type) != "object" then "weights.pipelines: expected a number per pipeline name" else ($v | to_entries[] | select((.value | type) != "number") | "weights.pipelines.\(.key): expected a number") end)
     elif (weight_scalars | index($k)) != null then check($v | type == "number"; "weights.\($k): expected a number")
-    else "weights.\($k): not a weight; expected one of \((weight_groups | keys) + ["pipelines"] + weight_scalars | join(", "))" end;
+    else "weights.\($k): not a weight; expected one of \((weight_groups | keys) + ["pipelines", "affinity"] + weight_scalars | join(", "))" end;
+# Names on both a progress list and a claim list, compared as the gather does.
+# The progress model keeps work started and ownership apart.
+def fold($on): if $on then ascii_downcase else . end;
+def overlap($progress; $claim; $fold): [$progress // [] | .[] | select(type == "string")] as $p | [$claim // [] | .[] | select(type == "string") | . as $n | select($p | any(.[]; fold($fold) == ($n | fold($fold))))];
 
 if type != "object" then {problems: ["the config must be a JSON object"], config: null}
 else
@@ -135,6 +158,17 @@ else
       check($c.deadlineDays | absent_or(is_int and . >= 0); "deadlineDays: expected a whole number of days"),
       check($c.progressLabels | absent_or(name_list); "progressLabels: expected a list of label names"),
       check($c.progressPipelines | absent_or(name_list); "progressPipelines: expected a list of pipeline names"),
+      check($c.claimLabels | absent_or(name_list); "claimLabels: expected a list of label names"),
+      check($c.claimPipelines | absent_or(name_list); "claimPipelines: expected a list of pipeline names"),
+      check($c.quietDays | absent_or(is_int and . > 0); "quietDays: expected a positive whole number of days"),
+      check($c.staleDays | absent_or(is_int and . > 0); "staleDays: expected a positive whole number of days"),
+      check((($c.quietDays // 7) | is_int | not) or (($c.staleDays // 30) | is_int | not) or ($c.quietDays // 7) < ($c.staleDays // 30); "quietDays: must be fewer than staleDays"),
+      check($c.affinityWorkDays | absent_or(is_int and . > 0); "affinityWorkDays: expected a positive whole number of days"),
+      check($c.affinityCommentDays | absent_or(is_int and . > 0); "affinityCommentDays: expected a positive whole number of days"),
+      check($c.uniformityShare | absent_or(type == "number" and . > 0 and . <= 1); "uniformityShare: expected a share above 0 and at most 1, such as 0.9"),
+      check($c.uniformityMinimum | absent_or(is_int and . > 0); "uniformityMinimum: expected a positive whole number of bugs"),
+      (if ($c.progressLabels | absent_or(name_list)) and ($c.claimLabels | absent_or(name_list)) then overlap($c.progressLabels // ["in progress"]; $c.claimLabels; true)[] | "claimLabels: \(.) is also a progress label; a label marks work started or ownership, not both" else empty end),
+      (if ($c.progressPipelines | absent_or(name_list)) and ($c.claimPipelines | absent_or(name_list)) then overlap($c.progressPipelines // ["In Progress", "Review/QA"]; $c.claimPipelines; false)[] | "claimPipelines: \(.) is also a progress pipeline; a pipeline marks work started or ownership, not both" else empty end),
       (if $c.weights == null then empty elif ($c.weights | type) != "object" then "weights: expected an object, grouped as the defaults are" else ($c.weights | weight_problems) end),
       ($c | keys[] | select(. as $k | config_keys | index($k) | not) | "\(.): not a config field; expected one of \(config_keys | join(", "))"),
       check($c.triageNote | absent_or(is_text); "triageNote: expected the path to the triage note"),
@@ -165,14 +199,23 @@ else
       deadlineDays: ($c.deadlineDays // 14),
       progressLabels: ($c.progressLabels // ["in progress"]),
       progressPipelines: ($c.progressPipelines // ["In Progress", "Review/QA"]),
-      # Calibrated against swing-left/votefwd. A config overrides any of them,
-      # one key at a time.
+      claimLabels: ($c.claimLabels // []),
+      claimPipelines: ($c.claimPipelines // []),
+      quietDays: ($c.quietDays // 7),
+      staleDays: ($c.staleDays // 30),
+      affinityWorkDays: ($c.affinityWorkDays // 30),
+      affinityCommentDays: ($c.affinityCommentDays // 90),
+      uniformityShare: ($c.uniformityShare // 0.9),
+      uniformityMinimum: ($c.uniformityMinimum // 5),
+      # Calibrated against the bugs of a production repository. A config
+      # overrides any of them, one key at a time.
       weights: ({
         impact: {security: 40, "data-loss": 35, money: 35, access: 30, "core-flow": 30, degraded: 10, cosmetic: 3, internal: 2, unknown: 10},
         surface: {public: 15, "signed-in": 12, admin: 5, internal: 0, unknown: 5},
         reach: {all: 15, many: 10, some: 5, few: 2, unknown: 4},
         evidence: {"user-report": 15, "production-observed": 12, reproduced: 6, "code-reading": 2, unknown: 0},
         pipelines: {},
+        affinity: {you: 5, other: -30},
         timeSensitive: 20, mitigated: -20, urgent: 15, sprint: 5, regression: 10,
         outsidePerson: 5, outsideCap: 15, reaction: 1, reactionCap: 10
       } * ($c.weights // {})),
@@ -186,22 +229,24 @@ end
 
 # Shared by the filters that read GitHub and ZenHub responses.
 # shellcheck disable=SC2016
-readonly COMMON_DEFS='
-def as_list: if type == "array" then . else [] end;
-# An ISO 8601 time as seconds since the epoch, accepting a fraction and either
-# Z or a numeric offset. Anything else is an error, never an empty result,
-# because capture emits nothing on a mismatch and would drop the value silently.
-def epoch:
-  ([capture("^(?<d>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2})(:(?<s>[0-9]{2}))?(\\.[0-9]+)?(?<z>Z|(?<sign>[+-])(?<h>[0-9]{2}):(?<m>[0-9]{2}))$")] | first)
-  | if . == null then error("not an ISO 8601 time") else . end
-  | ((.d + ":" + (.s // "00") + "Z") | fromdateiso8601)
-    - (if .z == "Z" then 0 else ((.h | tonumber) * 3600 + (.m | tonumber) * 60) * (if .sign == "+" then 1 else -1 end) end);
-def utc: if type == "string" then epoch | todateiso8601 else null end;
+readonly COMMON_DEFS="${PROGRESS_DEFS}"'
 def is_bot($bots): . != null and (.__typename == "Bot" or (.login | endswith("[bot]")) or (.login as $l | $bots | any(. == $l)));
+def checks_of: (.commits.nodes | as_list | first | .commit.statusCheckRollup.state) // null;
+def pr_of: {
+  number, title, url,
+  state: (if .mergedAt != null then "MERGED" else .state end),
+  isDraft, reviewDecision, author: (.author.login // null),
+  checks: checks_of,
+  createdAt: (.createdAt // null), updatedAt: (.updatedAt // null), mergedAt: (.mergedAt // null),
+  mergeable: (.mergeable // null), mergeStateStatus: (.mergeStateStatus // null), headRefName: (.headRefName // null),
+  reviewRequests: (.reviewRequests.totalCount // 0),
+  lastReview: (.latestReviews.nodes | as_list | last | .submittedAt? // null),
+  repo: (.repository.nameWithOwner // null)
+};
 '
 
 # Turns the slurped searches into one list of bugs, merged by number. Takes
-# $config, $viewer, and $searches, a list of {name, pages}.
+# $config, $repo, and $searches, a list of {name, pages}.
 # shellcheck disable=SC2016
 readonly NORMALIZE_FILTER="${COMMON_DEFS}"'
 def in_list($list): . as $v | $list | any(. == $v);
@@ -209,13 +254,6 @@ def any_in($a; $b): any($a[]; in_list($b));
 # Members, owners, and collaborators are the people who maintain the
 # repository. Anyone else who files or comments on a bug is a user of it.
 def outside: . != null and (in_list(["OWNER", "MEMBER", "COLLABORATOR"]) | not);
-def checks_of: (.commits.nodes | as_list | first | .commit.statusCheckRollup.state) // null;
-def pr_of: {
-  number, title, url,
-  state: (if .mergedAt != null then "MERGED" else .state end),
-  isDraft, reviewDecision, author: (.author.login // null),
-  checks: checks_of
-};
 
 $config.bots as $bots
 | [$searches[] | .name as $name | .pages[] | .data.search.nodes[] | select(. != null and .number != null) | {name: $name, node: .}]
@@ -255,9 +293,15 @@ $config.bots as $bots
         lastComment: ($people | last | if . == null then null else {author: (.author.login // "ghost"), at: .createdAt, outside: (.authorAssociation | outside)} end),
         fixes: [$prs[] | select(.state == "OPEN")],
         fixedBy: [$prs[] | select(.state == "MERGED")],
-        # Lists GitHub cut short, which gather warns about: a label or a fix
-        # past the cut is missing from this bug.
-        truncated: [(select($n.labels.pageInfo.hasNextPage == true) | "labels"), (select($n.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests")]
+        merged: ($n | merged_links($repo)),
+        # Commenters among the last 30 comments, for tier 3 affinity.
+        commenters: [$people[] | {login: (.author.login // "ghost"), at: .createdAt}],
+        # Lists GitHub cut short, which gather warns about.
+        truncated: [(select($n.labels.pageInfo.hasNextPage == true) | "labels"),
+                    (select($n.assignees.pageInfo.hasNextPage == true) | "assignees"),
+                    (select($n.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests"),
+                    (select($n.timelineItems.pageInfo.hasPreviousPage == true) | "cross-references"),
+                    (select(($n.comments.totalCount // 0) > ($n.comments.nodes | as_list | length)) | "comments")]
       }
   )
 '
@@ -296,29 +340,68 @@ def lookup_error: (.path // []) | length == 1 and (.[0] | type == "string" and t
 def unexpected_errors: [.errors[]? | select(lookup_error | not)];
 '
 
+# Reduces pages of the merged search or the open pull request connection to a
+# list of pull requests with their changed files. Takes $pages.
+# shellcheck disable=SC2016
+readonly PULLS_FILTER="${COMMON_DEFS}"'
+[$pages[] | (.data.search.nodes[]? | select(. != null and .__typename == "PullRequest")), (.data.repository.pullRequests.nodes[]? | select(. != null))
+ | pr_of + {files: [.files.nodes | as_list | .[] | .path], filesTruncated: (.files.pageInfo.hasNextPage == true)}]
+| unique_by(.number)
+'
+
 # Assembles the gather document. Takes $config, $repository, $bugs, $zenhub
-# (null without a workspace), $now, and $version.
+# (null without a workspace), $pulls ({open, merged}: every open pull request
+# in the repository, and the current user's merged ones), $local (null outside
+# a checkout of the repository), $now, $host, and $version.
 # shellcheck disable=SC2016
 readonly ASSEMBLE_FILTER="${COMMON_DEFS}"'
 ($zenhub.sprint // null) as $sprint
+| ($now | epoch) as $at
+| $repository.repository.nameWithOwner as $repo
+| $repository.repository.defaultBranchRef.name as $default
+| $repository.viewer.login as $viewer
+| ($config.affinityWorkDays * 86400) as $work_window
+# Pushed branches from GitHub, joined with the checkout, which adds local
+# branches, worktrees, and ahead and behind counts.
+| ([$refs[] | {name, local: false, remote: true, worktree: false, at: (.target.committedDate // null), ahead: null, behind: null}]
+   + ($local.branches // [])
+   | join_branches($default)) as $branches
 | [$bugs[] | . + {zenhub: (if $zenhub == null then null else ($zenhub.items[.number | tostring] // null) | if . == null then null else
     . + {sprint: ($sprint != null and (.sprintIds | any(. == $sprint.id)))} | del(.sprintIds) end end)}]
+| map(. as $b
+    | . + {progress: (if $b.state != "open" then null else
+        progress_of({number: $b.number, labels: $b.labels, updatedAt: $b.updatedAt, pipeline: ($b.zenhub.pipeline // null), pipelineSince: ($b.zenhub.pipelineSince // null),
+                     prs: ([$b.fixes[] | select((.repo // "") | same_repo($repo))]
+                           + [$pulls.open[] | select(.headRefName != null and (.headRefName | names_issue($b.number)))] | unique_by(.number)),
+                     merged: $b.merged}; $branches; $config; $at; $host) end)})
 | sort_by(.number) as $all
 | {
     version: $version,
-    repo: $repository.repository.nameWithOwner,
+    repo: $repo,
     repoUrl: $repository.repository.url,
-    defaultBranch: $repository.repository.defaultBranchRef.name,
+    defaultBranch: $default,
     commit: $repository.repository.defaultBranchRef.target.oid,
-    viewer: $repository.viewer.login,
+    viewer: $viewer,
     gatheredAt: $now,
     recentDays: $config.recentDays,
+    host: $host,
+    checkout: ($local != null),
     zenhub: (if $zenhub == null then null else {workspace: $config.zenhub.workspace, activeSprint: $sprint} end),
     counts: {
       open: [$all[] | select(.state == "open")] | length,
       closed: [$all[] | select(.state == "closed")] | length,
       withFix: [$all[] | select(.state == "open" and (.fixes | length) > 0)] | length,
-      outsideReporters: [$all[] | select(.state == "open" and .outsideReporter)] | length
+      outsideReporters: [$all[] | select(.state == "open" and .outsideReporter)] | length,
+      inProgress: [$all[] | select(.progress != null and .progress.stage != "close-out")] | length
+    },
+    # Files of the current user, active now and recent within the affinity
+    # window, which score matches against assessment areas.
+    viewerFiles: {
+      active: ([$pulls.open[] | select(.author == $viewer) | .number as $n | .files[] | {path: ., via: "pull request #\($n)"}]
+        + [$local.branchFiles // [] | .[] | {path, via: "branch \(.branch)"}] | unique),
+      recent: ([$pulls.merged[] | select(.mergedAt != null and (.mergedAt | epoch) >= $at - $work_window) | .number as $n | .mergedAt as $m | .files[] | {path: ., via: "pull request #\($n)", at: ($m | utc)}]
+        + [$local.commits // [] | .[] | select((.at | epoch) >= $at - $work_window) | .at as $t | .commit as $h | .files[] | {path: ., via: "commit \($h)", at: ($t | utc)}]
+        | group_by([.path, .via]) | map(sort_by(.at | epoch) | last))
     },
     bugs: $all
   }
@@ -332,7 +415,9 @@ def by_number: map({key: (.number | tostring), value: .}) | from_entries;
 def describe: "#\(.number) \(.title)";
 def entry($heading; $lines): if ($lines | length) > 0 then "- \($heading):", ($lines[] | "    - \(.)") else empty end;
 def shown: if . == null then "none" else tostring end;
-def fix_state: [.fixes | as_list | .[] | "#\(.number) \(if .isDraft then "draft" else (.checks // "no checks" | ascii_downcase) end), \(.reviewDecision // "no review" | ascii_downcase | gsub("_"; " "))"];
+# Where the work on a bug stands, without the flags that age with the clock.
+def progress_state: .progress | if . == null then null else {stage, signal} end;
+def progress_text: if . == null then "not in progress" else "\(.stage): \(.signal)" end;
 ($old.bugs | as_list | by_number) as $was
 # The cached copy of a bug in this gather, or null when the cache lacks it.
 | def cached: $was[.number | tostring];
@@ -349,13 +434,13 @@ def fix_state: [.fixes | as_list | .[] | "#\(.number) \(if .isDraft then "draft"
     entry("Left the board"; [$old.bugs | as_list | .[] | select(.state == "open" and $now[.number | tostring] == null) | "\(describe) (no longer a bug, or closed before this window)"]),
     entry("New comments"; [$kept[] | select(.lastComment != null and .lastComment != cached.lastComment) | "\(describe) (@\(.lastComment.author)\(if .lastComment.outside then ", outside" else "" end))"]),
     entry("More reactions"; [$kept[] | cached as $w | select(.reactions > ($w.reactions // 0)) | "\(describe) (\($w.reactions // 0) to \(.reactions))"]),
-    entry("Fix changed"; [$kept[] | cached as $w | select(fix_state != ($w | fix_state)) | "\(describe) (\(fix_state | if length == 0 then "no open fix" else join("; ") end))"]),
+    entry("Progress changed"; [$kept[] | cached as $w | select(progress_state != ($w | progress_state)) | "\(describe) (\($w | progress_state | progress_text) to \(progress_state | progress_text))"]),
     entry("Labels changed"; [$kept[] | cached as $w | select((.labels | sort) != ($w.labels | as_list | sort)) | "\(describe) (now \(.labels | if length == 0 then "none" else join(", ") end))"]),
     entry("Pipeline changed"; [$kept[] | cached as $w | select(.zenhub.pipeline != $w.zenhub.pipeline) | "\(describe) (\($w.zenhub.pipeline | shown) to \(.zenhub.pipeline | shown))"]),
     entry("Joined the sprint"; [$kept[] | select(.zenhub.sprint == true and (cached.zenhub.sprint != true)) | describe]),
     entry("Left the sprint"; [$kept[] | select(.zenhub != null and .zenhub.sprint != true and (cached.zenhub.sprint == true)) | describe]),
     entry("Otherwise updated"; [$kept[] | cached as $w
-      | select(.updatedAt != $w.updatedAt and .lastComment == $w.lastComment and .reactions == $w.reactions and fix_state == ($w | fix_state) and (.labels | sort) == ($w.labels | as_list | sort) and .zenhub == $w.zenhub) | describe])
+      | select(.updatedAt != $w.updatedAt and .lastComment == $w.lastComment and .reactions == $w.reactions and progress_state == ($w | progress_state) and (.labels | sort) == ($w.labels | as_list | sort) and .zenhub == $w.zenhub) | describe])
   ] | if length == 0 then ["- Nothing moved."] else . end | .[])
 '
 
@@ -385,7 +470,11 @@ def assessment_problems($at):
     (select(($a.gist | type) != "string" or ($a.gist | test("\\S") | not)) | "\($at): gist is required"),
     (select(($a.nextStep | type) != "string" or ($a.nextStep | test("\\S") | not)) | "\($at): nextStep is required"),
     (select($a.reproduced != null and ($a.reproduced | type) != "boolean") | "\($at): reproduced must be true, false, or null"),
-    (select($a.question != null and ($a.question | type) != "string") | "\($at): question must be text or null");
+    (select($a.question != null and ($a.question | type) != "string") | "\($at): question must be text or null"),
+    (select($a.areas != null and (($a.areas | type) != "array" or any($a.areas[];
+       type != "object" or ((.name | type) != "string") or (.name | test("\\S") | not)
+       or ((.paths | type) != "array") or (.paths | length) == 0 or any(.paths[]; type != "string" or (test("\\S") | not)))))
+     | "\($at): areas must be a list of {name, paths}, each with a name and at least one path pattern");
 '
 
 # Applies the triage note and the calibrated tier rules to a gather and its
@@ -475,17 +564,9 @@ $config as $c
     and (($a.deadline + "T00:00:00Z" | fromdateiso8601) - ($today + "T00:00:00Z" | fromdateiso8601)) <= $c.deadlineDays * 86400;
   # The first open fix that is not a draft, or null.
   def nondraft_fix($b): [$b.fixes[] | select(.isDraft | not)] | first;
-  def progress_of($b):
-    (nondraft_fix($b) | if . != null then "fix #\(.number)" else null end)
-    // ([$b.fixes[] | select(.isDraft)] | first | if . != null then "draft fix #\(.number)" else null end)
-    // ($b.zenhub.pipeline | if . != null and in_list($c.progressPipelines) then "the \(.) pipeline" else null end)
-    // ([$b.labels[] | select(in_list($c.progressLabels))] | first | if . != null then "the \(.) label" else null end);
-  def ready_group($b):
-    nondraft_fix($b) as $fix
-    | if $fix == null then (if progress_of($b) != null then "in-progress" else "ready-to-fix" end)
-      elif $fix.checks == "SUCCESS" and ($fix.reviewDecision == "APPROVED" or $fix.reviewDecision == null) then "ship"
-      else "review" end;
-  def score_of($a; $b):
+  # An unknown owner, like no owner, adds nothing.
+  def affinity_weight($f): if $f.owner == "you" then $w.affinity.you elif $f.owner == null or $f.owner == "unknown" then 0 else $w.affinity.other end;
+  def score_of($a; $b; $f):
     ($w.impact[$a.impact] // 0) + ($w.surface[$a.surface] // 0) + ($w.reach[$a.reach] // 0) + ($w.evidence[$a.evidence] // 0)
     + (if $a.timeSensitive then $w.timeSensitive else 0 end)
     + (if $a.mitigated then $w.mitigated else 0 end)
@@ -494,7 +575,8 @@ $config as $c
     + (if $b.zenhub.sprint == true then $w.sprint else 0 end)
     + (if $b.regression then $w.regression else 0 end)
     + ([$b.outsidePeople * $w.outsidePerson, $w.outsideCap] | min)
-    + ([$b.reactions * $w.reaction, $w.reactionCap] | min);
+    + ([$b.reactions * $w.reaction, $w.reactionCap] | min)
+    + affinity_weight($f);
   def signals_of($a; $b; $set):
     [
       {source: "assessment", kind: "impact", text: "\(shown_as($a.impact)) for \(shown_as($a.surface))\(if $a.reach != "unknown" then ", reach \($a.reach)" else "" end)", at: $b.updatedAt},
@@ -515,7 +597,7 @@ $config as $c
   def place($a; $b):
     placement($b.number) as $p
     | ((($a.evidence | confirmed_evidence) and $a.environment == "production")) as $confirmed
-    | progress_of($b) as $wip
+    | $b.progress as $wip
     | if $p.verb == "escalate" then {tier: "critical", why: "escalated", entry: $p.id}
       elif $p.verb == "demote" then {tier: "high", why: "demoted", entry: $p.id}
       elif $p.verb == "snooze" then {tier: "parked", reason: "snoozed until \($p.until)", entry: $p.id}
@@ -529,15 +611,14 @@ $config as $c
         then {tier: "high", why: "confirm on production", confirm: true}
       elif ($a.mitigated | not) and $a.timeSensitive and $a.deadline == null then {tier: "high", why: "worse with every event"}
       elif ($a.mitigated | not) and due($a) then {tier: "high", why: "due \($a.deadline)"}
-      elif $wip != null then {tier: "ready", why: "in progress"}
+      elif $wip != null then {tier: "ready", why: (if $wip.stage == "close-out" then "fix merged, still open" else "in progress" end)}
       elif $a.mitigated then {tier: "ready", why: "mitigated"}
       elif $a.impact == "security" and $a.surface == "internal" then {tier: "ready", why: "blocks a security fix"}
       elif $a.surface == "internal" then {tier: "lower", reason: "internal"}
       elif $a.impact == "cosmetic" then {tier: "lower", reason: "cosmetic"}
       elif ([$a.environment, $a.surface, $a.impact, $a.cause] | any(. == "unknown")) or $a.cause == "suspected" or $a.reproduced == false then
         {tier: "investigate", why: ([(["environment", "surface", "impact", "cause"][] as $k | select($a[$k] == "unknown") | "\($k) unknown"), (select($a.cause == "suspected") | "cause suspected"), (select($a.reproduced == false) | "not reproduced")] | join(", "))}
-      else {tier: "ready", why: "ready to fix"} end
-    | . + {inProgress: $wip};
+      else {tier: "ready", why: "ready to fix"} end;
 
   # Assessments must cover every open bug and must describe the bug as it is
   # now; a stale one means the bug changed after it was read.
@@ -547,22 +628,46 @@ $config as $c
     | if $a == null then "#\(.number): no assessment; read it"
       elif $a.updatedAt != .updatedAt then "#\(.number): assessed at updatedAt \($a.updatedAt), but the bug was updated at \(.updatedAt); read it again"
       else ($a | assessment_problems("#\(.number)")) end] + $assessed_twice) as $assessment_problems
+# Two bugs naming one area must give it the same paths. Malformed areas are
+# reported above, so only well-formed ones are compared.
+| ([$open[] | $assessed[.number | tostring] | select(. != null) | .number as $n
+    | .areas | if type == "array" then .[] else empty end
+    | select(type == "object" and (.name | type) == "string" and (.paths | type) == "array") | {name, paths: (.paths | unique), n: $n}]
+   | group_by(.name) | map(select((map(.paths) | unique | length) > 1) | "area \(.[0].name) has different paths in \(map("#\(.n)") | unique | join(", ")); give it one set")) as $area_problems
 | if ($assessment_problems | length) > 0 then {problems: $assessment_problems}
+  elif ($area_problems | length) > 0 then {problems: $area_problems}
   else
-    [$open[] | . as $b
+    # Affinity signals per open bug, with tiers 1 and 2 from its assessment
+    # areas.
+    ($c.affinityCommentDays * 86400) as $comment_window
+    | [$open[] | . as $b | ($assessed[$b.number | tostring].areas // []) as $areas
+       | {number: $b.number,
+          assignees: $b.assignees,
+          claims: [($b.labels[] | select(same_text($c.claimLabels)) | "claimed with the \(.) label"),
+                   ($b.zenhub.pipeline // empty | select(. as $p | $c.claimPipelines | index($p)) | "claimed in the \(.) pipeline")],
+          author: $b.author,
+          commented: any($b.commenters[]?; .login == $gather.viewer and (.at | epoch) >= $gathered - $comment_window),
+          active: active_reasons($areas; $gather.viewerFiles.active),
+          recent: recent_reasons($areas; $gather.viewerFiles.recent; $c.affinityWorkDays)}] as $held
+    | uniformity_ignored($held; $c) as $ignored
+    | ([$held[] | {key: (.number | tostring), value: affinity_of(.; $ignored; $gather.viewer; $c)}] | from_entries) as $affinity
+    | [$open[] | . as $b
      | overrides($b.number) as $set
      | ($assessed[$b.number | tostring] + ([$set[] | .fields] | add // {})) as $a
      | place($a; $b) as $t
+     | $affinity[$b.number | tostring] as $f
      | {number, title, url, author, assignees, labels, createdAt, updatedAt, outsidePeople, reactions,
         pipeline: ($b.zenhub.pipeline // null), sprint: ($b.zenhub.sprint // false),
         fix: (nondraft_fix($b) // ($b.fixes | first)),
         assessment: ($a | {environment, evidence, surface, impact, reach, workaround, cause, timeSensitive, deadline, mitigated, gist, nextStep, question}),
         overridden: ([$set[] | .fields | keys[]] | unique),
-        score: score_of($a; $b),
+        score: score_of($a; $b; $f),
         signals: (signals_of($a; $b; $set) + (if $t.entry != null then [$active[] | select(.id == $t.entry) | triage_signal] else [] end)),
         tier: $t.tier, why: ($t.why // null), reason: ($t.reason // null), confirm: ($t.confirm // false),
-        inProgress: $t.inProgress,
-        group: (if $t.tier == "ready" then ready_group($b) else null end)}] as $placed
+        progress: $b.progress,
+        affinity: $f,
+        areas: ([$a.areas // [] | .[] | .name] | unique),
+        group: (if $t.tier == "ready" then ($b.progress.stage // "ready-to-fix") else null end)}] as $placed
     | [$gather.bugs[] | select(.state == "closed") | . as $b
        | ($assessed[$b.number | tostring] // ([$previous.tiers // {} | .[] | .[] | select(.number == $b.number)] | first | .assessment?)) as $was
        | {number, title, url, closedAt, stateReason, fixedBy: [$b.fixedBy[] | .number], tier: "fixed",
@@ -576,6 +681,8 @@ $config as $c
         timeZone: $c.timeZone,
         criticalWarn: $c.criticalWarn,
         readyLimit: $c.readyLimit,
+        areas: ([$open[] | $assessed[.number | tostring] | select(. != null) | (.areas // [])[] | {name, paths: (.paths | unique)}] | unique_by(.name)),
+        affinityIgnored: $ignored,
         triage: {
           entries: [$entries[] | del(.instant)],
           expired: [$entries[] | select(.expired) | .id],
@@ -601,7 +708,8 @@ $config as $c
 # Prints a score as the text the check-in shows.
 # shellcheck disable=SC2016
 readonly REPORT_FILTER='
-def flags: [(select(.inProgress != null) | "in progress: \(.inProgress)"), (select(.confirm) | "unconfirmed"), (select(.overridden | length > 0) | "set by triage: \(.overridden | join(", "))")] | if length == 0 then "" else " (\(join("; ")))" end;
+def owner_text: if . == "you" then "you" elif . == "unknown" then "unknown owner" else "@\(.)" end;
+def flags: [(select(.progress != null) | "\(.progress.stage): \(.progress.signal)\(if (.progress.flags | length) > 0 then ", \(.progress.flags | join(", "))" else "" end)"), (select(.affinity.owner != null) | "affinity: \(.affinity.owner | owner_text)"), (select(.confirm) | "unconfirmed"), (select(.overridden | length > 0) | "set by triage: \(.overridden | join(", "))")] | if length == 0 then "" else " (\(join("; ")))" end;
 def line: "    - #\(.number) [\(.score)] \(.title)\(flags)\n        \(.why // .reason // ""): \(.assessment.gist)";
 def short: "    - #\(.number) [\(.score)] \(.title)\(flags)";
 def listed($heading; $items; f): "- \($heading) (\($items | length)):", ($items[] | f);
@@ -613,6 +721,7 @@ listed("High priority"; .tiers.high; line),
 listed("Ready to go, top \(.readyLimit) above the fold"; .tiers.ready[0:.readyLimit]; short),
 (.readyLimit as $limit | .tiers.ready | length | select(. > $limit) | "    - and \(. - $limit) more in the report"),
 "- Report: \(.tiers.investigate | length) to investigate, \(.tiers.lower | length) lower priority, \(.tiers.parked | length) parked, \(.tiers.fixed | length) fixed",
+(select((.affinityIgnored | length) > 0) | "- Affinity ignores \(.affinityIgnored | join(", ")): one owner holds it on nearly every open bug"),
 (if .changes == null then "- Changes: none recorded; the cache held no earlier score"
  else
    "- Entered Critical or High priority: \(.changes.entered | if length == 0 then "none" else join(", ") end)",
@@ -632,10 +741,11 @@ listed("Ready to go, top \(.readyLimit) above the fold"; .tiers.ready[0:.readyLi
 readonly DRAFT_FILTER='
 def open_bug: {number, title, url, state: "open", tier, author, createdAt, updatedAt, labels, pipeline, sprint, outsidePeople, reactions,
   fix: (if .fix == null then null else .fix | {number, url, isDraft, checks, reviewDecision} end),
-  inProgress, assessment, overridden, score};
+  progress, affinity, areas, assessment, overridden, score};
 def urgent_entry: {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals};
 ($scored.tiers | [.critical, .high, .ready, .investigate, .lower, .parked] | add) as $open
 | {
+    schemaVersion: 2,
     board: "bugs",
     title: "\($gather.repo | split("/") | .[1]) bugs",
     repo: $gather.repo,
@@ -651,6 +761,8 @@ def urgent_entry: {item: .number, why, confirm, action: .assessment.nextStep, im
     summary: null,
     criticalWarn: $scored.criticalWarn,
     readyLimit: $scored.readyLimit,
+    areas: $scored.areas,
+    affinityIgnored: $scored.affinityIgnored,
     triage: [$scored.triage.entries[] | del(.expired)],
     triageProblems: $scored.triage.problems,
     bugs: ([$open[] | open_bug] + [$scored.tiers.fixed[] | {number, title, url, state: "closed", tier, closedAt, stateReason, fixedBy}] | sort_by(.number)),
@@ -866,6 +978,25 @@ function github_search() {
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/search.graphql" -f "q=${query}"
 }
 
+# Reads every open pull request in a repository, page by page.
+function github_open_pulls() {
+  local repo="${1}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/open-pulls.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
+}
+
+# Searches the current user's merged pull requests. The query says @me, so it
+# needs no login lookup and runs beside the others.
+function github_pulls() {
+  local query="${1}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/pulls.graphql" -f "q=${query}"
+}
+
+# Reads every branch in a repository, page by page.
+function github_branches() {
+  local repo="${1}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/branches.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
+}
+
 function github_repository() {
   local repo="${1}"
   gh api graphql -F "query=@${QUERY_DIR}/repository.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
@@ -882,6 +1013,116 @@ function zenhub_post() {
   curl -sS --fail-with-body -X POST "${ZENHUB_URL}" \
     -H @"${header_file}" -H 'Content-Type: application/json' \
     --data-binary @"${payload_file}"
+}
+
+# Succeeds when a remote URL is OWNER/NAME on github.com, as
+# https://github.com/OWNER/NAME, ssh://git@github.com/OWNER/NAME, or
+# git@github.com:OWNER/NAME, with or without .git, ignoring case as GitHub
+# does. Any other host or path, such as a lookalike host or a local clone,
+# does not match.
+function remote_matches() {
+  local repo="${1}" url="${2}"
+  url="$(printf '%s' "${url}" | tr '[:upper:]' '[:lower:]')"
+  url="${url%/}"
+  url="${url%.git}"
+  repo="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
+  repo="${repo//./\\.}"
+  [[ "${url}" =~ ^(https://([^/@]+@)?github\.com/|ssh://git@github\.com(:22)?/|git@github\.com:)${repo}$ ]]
+}
+
+# Writes TEMP_DIR/local.json: the local and origin branches, the files on the
+# current user's branches, and their commits since SINCE. Writes null, with a
+# notice, outside a usable checkout of REPO. Inside one, a failed git command
+# stops the gather rather than reading as no branches.
+function gather_local() {
+  local repo="${1}" default_branch="${2}" since="${3}"
+  local output="${TEMP_DIR}/local.json"
+  # gather prints these notices only after writing, so a gather that stops
+  # shows only why.
+  : > "${TEMP_DIR}/local-notice.txt"
+  local url email base refname committed author name kind counts behind ahead path worktree
+  if ! command -v git > /dev/null 2>&1; then
+    printf '%s: git is not installed, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' "${SCRIPT_NAME}" >> "${TEMP_DIR}/local-notice.txt"
+    printf 'null' > "${output}"
+    return 0
+  fi
+  if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    printf '%s: not inside a checkout of %s, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' "${SCRIPT_NAME}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
+    printf 'null' > "${output}"
+    return 0
+  fi
+  if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then
+    printf '%s: this checkout'"'"'s origin is %s, not %s, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' \
+      "${SCRIPT_NAME}" "${url:-missing}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
+    printf 'null' > "${output}"
+    return 0
+  fi
+  base="refs/remotes/origin/${default_branch}"
+  if ! git rev-parse --verify --quiet "${base}" > /dev/null; then
+    printf '%s: origin/%s is missing from this checkout, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request; run git fetch --prune origin to read local branches too\n' \
+      "${SCRIPT_NAME}" "${default_branch}" >> "${TEMP_DIR}/local-notice.txt"
+    printf 'null' > "${output}"
+    return 0
+  fi
+  email="$(git config user.email || true)"
+  if [[ -z "${email}" ]]; then
+    printf '%s: git user.email is not set here, so no branch or commit in this checkout counts as yours for affinity\n' "${SCRIPT_NAME}" >> "${TEMP_DIR}/local-notice.txt"
+  fi
+  : > "${TEMP_DIR}/local-branches.tsv"
+  : > "${TEMP_DIR}/local-files.tsv"
+  git worktree list --porcelain > "${TEMP_DIR}/worktree-list.txt" || die "${E_INVALID}" "cannot list the worktrees of this checkout"
+  sed -n 's/^branch refs\/heads\///p' "${TEMP_DIR}/worktree-list.txt" > "${TEMP_DIR}/worktrees.txt"
+  git for-each-ref --format='%(refname)%09%(committerdate:iso-strict)%09%(authoremail)' refs/heads refs/remotes/origin > "${TEMP_DIR}/local-refs.tsv" \
+    || die "${E_INVALID}" "cannot list the branches of this checkout"
+  while IFS=$'\t' read -r refname committed author; do
+    case "${refname}" in
+      refs/heads/*)
+        kind=local
+        name="${refname#refs/heads/}"
+        ;;
+      refs/remotes/origin/HEAD) continue ;;
+      refs/remotes/origin/*)
+        kind=remote
+        name="${refname#refs/remotes/origin/}"
+        ;;
+      *) continue ;;
+    esac
+    [[ "${name}" != "${default_branch}" ]] || continue
+    counts="$(git rev-list --left-right --count "${base}...${refname}")" || die "${E_INVALID}" "cannot compare ${refname} with ${base}"
+    behind="${counts%%[[:space:]]*}"
+    ahead="${counts##*[[:space:]]}"
+    worktree=false
+    if [[ "${kind}" == local ]] && grep -qxF -- "${name}" "${TEMP_DIR}/worktrees.txt"; then
+      worktree=true
+    fi
+    if [[ -n "${email}" && "$(printf '%s' "${author}" | tr '[:upper:]' '[:lower:]')" == "<$(printf '%s' "${email}" | tr '[:upper:]' '[:lower:]')>" ]]; then
+      git diff --name-only "${base}...${refname}" > "${TEMP_DIR}/local-changed.txt" || die "${E_INVALID}" "cannot list the files changed on ${refname}"
+      while IFS= read -r path; do
+        [[ -n "${path}" ]] && printf '%s\t%s\n' "${name}" "${path}" >> "${TEMP_DIR}/local-files.tsv"
+      done < "${TEMP_DIR}/local-changed.txt"
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${kind}" "${name}" "${committed}" "${behind}" "${ahead}" "${worktree}" >> "${TEMP_DIR}/local-branches.tsv"
+  done < "${TEMP_DIR}/local-refs.tsv"
+  if [[ -n "${email}" ]]; then
+    # A record separator, which no file name holds, starts each commit. Email
+    # addresses ignore case; git matches --author with case by default.
+    git log --branches --remotes=origin --no-merges --since="${since}" --fixed-strings --regexp-ignore-case --author="${email}" --name-only --format=$'\x1e%h\t%cI' > "${TEMP_DIR}/local-commits.txt" \
+      || die "${E_INVALID}" "cannot read your recent commits in this checkout"
+  else
+    : > "${TEMP_DIR}/local-commits.txt"
+  fi
+  jq -n --arg host "${HOST_NAME}" \
+    --rawfile branches "${TEMP_DIR}/local-branches.tsv" \
+    --rawfile files "${TEMP_DIR}/local-files.tsv" \
+    --rawfile commits "${TEMP_DIR}/local-commits.txt" '
+    {
+      host: $host,
+      branches: [$branches | split("\n")[] | select(. != "") | split("\t")
+        | {name: .[1], local: (.[0] == "local"), remote: (.[0] == "remote"), worktree: (.[5] == "true"), at: .[2], behind: (.[3] | tonumber), ahead: (.[4] | tonumber)}],
+      branchFiles: [$files | split("\n")[] | select(. != "") | split("\t") | {branch: .[0], path: (.[1:] | join("\t"))}] | unique,
+      commits: [$commits | split("\u001e")[] | split("\n") | map(select(. != "")) | select(length > 0)
+        | (.[0] | split("\t")) as $head | {commit: $head[0], at: $head[1], files: .[1:]}]
+    }' > "${output}"
 }
 
 # Writes TEMP_DIR/zenhub.json: {sprint, items} for every open bug, looked up
@@ -963,7 +1204,7 @@ function gather_zenhub() {
 function cmd_gather() {
   [[ $# -eq 2 ]] || usage_error "gather takes a repository and an output path"
   local output_file="${2}"
-  local config repo has_zenhub qualifiers token_variable now since labels type_name type_query
+  local config repo has_zenhub qualifiers token_variable now since work_since labels type_name type_query
   local repo_id
   local -i index=0
   require_tools jq gh
@@ -983,9 +1224,15 @@ function cmd_gather() {
   since="$(jq -n -r --arg now "${now}" --argjson days "$(config_field "${config}" '.recentDays')" \
     '$now | fromdateiso8601 - $days * 86400 | strftime("%Y-%m-%d")')" \
     || die "${E_INVALID}" "BUGS_GATHER_NOW must be an ISO 8601 UTC time, such as 2026-10-06T12:00:00Z"
+  work_since="$(jq -n -r --arg now "${now}" --argjson days "$(config_field "${config}" '.affinityWorkDays')" \
+    '$now | fromdateiso8601 - $days * 86400 | strftime("%Y-%m-%d")')"
+  HOST_NAME="${BUGS_GATHER_HOST:-$(hostname -s 2> /dev/null || hostname)}"
   make_temp_dir
 
   start_job repository github_repository "${repo}"
+  start_job branches github_branches "${repo}"
+  start_job pulls-open github_open_pulls "${repo}"
+  start_job pulls-merged github_pulls "repo:${repo} is:pr author:@me is:merged merged:>=${work_since}"
   # A comma between labels matches any of them. An issue type takes one name
   # per search, so each configured type runs as its own pair of searches.
   qualifiers="repo:${repo} is:issue"
@@ -1005,9 +1252,36 @@ function cmd_gather() {
     || die "${E_INVALID}" "cannot read the repository ${repo}"
   [[ "$(jq -r '.data.repository.isArchived' "${TEMP_DIR}/repository.json")" != true ]] \
     || die "${E_INVALID}" "${repo} is archived; its bugs cannot change, so there is nothing to sync"
+  local default_branch
+  default_branch="$(jq -r '.data.repository.defaultBranchRef.name // empty' "${TEMP_DIR}/repository.json")"
+  [[ -n "${default_branch}" ]] || die "${E_INVALID}" "${repo} has no default branch"
 
-  local search_file search_name
+  local search_file search_name kind
   printf '[]' > "${TEMP_DIR}/searches.json"
+  # A missing open pull request would hide a bug it carries. GitHub search
+  # stops at 1000 results without saying so, so a merged search that returned
+  # fewer than it counted was cut short.
+  jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls-open.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
+  jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/pulls-merged.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the search for your merged pull requests came back without a result count"
+  jq -e '([.[] | .data.search.nodes | length] | add // 0) >= .[0].data.search.issueCount' "${TEMP_DIR}/pulls-merged.json" > /dev/null \
+    || die "${E_INVALID}" "the search for your merged pull requests was cut short, so the areas you worked in would be missing some files"
+  for kind in open merged; do
+    jq -n --slurpfile pages "${TEMP_DIR}/pulls-${kind}.json" "\$pages[0] as \$pages | ${PULLS_FILTER}" > "${TEMP_DIR}/pulls-${kind}.list"
+  done
+  jq -n --slurpfile open "${TEMP_DIR}/pulls-open.list" --slurpfile merged "${TEMP_DIR}/pulls-merged.list" \
+    '{open: $open[0], merged: $merged[0]}' > "${TEMP_DIR}/pulls.json"
+  local pulls_cut
+  pulls_cut="$(jq -r '[.open[], .merged[]] | .[] | select(.filesTruncated) | "  - #\(.number)"' "${TEMP_DIR}/pulls.json")"
+  if [[ -n "${pulls_cut}" ]]; then
+    printf '%s: GitHub listed only the first 100 files of these pull requests, so affinity misses the rest:\n%s\n' "${SCRIPT_NAME}" "${pulls_cut}" >&2
+  fi
+  # A missing branch would leave a bug it carries looking unstarted.
+  jq -e 'all(.[]; .data.repository.refs.nodes | type == "array")' "${TEMP_DIR}/branches.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the branches came back without a list, so the board cannot be trusted"
+  gather_local "${repo}" "${default_branch}" "${work_since}"
+
   for search_file in "${TEMP_DIR}"/search-*.json; do
     search_name="$(basename -- "${search_file}" .json)"
     search_name="${search_name#search-}"
@@ -1023,12 +1297,19 @@ function cmd_gather() {
       "${TEMP_DIR}/searches.json" > "${TEMP_DIR}/searches.next"
     mv -- "${TEMP_DIR}/searches.next" "${TEMP_DIR}/searches.json"
   done
-  jq -n --argjson config "${config}" --slurpfile searches "${TEMP_DIR}/searches.json" \
+  jq -n --argjson config "${config}" --arg repo "${repo}" --slurpfile searches "${TEMP_DIR}/searches.json" \
     "\$searches[0] as \$searches | ${NORMALIZE_FILTER}" > "${TEMP_DIR}/bugs.json"
+  # A progress label, linked pull request or cross-reference past the cut
+  # would read as no progress, so an open bug with one cut stops the gather.
   local truncated
+  truncated="$(jq -r '[.[] | select(.state == "open")
+    | (.truncated - ["assignees", "comments"]) as $cut
+    | select($cut | length > 0) | "#\(.number) (\($cut | join(" and ")))"] | join(", ")' "${TEMP_DIR}/bugs.json")"
+  [[ -z "${truncated}" ]] \
+    || die "${E_INVALID}" "GitHub cut short the lists of ${truncated}, so progress could be missing; the board cannot be trusted"
   truncated="$(jq -r '.[] | select(.truncated | length > 0) | "  - #\(.number): \(.truncated | join(" and "))"' "${TEMP_DIR}/bugs.json")"
   if [[ -n "${truncated}" ]]; then
-    printf '%s: GitHub cut these lists short, so a label or a fix past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${truncated}" >&2
+    printf '%s: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:\n%s\n' "${SCRIPT_NAME}" "${truncated}" >&2
   fi
 
   if [[ "${has_zenhub}" == true ]]; then
@@ -1038,18 +1319,23 @@ function cmd_gather() {
     printf 'null' > "${TEMP_DIR}/zenhub.json"
   fi
 
-  jq -n --argjson config "${config}" --arg now "${now}" --argjson version "${CACHE_VERSION}" \
+  jq -n --argjson config "${config}" --arg now "${now}" --arg host "${HOST_NAME}" --argjson version "${CACHE_VERSION}" \
     --slurpfile repository "${TEMP_DIR}/repository.json" \
     --slurpfile bugs "${TEMP_DIR}/bugs.json" \
     --slurpfile zenhub "${TEMP_DIR}/zenhub.json" \
-    "\$repository[0].data as \$repository | \$bugs[0] as \$bugs | \$zenhub[0] as \$zenhub | ${ASSEMBLE_FILTER}" \
+    --slurpfile pulls "${TEMP_DIR}/pulls.json" \
+    --slurpfile local "${TEMP_DIR}/local.json" \
+    --slurpfile branches "${TEMP_DIR}/branches.json" \
+    "\$repository[0].data as \$repository | [\$branches[0][] | .data.repository.refs.nodes[]] as \$refs | \$bugs[0] as \$bugs | \$zenhub[0] as \$zenhub | \$pulls[0] as \$pulls | \$local[0] as \$local | ${ASSEMBLE_FILTER}" \
     > "${TEMP_DIR}/gather.json"
   write_atomic "${output_file}" "${TEMP_DIR}/gather.json"
 
-  jq -r '
-    def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
-    "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(counted(.counts.open; "open bug"; "open bugs")), \(.counts.withFix) with an open fix, \(.counts.outsideReporters) from outside reporters; \(.counts.closed) closed in the last \(.recentDays) days"
+  jq -r "${PROGRESS_DEFS}"'
+    "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(plural(.counts.open; "open bug"; "open bugs")), \(.counts.withFix) with an open fix, \(.counts.inProgress) in progress, \(.counts.outsideReporters) from outside reporters; \(.counts.closed) closed in the last \(.recentDays) days"
   ' "${output_file}"
+  if [[ -s "${TEMP_DIR}/local-notice.txt" ]]; then
+    cat -- "${TEMP_DIR}/local-notice.txt" >&2
+  fi
   report_moved "${config}" "${output_file}"
 }
 

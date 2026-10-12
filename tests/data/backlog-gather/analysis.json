@@ -1,0 +1,165 @@
+{
+  "board": "backlog-triage",
+  "title": "widgets backlog",
+  "repo": "acme/widgets",
+  "repoUrl": "https://github.com/acme/widgets",
+  "summary": "Sample analysis data for backlog-gather finish.",
+  "sync": {
+    "at": "2026-10-15T16:00:00Z",
+    "branch": "main",
+    "commit": "0000000000000000000000000000000000000000"
+  },
+  "areas": [
+    {
+      "name": "parser",
+      "paths": ["src/parser/"]
+    },
+    {
+      "name": "ui",
+      "paths": ["src/ui/button.c"]
+    },
+    {
+      "name": "docs",
+      "paths": ["docs/**/*.md"],
+      "query": "label:docs"
+    },
+    {
+      "name": "cache",
+      "paths": ["lib/*.c"]
+    },
+    {
+      "name": "net",
+      "paths": ["src/net/**"]
+    }
+  ],
+  "issues": [
+    {
+      "number": 1,
+      "title": "Issue 1",
+      "milestone": null
+    },
+    {
+      "number": 2,
+      "title": "Issue 2",
+      "milestone": null,
+      "areas": ["parser"]
+    },
+    {
+      "number": 3,
+      "title": "Issue 3",
+      "milestone": null,
+      "areas": ["ui"]
+    },
+    {
+      "number": 4,
+      "title": "Issue 4",
+      "milestone": null
+    },
+    {
+      "number": 5,
+      "title": "Issue 5",
+      "milestone": null,
+      "areas": ["docs"]
+    },
+    {
+      "number": 6,
+      "title": "Issue 6",
+      "milestone": null
+    },
+    {
+      "number": 7,
+      "title": "Issue 7",
+      "milestone": null
+    },
+    {
+      "number": 8,
+      "title": "Issue 8",
+      "milestone": null
+    },
+    {
+      "number": 9,
+      "title": "Issue 9",
+      "milestone": null
+    },
+    {
+      "number": 10,
+      "title": "Issue 10",
+      "milestone": null
+    },
+    {
+      "number": 11,
+      "title": "Issue 11",
+      "milestone": null
+    },
+    {
+      "number": 12,
+      "title": "Issue 12",
+      "milestone": null
+    },
+    {
+      "number": 13,
+      "title": "Issue 13",
+      "milestone": null
+    },
+    {
+      "number": 14,
+      "title": "Issue 14",
+      "milestone": null
+    },
+    {
+      "number": 15,
+      "title": "Issue 15",
+      "milestone": null
+    },
+    {
+      "number": 16,
+      "title": "Issue 16",
+      "milestone": null,
+      "areas": ["parser"]
+    },
+    {
+      "number": 17,
+      "title": "Issue 17",
+      "milestone": null,
+      "areas": ["cache"]
+    },
+    {
+      "number": 18,
+      "title": "Issue 18",
+      "milestone": null
+    },
+    {
+      "number": 19,
+      "title": "Issue 19",
+      "milestone": null,
+      "areas": ["net"]
+    },
+    {
+      "number": 20,
+      "title": "Issue 20",
+      "milestone": null
+    },
+    {
+      "number": 21,
+      "title": "Issue 21",
+      "milestone": null
+    },
+    {
+      "number": 41,
+      "title": "Issue 41",
+      "milestone": null
+    }
+  ],
+  "lanes": [
+    {
+      "key": "L1",
+      "name": "Everything",
+      "mode": "any",
+      "issues": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 41]
+    }
+  ],
+  "startNow": [],
+  "contention": {
+    "rowLabel": "Area"
+  }
+}

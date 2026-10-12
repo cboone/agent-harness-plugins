@@ -1,0 +1,868 @@
+[
+  {
+    "data": {
+      "repository": {
+        "issues": {
+          "pageInfo": {
+            "hasNextPage": true,
+            "endCursor": "c1"
+          },
+          "nodes": [
+            {
+              "number": 1,
+              "title": "Started by label",
+              "body": "Body of #1.",
+              "url": "https://github.com/acme/widgets/issues/1",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-12T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "name": "in progress"
+                  }
+                ]
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 2,
+              "title": "Local branch",
+              "body": "Body of #2.",
+              "url": "https://github.com/acme/widgets/issues/2",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 3,
+              "title": "Pushed branch",
+              "body": "Body of #3.",
+              "url": "https://github.com/acme/widgets/issues/3",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-01T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 4,
+              "title": "Draft",
+              "body": "Body of #4.",
+              "url": "https://github.com/acme/widgets/issues/4",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 5,
+              "title": "Review nobody asked for",
+              "body": "Body of #5.",
+              "url": "https://github.com/acme/widgets/issues/5",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 6,
+              "title": "Review requested",
+              "body": "Body of #6.",
+              "url": "https://github.com/acme/widgets/issues/6",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 7,
+              "title": "Checks running",
+              "body": "Body of #7.",
+              "url": "https://github.com/acme/widgets/issues/7",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 8,
+              "title": "Merge conflict",
+              "body": "Body of #8.",
+              "url": "https://github.com/acme/widgets/issues/8",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 9,
+              "title": "Changes requested",
+              "body": "Body of #9.",
+              "url": "https://github.com/acme/widgets/issues/9",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 10,
+              "title": "Ready, mergeability unknown",
+              "body": "Body of #10.",
+              "url": "https://github.com/acme/widgets/issues/10",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-14T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ana"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "name": "In Progress"
+                  }
+                ]
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "data": {
+      "repository": {
+        "issues": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": "c2"
+          },
+          "nodes": [
+            {
+              "number": 11,
+              "title": "Mentioned by a merged pull request",
+              "body": "Body of #11.",
+              "url": "https://github.com/acme/widgets/issues/11",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-05T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "name": "in progress"
+                  }
+                ]
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": [
+                  {
+                    "__typename": "CrossReferencedEvent",
+                    "willCloseTarget": false,
+                    "source": {
+                      "__typename": "PullRequest",
+                      "number": 110,
+                      "mergedAt": "2026-10-05T10:00:00Z",
+                      "repository": {
+                        "nameWithOwner": "acme/widgets"
+                      }
+                    }
+                  },
+                  {
+                    "__typename": "CrossReferencedEvent",
+                    "willCloseTarget": false,
+                    "source": {
+                      "__typename": "PullRequest",
+                      "number": 7,
+                      "mergedAt": "2026-10-06T10:00:00Z",
+                      "repository": {
+                        "nameWithOwner": "other/repo"
+                      }
+                    }
+                  },
+                  {
+                    "__typename": "CrossReferencedEvent",
+                    "willCloseTarget": false,
+                    "source": {
+                      "__typename": "Issue"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "number": 12,
+              "title": "Stale branches",
+              "body": "Body of #12.",
+              "url": "https://github.com/acme/widgets/issues/12",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-09-05T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 13,
+              "title": "Behind the default branch",
+              "body": "Body of #13.",
+              "url": "https://github.com/acme/widgets/issues/13",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-12T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 14,
+              "title": "Assigned to someone else",
+              "body": "Body of #14.",
+              "url": "https://github.com/acme/widgets/issues/14",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "login": "ben"
+                  }
+                ]
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 15,
+              "title": "Filed by the viewer",
+              "body": "Body of #15.",
+              "url": "https://github.com/acme/widgets/issues/15",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "ana"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 16,
+              "title": "Open work in the area",
+              "body": "Body of #16.",
+              "url": "https://github.com/acme/widgets/issues/16",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 17,
+              "title": "Recent commits in the area",
+              "body": "Body of #17.",
+              "url": "https://github.com/acme/widgets/issues/17",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 18,
+              "title": "Claimed by no one known",
+              "body": "Body of #18.",
+              "url": "https://github.com/acme/widgets/issues/18",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "name": "claimed"
+                  }
+                ]
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 19,
+              "title": "Merged pull request in the area",
+              "body": "Body of #19.",
+              "url": "https://github.com/acme/widgets/issues/19",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 20,
+              "title": "Fresh worktree",
+              "body": "Body of #20.",
+              "url": "https://github.com/acme/widgets/issues/20",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": []
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 21,
+              "title": "Commented by the viewer",
+              "body": "Body of #21.",
+              "url": "https://github.com/acme/widgets/issues/21",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "ben"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "ana"
+                    },
+                    "createdAt": "2026-10-01T09:00:00Z"
+                  },
+                  {
+                    "author": {
+                      "login": "ben"
+                    },
+                    "createdAt": "2026-10-02T09:00:00Z"
+                  }
+                ]
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 41,
+              "title": "Not named by branch 412",
+              "body": "Body of #41.",
+              "url": "https://github.com/acme/widgets/issues/41",
+              "createdAt": "2026-09-01T12:00:00Z",
+              "updatedAt": "2026-10-10T09:00:00Z",
+              "author": {
+                "login": "carol"
+              },
+              "milestone": null,
+              "assignees": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "labels": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "ana"
+                    },
+                    "createdAt": "2026-06-01T09:00:00Z"
+                  }
+                ]
+              },
+              "closedByPullRequestsReferences": {
+                "nodes": []
+              },
+              "timelineItems": {
+                "nodes": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

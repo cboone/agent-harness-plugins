@@ -43,7 +43,7 @@ Everything below exists to keep these true. A step that would break one is wrong
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/review-scope" --base main
 ```
 
-Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step. **If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the script with `**/review-until-clean/**/scripts/review-scope`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
+Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step. **If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/review-until-clean/**/scripts/review-scope`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
 
 The steps below abbreviate that path to `review-scope`. Expand the abbreviation when you run one.
 
@@ -72,7 +72,6 @@ Take `--reviewer` when given. Otherwise pick the model family the host is not, b
 | ----------- | ---------------- |
 | Claude Code | `codex`          |
 | Codex CLI   | `claude`         |
-| OpenCode    | `codex`          |
 
 Confirm the backend is installed and authenticated before anything else, following `./references/backends.md`. If the default is unavailable, say so, name the substitute, and record the substitution in the ledger. If no backend is available, stop and report which ones were tried.
 

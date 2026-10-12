@@ -9,10 +9,15 @@ moved and which bugs need reading again.
 Every call goes through `tests/fixtures/gh-stub` and `tests/fixtures/curl-stub`,
 which answer from `tests/data/bugs-gather/`. The fixtures describe `acme/widgets`
 (ZenHub ID 101) with 20 open bugs, built so that between them they reach every
-tier, and 2 closed in the last week. The config names a test-only token
-variable holding a sample value, and the Makefile unsets the real ZenHub token
-variable, so no test can reach ZenHub. `bugs` takes settings (`NAME=value`) first, then the
-command. The gather time is fixed at 2026-10-15T16:00:00Z.
+tier, and 2 closed in the last week. The viewer, `alice`, has two open pull
+requests and one merged in the last month, and filed every bug but one. The
+config names a test-only token variable holding a sample value, and the
+Makefile unsets the real ZenHub token variable, so no test can reach ZenHub.
+`bugs` takes settings (`NAME=value`) first, then the command, and runs outside
+any checkout, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request. `variant`
+copies the GitHub fixtures with a jq filter applied to every open bug the open
+searches return, and prints the copy's directory. The gather time is fixed at
+2026-10-15T16:00:00Z.
 
 ```scrut
 $ function bugs() {
@@ -24,8 +29,21 @@ $ function bugs() {
 >   env PATH="${stub_dir}:${PATH}" \
 >     STUB_GH_DIR="${BUGS_GATHER_DATA_DIR}/github" STUB_CURL_DIR="${BUGS_GATHER_DATA_DIR}/zenhub" \
 >     STUB_CURL_TOKEN=sample-token BUGS_TEST_ZENHUB_TOKEN=sample-token \
->     BUGS_GATHER_NOW=2026-10-15T16:00:00Z XDG_CACHE_HOME="${work}/cache" XDG_CONFIG_HOME="${work}/config" \
+>     BUGS_GATHER_NOW=2026-10-15T16:00:00Z BUGS_GATHER_HOST=testhost XDG_CACHE_HOME="${work}/cache" XDG_CONFIG_HOME="${work}/config" \
 >     ${settings[@]+"${settings[@]}"} "${BUGS_GATHER_BIN}" "${@}"
+> }
+> function variant() {
+>   local dir
+>   dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${dir}/"
+>   local search
+>   for search in search-open-labels search-open-type; do
+>     jq "map(.data.search.nodes |= map(${1}))" "${BUGS_GATHER_DATA_DIR}/github/graphql/${search}.json" > "${dir}/graphql/${search}.json"
+>   done
+>   printf '%s' "${dir}"
+> }
+> function progress() {
+>   jq -r --argjson n "${2}" '.bugs[] | select(.number == $n) | .progress | if . == null then "none" else "\(.stage), \(.nextMove): \(.nextAction)\(if (.flags | length) > 0 then " [\(.flags | join(", "))]" else "" end)" end' "${1}"
 > }
 > function config_with() {
 >   jq --arg note "${BUGS_GATHER_DATA_DIR}/triage.md" ".triageNote = \$note | ${1:-.}" "${BUGS_GATHER_DATA_DIR}/config.json"
@@ -48,7 +66,7 @@ $ function bugs() {
 
 ```scrut
 $ bugs gather "${work}/config.json" "${work}/again.json" | sed "s|${work}|WORK|g"
-acme/widgets at main 01234567: 20 open bugs, 3 with an open fix, 1 from outside reporters; 2 closed in the last 7 days
+acme/widgets at main 01234567: 20 open bugs, 3 with an open fix, 5 in progress, 1 from outside reporters; 2 closed in the last 7 days
 Cold sync: no usable cache at WORK/cache/report-boards/bugs/github.com/acme/widgets/gather.json, so nothing can be compared yet.
 ```
 
@@ -59,6 +77,9 @@ labels matches any of them, and each issue type runs as its own search.
 
 ```scrut
 $ log="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs STUB_GH_LOG="${log}" gather "${work}/config.json" "${work}/logged.json" > /dev/null && sort "${log}"
+gh api graphql branches owner=acme name=widgets
+gh api graphql open-pulls owner=acme name=widgets
+gh api graphql pulls q=repo:acme/widgets is:pr author:@me is:merged merged:>=2026-09-15
 gh api graphql repository owner=acme name=widgets
 gh api graphql search q=repo:acme/widgets is:issue is:closed closed:>=2026-10-08 label:"bug"
 gh api graphql search q=repo:acme/widgets is:issue is:closed closed:>=2026-10-08 type:"Bug"
@@ -76,6 +97,131 @@ $ jq -r '.bugs[] | select(.number == 10 or .number == 26) | "#\(.number) \(.foun
 #26 open-type
 ```
 
+## Every open bug with a signal gets a stage of the progress model
+
+`#12` sits in a progress pipeline and has a pushed branch, which goes further.
+`#17` has no fix that closes it, but an open pull request names it by branch,
+needs a review, and has none requested. `#26` carries the progress label
+beside a merged pull request that only mentions it.
+
+```scrut
+$ jq -r '.bugs[] | select(.progress != null) | "#\(.number) \(.progress.stage), \(.progress.nextMove): \(.progress.nextAction) (\(.progress.signal))\(if (.progress.flags | length) > 0 then " [\(.progress.flags | join(", "))]" else "" end)\(if (.progress.extraCarriers | length) > 0 then " also \(.progress.extraCarriers | map(to_entries[0] | "\(.key) \(.value)") | join(", "))" else "" end)"' "${work}/gather.json"
+#12 branch, author: open a pull request (branch 12-token-refresh, commits ahead unknown) also pipeline In Progress
+#16 ready-to-merge, author: merge it (pull request #40, approved, checks passing)
+#17 awaiting-review, nobody: request a review (pull request #44, review required, no review requested, mergeability unknown, checks passing)
+#26 close-out, author: close or split (pull request #38 merged 2026-10-13) [leftover-label] also label in progress
+#27 draft, author: mark it ready for review (pull request #42, draft) also label in progress
+#28 needs-author, author: fix the checks (pull request #43, no review required, checks failing)
+```
+
+## Only a merged pull request in this repository is linked to a bug
+
+`#26`'s timeline also holds a merged pull request in another repository, an
+issue, and an open pull request, none of which count. Pull request `#38` only
+mentions `#26`.
+
+```scrut
+$ jq -c '.bugs[] | select(.number == 26) | .merged' "${work}/gather.json"
+[{"number":38,"mergedAt":"2026-10-13T11:00:00Z","closes":false}]
+```
+
+## A merged pull request that only mentions a bug counts while work is still marked
+
+Without the progress label, the mention is likely of a follow-up, so `#26` is
+not in progress at all. A cross-reference with a closing keyword closes the
+bug, and counts with no label. A closing reference from another repository
+does not count.
+
+```scrut
+$ unlabeled='(.labels.nodes |= map(select(.name != "in progress")))' && for change in "${unlabeled}" "${unlabeled} | .timelineItems.nodes[0].willCloseTarget = true" "${unlabeled} | .closedByPullRequestsReferences.nodes += [.timelineItems.nodes[1].source]"; do dir="$(variant "if .number == 26 then ${change} else . end")" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/mention.json" > /dev/null 2>&1 && progress "${work}/mention.json" 26; done
+none
+close-out, author: close or split
+none
+```
+
+## A pull request's review, checks, and mergeability decide its stage
+
+Each line changes `#40`, the approved and green fix for `#16`.
+
+```scrut
+$ for change in '.reviewDecision = "REVIEW_REQUIRED" | .reviewRequests.totalCount = 1' '.reviewDecision = null | .commits.nodes[0].commit.statusCheckRollup.state = "PENDING"' '.mergeable = "CONFLICTING"' '.reviewDecision = "CHANGES_REQUESTED"' '.mergeStateStatus = "BEHIND"' '.mergeable = "UNKNOWN"' '.isDraft = true'; do dir="$(variant "(.closedByPullRequestsReferences.nodes |= map(if .number == 40 then ${change} else . end))")" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pr.json" > /dev/null 2>&1 && printf '%s => %s\n' "${change}" "$(progress "${work}/pr.json" 16)"; done
+.reviewDecision = "REVIEW_REQUIRED" | .reviewRequests.totalCount = 1 => awaiting-review, reviewer: wait for review
+.reviewDecision = null | .commits.nodes[0].commit.statusCheckRollup.state = "PENDING" => awaiting-review, ci: wait for checks
+.mergeable = "CONFLICTING" => needs-author, author: resolve the conflict [conflict]
+.reviewDecision = "CHANGES_REQUESTED" => needs-author, author: answer the review
+.mergeStateStatus = "BEHIND" => ready-to-merge, author: merge it [behind]
+.mergeable = "UNKNOWN" => ready-to-merge, author: merge it
+.isDraft = true => draft, author: mark it ready for review
+```
+
+## Unknown mergeability counts as no conflict, and the signal says so
+
+```scrut
+$ dir="$(variant '(.closedByPullRequestsReferences.nodes |= map(if .number == 40 then .mergeable = "UNKNOWN" else . end))')" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/unknown.json" > /dev/null 2>&1 && jq -r '.bugs[] | select(.number == 16) | .progress.signal' "${work}/unknown.json"
+pull request #40, approved, mergeability unknown, checks passing
+```
+
+## Work with no recent activity is quiet, then stale
+
+`#16`'s pull request last moved on 2026-10-14. Eleven days on it is quiet; five
+weeks on it is stale, and its next action becomes resume or drop.
+
+```scrut
+$ for at in 2026-10-25T16:00:00Z 2026-11-20T16:00:00Z; do bugs BUGS_GATHER_NOW="${at}" gather "${work}/config.json" "${work}/aged.json" > /dev/null 2>&1 && printf '%s: %s\n' "${at}" "$(progress "${work}/aged.json" 16)"; done
+2026-10-25T16:00:00Z: ready-to-merge, author: merge it [quiet]
+2026-11-20T16:00:00Z: ready-to-merge, author: resume or drop [stale]
+```
+
+## A progress label alone marks work started
+
+Without its draft pull request, `#27` has only the progress label.
+
+```scrut
+$ dir="$(variant 'if .number == 27 then .closedByPullRequestsReferences.nodes = [] else . end')" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/label.json" > /dev/null 2>&1 && progress "${work}/label.json" 27
+started, author: open a branch
+```
+
+## In a checkout, local branches count, with the host that saw them
+
+The checkout's `origin` names `acme/widgets`. Its branch for `#18` was never
+pushed, and the viewer's branch files and commits join the files affinity
+reads.
+
+```scrut
+$ repo="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (cd "${repo}" && export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_AUTHOR_DATE=2026-10-01T10:00:00Z GIT_COMMITTER_DATE=2026-10-01T10:00:00Z && git init -q -b main && git config user.email alice@example.com && git config user.name Alice && echo a > README.md && git add -A && git commit -q -m readme && git update-ref refs/remotes/origin/main HEAD && git remote add origin git@github.com:acme/widgets.git && git checkout -q -b 18-axios-test && mkdir -p src/deps && echo x > src/deps/axios.js && git add -A && GIT_AUTHOR_DATE=2026-10-14T10:00:00Z GIT_COMMITTER_DATE=2026-10-14T10:00:00Z git commit -q -m axios && git checkout -q main && bugs gather "${work}/config.json" "${work}/checkout.json" > /dev/null 2>&1) && jq -r '.checkout, (.bugs[] | select(.number == 18) | .progress | "\(.signal) on \(.host): \(.nextAction) [\(.flags | join(", "))]"), (.viewerFiles | .active[], .recent[] | "\(.path) via \(.via)")' "${work}/checkout.json"
+true
+branch 18-axios-test, 1 commit ahead, local on testhost: push it [local]
+CHANGELOG.md via pull request #40
+src/auth/session.js via pull request #44
+src/deps/axios.js via branch 18-axios-test
+src/elections/dates.js via pull request #40
+README.md via commit * (glob)
+src/api/v2/writes.js via pull request #39
+src/deps/axios.js via commit * (glob)
+```
+
+## A checkout of a lookalike host supplies no local state
+
+```scrut
+$ repo="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (cd "${repo}" && git init -q -b main && git remote add origin https://evilgithub.com/acme/widgets.git && bugs gather "${work}/config.json" "${work}/lookalike.json" 2>&1 > /dev/null | grep 'origin is') && jq -c '.checkout' "${work}/lookalike.json"
+bugs-gather: this checkout's origin is https://evilgithub.com/acme/widgets.git, not acme/widgets, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request
+false
+```
+
+## Outside a checkout, the gather reads no local state
+
+```scrut
+$ jq -c '[.checkout, .host]' "${work}/gather.json"
+[false,"testhost"]
+```
+
+It says so once the gather is written, so a gather that stops shows only why.
+
+```scrut
+$ bugs gather "${work}/config.json" "${work}/outside.json" 2>&1 > /dev/null | grep checkout
+bugs-gather: not inside a checkout of acme/widgets, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request
+```
+
 ## People outside the repository count as users, and bots do not
 
 `#20` was filed by an outside reporter, with comments from another outsider, a
@@ -84,6 +230,44 @@ bot, and a member.
 ```scrut
 $ jq -c '.bugs[] | select(.number == 20) | {outsideReporter, outsidePeople, reactions, comments, lastComment}' "${work}/gather.json"
 {"outsideReporter":true,"outsidePeople":2,"reactions":4,"comments":3,"lastComment":{"author":"alice","at":"2026-10-12T09:00:00Z","outside":false}}
+```
+
+## Anyone's open pull request carries a bug, but only the viewer's files count
+
+`bob`'s open pull request names `#21` by its branch. It carries the bug, and
+its files stay out of the viewer's affinity.
+
+```scrut
+$ dir="$(variant .)" && jq 'map(.data.repository.pullRequests.nodes += [{number: 46, title: "Speed up admin search", url: "https://github.com/acme/widgets/pull/46", state: "OPEN", isDraft: false, createdAt: "2026-10-13T09:00:00Z", updatedAt: "2026-10-14T09:00:00Z", mergedAt: null, mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", headRefName: "21-admin-search", reviewDecision: "REVIEW_REQUIRED", reviewRequests: {totalCount: 1}, latestReviews: {nodes: []}, author: {login: "bob"}, commits: {nodes: []}, files: {pageInfo: {hasNextPage: false}, nodes: [{path: "src/admin/search.js"}]}}])' "${BUGS_GATHER_DATA_DIR}/github/graphql/pulls-open.json" > "${dir}/graphql/pulls-open.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/others.json" > /dev/null 2>&1 && progress "${work}/others.json" 21 && jq -r '"files via #46: \([.viewerFiles.active[] | select(.via == "pull request #46")] | length)"' "${work}/others.json"
+awaiting-review, reviewer: wait for review
+files via #46: 0
+```
+
+## An open fix in another repository does not carry a bug
+
+```scrut
+$ dir="$(variant 'if .number == 16 then .closedByPullRequestsReferences.nodes |= map(.repository = {nameWithOwner: "acme/other"}) else . end')" && jq 'map(.data.repository.pullRequests.nodes |= map(select(.number != 40)))' "${BUGS_GATHER_DATA_DIR}/github/graphql/pulls-open.json" > "${dir}/graphql/pulls-open.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/elsewhere.json" > /dev/null 2>&1 && progress "${work}/elsewhere.json" 16
+none
+```
+
+## A pull request and its own head branch carry a bug once
+
+The head branch of `#40` adds no carrier, and its newer commit becomes the
+last activity.
+
+```scrut
+$ dir="$(variant .)" && jq 'map(.data.repository.refs.nodes += [{name: "16-election-day", target: {committedDate: "2026-10-15T08:00:00Z"}}])' "${BUGS_GATHER_DATA_DIR}/github/graphql/branches-widgets.json" > "${dir}/graphql/branches-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/head.json" > /dev/null 2>&1 && jq -c '.bugs[] | select(.number == 16) | .progress | {carrier, extraCarriers, flags, lastActivity}' "${work}/head.json"
+{"carrier":{"pr":40},"extraCarriers":[],"flags":[],"lastActivity":"2026-10-15T08:00:00Z"}
+```
+
+## A pipeline alone starts a bug from when it entered the pipeline
+
+Without its branch, `#12` is carried by its ZenHub pipeline, and its last
+activity is when it moved there.
+
+```scrut
+$ dir="$(variant .)" && jq 'map(.data.repository.refs.nodes |= map(select(.name != "12-token-refresh")))' "${BUGS_GATHER_DATA_DIR}/github/graphql/branches-widgets.json" > "${dir}/graphql/branches-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pipeline.json" > /dev/null 2>&1 && jq -r '.bugs[] | select(.number == 12) | .progress | "\(.stage) on \(.carrier | to_entries[0] | "\(.key) \(.value)"), last activity \(.lastActivity)"' "${work}/pipeline.json"
+started on pipeline In Progress, last activity 2026-10-05T14:00:00Z
 ```
 
 ## Fix pull requests carry their draft, check, and review state
@@ -183,11 +367,11 @@ with its approved, green fix.
 
 ```scrut
 $ tiers "${work}/scored.json"
-critical: #11 #25 #10 #24
-high: #14 #13 #12 #15
-ready: #16/ship #18/ready-to-fix #27/in-progress #17/ready-to-fix #21/ready-to-fix #28/review
+critical: #11 #10 #25 #24
+high: #14 #12 #15 #13
+ready: #16/ready-to-merge #18/ready-to-fix #27/draft #17/awaiting-review #21/ready-to-fix #28/needs-author #26/close-out
 investigate: #20
-lower: #19 #26
+lower: #19
 parked: #23 #29 #22
 fixed: #5 #6
 ```
@@ -199,41 +383,107 @@ $ bugs score "${work}/config.json" "${work}/gather.json" "${assessments}" "${wor
 Triage note: 5 entries, 1 expired
     - expired: 2026-10-01T08:00-04:00 escalate #19
 - Critical (4):
-    - #11 [87] API v2 accepts unauthenticated writes
+    - #11 [92] API v2 accepts unauthenticated writes (affinity: you)
         public security exposure: Bug 11 in one sentence.
+    - #10 [82] Pledging crashes the app (affinity: you)
+        hurting users on production: Bug 10 in one sentence.
     - #25 [80] Opt-outs do not suppress adopted letters (set by triage: environment, evidence)
         hurting users on production: Bug 25 in one sentence.
-    - #10 [77] Pledging crashes the app
-        hurting users on production: Bug 10 in one sentence.
     - #24 [29] Footer link color is off
         escalated: Bug 24 in one sentence.
 - High priority (4):
     - #14 [80] Relinquish erases bundle membership
         worse with every event: Bug 14 in one sentence.
-    - #13 [51] Partner pages drop campaigns with null flags (unconfirmed)
-        confirm on production: Bug 13 in one sentence.
-    - #12 [49] Token refresh bounces users to the dashboard (in progress: the In Progress pipeline)
+    - #12 [49] Token refresh bounces users to the dashboard (branch: branch 12-token-refresh, commits ahead unknown)
         affecting users on production: Bug 12 in one sentence.
     - #15 [49] Reminder batch sends twice before the send window
         due 2026-10-20: Bug 15 in one sentence.
-- Ready to go, top 8 above the fold (6):
-    - #16 [94] Election day counts as past (in progress: fix #40)
-    - #18 [61] A test break blocks the axios security update
-    - #27 [59] Callback returns 500 for invalid logins (in progress: draft fix #42)
-    - #17 [47] Auth0 forces near-daily sign-outs
+    - #13 [21] Partner pages drop campaigns with null flags (affinity: @bob; unconfirmed)
+        confirm on production: Bug 13 in one sentence.
+- Ready to go, top 8 above the fold (7):
+    - #16 [99] Election day counts as past (ready-to-merge: pull request #40, approved, checks passing; affinity: you)
+    - #18 [66] A test break blocks the axios security update (affinity: you)
+    - #27 [59] Callback returns 500 for invalid logins (draft: pull request #42, draft)
+    - #17 [47] Auth0 forces near-daily sign-outs (awaiting-review: pull request #44, review required, no review requested, mergeability unknown, checks passing)
     - #21 [39] Admin search returns 500 for long names
-    - #28 [38] Profile form sends a request per keystroke (in progress: fix #43)
-- Report: 1 to investigate, 2 lower priority, 3 parked, 2 fixed
+    - #28 [38] Profile form sends a request per keystroke (needs-author: pull request #43, no review required, checks failing)
+    - #26 [26] Tooltip flickers on hover (close-out: pull request #38 merged 2026-10-13, leftover-label)
+- Report: 1 to investigate, 1 lower priority, 3 parked, 2 fixed
+- Affinity ignores filed: one owner holds it on nearly every open bug
 - Changes: none recorded; the cache held no earlier score
+```
+
+## Affinity says whose each bug is, and why
+
+`#10` and `#11` name the `api` area, where the viewer merged a pull request
+this month; `#16` names `elections`, which the viewer's open pull request
+changes; `#18` is assigned to the viewer, `#13` to someone else, and the viewer
+commented on `#20`. The viewer filed every bug but one, so filing tells none
+apart and is ignored.
+
+```scrut
+$ jq -r '.affinityIgnored | "ignored: \(join(", "))"' "${work}/scored.json" && jq -r '[.tiers[][]] | sort_by(.number)[] | select(.affinity.owner != null) | "#\(.number) \(.affinity.owner) \(.affinity.kind)\(if .affinity.tier then " tier \(.affinity.tier)" else "" end): \(.affinity.reasons | join("; "))"' "${work}/scored.json"
+ignored: filed
+#10 you implicit tier 2: api changed in pull request #39 within 30 days
+#11 you implicit tier 2: api changed in pull request #39 within 30 days
+#13 bob explicit: assigned to @bob
+#16 you implicit tier 1: elections changed on pull request #40
+#18 you explicit: assigned
+#20 you implicit tier 3: commented within 90 days
+```
+
+## Affinity adds a little for the viewer's bugs and takes a lot for someone else's
+
+`#13` would score 51 without its other owner, and `#16` 94 without the viewer.
+
+```scrut
+$ jq -r '[.tiers[][]] | sort_by(.number)[] | select(.number == 13 or .number == 16) | "#\(.number) \(.score)"' "${work}/scored.json"
+#13 21
+#16 99
+```
+
+## Below the minimum, uniformity ignores nothing
+
+```scrut
+$ config_with '.uniformityMinimum = 50' > "${work}/few.json" && bugs score "${work}/few.json" "${work}/gather.json" "${assessments}" "${work}/few-scored.json" > /dev/null && jq -r '"ignored: \(.affinityIgnored | length)", ([.tiers[][]] | sort_by(.number)[] | select(.number == 14 or .number == 26) | "#\(.number) \(.affinity.owner // "none"): \(.affinity.reasons | join("; "))")' "${work}/few-scored.json"
+ignored: 0
+#14 you: filed it
+#26 you: filed it
+```
+
+## A claim with no assignee has no known owner
+
+```scrut
+$ dir="$(variant 'if .number == 19 then .labels.nodes += [{name: "claimed"}] else . end')" && config_with '.claimLabels = ["Claimed"]' > "${work}/claims.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/claims.json" "${work}/claims-gather.json" > /dev/null 2>&1 && bugs score "${work}/claims.json" "${work}/claims-gather.json" "${assessments}" "${work}/claims-scored.json" > /dev/null && jq -c '[.tiers[][]] | .[] | select(.number == 19) | .affinity' "${work}/claims-scored.json"
+{"owner":"unknown","kind":"explicit","tier":null,"reasons":["claimed with the claimed label"]}
+```
+
+## An area named twice with different paths is refused
+
+```scrut
+$ jq 'map(if .number == 11 then .areas = [{name: "api", paths: ["src/api/v2/"]}] else . end)' "${assessments}" > "${work}/clash.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/clash.json" "${work}/clash-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+bugs-gather: WORK/clash.json does not cover the gather:
+  - area api has different paths in #10, #11; give it one set
+exit 1
+```
+
+## An area without a path pattern is refused
+
+```scrut
+$ jq 'map(if .number == 11 then .areas = [{name: "api", paths: []}] elif .number == 12 then .areas = "src" else . end)' "${assessments}" > "${work}/no-paths.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/no-paths.json" "${work}/no-paths-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+bugs-gather: WORK/no-paths.json does not cover the gather:
+  - #11: areas must be a list of {name, paths}, each with a name and at least one path pattern
+  - #12: areas must be a list of {name, paths}, each with a name and at least one path pattern
+exit 1
 ```
 
 ## Within a tier, bugs rank by urgency score
 
 ```scrut
 $ jq -r '.tiers.critical[] | "#\(.number) \(.score)"' "${work}/scored.json"
-#11 87
+#11 92
+#10 82
 #25 80
-#10 77
 #24 29
 ```
 
@@ -246,15 +496,15 @@ $ jq -r '.tiers.critical[] | select(.number == 10 or .number == 11 or .number ==
   assessment evidence: found in source on production
   assessment workaround: no workaround
   zenhub pipeline: in High Priority
+#10
+  assessment impact: money for the public, reach all
+  assessment evidence: seen on production
+  assessment workaround: no workaround
 #25
   assessment impact: data loss for the public, reach all
   assessment evidence: reported by users on production
   assessment workaround: no workaround
   triage set: two donors reported it
-#10
-  assessment impact: money for the public, reach all
-  assessment evidence: seen on production
-  assessment workaround: no workaround
 ```
 
 ## A public security bug needs some evidence to reach Critical
@@ -347,6 +597,21 @@ bugs-gather: drafted WORK/board.json; write summary, and impact for each Critica
 0
 ```
 
+## Draft carries each open bug's progress, affinity, and areas
+
+```scrut
+$ jq -r '"schema \(.schemaVersion), areas \(.areas | map(.name) | join(", ")), ignored \(.affinityIgnored | join(", "))", (.ready[] | "ready #\(.item) \(.group)"), (.bugs[] | select(.number == 16) | "#16 \(.progress.stage), \(.affinity.owner), \(.areas | join(", "))")' "${work}/board.json"
+schema 2, areas api, elections, ignored filed
+ready #16 ready-to-merge
+ready #18 ready-to-fix
+ready #27 draft
+ready #17 awaiting-review
+ready #21 ready-to-fix
+ready #28 needs-author
+ready #26 close-out
+#16 ready-to-merge, you, elections
+```
+
 ## Reuse on a cold cache lists every open bug to read
 
 ```scrut
@@ -388,10 +653,10 @@ bugs-gather: reused 19 cached assessments in WORK/warm-reused.json
 Read these bugs and add their assessments: #12
 ```
 
-## Moved reports new bugs, closures, comments, and fix changes
+## Moved reports new bugs, closures, comments, and progress changes
 
 ```scrut
-$ jq '(.bugs[] | select(.number == 12)) |= (.lastComment = {author: "dave", at: "2026-10-15T15:00:00Z", outside: true} | .updatedAt = "2026-10-15T15:00:00Z") | (.bugs[] | select(.number == 28) | .fixes[0].checks) = "SUCCESS" | (.bugs[] | select(.number == 21)) |= (.state = "closed" | .stateReason = "COMPLETED") | .bugs += [{number: 30, title: "A new bug", state: "open", author: "erin", outsideReporter: true, labels: ["bug"], fixes: [], reactions: 0, updatedAt: "2026-10-15T15:30:00Z", lastComment: null, zenhub: null}]' "${work}/gather.json" > "${work}/moved.json" && bugs moved "${work}/config.json" "${work}/moved.json"
+$ jq '(.bugs[] | select(.number == 12)) |= (.lastComment = {author: "dave", at: "2026-10-15T15:00:00Z", outside: true} | .updatedAt = "2026-10-15T15:00:00Z") | (.bugs[] | select(.number == 28) | .progress) |= (.stage = "ready-to-merge" | .signal = "pull request #43, no review required, checks passing") | (.bugs[] | select(.number == 21)) |= (.state = "closed" | .stateReason = "COMPLETED") | .bugs += [{number: 30, title: "A new bug", state: "open", author: "erin", outsideReporter: true, labels: ["bug"], fixes: [], reactions: 0, updatedAt: "2026-10-15T15:30:00Z", lastComment: null, zenhub: null}]' "${work}/gather.json" > "${work}/moved.json" && bugs moved "${work}/config.json" "${work}/moved.json"
 Previous gather: 2026-10-15T16:00:00Z
 This gather: 2026-10-15T16:00:00Z
 
@@ -401,8 +666,8 @@ This gather: 2026-10-15T16:00:00Z
     - #21 Admin search returns 500 for long names (completed)
 - New comments:
     - #12 Token refresh bounces users to the dashboard (@dave, outside)
-- Fix changed:
-    - #28 Profile form sends a request per keystroke (#43 success, no review)
+- Progress changed:
+    - #28 Profile form sends a request per keystroke (needs-author: pull request #43, no review required, checks failing to ready-to-merge: pull request #43, no review required, checks passing)
 ```
 
 ## A warm score reports what entered and left Critical and High priority
@@ -441,12 +706,30 @@ bugs-gather: WORK/bad-config.json is not a valid bugs config:
   - bugLabels: expected a non-empty list of label names
   - recentDays: expected a positive whole number of days
   - weights.impact.security: expected a number
-  - weights.impcat: not a weight; expected one of evidence, impact, reach, surface, pipelines, timeSensitive, mitigated, urgent, sprint, regression, outsidePerson, outsideCap, reaction, reactionCap
-  - triagenote: not a config field; expected one of repo, timeZone, bugLabels, bugTypes, urgentLabels, regressionLabels, parkLabels, urgentPipelines, containerLevels, bots, recentDays, criticalWarn, readyLimit, deadlineDays, progressLabels, progressPipelines, weights, zenhub, triageNote, triageGit
+  - weights.impcat: not a weight; expected one of evidence, impact, reach, surface, pipelines, affinity, timeSensitive, mitigated, urgent, sprint, regression, outsidePerson, outsideCap, reaction, reactionCap
+  - triagenote: not a config field; expected one of repo, timeZone, bugLabels, bugTypes, urgentLabels, regressionLabels, parkLabels, urgentPipelines, containerLevels, bots, recentDays, criticalWarn, readyLimit, deadlineDays, progressLabels, progressPipelines, claimLabels, claimPipelines, quietDays, staleDays, affinityWorkDays, affinityCommentDays, uniformityShare, uniformityMinimum, weights, zenhub, triageNote, triageGit
   - triageGit.worktree: not a triageGit field; expected gitDir, workTree
   - zenhub.workspace: expected the workspace ID
   - zenhub.tokenVariable: expected the name of the environment variable holding the token
   - zenhub.tokenVarible: not a zenhub field; expected workspace, tokenVariable
+exit 1
+```
+
+## A label or pipeline cannot mark both work started and ownership
+
+Labels compare without regard to case, as the gather matches them; pipelines
+compare exactly.
+
+```scrut
+$ printf '%s\n' '{"repo": "acme/widgets", "claimLabels": ["In Progress"], "claimPipelines": ["Review/QA", "review/qa"], "quietDays": 30, "staleDays": 30, "uniformityShare": 1.5, "affinityWorkDays": 0, "weights": {"affinity": {"me": 3, "other": "much"}}}' > "${work}/overlap.json" && bugs gather "${work}/overlap.json" "${work}/overlap-gather.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+bugs-gather: WORK/overlap.json is not a valid bugs config:
+  - quietDays: must be fewer than staleDays
+  - affinityWorkDays: expected a positive whole number of days
+  - uniformityShare: expected a share above 0 and at most 1, such as 0.9
+  - claimLabels: In Progress is also a progress label; a label marks work started or ownership, not both
+  - claimPipelines: Review/QA is also a progress pipeline; a pipeline marks work started or ownership, not both
+  - weights.affinity.me: expected one of you, other
+  - weights.affinity.other: expected a number
 exit 1
 ```
 
@@ -656,13 +939,29 @@ bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/assessmen
 bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/scored.json: it is unreadable or was written by another version of bugs-gather
 ```
 
-## Labels or fixes GitHub cut short are listed, and the gather goes on
+## Lists GitHub cut short are listed, and the gather goes on
 
 ```scrut
-$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 12) | .labels.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/labels-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
-bugs-gather: GitHub cut these lists short, so a label or a fix past the cut is missing:
-  - #12: labels
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 26) | .assignees.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json" > "${capped}/graphql/search-open-type.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/assignees-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
+bugs-gather: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:
+  - #26: assignees
 exit 0
+```
+
+## Progress lists cut short stop the gather
+
+A progress label, linked pull request or cross-reference past the cut would read as no progress.
+
+```scrut
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 12) | .labels.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/labels-cut.json" 2>&1
+bugs-gather: GitHub cut short the lists of #12 (labels), so progress could be missing; the board cannot be trusted
+[1]
+```
+
+```scrut
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 26) | .timelineItems.pageInfo) = {hasPreviousPage: true} | (.data.search.nodes[] | select(.number == 26) | .closedByPullRequestsReferences.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json" > "${capped}/graphql/search-open-type.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/timeline-cut.json" 2>&1
+bugs-gather: GitHub cut short the lists of #26 (linked pull requests and cross-references), so progress could be missing; the board cannot be trusted
+[1]
 ```
 
 ## Usage errors

@@ -38,17 +38,18 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/report-board"
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
-**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the script with `**/publish-report-board/**/scripts/report-board`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session. The script finds its templates relative to its own location, so run it from where it is installed rather than from a copy.
+**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/publish-report-board/**/scripts/report-board`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session. The script finds its templates relative to its own location, so run it from where it is installed rather than from a copy.
 
 In the commands below, `REPORT_BOARD` is shorthand for that full **quoted path**.
 
-A `bugs` board also uses `bugs-gather`, which ships beside it and is found the same way, with its own name in place of `report-board`:
+Each board type also has a gather script, which ships beside it and is found the same way, with its own name in place of `report-board`: `backlog-gather` for a `backlog-triage` board and `bugs-gather` for a `bugs` board.
 
 ```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/backlog-gather"
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/bugs-gather"
 ```
 
-Its reference writes that quoted path as `BUGS_GATHER`. Its working files, the gather, the assessments, and the score, sit beside the board data in the same directory; its persistent cache has a directory of its own, which the reference names.
+The board-type references write those quoted paths as `BACKLOG_GATHER` and `BUGS_GATHER`. Both derive each issue's progress and affinity from gathered signals, as `./references/progress-model.md` describes, so the analysis never writes either. Their working files, such as the gather, the analysis, and a bugs board's assessments and score, sit beside the board data in the same directory; the bugs board's persistent cache has a directory of its own, which its reference names.
 
 ### 3. Choose Where the Board Lives
 
@@ -57,7 +58,7 @@ Name the data file `REPO-BOARD.json` and the board `REPO-BOARD.html`, where `REP
 `REPO-BOARD.html` names the published board, not every page this sync renders. Without the Artifact tool the two are separate files: step 7 renders a working page that step 8 is still free to reject, and step 9 renders the board itself once the checks have passed. Give that working page any other name in the same directory, such as `REPO-BOARD.next.html`, and leave `REPO-BOARD.html` alone until step 9. The fixed name governs discovery, which is what the rule above protects; it does not mean a sync may write only one file.
 
 - **With the Artifact tool** (Claude Code): keep both files in a directory of their own named `OWNER/REPO`, inside the session scratchpad directory when the system prompt lists one, and otherwise inside a directory from `mktemp -d "${TMPDIR:-/tmp}/report-board-XXXXXX"`. The published Artifact is the board; the local files are this conversation's working copies. The directory is what keeps two boards apart, because the file names carry the repository without its owner: boarding `owner-a/widgets` and `owner-b/widgets` in one session would otherwise write both to `widgets-BOARD.json` and leave the second render sitting on the first board's working data.
-- **Without the Artifact tool** (Codex CLI, OpenCode): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/REPO-PATH/`, creating it if needed. `REPO-PATH` is the host and path of `repoUrl` together, such as `git.example.com/enterprise/owner/name`, or `github.com/OWNER/REPO` when the board carries none. The whole address is the key because a host alone is not unique: two repositories can share an owner and a name under different path prefixes on one host. The rendered `REPO-BOARD.html` there is the board, and the next session finds it at that exact path. Because the path is built from the identity, a repository that is renamed or moves to another host or prefix lands in a different directory, so step 4 finds nothing and reads the sync as a first publish. The identity guard in step 8 then never runs, and the old board stays where it was. Say so to the user rather than leaving it behind silently, and move or remove it by hand.
+- **Without the Artifact tool** (Codex CLI): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/REPO-PATH/`, creating it if needed. `REPO-PATH` is the host and path of `repoUrl` together, such as `git.example.com/enterprise/owner/name`, or `github.com/OWNER/REPO` when the board carries none. The whole address is the key because a host alone is not unique: two repositories can share an owner and a name under different path prefixes on one host. The rendered `REPO-BOARD.html` there is the board, and the next session finds it at that exact path. Because the path is built from the identity, a repository that is renamed or moves to another host or prefix lands in a different directory, so step 4 finds nothing and reads the sync as a first publish. The identity guard in step 8 then never runs, and the old board stays where it was. Say so to the user rather than leaving it behind silently, and move or remove it by hand.
 
 ### 4. Find the Previous Board
 
