@@ -83,8 +83,8 @@ Send options:
 
 A title, a message or both are required.
 
-Settings come from the config file, and an environment variable of the same
-name overrides each one:
+Settings come from the config file, and a non-empty environment variable of
+the same name overrides each one; an empty one is ignored and clears nothing:
   PUSH_NOTIFICATION_BACKEND   Backend to use (default: ${DEFAULT_BACKEND})
   NTFY_SERVER                 ntfy server URL (default: ${DEFAULT_NTFY_SERVER})
   NTFY_TOPIC                  ntfy topic to publish to (required)
@@ -92,10 +92,12 @@ name overrides each one:
 
 Config file: \${PUSH_NOTIFICATION_CONFIG}, or
 \${XDG_CONFIG_HOME:-\$HOME/.config}/push-notification/config. It holds
-KEY=value lines and is read, never sourced. A file that holds NTFY_TOKEN must
-be readable by its owner alone.
+KEY=value lines and is read, never sourced. A file that holds NTFY_TOPIC or
+NTFY_TOKEN must be readable by its owner alone. A PUSH_NOTIFICATION_CONFIG
+that names a missing file is an error; the default path may be absent.
 
-Exit status: 0 sent, 1 send failed, 2 usage error, 3 not configured.
+Exit status: 0 sent and confirmed, or a dry run printed; 1 send failed or
+unconfirmed; 2 usage error; 3 not configured.
 
 Examples:
   ${SCRIPT_NAME} check
@@ -147,7 +149,13 @@ function is_config_key() {
 # runs.
 function read_config() {
   CONFIG_FILE="${PUSH_NOTIFICATION_CONFIG:-${XDG_CONFIG_HOME:-${HOME}/.config}/push-notification/config}"
-  [[ -f "${CONFIG_FILE}" ]] || return 0
+  if [[ ! -f "${CONFIG_FILE}" ]]; then
+    # Only the default path may be absent. A path named explicitly that is
+    # missing would otherwise fall back to ntfy.sh without its server or token.
+    [[ -z "${PUSH_NOTIFICATION_CONFIG:-}" ]] \
+      || die "PUSH_NOTIFICATION_CONFIG names ${CONFIG_FILE}, which is not a file; fix the path or unset it" "${EXIT_NOT_CONFIGURED}"
+    return 0
+  fi
   [[ -r "${CONFIG_FILE}" ]] || die "cannot read config file ${CONFIG_FILE}" "${EXIT_NOT_CONFIGURED}"
 
   local line key value line_number=0
@@ -168,17 +176,20 @@ function read_config() {
     printf -v "CONFIG_VALUE_${key}" '%s' "${value}"
   done < "${CONFIG_FILE}"
 
-  if [[ -n "${CONFIG_VALUE_NTFY_TOKEN:-}" ]]; then
+  # On a public server the topic name is the only thing that guards a topic,
+  # so it needs the same private file as the token.
+  if [[ -n "${CONFIG_VALUE_NTFY_TOPIC:-}" || -n "${CONFIG_VALUE_NTFY_TOKEN:-}" ]]; then
     local mode
     mode="$(file_mode "${CONFIG_FILE}")"
     if (((8#${mode} & 8#077) != 0)); then
-      die "${CONFIG_FILE} holds NTFY_TOKEN but is readable by others (mode ${mode}); run: chmod 600 \"${CONFIG_FILE}\"" "${EXIT_NOT_CONFIGURED}"
+      die "${CONFIG_FILE} holds NTFY_TOPIC or NTFY_TOKEN but is readable by others (mode ${mode}); run: chmod 600 \"${CONFIG_FILE}\"" "${EXIT_NOT_CONFIGURED}"
     fi
   fi
 }
 
-# Sets SETTING_<KEY> and SOURCE_<KEY> for one key: the environment wins, then
-# the config file, then the default passed as the second argument.
+# Sets SETTING_<KEY> and SOURCE_<KEY> for one key: a non-empty environment
+# variable wins, then the config file, then the default passed as the second
+# argument.
 function resolve_setting() {
   local key="${1}" default="${2:-}" config_name="CONFIG_VALUE_${1}"
   if [[ -n "${!key:-}" ]]; then
@@ -262,6 +273,15 @@ function backend_ntfy_status() {
   print_setting NTFY_TOKEN "token" true
 }
 
+# Prints its argument with the topic and token replaced, for server text that
+# may echo them back, such as a partial publish answer or a proxy error.
+function ntfy_redact() {
+  local text="${1}"
+  [[ -z "${SETTING_NTFY_TOPIC}" ]] || text="${text//"${SETTING_NTFY_TOPIC}"/(topic hidden)}"
+  [[ -z "${SETTING_NTFY_TOKEN}" ]] || text="${text//"${SETTING_NTFY_TOKEN}"/(token hidden)}"
+  printf '%s' "${text}"
+}
+
 # Prints the JSON publish request, with the topic taken from the environment.
 function ntfy_payload() {
   local tags_json
@@ -316,14 +336,22 @@ function backend_ntfy_send() {
   # message, so a failure here means unconfirmed, not undelivered.
   local response
   if ! response="$(printf '%s' "${payload}" | curl "${curl_args[@]}" --data-binary @- "${url}" 2>&1)"; then
-    echo "${SCRIPT_NAME}: ntfy did not confirm the notification: ${response}" >&2
+    echo "${SCRIPT_NAME}: ntfy did not confirm the notification: $(ntfy_redact "${response}")" >&2
     return 1
   fi
 
   # ntfy answers a publish with the message as JSON, topic included, so the
   # response is checked for its id and never printed.
-  local id=""
-  id="$(jq -r 'if type == "object" and (.id | type) == "string" then .id else empty end' <<< "${response}" 2> /dev/null)" || id=""
+  if ! jq -e . > /dev/null 2>&1 <<< "${response}"; then
+    echo "${SCRIPT_NAME}: ${url} answered with something other than JSON, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
+    return 1
+  fi
+  local id status=0
+  id="$(jq -r 'if type == "object" and (.id | type) == "string" then .id else empty end' <<< "${response}")" || status=$?
+  if ((status != 0)); then
+    echo "${SCRIPT_NAME}: could not read the ntfy answer (jq exited ${status}), so delivery is unconfirmed" >&2
+    return 1
+  fi
   if [[ -z "${id}" ]]; then
     echo "${SCRIPT_NAME}: ${url} answered without an ntfy message id, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
     return 1

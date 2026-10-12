@@ -37,7 +37,7 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's dir
 
 For a body with quotes, newlines or shell metacharacters, pass `--message -` and send the body on stdin through a quoted heredoc, so the shell does not expand it.
 
-Exit status: 0 sent and confirmed by the server, 1 the send failed or could not be confirmed, 2 a usage error in the command, 3 not configured. After exit 1 the notification may still have arrived: a connection can fail after the server published it.
+Exit status: 0 sent and confirmed by the server, or with `--dry-run` the preview printed and nothing sent; 1 the send failed or could not be confirmed, 2 a usage error in the command, 3 not configured. After exit 1 the notification may still have arrived: a connection can fail after the server published it.
 
 ## Workflow
 
@@ -53,7 +53,7 @@ Follow [Writing the notification](#writing-the-notification) and [What never goe
 
 ### 3. Send it
 
-Run `send`. On exit 0, report in one line that the notification was sent, with its title. On exit 1, report that the notification was not confirmed, with the error the helper printed, and stop: do not retry in a loop, and do not fall back to another channel. On exit 2, fix the command and run it once more.
+Run `send`. On exit 0 without `--dry-run`, report in one line that the server confirmed the notification, with its title. On exit 0 with `--dry-run`, show the preview and say that nothing was sent. On exit 1, report that the notification was not confirmed, with the error the helper printed, and stop: do not retry in a loop, and do not fall back to another channel. On exit 2, fix the command and run it once more.
 
 ## Writing the notification
 

@@ -100,20 +100,39 @@ server: https://ntfy.sh (env)
 token: set (env)
 ```
 
-## A config file that holds a token must be private
+An empty environment variable is ignored, so it cannot clear a configured
+value.
+
+```scrut
+$ pn NTFY_SERVER= NTFY_TOKEN= check | grep -e server -e token
+server: https://ntfy.example.com/ (config)
+token: set (config)
+```
+
+## A config file that holds a topic or token must be private
+
+On ntfy.sh the topic name is all that guards a topic, so it needs the same
+private file as the token.
 
 ```scrut
 $ printf '%s\n' 'NTFY_TOPIC=sample-topic' 'NTFY_TOKEN=tk_sample' | write_config 644
 > pn check 2>&1 | sed "s|${work}|WORK|g"
-push-notification: WORK/config/push-notification/config holds NTFY_TOKEN but is readable by others (mode 644); run: chmod 600 "WORK/config/push-notification/config"
+push-notification: WORK/config/push-notification/config holds NTFY_TOPIC or NTFY_TOKEN but is readable by others (mode 644); run: chmod 600 "WORK/config/push-notification/config"
 [3]
 ```
 
-A file without a token can be readable by others.
-
 ```scrut
 $ printf '%s\n' 'NTFY_TOPIC=sample-topic' | write_config 644
-> pn check | tail -n 1
+> pn check 2>&1 | sed "s|${work}|WORK|g"
+push-notification: WORK/config/push-notification/config holds NTFY_TOPIC or NTFY_TOKEN but is readable by others (mode 644); run: chmod 600 "WORK/config/push-notification/config"
+[3]
+```
+
+A file that holds neither can be readable by others.
+
+```scrut
+$ printf '%s\n' 'NTFY_SERVER=https://ntfy.example.com' | write_config 644
+> pn NTFY_TOPIC=env-topic check | tail -n 1
 ready: yes
 ```
 
@@ -149,8 +168,18 @@ nothing ran
 
 ```scrut
 $ printf '%s\n' 'NTFY_TOPIC=other-topic' > "${work}/other-config"
+> chmod 600 "${work}/other-config"
 > pn PUSH_NOTIFICATION_CONFIG="${work}/other-config" check | sed "s|${work}|WORK|g" | head -n 1
 config file: WORK/other-config (found)
+```
+
+A path named this way must exist, or a send would fall back to ntfy.sh
+without the server and token the file was meant to supply.
+
+```scrut
+$ pn PUSH_NOTIFICATION_CONFIG="${work}/missing-config" NTFY_TOPIC=env-topic send --title Done --dry-run 2>&1 | sed "s|${work}|WORK|g"
+push-notification: PUSH_NOTIFICATION_CONFIG names WORK/missing-config, which is not a file; fix the path or unset it
+[3]
 ```
 
 ## A dry run prints the request without the topic or token
@@ -298,7 +327,8 @@ $ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
 
 ```scrut
 $ log="${work}/no-token.log"
-> pn NTFY_TOPIC=open-topic PUSH_NOTIFICATION_CONFIG=/dev/null STUB_CURL_LOG="${log}" send --title Done > /dev/null
+> : > "${work}/empty-config"
+> pn NTFY_TOPIC=open-topic PUSH_NOTIFICATION_CONFIG="${work}/empty-config" STUB_CURL_LOG="${log}" send --title Done > /dev/null
 > grep -c -e authorization -e "^header" "${log}"
 0
 [1]
@@ -318,6 +348,21 @@ $ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
 0
 ```
 
+A failure body that echoes the topic or token back has both replaced before
+it is relayed.
+
+```scrut
+$ pn STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='{"error":"rejected","topic":"sample-topic","auth":"Bearer tk_sample"}' send --title Done 2>&1
+push-notification: ntfy did not confirm the notification: {"error":"rejected","topic":"(topic hidden)","auth":"Bearer (token hidden)"}
+curl: (22) The requested URL returned error: 401
+[1]
+```
+
+```scrut
+$ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
+0
+```
+
 ## An answer without an ntfy message id is not a confirmed send
 
 A proxy or a misconfigured `NTFY_SERVER` can answer with HTTP success and a
@@ -326,7 +371,7 @@ carries the topic.
 
 ```scrut
 $ pn STUB_CURL_RESPONSE='<html><body>Sign in</body></html>' send --title Done 2>&1
-push-notification: https://ntfy.sh/ answered without an ntfy message id, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
+push-notification: https://ntfy.sh/ answered with something other than JSON, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
 [1]
 ```
 
@@ -342,6 +387,17 @@ A real answer names the topic, and the confirmation leaves it out.
 $ pn send --title Done | grep -c sample-topic
 0
 [1]
+```
+
+## The environment's server, topic and token are the ones sent
+
+```scrut
+$ log="${work}/env-send.log"
+> pn NTFY_SERVER=https://ntfy.env.example NTFY_TOPIC=env-topic NTFY_TOKEN=tk_env STUB_CURL_TOKEN=tk_env STUB_CURL_LOG="${log}" send --title Done > /dev/null
+> grep -e '^arg: https' -e '^body' -e '^header' "${log}"
+arg: https://ntfy.env.example/
+body: {"topic":"env-topic","title":"Done","priority":3}
+header matches: true, mode 600
 ```
 
 ## A dry run never calls curl

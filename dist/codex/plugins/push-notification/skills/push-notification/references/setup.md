@@ -29,7 +29,7 @@ NTFY_TOPIC=agent-3f9c2a7e5b1d48c6a0e2f7b4
 NTFY_TOKEN=tk_...
 ```
 
-Make the file readable by its owner alone. The helper refuses to use a file that holds `NTFY_TOKEN` and is readable by anyone else:
+Make the file readable by its owner alone. The helper refuses to use a file that holds `NTFY_TOPIC` or `NTFY_TOKEN` and is readable by anyone else, since on ntfy.sh the topic name works like a password:
 
 ```bash
 chmod 600 "${XDG_CONFIG_HOME:-$HOME/.config}/push-notification/config"
@@ -37,7 +37,7 @@ chmod 600 "${XDG_CONFIG_HOME:-$HOME/.config}/push-notification/config"
 
 ## 4. Or use environment variables
 
-Every key is also an environment variable of the same name, and the environment overrides the file. That suits remote and cloud sessions, where the variables can come from the environment's secret settings rather than a file: `NTFY_SERVER`, `NTFY_TOPIC`, `NTFY_TOKEN`, and `PUSH_NOTIFICATION_BACKEND` (only `ntfy` today).
+Every key is also an environment variable of the same name, and a non-empty one overrides the file. That suits remote and cloud sessions, where the variables can come from the environment's secret settings rather than a file: `NTFY_SERVER`, `NTFY_TOPIC`, `NTFY_TOKEN`, and `PUSH_NOTIFICATION_BACKEND` (only `ntfy` today). An empty one is ignored, so it cannot clear a value set in the file; remove the line from the file instead. If `PUSH_NOTIFICATION_CONFIG` is set, the file it names must exist.
 
 ## 5. Confirm
 

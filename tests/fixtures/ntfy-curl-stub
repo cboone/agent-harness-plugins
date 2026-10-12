@@ -9,8 +9,10 @@
 # body, then for a header file its contents check and mode. The check compares
 # the file against "Authorization: Bearer STUB_CURL_TOKEN". STUB_CURL_FAIL=1
 # makes the request fail with HTTP 401, as ntfy answers a rejected token.
-# STUB_CURL_RESPONSE, when set, replaces the successful answer, the way a proxy
-# in front of the server can answer with its own page.
+# STUB_CURL_FAIL_BODY, when set, replaces the body of that failure, the way a
+# server or proxy error can echo the request back. STUB_CURL_RESPONSE, when
+# set, replaces the successful answer, the way a proxy in front of the server
+# can answer with its own page.
 set -euo pipefail
 
 # Prints the permission bits of a file, with GNU stat first, because BSD stat
@@ -48,7 +50,8 @@ function main() {
   fi
 
   if [[ "${STUB_CURL_FAIL:-}" == "1" ]]; then
-    printf '{"code":40101,"http":401,"error":"unauthorized"}\n'
+    local unauthorized='{"code":40101,"http":401,"error":"unauthorized"}'
+    printf '%s\n' "${STUB_CURL_FAIL_BODY:-${unauthorized}}"
     echo "curl: (22) The requested URL returned error: 401" >&2
     exit 22
   fi
