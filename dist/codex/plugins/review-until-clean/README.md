@@ -22,7 +22,7 @@ The loop is only worth running if a clean result means something. Four rules mak
 1. **Every round reviews the whole scope.** Committed branch changes, staged changes, unstaged changes, and untracked files, every round. The common failure in an agent review loop is that the agent fixes a finding and the next round quietly reviews only its own patch, so the code the first round never reached is never reviewed at all.
 1. **The reviewer is read-only.** Codex runs in a read-only sandbox, and Claude is never given `--fix`. The host agent owns every change, so nothing is modified by a process whose output you have not seen.
 1. **Empty or unparseable output is not clean.** A reviewer that crashes, times out, returns nothing, or returns something that does not parse ends the run as `failed`. Silence is the same shape as success, and that is exactly the failure this rule exists to catch.
-1. **A clean result is bound to a content snapshot.** The snapshot covers every file in scope by content. Any edit after the review invalidates the clean result, so a run cannot report clean for code that no longer exists.
+1. **A clean result is bound to a content snapshot.** The snapshot covers disk and index content, bucket membership, HEAD and the resolved base. Any edit after the review invalidates the clean result, so a run cannot report clean for code that no longer exists.
 
 ### Model diversity
 
@@ -79,7 +79,7 @@ Also required:
 
 Each round asks you to confirm the item list before anything is edited, because [Address Review](../address-review/README.md) does the fixing and always confirms first. This is a gate you watch, not an unattended job.
 
-When the Claude backend is selected and untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. It restores the index with `git reset -- <paths>` afterward, touching only those paths. Declining is fine; the run then reports `partial scope`. The snapshot is computed from file content rather than from index state, so staging a file this way does not move it.
+When the Claude backend is selected and untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. Preparation happens before capturing the review snapshot and stays in place through validity checks and confirming rounds. Cleanup afterward restores only intent-to-add entries created by the run, preserving pre-existing and concurrently staged entries. Declining is fine; the run then reports `partial scope`. Staging and intent-to-add now move the snapshot because the index is review input.
 
 ### As a pre-push hook
 

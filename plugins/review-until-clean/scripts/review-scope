@@ -33,9 +33,9 @@ Print one JSON object describing every local change and a snapshot identifier
 bound to their content: committed branch changes, staged changes, unstaged
 changes, and untracked files.
 
-The snapshot is content-addressed, so it does not move when a file changes
-which bucket it is in: staging a file, unstaging it, or recording an intent to
-add it with `git add -N` all leave it alone, while changing a byte moves it.
+The snapshot covers HEAD, the base tip and merge base, disk content, index
+content and bucket membership. Staging, unstaging and intent-to-add move it.
+The separate tree identifier measures disk content only.
 
 Options:
   --base <ref>  Take the merge base with this ref instead of with the default
@@ -257,6 +257,16 @@ function write_empty_bucket() {
   printf '[]' > "${TMP_DIR}/${1}.json"
 }
 
+# Hash semantic index entries, including modes and merge stages, without stat
+# cache timestamps. NUL separators preserve every Git path. The real index is
+# never refreshed or rewritten by this read.
+function index_digest() {
+  local output="${1}"
+  git --no-optional-locks ls-files --stage -z > "${output}" \
+    || die "could not read the index entries"
+  git hash-object "${output}" || die "could not hash the index entries"
+}
+
 function main() {
   local requested_base=""
   local mode="scope"
@@ -317,7 +327,7 @@ function main() {
   # only an empty committed bucket would make "nothing is committed" and "the
   # commits could not be reached" identical, and a branch whose history was
   # never reviewed would read as an empty scope.
-  local head base_ref base_sha merge_base base_unrelated committed_covered
+  local head base_ref base_sha base_tip merge_base base_unrelated committed_covered
   base_unrelated="false"
   committed_covered="false"
   head="$(git rev-parse HEAD)"
@@ -329,10 +339,12 @@ function main() {
   # so that case still stops the script. The scrut suite covers both paths.
   base_ref="$(resolve_base_ref "${requested_base}" || true)"
   base_sha=""
+  base_tip=""
   merge_base=""
   if [[ -n "${base_ref}" ]]; then
     base_sha="$(git rev-parse --verify --quiet "${base_ref}^{commit}")" \
       || die "base ref '${base_ref}' does not resolve to a commit"
+    base_tip="${base_sha}"
 
     # A base that shares no history with HEAD has no merge base, and git says
     # so with exit 1 and no output. Swallowing that leaves the committed bucket
@@ -375,9 +387,9 @@ function main() {
   # on disk changed while the scope was being read, so the buckets and the
   # snapshot describe one state. Unequal trees mean they may not, and that is
   # reported rather than guessed at: the caller reruns against a settled tree.
-  local tree digest
+  local tree digest index_before
+  index_before="$(index_digest "${TMP_DIR}/index-before.records")"
   tree="$(working_tree_digest "${TMP_DIR}/index")"
-  digest="$(printf 'head %s\nbase %s\ntree %s\n' "${head}" "${merge_base:--}" "${tree}" | git hash-object --stdin)"
 
   # Each bucket goes to a file rather than into a jq argument. A large scope
   # makes the combined argument list exceed the execve limit, and on Linux a
@@ -409,6 +421,30 @@ function main() {
   [[ "${tree_after}" == "${tree}" ]] \
     || die "the working tree changed while the scope was being read, so the file lists and the snapshot may describe different states; rerun once it has settled"
 
+  local index_after head_after base_tip_after=""
+  index_after="$(index_digest "${TMP_DIR}/index-after.records")"
+  head_after="$(git rev-parse HEAD)"
+  if [[ -n "${base_ref}" ]]; then
+    base_tip_after="$(git rev-parse --verify --quiet "${base_ref}^{commit}")" \
+      || die "the base ref disappeared while the scope was being read"
+  fi
+  [[ "${index_before}" == "${index_after}" && "${head}" == "${head_after}" && "${base_tip}" == "${base_tip_after}" ]] \
+    || die "the index, HEAD or base changed while the scope was being read; rerun once it has settled"
+
+  # Hash a canonical record of every review input, not the path's current
+  # bucket alone or the disk tree alone. Partly staged content is review input
+  # even when it never appears on disk.
+  digest="$(jq -cSn \
+    --arg head "${head}" --arg base "${merge_base}" --arg base_tip "${base_tip}" \
+    --arg tree "${tree}" --arg index "${index_before}" \
+    --slurpfile committed "${TMP_DIR}/committed.json" \
+    --slurpfile staged "${TMP_DIR}/staged.json" \
+    --slurpfile unstaged "${TMP_DIR}/unstaged.json" \
+    --slurpfile untracked "${TMP_DIR}/untracked.json" \
+    '{head: $head, base: $base, base_tip: $base_tip, tree: $tree, index: $index,
+      committed: $committed[0], staged: $staged[0], unstaged: $unstaged[0], untracked: $untracked[0]}' \
+    | git hash-object --stdin)"
+
   # An independent cross-check on the digest. The buckets and the tree come
   # from different git commands and have to agree: if anything is staged,
   # unstaged or untracked, the working tree differs from HEAD, so its tree
@@ -439,6 +475,8 @@ function main() {
     --argjson base_unrelated "${base_unrelated}" \
     --argjson committed_covered "${committed_covered}" \
     --arg tree "${tree}" \
+    --arg index "${index_before}" \
+    --arg base_tip "${base_tip}" \
     --arg snapshot "${digest}" \
     --slurpfile committed "${TMP_DIR}/committed.json" \
     --slurpfile staged "${TMP_DIR}/staged.json" \
@@ -451,6 +489,8 @@ function main() {
       base_unrelated: $base_unrelated,
       committed_covered: $committed_covered,
       tree: $tree,
+      index: $index,
+      base_tip: (if $base_tip == "" then null else $base_tip end),
       snapshot: $snapshot,
       committed: $committed[0],
       staged: $staged[0],

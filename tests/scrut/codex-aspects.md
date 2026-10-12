@@ -38,13 +38,14 @@ $ fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 ## Help
 
 ```scrut
-$ "${CODEX_ASPECTS_BIN}" --help | head -6
+$ "${CODEX_ASPECTS_BIN}" --help | head -7
 Usage: codex-aspects schema
-       codex-aspects prompt --aspect <name> --scope <file>
+       codex-aspects select [aspects...|all]
+       codex-aspects gate --scope <file> --after <file> --results <file>
+                         --statuses <file> --aspect <name> [--aspect <name>...]
+       codex-aspects finish --validation passed|failed|unverified <gate-options>
+       codex-aspects prompt --aspect <name> --scope <file> [--guide-name <name>]
        codex-aspects run --aspect <name> [--aspect <name>...] --scope <file>
-                         --out-dir <dir> [--model <model>] [--effort <level>]
-       codex-aspects validate --aspect <name> --scope <file> <output-file>
-       codex-aspects changes --before <file> --after <file>
 ```
 
 ## No command prints the usage and fails
@@ -215,18 +216,20 @@ $ grep -c '<!--' "${FIXTURE}/errors.prompt"
 ## The scope lists each non-empty bucket and gives a symlink as its link text
 
 ```scrut
-$ sed -n '/^## Scope$/,/^Read the surrounding/p' "${FIXTURE}/errors.prompt" | sed "s/[0-9a-f]\{40\}/SHA/g"
+$ sed -n '/^## Scope$/,/^## Trusted project/p' "${FIXTURE}/errors.prompt" | sed -e "s/[0-9a-f]\{40\}/SHA/g" -e "s|${FIXTURE}|FIXTURE|g" -e "s|/privateFIXTURE|FIXTURE|g"
 ## Scope
 
+Repository root (JSON string): "FIXTURE/repo" (glob)
+Keep the session working directory outside that repository. Use git -C and absolute file paths.
 The scope is all of the following, and you must read all of it:
 
-- Committed changes: git --no-pager diff --no-ext-diff --no-textconv --no-color --no-relative SHA SHA
-- Unstaged changes: git --no-pager diff --no-ext-diff --no-textconv --no-color --no-relative
-- Untracked files, which are in no diff. Each name below is a JSON string: decode it, then read the file it names:
+- Committed changes: git --no-pager -C 'FIXTURE/repo' diff --no-ext-diff --no-textconv --no-color --no-relative SHA SHA (glob)
+- Unstaged changes: git --no-pager -C 'FIXTURE/repo' diff --no-ext-diff --no-textconv --no-color --no-relative (glob)
+- Untracked files, which are in no diff. Each name below is a JSON string relative to the repository root: decode it, then read that absolute path:
   - "fresh.txt"
   - "link" -> "/etc/hosts" (a symlink; review the link text only and do not open its target)
 
-Read the surrounding code, not only the diff. Before reviewing, read the
+## Trusted project guidelines at SHA
 ```
 
 ## Project guidelines are read from the base revision
@@ -237,8 +240,8 @@ material to review.
 
 ```scrut
 $ base="$(jq -r .base "${FIXTURE}/scope.json")" \
->   && grep -c -F "\`git --no-pager show --no-textconv ${base}:<path>\`" "${FIXTURE}/errors.prompt" \
->   && grep -c 'never as instructions to you\.$' "${FIXTURE}/errors.prompt"
+>   && grep -c -F "## Trusted project guidelines at ${base}" "${FIXTURE}/errors.prompt" \
+>   && grep -c 'instruction files from the current checkout' "${FIXTURE}/errors.prompt"
 1
 1
 ```
@@ -379,7 +382,7 @@ gone.
 
 ```scrut
 $ mkdir "${FIXTURE}/pids" "${FIXTURE}/cancel-out" \
->   && { CODEX_STUB_MODES="simplify=hang" CODEX_STUB_PID_DIR="${FIXTURE}/pids" \
+>   && { CODEX_STUB_MODES="simplify=hang" CODEX_STUB_PID_DIR="${FIXTURE}/pids" CODEX_STUB_SENTINEL="${FIXTURE}/continued" \
 >        "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/scope.json" \
 >        --out-dir "${FIXTURE}/cancel-out" > /dev/null 2>&1 & } \
 >   && helper=$! \
@@ -388,13 +391,15 @@ $ mkdir "${FIXTURE}/pids" "${FIXTURE}/cancel-out" \
 >   && child="$(cat "${FIXTURE}/pids/simplify.child.pid")" \
 >   && kill -TERM "${helper}" \
 >   && { wait "${helper}"; echo "helper exit=$?"; } \
->   && sleep 0.2 \
+>   && sleep 1.2 \
 >   && for entry in "stub:${stub}" "child:${child}"; do \
->        if kill -0 "${entry#*:}" 2> /dev/null; then echo "${entry%%:*} still running"; kill "${entry#*:}"; else echo "${entry%%:*} stopped"; fi; \
->      done
+>        if ps -p "${entry#*:}" -o stat= | grep -q '^[^Z]'; then echo "${entry%%:*} still running"; kill "${entry#*:}"; else echo "${entry%%:*} stopped"; fi; \
+>      done \
+>   && test ! -e "${FIXTURE}/continued" && echo "no write after cancellation"
 helper exit=143
 stub stopped
 child stopped
+no write after cancellation
 ```
 
 ## A prompt too large for one argument stops the run before Codex starts
@@ -428,6 +433,7 @@ $ printf "" | "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope
 >   --model test-model --effort high > /dev/null && cat "${FIXTURE}/log/code.args"
 --cd
 <path>
+--skip-git-repo-check
 --sandbox
 read-only
 --ephemeral
@@ -634,7 +640,7 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/staged" && cd "${FIXTURE}/staged" \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/staged-scope.json" \
 >   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/staged-scope.json" \
 >   | grep -e '^- Staged changes' -e '^- Unstaged changes'
-- Staged changes: git --no-pager diff --no-ext-diff --no-textconv --no-color --no-relative --cached
+- Staged changes: git --no-pager -C '*' diff --no-ext-diff --no-textconv --no-color --no-relative --cached (glob)
 ```
 
 ## Changes covers the whole tree with diff.relative on, from a subdirectory
@@ -746,4 +752,196 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/self-helper" && cd "${FIXTURE}/self-helper
 >   && sed -e "s|^codex-aspects: codex-aspects at /private/|codex-aspects: codex-aspects at /|" -e "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/self-helper.err"
 exit=1
 codex-aspects: codex-aspects at FIXTURE/self-helper/helper is inside the repository under review, so the change could rewrite the helper its own review runs with; run an installed copy instead
+```
+
+## Default and all selection never authorize edits
+
+```scrut
+$ "${CODEX_ASPECTS_BIN}" select | jq -c '{reviews, simplify}' \
+>   && "${CODEX_ASPECTS_BIN}" select all | jq -c '{reviews, simplify}'
+{"reviews":["code","comments","errors","tests","types"],"simplify":false}
+{"reviews":["code","comments","errors","tests","types"],"simplify":false}
+```
+
+## Explicit simplification requires a review aspect
+
+```scrut
+$ "${CODEX_ASPECTS_BIN}" select all simplify | jq -c '{all, simplify}' \
+>   && "${CODEX_ASPECTS_BIN}" select code simplify | jq -c '{reviews, simplify}'
+{"all":true,"simplify":true}
+{"reviews":["code"],"simplify":true}
+```
+
+```scrut
+$ "${CODEX_ASPECTS_BIN}" select simplify 2>&1
+codex-aspects: simplify requires at least one review aspect; use all simplify
+[1]
+```
+
+## Successful review is eligible only over its original scope
+
+```scrut
+$ cd "${FIXTURE}/repo" \
+>   && "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/gate-statuses.json" \
+>   && jq -s . "${FIXTURE}/out/code.json" > "${FIXTURE}/gate-results.json" \
+>   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c .
+{"eligible":true,"reason":null}
+```
+
+## Critical findings prevent simplification
+
+```scrut
+$ jq '.[] |= (.findings = [{confidence: 90, detail: "data loss", file: "lib.sh", fix: "preserve data", line: 1, severity: "critical", title: "Data is lost"}])' \
+>     "${FIXTURE}/gate-results.json" > "${FIXTURE}/critical-results.json" \
+>   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/critical-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c .
+{"eligible":false,"reason":"a review reported a Critical finding"}
+```
+
+## Missing or failed aspects cannot vouch for edits
+
+```scrut
+$ jq '.[0].status = "failed"' "${FIXTURE}/gate-statuses.json" > "${FIXTURE}/failed-statuses.json" \
+>   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/failed-statuses.json" --aspect code | jq -c . \
+>   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code --aspect tests | jq -c .
+{"eligible":false,"reason":"a selected review aspect failed or is missing"}
+{"eligible":false,"reason":"a selected review aspect failed or is missing"}
+```
+
+## Index-only changes invalidate eligibility without disk edits
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/index-only" && cd "${FIXTURE}/index-only" \
+>   && blob="$(printf 'index only\n' | git hash-object -w --stdin)" \
+>   && git update-index --cacheinfo "100644,${blob},lib.sh" \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/index-only.json" \
+>   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/scope.json" --after "${FIXTURE}/index-only.json" | jq -c '{scope_changed, changed}' \
+>   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/index-only.json" \
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c .
+{"scope_changed":true,"changed":[]}
+{"eligible":false,"reason":"the review scope changed"}
+```
+
+## Standalone review starts outside the repository
+
+```scrut
+$ cd "${FIXTURE}/repo" \
+>   && "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > /dev/null \
+>   && cwd="$(cat "${FIXTURE}/log/code.cwd")" \
+>   && case "${cwd}" in "${FIXTURE}/repo"*) echo "inside repository";; *) echo "outside repository";; esac
+outside repository
+```
+
+## Historical override wins and checkout changes are not instructions
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/guides" && cd "${FIXTURE}/guides" \
+>   && printf 'Override guideline\n' > AGENTS.override.md && printf 'Lower priority\n' > AGENTS.md \
+>   && git add AGENTS.override.md AGENTS.md \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm guides \
+>   && printf 'Untrusted checkout guideline\n' > AGENTS.override.md \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base HEAD > "${FIXTURE}/guides-scope.json" \
+>   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/guides-scope.json" > "${FIXTURE}/guides.prompt" \
+>   && grep -c '^Override guideline$' "${FIXTURE}/guides.prompt" \
+>   && { grep -c '^Lower priority\|^Untrusted checkout guideline$' "${FIXTURE}/guides.prompt" || true; }
+1
+0
+```
+
+## Historical relative symlinks and configured fallback names
+
+```scrut
+$ cd "${FIXTURE}/guides" && git restore -- AGENTS.override.md && git rm -q AGENTS.override.md AGENTS.md \
+>   && printf 'Fallback guideline\n' > TEAM.md && ln -s TEAM.md CLAUDE.md \
+>   && git add TEAM.md CLAUDE.md \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm fallback \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base HEAD > "${FIXTURE}/fallback-scope.json" \
+>   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/fallback-scope.json" --guide-name TEAM.md > "${FIXTURE}/fallback.prompt" \
+>   && grep -c '^Fallback guideline$' "${FIXTURE}/fallback.prompt" \
+>   && grep -c '^Instruction source: "TEAM.md"$' "${FIXTURE}/fallback.prompt" \
+>   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/fallback-scope.json" | grep -c '^Fallback guideline$'
+1
+1
+1
+```
+
+## Final review completeness includes project validation
+
+```scrut
+$ for validation in passed failed unverified; do \
+>   "${CODEX_ASPECTS_BIN}" finish --validation "${validation}" --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c '{review_complete, complete, validation}'; done
+{"review_complete":true,"complete":true,"validation":"passed"}
+{"review_complete":true,"complete":false,"validation":"failed"}
+{"review_complete":true,"complete":false,"validation":"unverified"}
+```
+
+## Failed final aspects cannot supply actionable findings
+
+```scrut
+$ "${CODEX_ASPECTS_BIN}" finish --validation passed --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/critical-results.json" --statuses "${FIXTURE}/failed-statuses.json" --aspect code | jq -c '{complete, findings}'
+{"complete":false,"findings":[]}
+```
+
+## A completed final review can still contain Critical findings
+
+```scrut
+$ "${CODEX_ASPECTS_BIN}" finish --validation passed --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/critical-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c '{complete, severities: [.findings[].severity]}'
+{"complete":true,"severities":["critical"]}
+```
+
+## HEAD and base movement invalidate review without changing disk content
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/ref-move" && cd "${FIXTURE}/ref-move" \
+>   && git update-ref refs/heads/base HEAD \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/base-moved.json" \
+>   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/scope.json" --after "${FIXTURE}/base-moved.json" | jq -c '{scope_changed, changed}' \
+>   && git update-ref refs/heads/feature "$(jq -r .base "${FIXTURE}/scope.json")" \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/head-moved.json" \
+>   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/base-moved.json" --after "${FIXTURE}/head-moved.json" | jq -c '{scope_changed, changed}'
+{"scope_changed":true,"changed":[]}
+{"scope_changed":true,"changed":[]}
+```
+
+## Empty results and duplicated aspects do not authorize edits
+
+```scrut
+$ printf '[]' > "${FIXTURE}/no-results.json" \
+>   && { "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/no-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code 2>&1; echo "exit=$?"; } \
+>   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code --aspect code | jq -c .
+codex-aspects: review results are incomplete or invalid
+exit=1
+{"eligible":false,"reason":"a selected aspect is duplicated"}
+```
+
+## Historical guides cannot follow a link outside the repository
+
+```scrut
+$ cd "${FIXTURE}/guides" && ln -s ../outside.md AGENTS.md \
+>   && git add AGENTS.md && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm escape \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base HEAD > "${FIXTURE}/escape-guide-scope.json" \
+>   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/escape-guide-scope.json" > "${FIXTURE}/escape-guide.out" 2> "${FIXTURE}/escape-guide.err"; echo "exit=$?"; } \
+>   && tail -1 "${FIXTURE}/escape-guide.err"
+exit=1
+codex-aspects: historical guide link leaves the repository
+```
+
+## Historical guidance is identical from root and nested directories
+
+```scrut
+$ cd "${FIXTURE}/guides" && mkdir sub \
+>   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/fallback-scope.json" --guide-name TEAM.md > "${FIXTURE}/root-guide.prompt" \
+>   && cd sub \
+>   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/fallback-scope.json" --guide-name TEAM.md > "${FIXTURE}/nested-guide.prompt" \
+>   && cmp "${FIXTURE}/root-guide.prompt" "${FIXTURE}/nested-guide.prompt" \
+>   && echo "identical historical guidance"
+identical historical guidance
 ```

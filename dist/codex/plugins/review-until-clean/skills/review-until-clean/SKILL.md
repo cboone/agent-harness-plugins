@@ -47,7 +47,7 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's abs
 
 The steps below abbreviate that path to `review-scope`. Expand the abbreviation when you run one.
 
-Do not recompute the snapshot by hand. It is content-addressed on purpose, so that staging a file, unstaging it, or recording an intent to add it does not move it, while changing a byte does. A digest over `git status` or `git diff HEAD` moves when a path only changed buckets, and would throw away clean results that are still good. `./references/scope-and-snapshot.md` has the details.
+Do not recompute the snapshot by hand. It binds the review to HEAD, the base tip and merge base, disk content, index content and bucket membership. Staging, unstaging and intent-to-add move it because the reviewers read those diffs. The separate `tree` identifies disk content only. `./references/scope-and-snapshot.md` has the details.
 
 ## Workflow
 
@@ -84,7 +84,9 @@ The Codex backend covers the whole scope, because its prompt names all four buck
 The Claude backend needs two checks:
 
 - **Committed changes.** Claude's built-in review measures from the branch's upstream, not the base. On a pushed branch the upstream is usually at `HEAD`, so a no-target run reviews none of the committed work while still looking complete. Compare `git rev-parse @{upstream}` with the base; when they differ, pass `<base>...HEAD` as the target or record the committed bucket as not covered.
-- **Untracked files.** Ask once whether to make them visible with `git add -N`, which records an intent to add without staging content, and restore the index with `git reset -- <paths>` when the round ends. Use the structured-question capability where the harness has one, and a numbered list with a wait for the reply where it does not.
+- **Untracked files.** Ask once whether to make them visible with `git add -N`, which records an intent to add without staging content, and record only the currently untracked paths added by this run. Never reset pre-existing index entries. Prepare these paths before capturing the review snapshot and keep the preparation through the validity check and any confirming round. Use the structured-question capability where the harness has one, and a numbered list with a wait for the reply where it does not.
+
+After any authorized preparation, run `review-scope` again and replace the round's snapshot and buckets before rendering the review task. Register cleanup of only this run's preparation for failure and cancellation. Keep preparation in place through step 8, and through consecutive confirming rounds; do not restore it between them. When beginning another fix round, prepare newly untracked paths and capture a fresh snapshot.
 
 Record the answer as the round's coverage. Excluding the untracked files is a valid choice and is not a failure, but it does change what a clean result is allowed to claim.
 
@@ -157,6 +159,8 @@ Never push. A finding you decline goes back into the ledger with its reason, und
 Recompute the snapshot. If it did not move and findings remain, nothing was fixed and the next round would read exactly the same code and return exactly the same findings: stop with `decisions-needed` rather than spending the remaining rounds. Otherwise start the next round at step 1, up to `--max-rounds`. A confirming round under `--confirm-clean` uses a round from that budget when one is left. When the first clean round used the last round, the confirming round runs anyway as one round past the cap, and it is a review only: if it leaves an undeclined finding at or above `--severity`, do not fix it; stop with `stopped`. That extra round exists only to confirm, so if its step 1 reports a snapshot other than the one the last clean round reviewed, do not run it: stop with `stopped`, and report that the tree changed after the last clean round.
 
 ### 11. Report
+
+After the final validity check, restore only this run's intent-to-add entries. Before resetting a prepared path, verify its index entry is still the intent-to-add entry this run created and its content was not staged by another session. If an entry changed, leave it alone and report cleanup as incomplete. Cleanup is an intentional index change after review and must not be mistaken for a reviewed snapshot; label the ledger with the snapshot reviewed and state that preparation was restored afterward. Apply the same guarded cleanup on failure and cancellation.
 
 Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
 

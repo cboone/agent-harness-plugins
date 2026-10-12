@@ -1,6 +1,6 @@
 # Review PR with Codex
 
-Have Codex review the current branch in focused aspects (code, error handling, tests, comments, types), each in its own read-only run, then merge the findings into one report with an action plan.
+Have Codex review the current branch in focused read-only aspects (code, error handling, tests, comments, types), then merge the findings into one report with an action plan.
 
 **Type:** Skill
 **Trigger:** `/review-pr-with-codex`
@@ -26,18 +26,18 @@ The review covers committed changes since the merge base with the default branch
 
 ### Two entry points
 
-- **In Codex CLI**, each aspect goes to its own Codex subagent. Every subagent's task carries its full instructions, so nothing needs adding to `~/.codex/config.toml`. If the session cannot spawn subagents, the aspects run one after another, and the report says so.
+- **In Codex CLI**, aspects use available Codex subagent slots in bounded batches. Every subagent's task carries its full instructions, so nothing needs adding to `~/.codex/config.toml`. If slots cannot be released or spawning fails, remaining aspects run sequentially or through the standalone entry point. The report records actual settings and inherited-instruction limits.
 - **In Claude Code**, each aspect is its own `codex exec` run, all in parallel, and the host agent merges the results.
 
 ### Read-only, and honest about failure
 
-Every review aspect is read-only: in a `--sandbox read-only` Codex run, or under read-only instructions in a subagent. Either way, the skill compares the working tree before and after the review and reports any path whose content changed. That comparison catches lasting edits, not every write: a change only to the index, a write to an ignored, untracked file, an edit reverted before the second scan, or an edit that Git normalization maps back to the same content leaves no trace.
+Every review aspect is read-only: in a `--sandbox read-only` Codex run, or under read-only instructions in a subagent. Either way, the skill compares the working tree before and after the review and reports any path whose content changed. The separate snapshot comparison also catches index-content, HEAD, base and bucket changes, invalidating stale results. The disk comparison catches lasting edits, not every write: a write to an ignored, untracked file, an edit reverted before the second scan, or an edit that Git normalization maps back to the same content leaves no trace.
 
-An aspect whose run failed, timed out, or returned nothing or something unparseable is reported as **failed**, never as clean. A reviewer that crashed and one that found nothing produce the same empty list unless something checks. The bundled helper checks every signal: the exit status, the output file, its size, its schema, and that it names the right aspect and snapshot.
+An aspect whose run failed, timed out, or returned nothing or something unparseable is reported as **failed**, never as clean. A reviewer that crashed and one that found nothing produce the same empty list unless something checks. The standalone helper checks every signal: the exit status, the output file, its size, its schema, and that it names the right aspect and snapshot.
 
 ### Simplify
 
-`simplify` is the one aspect that edits files. It runs last, alone, and only when every review aspect succeeded and none reported a Critical finding. Its changes are measured from the working tree, not taken from Codex's account, and listed in the report. Nothing is committed or pushed.
+`simplify` is the one aspect that edits files. It runs last, alone, and only when explicitly selected alongside review aspects, every selected review succeeded, none reported a Critical finding, and the full review scope remains unchanged. Omitted arguments and `all` never authorize edits. After edits, relevant project checks and a final read-only review run; actionable findings refer to the final snapshot. Its changes are measured from the working tree, not taken from Codex's account, and listed in the report. Nothing is committed or pushed.
 
 ### The report
 
@@ -58,7 +58,7 @@ An aspect whose run failed, timed out, or returned nothing or something unparsea
 ## Requirements
 
 - [`codex`](https://github.com/openai/codex), authenticated. Install via Homebrew: `brew install codex`. Subagents in Codex CLI need its `multi_agent` feature, which is on by default as of `codex-cli` 0.162.1.
-- `git` and [`jq`](https://jqlang.org/). The bundled helpers emit and validate JSON with `jq`.
+- `git`, `ps`, `pgrep` and [`jq`](https://jqlang.org/). Process inspection is required to verify cancelled descendants stopped; a sandbox denial is reported as incomplete cancellation. The bundled helpers emit and validate JSON with `jq`.
 
 ## Usage
 
@@ -92,7 +92,8 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## Examples
 
-- "review pr with codex": every applicable aspect, then `simplify` if the review allows it
+- "review pr with codex": every applicable read-only review aspect
+- "/review-pr-with-codex all simplify": review, then explicitly authorized simplification, validation and final review
 - "/review-pr-with-codex code errors": only the code and error-handling aspects
 - "/review-pr-with-codex tests --effort high": the tests aspect at higher effort
 - "/review-pr-with-codex --base release/2.0": review against a release branch

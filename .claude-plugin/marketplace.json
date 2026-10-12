@@ -481,7 +481,7 @@
         "name": "Christopher Boone"
       },
       "category": "code-review",
-      "description": "Have Codex review the current branch in focused aspects (code, error handling, tests, comments, types), each in its own read-only run, then merge the findings into one report with an action plan.",
+      "description": "Have Codex review the current branch in focused read-only aspects (code, error handling, tests, comments, types), then merge the findings into one report with an action plan.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["code-review", "codex", "pull-request", "review", "subagents"],
       "license": "MIT AND Apache-2.0",
