@@ -1,5 +1,5 @@
 ---
-name: merge-main
+name: merge
 description: >-
   Merge the base branch into this branch, resolve conflicts, and push. Use for
   "merge main" or "sync with main"; to rebase, use rebase-onto-main.

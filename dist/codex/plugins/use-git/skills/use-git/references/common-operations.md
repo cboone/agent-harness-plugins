@@ -27,7 +27,7 @@ Keep these distinct, because they diverge exactly when it matters:
 - **`<default-branch>`** is what the detection above returns: the repository's default branch, usually `main`.
 - **`<base-branch>`** is the branch a pull request targets. It is normally the same thing, but for a stacked PR it is the parent feature branch instead.
 
-Skills that only ever work against the repository default (`merge-main`, `rebase-onto-main`) use `<default-branch>`. The `pr` skill distinguishes the two, because it detects a stacked-PR parent from the reflog and falls back to `<default-branch>` when that parent is missing, merged, or the current branch itself.
+Skills that only ever work against the repository default (`sync-with-main:merge`, `sync-with-main:rebase`) use `<default-branch>`. The `pr` skill distinguishes the two, because it detects a stacked-PR parent from the reflog and falls back to `<default-branch>` when that parent is missing, merged, or the current branch itself.
 
 ## Push with Upstream Fallback
 
