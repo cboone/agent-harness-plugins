@@ -72,7 +72,7 @@ The change cannot merge as it stands. Any one of these matches:
 - **A peer or engine conflict**, such as a new major that requires a newer runtime than the repository pins, or a peer range the repository's other dependencies cannot satisfy.
 - **An install failure** with the frozen lockfile.
 
-Action: a tracking issue through the `create-issue` skill (one issue per outstanding upgrade), a separate migration PR, or, on the user's decision, an ignore command. The triage does not write the migration.
+Action: a tracking issue through the `use-git:create-issue` skill (one issue per outstanding upgrade), a separate migration PR, or, on the user's decision, an ignore command. The triage does not write the migration.
 
 ## 6. Needs testing
 

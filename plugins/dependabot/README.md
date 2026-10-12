@@ -177,5 +177,5 @@ The `gh pr comment`, `close`, `merge`, and `review` rules allow writes to your r
 - [Review Dependabot Config](../dependabot/README.md): review the `dependabot.yml` and repository settings behind these PRs
 - [Monitor PR](../monitor-pr/README.md): watch a single refreshed Dependabot PR until it is ready to merge
 - [Upgrade Everything](../upgrade-everything/README.md): replace several PRs that fight over one lockfile with a single package-manager upgrade
-- [Create Issue](../create-issue/README.md): track a Needs work or Hold upgrade
+- [Create Issue](../use-git/README.md): track a Needs work or Hold upgrade
 - [All plugins](../../README.md)

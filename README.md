@@ -43,14 +43,14 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Git
 
-| Plugin                                               | Trigger                                           | What it does                                                                                                                                          |
-| ---------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Commit](./plugins/commit/README.md)                 | `/commit`                                         | Smart, context-aware git commits with conventional commit messages and plan awareness.                                                                |
-| [Sync With Main](./plugins/sync-with-main/README.md) | `/sync-with-main:merge`, `/sync-with-main:rebase` | Merge or rebase the base branch into the current branch, resolve conflicts, and push using the selected workflow.                                     |
-| [PR](./plugins/pr/README.md)                         | `/pr`                                             | Lint, commit, push, and create a pull request in one step with no prompts.                                                                            |
-| [Release](./plugins/release/README.md)               | `/release`                                        | Prepare a versioned release: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.                     |
-| [Review Branch](./plugins/review-branch/README.md)   | `/review-branch`                                  | Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.                        |
-| [Use Git](./plugins/use-git/README.md)               | `/use-git`                                        | Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance. |
+| Plugin                                               | Trigger                                           | What it does                                                                                                                      |
+| ---------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| [Commit](./plugins/commit/README.md)                 | `/commit`                                         | Smart, context-aware git commits with conventional commit messages and plan awareness.                                            |
+| [Sync With Main](./plugins/sync-with-main/README.md) | `/sync-with-main:merge`, `/sync-with-main:rebase` | Merge or rebase the base branch into the current branch, resolve conflicts, and push using the selected workflow.                 |
+| [PR](./plugins/pr/README.md)                         | `/pr`                                             | Lint, commit, push, and create a pull request in one step with no prompts.                                                        |
+| [Release](./plugins/release/README.md)               | `/release`                                        | Prepare a versioned release: update release files, create a release commit, tag locally, and optionally publish a GitHub Release. |
+| [Review Branch](./plugins/review-branch/README.md)   | `/review-branch`                                  | Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.    |
+| [Use Git](./plugins/use-git/README.md)               | `/use-git:use-git`, `/use-git:create-issue`       | Apply git and GitHub CLI conventions for tmpfile bodies, signed commits and safe pushes, and create GitHub issues.                |
 
 **External tools:**
 
@@ -65,7 +65,6 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Address Issue](./plugins/address-issue/README.md)                   | `/address-issue <issue>`                           | Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.                                             |
 | [Workmux](./plugins/workmux/README.md)                               | `/workmux:create-worktree`, `/workmux:start-issue` | Create worktrees, branches and tmux windows with workmux, or launch issue planning in a new session.                                                       |
 | [Create Deferred Issues](./plugins/create-deferred-issues/README.md) | `/create-deferred-issues`                          | Scan the session, branch, and pull request for concerns set aside as out of scope, propose them as one batch, and file the approved ones as GitHub issues. |
-| [Create Issue](./plugins/create-issue/README.md)                     | `/create-issue`                                    | Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.                                                       |
 | [Suggest Next Issue](./plugins/suggest-next-issue/README.md)         | `/suggest-next-issue`                              | Review open GitHub issues and recommend what to work on next with prioritized reasoning.                                                                   |
 | [WTAF](./plugins/wtaf/README.md)                                     | `/wtaf`                                            | Summarize where the conversation, branch, and tasks stand and what comes next, with a thorough mode that also reads the history.                           |
 

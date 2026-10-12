@@ -1,6 +1,6 @@
 # Batch Filing
 
-How to file the approved batch and post the summary comment. The per-issue sequence mirrors the `create-issue` skill's tmpfile pattern. Where the two ever disagree about those mechanics, `create-issue` is the source to follow.
+How to file the approved batch and post the summary comment. The per-issue sequence mirrors the `use-git:create-issue` skill's tmpfile pattern. Where the two ever disagree about those mechanics, `use-git:create-issue` is the source to follow.
 
 ## Title
 

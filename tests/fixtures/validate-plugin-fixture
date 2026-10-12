@@ -250,7 +250,7 @@ function main() {
     # create-issue takes no options, so a heading inside an example fence must
     # not demand a hint of it.
     fenced-options-heading)
-      printf '%s\n' '' '```markdown' '## Options' '```' >> "${FIXTURE_ROOT}/plugins/create-issue/skills/create-issue/SKILL.md"
+      printf '%s\n' '' '```markdown' '## Options' '```' >> "${FIXTURE_ROOT}/plugins/use-git/skills/create-issue/SKILL.md"
       ;;
     # The translation itself: the generated copy loses the line and gains the
     # policy Codex reads, and validation passes.
