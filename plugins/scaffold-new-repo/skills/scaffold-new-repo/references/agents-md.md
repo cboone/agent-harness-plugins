@@ -1,6 +1,6 @@
 # AGENTS.md Template
 
-This is the single source of truth for all AI coding agents (Claude Code, Codex, Copilot, OpenCode). CLAUDE.md is created as a symlink pointing to this file.
+This is the single source of truth for all AI coding agents (Claude Code, Codex, Copilot). CLAUDE.md is created as a symlink pointing to this file.
 
 Replace `PROJECT-NAME` with the exact binary or repository name (kebab-case) and `SHORT-DESCRIPTION` with the one-sentence description.
 

@@ -27,7 +27,7 @@ The review covers committed changes since the merge base with the default branch
 ### Two entry points
 
 - **In Codex CLI**, each aspect goes to its own Codex subagent. Every subagent's task carries its full instructions, so nothing needs adding to `~/.codex/config.toml`. If the session cannot spawn subagents, the aspects run one after another, and the report says so.
-- **In Claude Code** (and OpenCode), each aspect is its own `codex exec` run, all in parallel, and the host agent merges the results.
+- **In Claude Code**, each aspect is its own `codex exec` run, all in parallel, and the host agent merges the results.
 
 ### Read-only, and honest about failure
 

@@ -6,8 +6,8 @@
     "extends": ".markdownlint.jsonc",
   },
 
-  // dist/ holds the generated mirrors; see cli.markdownlint-cli2.jsonc for why
-  // they are excluded rather than linted.
+  // dist/ holds the generated Codex mirror; see cli.markdownlint-cli2.jsonc for
+  // why it is excluded rather than linted.
   "ignores": [".workmux/", "**/node_modules/**", "dist/"],
 
   // customRules are in cli.markdownlint-cli2.jsonc, loaded via --config in

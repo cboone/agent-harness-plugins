@@ -98,7 +98,7 @@ Key points:
 
 #### For Skills
 
-Create `skills/PLUGIN-NAME/SKILL.md`. See `./references/skill-md.md` for the frontmatter format, description formula, common sections, and examples. The skill is one workflow shared by Claude Code, Codex CLI, and OpenCode; follow the adapter conventions in the "Cross-harness workflow adapters" section of `docs/plugin-development.md`.
+Create `skills/PLUGIN-NAME/SKILL.md`. See `./references/skill-md.md` for the frontmatter format, description formula, common sections, and examples. The skill is one workflow shared by Claude Code and Codex CLI; follow the adapter conventions in the "Cross-harness workflow adapters" section of `docs/plugin-development.md`.
 
 Key points:
 
@@ -162,7 +162,7 @@ Key points:
 - Insert alphabetically by plugin name
 - Include `category` and `source` fields (not present in `plugin.json`)
 - All shared fields must match `plugin.json` exactly
-- Do not hand-edit `.agents/plugins/marketplace.json`, `dist/codex/`, or `dist/opencode/`; regenerate them with the build scripts
+- Do not hand-edit `.agents/plugins/marketplace.json` or `dist/codex/`; regenerate them with the build scripts
 
 ### 9. Update README.md
 
@@ -181,7 +181,6 @@ Regenerate generated surfaces from the canonical plugin source with `make build`
 
 1. `bin/build-review-checklists`, which copies each style guide's review checklist into `set-up-review-config`.
 1. `bin/build-codex-marketplace`, which updates `.agents/plugins/marketplace.json` and `dist/codex/`.
-1. `bin/build-opencode-mirror`, which updates `dist/opencode/`.
 
 Do not edit generated mirror files directly. Only update project-level instruction files such as `AGENTS.md` or `CLAUDE.md` when the new plugin changes repository conventions or those files already contain a current plugin catalog that must be kept in sync.
 
@@ -193,7 +192,7 @@ Before finishing, verify:
 - [ ] `plugin.json` fields are alphabetized and `name` matches the directory name
 - [ ] `marketplace.json` is valid JSON with the new entry
 - [ ] `marketplace.json` entry fields match `plugin.json` (shared fields)
-- [ ] `make build` has regenerated the review checklist copies, `.agents/plugins/marketplace.json`, `dist/codex/` and `dist/opencode/`
+- [ ] `make build` has regenerated the review checklist copies, `.agents/plugins/marketplace.json` and `dist/codex/`
 - [ ] Root `README.md` has the new plugin row in the correct category table, with the marketplace description copied verbatim
 - [ ] Root `README.md` external-tool bullets are updated if the plugin needs external tools
 - [ ] `plugins/PLUGIN-NAME/README.md` exists and documents installation, usage, requirements, examples, and related plugins
@@ -218,4 +217,4 @@ Before finishing, verify:
 - If `marketplace.json` cannot be parsed as valid JSON, fix the syntax before proceeding
 - If the user is unsure about the plugin type, default to a skills plugin (the most common type)
 - If the user wants to add a skill to an existing plugin instead of creating a new one, bump the minor version in `.claude-plugin/plugin.json` and mirror it in `.codex-plugin/plugin.json` when that manifest exists
-- If generated review checklist copies, Codex files or OpenCode files drift, run `make build` instead of editing generated files directly
+- If generated review checklist copies or Codex files drift, run `make build` instead of editing generated files directly

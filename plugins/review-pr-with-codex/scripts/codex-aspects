@@ -12,8 +12,8 @@ readonly SCRIPT_NAME
 
 # The aspect instructions ship beside the skill, two levels up from this
 # script. They are found relative to the script rather than through
-# ${CLAUDE_PLUGIN_ROOT}, so the lookup also works in Codex CLI and OpenCode,
-# where that placeholder is not substituted.
+# ${CLAUDE_PLUGIN_ROOT}, so the lookup also works in Codex CLI, where that
+# placeholder is not substituted in skills.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
 ASPECTS_DIR="${CODEX_ASPECTS_DIR:-${SCRIPT_DIR}/../skills/review-pr-with-codex/references/aspects}"
 readonly SCRIPT_DIR ASPECTS_DIR
