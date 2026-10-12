@@ -54,10 +54,8 @@ jobs:
         run: |
           bin/build-review-checklists
           bin/build-codex-marketplace
-          # `git diff` compares the worktree to the index and ignores untracked
-          # files, so a new plugin whose generated root under dist/codex/plugins/
-          # was never committed would still report clean.
-          # `git status --porcelain` catches additions as well as edits.
+          # `git status --porcelain`, unlike `git diff`, also reports untracked
+          # files, such as a new plugin's uncommitted root under dist/codex/plugins/.
           drift="$(git status --porcelain dist/ .agents/ plugins/set-up-review-config/skills/set-up-review-config/references/checklists/)"
           if [[ -n "${drift}" ]]; then
             echo "::error::Generated files are out of date; run make build"
