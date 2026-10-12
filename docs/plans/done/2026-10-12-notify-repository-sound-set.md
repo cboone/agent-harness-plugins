@@ -2,7 +2,7 @@
 
 Issue: [#595](https://github.com/cboone/agent-harness-plugins/issues/595)
 
-Status: Approved for implementation.
+Status: Implemented and validated.
 
 ## Scope
 
@@ -21,3 +21,13 @@ Add an opt-in sound set for Claude Code and Codex CLI through the shared notify 
 ## Validation and delivery
 
 Run relevant formatting, linting, validation and `make test-scrut`, observing final results. Confirm parsing under macOS `/bin/bash` 3.2. Commit the plan first, then commit implementation and generated artifacts in signed commits referencing #595. Keep the issue in progress; pushing and opening a PR are separate follow-up actions.
+
+## Results
+
+- Added the resolver to all five sound call sites, covering both harnesses and all three roles. Detached delivery is unchanged.
+- Added 13 scrut cases, including pinned checksum vectors. All sound scenarios execute the notifier under macOS `/bin/bash` 3.2.57 with an isolated sound directory and captured notification arguments.
+- Updated the README and both manifests to 4.1.0; regenerated the Codex mirror with `make build`. Generation needed sandbox escalation for the protected `.agents` output.
+- `make lint` and `make validate` passed. Formatting, shell checks and `git diff --check` passed.
+- `make test-scrut` completed all 27 documents. Twenty-four passed in the sandbox; `codex-aspects.md`, `notifications.md` and `launch-workmux.md` failed process-access checks. Separate runs outside the sandbox passed all 56, 57 and 62 cases respectively. The sandbox denied `pgrep` and `/bin/ps` access and affected process-group cancellation.
+- Version comparison against the branch's merge base confirmed a minor bump from 4.0.0 to 4.1.0 in both manifests. Catalog coverage and manifest-only version ownership passed plugin validation.
+- No sound assets were produced, installed or played. Automated verification covers sound-name selection and delivery arguments; listening to separately produced assets remains outside this issue.

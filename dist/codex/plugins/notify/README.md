@@ -63,7 +63,7 @@ Delivers native macOS notifications so you can work in other apps while an agent
     File paths are shown relative to the repository root (or under `~`) and truncated from the left so the file name stays visible. Bash commands drop a leading `cd` into the working directory or repository root. When no call matches, the body is the payload message.
 
   - Question bodies show the first question, followed by `(+N more)` when there are several.
-- **Shared event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion. Claude's idle reminders are disabled.
+- **Event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion by default. An optional [repository sound set](#repository-sound-set) substitutes variants. Claude's idle reminders are disabled.
 - **Session-specific groups**: banners from unrelated sessions do not replace one another. Completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored.
 - **Visibility-aware completion**: completion alerts are suppressed when the host terminal application is frontmost and a focused tmux client displays the originating pane. The terminal is identified from `$TERM_PROGRAM`, which must be one of Apple Terminal (`Apple_Terminal`), iTerm2 (`iTerm.app`), Ghostty (`ghostty`), WezTerm (`WezTerm`), VS Code (`vscode`) or Alacritty (`alacritty`). If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
 - **Fire-and-forget delivery**: each `alerter` is stopped a short grace period after launch (see [Notes and caveats](#notes-and-caveats)), so no process waits on the banner. Banners stay in Notification Center. Clicking one does not focus the originating terminal or tmux pane.
@@ -92,6 +92,26 @@ MCP tools appear by their tool name, as in `Approve batch?`, with the server nam
 | `Stop`                          | `Done`                        | Summary of `last_assistant_message`  | `Glass` |
 
 `UserPromptSubmit` resets completion deduplication without posting a banner. Repeated Stop events in the same user turn are suppressed, including their sounds. A Stop hook that requests continuation can still cause the first completion banner before that continuation finishes; the notification plugin does not decide whether other Stop hooks will continue the turn.
+
+## Repository sound set
+
+Set `NOTIFY_SOUND_SET=<prefix>` in the environment inherited by Claude Code or Codex CLI to enable a separately installed sound set. Unset or empty keeps the default sounds. The prefix must match `^[A-Za-z0-9._-]+$`; invalid values are ignored.
+
+Install files in `~/Library/Sounds` named `<prefix>-<role>-<n>.<ext>`, where `<ext>` is `aiff`, `wav` or `caf`. Each role's indices start at `0` and continue without gaps:
+
+| Role         | Replaces | Events                                   |
+| ------------ | -------- | ---------------------------------------- |
+| `stop`       | Glass    | Task completion                          |
+| `permission` | Funk     | Permission requests                      |
+| `attention`  | Tink     | Questions, elicitation and plan approval |
+
+For example, `NOTIFY_SOUND_SET=Chord` uses files such as `Chord-stop-0.aiff`, `Chord-permission-0.wav` and `Chord-attention-0.caf`. Add matching indices for each pitch or timbre variant. Sound files are produced and installed separately; this plugin does not include them.
+
+The plugin counts indices per role until the first missing index, accepting any supported extension and counting an index only once. A role without index `0` falls back to its built-in sound. Files after a gap are ignored.
+
+Selection uses POSIX `cksum` on the repository name's bytes without a trailing newline, modulo the role's count. The name is the same as the subtitle's repository name, shared across worktrees; outside Git, the folder name is used. Matching variant counts across roles select the same index, allowing a repository's sounds to share a pitch. Different counts use the same hash modulo their respective counts. Different repositories can select the same variant. Selection needs no saved state; changing the name or variant count can change the selection.
+
+The selected name is passed to `alerter --sound` without an extension. macOS searches `~/Library/Sounds`, then `/Library/Sounds`, then `/System/Library/Sounds`. The plugin counts set files only in `~/Library/Sounds`. System Settings > Notifications > Terminal must allow sounds.
 
 ## Notes and caveats
 
