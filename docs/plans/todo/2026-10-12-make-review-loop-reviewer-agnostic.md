@@ -59,11 +59,11 @@ Delete `backends.md`. The new file contains only rules that apply to every revie
 ### 5. `review-pr-with-codex` owns the Codex invocation details
 
 - **`references/invocation.md`:** remove the sentence that defers to `review-until-clean`'s `backends.md`. Add the measured details that only existed there: the exact `codex exec review` errors against `codex-cli 0.155.1`, the stdin hang that never creates `-o`, and the schema-keyword note (no lookaround, measured against 0.157.1).
-- **Version:** patch bump to 1.0.1.
+- **Version:** patch bump to 2.0.1, over the 2.0.0 `main` reached meanwhile.
 
 ### 6. Cross-references in other plugins
 
-- **`review-anti-patterns/README.md`:** "a looping review with fixes, from another model family" becomes reviewer-neutral. Patch bump to 1.0.1.
+- **`review-anti-patterns/README.md`:** "a looping review with fixes, from another model family" becomes reviewer-neutral. Patch bump to 1.0.2, over the 1.0.1 `main` reached meanwhile.
 - **Remaining hits:** check every other `grep` hit for "backend", "codex|claude" or "model family" in relation to `review-until-clean`, then fix wording only where it is now false.
 
 ### 7. Generated output and the plan file
