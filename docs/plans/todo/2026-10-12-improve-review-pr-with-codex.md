@@ -4,7 +4,7 @@
 
 Make `review-pr-with-codex` read-only by default, bind results to everything the reviewers inspect, and make its Codex entry points reliable under instruction and concurrency constraints. Calibrate findings by impact and resolve the observed cancellation-test failure.
 
-Status: proposed. This checkpoint authorizes no implementation. The scope covers the five review concerns and the cancellation failure reported on 2026-10-12.
+Status: approved for implementation on 2026-10-12, including the RP-1 and RP-2 plan-review corrections below. The scope covers the five review concerns and the cancellation failure reported on 2026-10-12.
 
 ## Scope
 
@@ -27,6 +27,7 @@ Keep the existing review aspects, structured output, and failure reporting. No m
 - [ ] Bracket scope collection with checks for index content, HEAD, and base stability as well as disk content. Refuse a scope assembled from inconsistent reads.
 - [ ] Extend the comparison output to distinguish content changes from scope validity changes. Any snapshot mismatch invalidates the prior review, including index-only changes or base/HEAD movement with identical disk content. Block simplification and collect a fresh scope before rerunning review.
 - [ ] Update both `review-scope` copies together, their schema and affected consumers. Retain the documented limitations for ignored files, reverted edits, and Git normalization; describe those separately from validity checks.
+- [ ] Migrate `review-until-clean` explicitly: prepare authorized intent-to-add coverage before capturing the round snapshot, retain that preparation through review and validity checking, and restore it only after those checks or on failure/cancellation. Capture a fresh snapshot after any new preparation. Preserve pre-existing index entries and carry unchanged preparation through confirming rounds. Update the old staging-invariance assertions and documentation. Verify that an authorized preparation can complete a clean round and that unrelated index-content changes invalidate it (RP-1).
 
 Validation must reproduce the reported case: replace the indexed version of a tracked file while leaving its disk content unchanged. The snapshot must change, the measured disk diff must remain empty, and the prior review must be invalidated. Also cover base/HEAD movement, bucket changes, unchanged-state stability, and preservation of the real index.
 
@@ -69,8 +70,9 @@ The helper suite passed 55 of 56 cases on two runs. The cancellation case report
 ## Integration and acceptance
 
 - [ ] Add behavioral coverage to `tests/scrut/codex-aspects.md`, `tests/scrut/review-scope.md`, the shared-copy check in `tests/scrut/repo-tooling.md`, and affected fixtures as needed. Read scoped test instructions before edits. Add model smoke-test evidence separately from deterministic test results.
+- [ ] Validate the complete review/edit workflow (RP-2): omitted arguments and `all` never edit; `all simplify` runs gated edits, validation and final review; `simplify` alone is rejected; failed aspects, Critical findings and scope movement prevent edits; failed validation or final review leaves the result incomplete. Bind actionable findings to the final snapshot and mark superseded initial findings. Extract deterministic selection and eligibility decisions into the helper where useful, then exercise host-controlled sequencing in controlled smoke tests.
 - [ ] Determine version bumps from the final contract. The default edit policy changes existing behavior, so evaluate a major bump for `review-pr-with-codex`; choose the shared consumer's bump based on its resulting compatibility. Mirror manifest versions and update catalog descriptions only when their wording changes.
 - [ ] Run `make build`, then relevant checks and `make test-all`. Confirm generated mirrors, cross-references, shared-helper identity, and the final observed test results. Use `check-versions` before a PR.
-- [ ] Update this plan as implementation proceeds and create signed commits at logical boundaries. Implementation remains pending approval of this plan.
+- [ ] Update this plan as implementation proceeds and create signed commits at logical boundaries.
 
 Acceptance requires read-only default invocation, explicit authorization for simplification, validation and review of final edits, invalidation on index or scope movement, accurate instruction guarantees, completion within native worker limits, impact-based findings, and a cancellation check that reliably detects continued execution.
