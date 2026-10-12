@@ -11,7 +11,8 @@ argument-hint: "[--reviewer <command>] [--base <ref>] [--severity important|nit]
 Run one reviewer over every local change, fix the findings at or above a severity threshold, and repeat until a finished review of the snapshot that is actually on disk leaves nothing to fix. The loop owns the scope, the snapshot, the ledger, the fixes and the decision to stop. It knows nothing about how any particular reviewer works.
 
 <!-- `/simplify` is Claude Code's built-in command, named here as an example reviewer, not a plugin in this marketplace. -->
-<!-- validate-plugins: ignore /simplify -->
+<!-- `/pr-review-toolkit:review-pr` is an external plugin, named here as an example reviewer. -->
+<!-- validate-plugins: ignore /simplify /pr-review-toolkit:review-pr -->
 
 ## Options
 

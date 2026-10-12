@@ -1,5 +1,6 @@
 <!-- `/simplify` is Claude Code's built-in command, named here as an example reviewer, not a plugin in this marketplace. -->
-<!-- validate-plugins: ignore /simplify -->
+<!-- `/pr-review-toolkit:review-pr` is an external plugin, named here as an example reviewer. -->
+<!-- validate-plugins: ignore /simplify /pr-review-toolkit:review-pr -->
 
 # Reviewers
 
