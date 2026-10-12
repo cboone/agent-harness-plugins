@@ -1,10 +1,10 @@
 # Claude Code Plugins
 
-A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), from [Christopher Boone](https://cboone.github.io).
+A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), from [Christopher Boone](https://cboone.github.io).
 
 ## Contents
 
-- [Install](#install): [Claude Code](#claude-code), [Codex CLI](#codex-cli)
+- [Install](#install): [Claude Code](#claude-code), [Codex CLI](#codex-cli), [OpenCode](#opencode)
 - [Skills](#skills): [Git](#git), [Issues and Worktrees](#issues-and-worktrees), [Code Review](#code-review), [Code Quality](#code-quality), [Writing](#writing), [Scaffolding](#scaffolding), [CI and Release](#ci-and-release), [Agents](#agents)
 - [Hooks](#hooks)
 - [Using with Codex CLI](#using-with-codex-cli)
@@ -35,7 +35,7 @@ See [Using with Codex CLI](#using-with-codex-cli) below for selective installati
 
 ### OpenCode
 
-OpenCode is no longer supported. Commit [`41605e95`](https://github.com/cboone/agent-harness-plugins/tree/41605e95bd814e354799722eae2fc9c8d50e2796/dist/opencode) is the last on `main` that ships the `dist/opencode/` mirror.
+OpenCode is no longer supported. The last `dist/opencode/` mirror is available at commit [`41605e95`](https://github.com/cboone/agent-harness-plugins/tree/41605e95bd814e354799722eae2fc9c8d50e2796/dist/opencode).
 
 ## Skills
 
