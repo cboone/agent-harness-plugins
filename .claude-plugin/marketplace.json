@@ -350,6 +350,19 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "agents",
+      "description": "Send push notifications through ntfy when work finishes or needs a decision, on request or from another skill, including from remote and cloud sessions.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["notifications", "ntfy", "push", "remote-sessions"],
+      "license": "MIT",
+      "name": "push-notification",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./plugins/push-notification"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "git",
       "description": "Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",

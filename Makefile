@@ -20,11 +20,12 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR \
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
 	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT -u CODEX_OTHER_SKILL_RESERVE_TOKENS \
-	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_TOKEN \
+	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
 	-u BACKLOG_GATHER_NOW -u BACKLOG_GATHER_HOST \
-	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME
+	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME \
+	-u PUSH_NOTIFICATION_BACKEND -u PUSH_NOTIFICATION_CONFIG -u NTFY_SERVER -u NTFY_TOPIC -u NTFY_TOKEN
 
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from
@@ -73,6 +74,8 @@ SCRUT_ENV := \
 	BACKLOG_GATHER_DATA_DIR="$(CURDIR)/tests/data/backlog-gather" \
 	BACKLOG_GATHER_GH_STUB_BIN="$(CURDIR)/tests/fixtures/backlog-gather-gh-stub" \
 	CURL_STUB_BIN="$(CURDIR)/tests/fixtures/curl-stub" \
+	PUSH_NOTIFICATION_BIN="$(CURDIR)/plugins/push-notification/scripts/push-notification" \
+	NTFY_CURL_STUB_BIN="$(CURDIR)/tests/fixtures/ntfy-curl-stub" \
 	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads" \
 	MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/monitor-pr/scripts/resolve-copilot-threads" \
 	MERGE_FLOW_BIN="$(CURDIR)/plugins/monitor-pr/scripts/merge-flow" \

@@ -191,10 +191,15 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Agents
 
-| Plugin                                                             | Trigger                  | What it does                                                                                                      |
-| ------------------------------------------------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| [Clean Up Agent Config](./plugins/clean-up-agent-config/README.md) | `/clean-up-agent-config` | Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, and Copilot. |
-| [Create Plugin](./plugins/create-plugin/README.md)                 | `/create-plugin`         | Guide for creating new plugins in this repository with consistent structure and conventions.                      |
+| Plugin                                                             | Trigger                  | What it does                                                                                                                                             |
+| ------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Clean Up Agent Config](./plugins/clean-up-agent-config/README.md) | `/clean-up-agent-config` | Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, and Copilot.                                        |
+| [Create Plugin](./plugins/create-plugin/README.md)                 | `/create-plugin`         | Guide for creating new plugins in this repository with consistent structure and conventions.                                                             |
+| [Push Notification](./plugins/push-notification/README.md)         | `/push-notification`     | Send push notifications through ntfy when work finishes or needs a decision, on request or from another skill, including from remote and cloud sessions. |
+
+**External tools:**
+
+- _Push Notification:_ [`curl`](https://curl.se/) 7.76.0 or newer, [`jq`](https://jqlang.org/), and an [ntfy](https://ntfy.sh) topic on ntfy.sh or a self-hosted server
 
 ## Hooks
 
