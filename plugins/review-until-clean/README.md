@@ -21,12 +21,12 @@ The loop is only worth running if a clean result means something. Four rules mak
 
 1. **Every round reviews the whole scope.** Committed branch changes, staged changes, unstaged changes, and untracked files, every round. The common failure in an agent review loop is that the agent fixes a finding and the next round quietly reviews only its own patch, so the code the first round never reached is never reviewed at all.
 1. **The loop knows each round's mode.** A reviewer either reports findings, which the loop fixes, or edits the code itself. The loop tells which by checking the snapshot as the reviewer returns. A round in which the reviewer changed the code is never clean; the next round reviews what it left.
-1. **A run that does not finish is never clean.** A CLI must exit 0 with output that is not empty, and a skill or command must report that it completed. A reviewer that crashes, times out, returns nothing, or stops partway ends the run as `failed`. Silence is the same shape as success, and that is exactly the failure this rule exists to catch.
+1. **A run that does not finish is never clean.** A CLI must exit 0 with stdout that is not empty, and a skill or command must report that it completed. A reviewer that crashes, times out, returns nothing, or stops partway ends the run as `failed`. Silence is the same shape as success, and that is exactly the failure this rule exists to catch.
 1. **A clean result is bound to a content snapshot.** The snapshot covers every file in scope by content. Any edit after the review invalidates the clean result, so a run cannot report clean for code that no longer exists.
 
 ### Choosing a reviewer
 
-The loop works with any reviewer and knows nothing about how any of them works. `--reviewer` takes what you would type yourself: a skill or slash command such as `/pr-review-toolkit:review-pr`, `/review-pr-with-codex` or `/simplify`, or a shell command such as `coderabbit review --plain`. The reviewer's own options go inside the value, as in `--reviewer "/review-pr-with-codex --effort high"`. One run uses one reviewer; to combine reviewers, run the loop once for each.
+The loop works with any reviewer and knows nothing about how any of them works. `--reviewer` takes what you would type yourself: a skill or slash command such as `/pr-review-toolkit:review-pr`, `/review-pr-with-codex` or `/simplify`, or a shell command such as `coderabbit review --agent --fresh`. The reviewer's own options go inside the value, as in `--reviewer "/review-pr-with-codex --effort high"`. One run uses one reviewer; to combine reviewers, run the loop once for each.
 
 The loop reads what the reviewer returns and transcribes its findings into one ledger format, mapping its severities into Important and Nit. A finding with no severity counts as Important, so a reviewer that does not grade its findings still blocks a clean result.
 
@@ -38,7 +38,7 @@ review-until-clean reviewer: /pr-review-toolkit:review-pr
 
 If none is named, it asks once.
 
-A reviewer chooses its own diff, so the loop cannot make it read all four buckets. It offers to make untracked files visible with `git add -N` before each round, then compares what the reviewer reports it read against the scope. A round's coverage is `full`, `partial`, or `unverified` when the reviewer does not say.
+A reviewer chooses its own diff, so the loop cannot make it read all four buckets. It offers once per run to make untracked files visible with `git add -N`, then compares what the reviewer reports it read against the scope. A round's coverage is `full`, `partial`, or `unverified` when the reviewer does not say.
 
 ### Findings you disagree with
 
@@ -86,7 +86,7 @@ Also required:
 
 Before each fix pass, [Address Review](../address-review/README.md), which does the fixing, asks you to confirm the item list. A reviewer that edits, such as `/simplify`, changes the tree itself while it runs, before any such confirmation and under its own approval behavior; that round's changes are recorded in the ledger and reviewed by the next round when the round budget allows. This is a gate you watch, not an unattended job.
 
-When untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. It restores the index with `git reset -- <paths>` afterward, touching only those paths. Declining is fine; the untracked bucket is then recorded as not covered, unless the reviewer's report shows it read those files anyway. The snapshot is computed from file content rather than from index state, so staging a file this way does not move it.
+When untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. It restores the index with `git reset -- <paths>` afterward, touching only those paths. Declining is fine; the untracked bucket is then recorded as not covered, unless the reviewer's report shows it read those files anyway. The snapshot is computed from file content rather than from index state, so staging a file this way does not move it. Only a change to which paths are tracked does, such as force-adding an ignored file.
 
 ### As a pre-push hook
 
@@ -99,7 +99,7 @@ This skill runs git commands, and your reviewer's own commands, that trigger per
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)"]
+    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)", "Bash(git diff-tree *)"]
   }
 }
 ```
@@ -113,7 +113,7 @@ The first two rules cover the bundled helper, which runs at least twice every ro
 - "review until clean": the default loop, with the reviewer your agent config names, or asked once
 - "/review-until-clean --reviewer /pr-review-toolkit:review-pr": the toolkit's review each round
 - "/review-until-clean --reviewer '/review-pr-with-codex --effort high'": a Codex review at high effort
-- "/review-until-clean --reviewer 'coderabbit review --plain'": the CodeRabbit CLI
+- "/review-until-clean --reviewer 'coderabbit review --agent --fresh'": the CodeRabbit CLI
 - "/review-until-clean --reviewer /simplify": a reviewer that edits, run until it leaves the tree unchanged
 - "/review-until-clean --report-only": one round, a written ledger, nothing changed by the loop
 - "/review-until-clean --severity nit": fix the nits too, not just the Important findings

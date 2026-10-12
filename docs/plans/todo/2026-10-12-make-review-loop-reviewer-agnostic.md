@@ -15,11 +15,11 @@ Decisions taken during planning:
 ### 1. `plugins/review-until-clean/skills/review-until-clean/SKILL.md`
 
 - Frontmatter: description becomes reviewer-neutral (for example "Loop any reviewer and fix its findings until the snapshot is clean. Use for \"review until clean\"."). `argument-hint`: `--reviewer <command>`, `--effort` removed.
-- Options: `--reviewer <command>` is free-form, taking a slash command or skill (`/pr-review-toolkit:review-pr`, `/review-pr-with-codex --effort high`, `/simplify`) or a shell command (`coderabbit review --plain`). The reviewer's own options go inside the value, and it takes exactly one reviewer. `--effort` is removed. The other options are unchanged.
+- Options: `--reviewer <command>` is free-form, taking a slash command or skill (`/pr-review-toolkit:review-pr`, `/review-pr-with-codex --effort high`, `/simplify`) or a shell command (`coderabbit review --agent --fresh`). The reviewer's own options go inside the value, and it takes exactly one reviewer. `--effort` is removed. The other options are unchanged.
 - Invariants, rewritten:
   1. Every round reviews the whole scope (unchanged), now with coverage verified from the reviewer's report.
   1. **The loop knows each round's mode** (report or edit, observed from the snapshot) and decides cleanliness from that mode's signal. This replaces "the reviewer is read-only".
-  1. **A run that does not finish is never clean.** A CLI is clean only on exit 0 with non-empty output. A skill or command is clean only when its report says it completed. Silence, errors and truncated output are a failed round.
+  1. **A run that does not finish is never clean.** A CLI is clean only on exit 0 with non-empty stdout. A skill or command is clean only when its report says it completed. Silence, errors and truncated output are a failed round.
   1. A clean result is bound to a content snapshot (unchanged).
 - Workflow:
   - Step 2 (select the reviewer): `--reviewer`, else agent config, else ask once. Record the source.
@@ -29,7 +29,7 @@ Decisions taken during planning:
   - Step 6 (record): mode, coverage, and an edit round's changed paths.
   - Steps 8 and 10: the edit-round rules.
   - Coverage, availability and severity text that points at `backends.md` is rewritten to point at the loop's own references.
-- Example output and error handling move to a generic reviewer (for example `coderabbit review --plain`), with a "reviewer not found" entry.
+- Example output and error handling move to a generic reviewer (for example `coderabbit review --agent --fresh`), with a "reviewer not found" entry.
 
 ### 2. New `references/reviewers.md`, replacing `references/backends.md`
 
@@ -83,7 +83,7 @@ Each is signed, references (#611), and lands at a logical boundary:
 
 ## Related issues, handled at PR time
 
-- **#522:** close as superseded (`--reviewer "coderabbit review --plain"`).
+- **#522:** close as superseded (`--reviewer "coderabbit review --agent --fresh"`).
 - **#538:** close as moot, since there is no Claude backend. The scope concern now lives in the generic coverage check.
 - **#510 and #524:** stay open. Comment on them only if asked.
 
@@ -92,4 +92,4 @@ Each is signed, references (#611), and lands at a logical boundary:
 - `make build`, then `make lint`, `make validate` (catalog description match and cross-references, including no dangling `backends.md` links) and `make test-scrut`. Finish with `make test-all`, and observe the final result.
 - No reference to `backends.md` remains, no loop-level `--effort` option is documented (a reviewer's own `--effort` inside a quoted `--reviewer` value is expected), and no `review-until-clean` source mentions a named reviewer outside examples.
 - The `check-versions` skill confirms the version bumps: review-until-clean 2.0.0, review-pr-with-codex 1.0.1 and review-anti-patterns 1.0.1.
-- Read-through check of the workflow against the three invariants above. In particular, no path turns an empty, error-only or missing reply into `"findings": []`, and an edit round can never be reported clean.
+- Read-through check of the workflow against the four invariants above. In particular, no path turns an empty, error-only or missing reply into `"findings": []`, and an edit round can never be reported clean.
