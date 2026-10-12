@@ -129,7 +129,7 @@ The round is **clean** when all of these hold:
 
 Check the snapshot again here rather than trusting step 5. Anything that touched the tree since, including another session, invalidates the result.
 
-**An edit round is never clean.** It changed the code it reviewed, so its verdict is about code that no longer exists. Record its changes as the round's result. Record any findings it also reported, but never queue them: they name paths and lines in the tree the reviewer read, which its own edits replaced, so handing them to the fixer would apply edits computed for one version of a file to another. Go to step 10, so the next round reviews what the reviewer left; a finding that still holds comes back there with locations that match the code on disk.
+**An edit round is never clean.** It changed the code it reviewed, so its verdict is about code that no longer exists. Record its changes as the round's result. Record any findings it also reported, but never queue them: they name paths and lines in the tree the reviewer read, which its own edits replaced, so handing them to the fixer would apply edits computed for one version of a file to another. Under `--report-only`, go to step 11 with `decisions-needed` now, listing the changed paths, and run no further round: another review could edit again or come back clean, and either would bury the decision about these edits. Otherwise go to step 10, so the next round reviews what the reviewer left; a finding that still holds comes back there with locations that match the code on disk.
 
 **A snapshot that moved after step 5 invalidates the findings, not only a clean result.** The findings name paths and lines in the tree the reviewer read, and that tree is gone. Handing them to the fixer would apply edits computed for one version of a file to a different one, which is how a review turns into damage. So when the snapshot has moved since step 5, discard the round's findings along with any clean verdict, record in the ledger that the round was invalidated and why, and start a new round from step 1 against the current snapshot if one is left in `--max-rounds`. If none is left, including when the invalidated round was the extra confirming round past the cap, go to step 11 with `stopped` and say the tree changed during the round; under `--confirm-clean`, report any clean round it was confirming as unconfirmed. Under `--report-only`, which has no round budget, report that clean round as unconfirmed instead of `stopped`. Do not go to step 9 with findings from a snapshot that no longer exists.
 
@@ -163,7 +163,7 @@ When the round limit is reached after an edit round, stop with `stopped` and say
 
 ### 11. Report
 
-Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
+Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
 
 Print the status line, the ledger path, the reviewer, and the coverage:
 
