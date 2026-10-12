@@ -38,6 +38,38 @@ readonly MAX_PROMPT_BYTES
 EXIT_ASPECT_FAILED=3
 readonly EXIT_ASPECT_FAILED
 
+# The `codex exec` processes `run` has started and not yet waited for. A
+# global rather than a local of cmd_run, because the EXIT trap below runs after
+# cmd_run's locals are gone.
+RUNNING_PIDS=()
+
+# Stops every Codex run still going, with its direct children, and waits for
+# them. Without it, stopping this helper while it waits leaves the runs going on
+# their own, and a simplify run keeps write access and goes on editing after
+# the caller has measured its changes. pkill -P reaches the processes a run has
+# started itself; Codex stops the rest of its tree when it receives TERM.
+function stop_running_codex() {
+  local pid
+
+  for pid in ${RUNNING_PIDS[@]+"${RUNNING_PIDS[@]}"}; do
+    if kill -0 "${pid}" 2> /dev/null; then
+      pkill -TERM -P "${pid}" 2> /dev/null || true
+      kill -TERM "${pid}" 2> /dev/null || true
+    fi
+  done
+  for pid in ${RUNNING_PIDS[@]+"${RUNNING_PIDS[@]}"}; do
+    wait "${pid}" 2> /dev/null || true
+  done
+  RUNNING_PIDS=()
+}
+
+# One EXIT trap covers every way out: a normal return, a `die` partway through
+# `run` after some runs have started, and a fatal signal such as TERM, since
+# Bash runs the EXIT trap before a fatal signal ends the shell. Measured on
+# Bash 5 and on macOS Bash 3.2: TERM sent to the helper stops its runs, and the
+# helper still exits 143.
+trap stop_running_codex EXIT
+
 function usage() {
   cat << 'USAGE_TEXT'
 Usage: codex-aspects schema
@@ -622,7 +654,7 @@ function cmd_run() {
   # prompt, and an agent harness's stdin is a pipe that never closes, so the
   # run would wait forever and never write its output file. --ephemeral keeps
   # each run from persisting a session.
-  local pids=() sandbox index=0
+  local sandbox index=0
   for aspect in "${aspects[@]}"; do
     sandbox="read-only"
     if [[ "${aspect}" == "simplify" ]]; then
@@ -639,7 +671,7 @@ function cmd_run() {
       --output-last-message "${out_physical}/${aspect}.json" \
       "${prompts[${index}]}" \
       < /dev/null > "${out_physical}/${aspect}.log" 2>&1 &
-    pids+=("$!")
+    RUNNING_PIDS+=("$!")
     index=$((index + 1))
   done
 
@@ -649,11 +681,12 @@ function cmd_run() {
   index=0
   for aspect in "${aspects[@]}"; do
     exit_code=0
-    wait "${pids[${index}]}" || exit_code=$?
+    wait "${RUNNING_PIDS[${index}]}" || exit_code=$?
     statuses+=("$(aspect_status "${aspect}" "${out_physical}/${aspect}.json" "${snapshot}" \
       "${exit_code}" "${out_physical}/${aspect}.log")")
     index=$((index + 1))
   done
+  RUNNING_PIDS=()
 
   local combined
   combined="$(printf '%s\n' "${statuses[@]}" | jq -s '.')"
@@ -696,12 +729,13 @@ function cmd_changes() {
   after_tree="$(jq -r '.tree' "${after}")"
 
   # The tree objects are review-scope's content digests of the whole working
-  # tree, so diffing them lists every path whose content changed between the
-  # two reads, whichever bucket it sits in. --no-renames lists a rename as its
-  # deletion and its addition: with rename detection on, git names only the new
-  # path, so moving an out-of-scope file into the scope would hide the removed
-  # source from outside_scope. The output goes to a file first so git's exit
-  # status is checked rather than hidden behind jq's.
+  # tree, so diffing them lists every path whose content, as Git would store it
+  # after normalization, changed between the two reads, whichever bucket it
+  # sits in. --no-renames lists a rename as its deletion and its addition: with
+  # rename detection on, git names only the new path, so moving an out-of-scope
+  # file into the scope would hide the removed source from outside_scope. The
+  # output goes to a file first so git's exit status is checked rather than
+  # hidden behind jq's.
   raw="$(mktemp "${TMPDIR:-/tmp}/codex-aspects.XXXXXX")"
   if ! git diff -z --no-renames --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
     rm -f "${raw}"

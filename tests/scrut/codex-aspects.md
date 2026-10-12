@@ -308,6 +308,46 @@ errors
 tests
 ```
 
+## Stopping the helper stops its Codex runs
+
+A `simplify` run has write access, so a run left going after the helper stops
+could keep editing after its changes were measured. The stub here runs until
+stopped; once the helper receives TERM, the stub must be gone as well.
+
+```scrut
+$ mkdir "${FIXTURE}/pids" "${FIXTURE}/cancel-out" \
+>   && { CODEX_STUB_MODES="simplify=hang" CODEX_STUB_PID_DIR="${FIXTURE}/pids" \
+>        "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/scope.json" \
+>        --out-dir "${FIXTURE}/cancel-out" > /dev/null 2>&1 & } \
+>   && helper=$! \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/pids/simplify.pid" ] && break; sleep 0.1; done \
+>   && stub="$(cat "${FIXTURE}/pids/simplify.pid")" \
+>   && kill -TERM "${helper}" \
+>   && { wait "${helper}"; echo "helper exit=$?"; } \
+>   && if kill -0 "${stub}" 2> /dev/null; then echo "stub still running"; kill "${stub}"; else echo "stub stopped"; fi
+helper exit=143
+stub stopped
+```
+
+## A prompt too large for one argument stops the run before Codex starts
+
+The prompt is passed as one argument, which Linux caps at 128 KiB. Thousands of
+untracked paths can exceed that, and the helper must refuse before any run
+starts rather than fail partway with a raw shell error.
+
+```scrut
+$ jq '.untracked = [range(0; 3000) | "generated/untracked-path-number-\(.)-with-some-padding.txt"]' \
+>      "${FIXTURE}/scope.json" > "${FIXTURE}/large-scope.json" \
+>   && mkdir "${FIXTURE}/large-out" \
+>   && { "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/large-scope.json" \
+>        --out-dir "${FIXTURE}/large-out" > "${FIXTURE}/large.err" 2>&1; echo "exit=$?"; } \
+>   && sed 's/is [0-9]* bytes/is N bytes/' "${FIXTURE}/large.err" \
+>   && ls "${FIXTURE}/large-out"
+exit=1
+codex-aspects: the code prompt is N bytes, above the 120000-byte limit for one argument; narrow the scope
+schema.json
+```
+
 ## Review aspects run read-only, with the model, effort and stdin set per run
 
 The helper is given a pipe on stdin, as an agent harness gives it, and each
@@ -391,6 +431,28 @@ $ printf 'Looks good to me.\n' > "${FIXTURE}/prose.json" \
 >   && jq -r .reason "${FIXTURE}/prose.status"
 exit=3
 the output is not JSON
+```
+
+## Validate accepts each of the three severities
+
+```scrut
+$ for severity in critical important suggestion; do jq --arg severity "${severity}" '.findings[0].severity = $severity' "${FIXTURE}/out/types.json" > "${FIXTURE}/severity.json" && "${CODEX_ASPECTS_BIN}" validate --aspect types --scope "${FIXTURE}/scope.json" "${FIXTURE}/severity.json" | jq -r '"\($severity): \(.status)"' --arg severity "${severity}"; done
+critical: ok
+important: ok
+suggestion: ok
+```
+
+## Validate rejects a severity outside the three
+
+The `simplify` gate looks for `critical` exactly, so a reply saying `Critical`
+must fail rather than slip past it.
+
+```scrut
+$ jq '.findings[0].severity = "Critical"' "${FIXTURE}/out/types.json" > "${FIXTURE}/bad-severity.json" \
+>   && { "${CODEX_ASPECTS_BIN}" validate --aspect types --scope "${FIXTURE}/scope.json" "${FIXTURE}/bad-severity.json" > "${FIXTURE}/bad-severity.status"; echo "exit=$?"; } \
+>   && jq -r .reason "${FIXTURE}/bad-severity.status"
+exit=3
+the output does not match the schema
 ```
 
 ## Validate rejects a finding whose path escapes the repository

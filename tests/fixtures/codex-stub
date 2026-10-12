@@ -18,6 +18,8 @@
 #   multiple        an invalid object followed by a valid output, in one file
 #   barrier         valid output, written only once every run has started
 #   barrier-slow    as barrier, then a further second before writing
+#   hang            write its process ID to <CODEX_STUB_PID_DIR>/<aspect>.pid,
+#                   then run until stopped, writing no output
 #
 # The barrier modes prove the runs are concurrent. Each run marks itself
 # started in CODEX_STUB_BARRIER_DIR and waits, for at most ten seconds, until
@@ -165,6 +167,12 @@ function main() {
         cat "${output}.valid"
       } > "${output}"
       rm -f "${output}.valid"
+      ;;
+    hang)
+      echo "$$" > "${CODEX_STUB_PID_DIR:?CODEX_STUB_PID_DIR is required for hang mode}/${aspect}.pid"
+      while true; do
+        sleep 1
+      done
       ;;
     barrier | barrier-slow)
       wait_for_barrier "${aspect}"
