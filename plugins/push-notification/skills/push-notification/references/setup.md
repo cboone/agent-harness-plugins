@@ -47,7 +47,7 @@ The file must stay readable by its owner alone. The helper refuses to use a file
 
 ## 4. Or use environment variables
 
-Every key is also an environment variable of the same name, and a non-empty one overrides the file. That suits remote and cloud sessions, where the variables can come from the environment's secret settings rather than a file: `NTFY_SERVER`, `NTFY_TOPIC`, `NTFY_TOKEN`, and `PUSH_NOTIFICATION_BACKEND` (only `ntfy` today). An empty variable is ignored, so it cannot clear a value set in the file; remove the line from the file instead. If `PUSH_NOTIFICATION_CONFIG` is set, the file it names must exist.
+Every key is also an environment variable of the same name, and a non-empty one overrides the file. That suits remote and cloud sessions, where the variables can come from the environment's secret settings rather than a file: `NTFY_SERVER`, `NTFY_TOPIC`, `NTFY_TOKEN`, and `PUSH_NOTIFICATION_BACKEND` (only `ntfy` ships). An empty variable is ignored, so it cannot clear a value set in the file; remove the line from the file instead. If `PUSH_NOTIFICATION_CONFIG` is set, the file it names must exist.
 
 ## 5. Confirm
 
