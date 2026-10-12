@@ -234,13 +234,13 @@
         "name": "Christopher Boone"
       },
       "category": "git",
-      "description": "Fetch and merge the base branch into the current feature branch with automatic conflict resolution.",
+      "description": "Merge or rebase the base branch into the current branch, resolve conflicts, and push using the selected workflow.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["branch", "conflicts", "git", "merge"],
       "license": "MIT",
-      "name": "merge-main",
+      "name": "sync-with-main",
       "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./plugins/merge-main"
+      "source": "./plugins/sync-with-main"
     },
     {
       "author": {
@@ -345,19 +345,6 @@
       "name": "push-notification",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./plugins/push-notification"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "git",
-      "description": "Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["branch", "conflicts", "git", "rebase"],
-      "license": "MIT",
-      "name": "rebase-onto-main",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./plugins/rebase-onto-main"
     },
     {
       "author": {

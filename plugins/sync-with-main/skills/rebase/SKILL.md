@@ -1,5 +1,5 @@
 ---
-name: rebase-onto-main
+name: rebase
 description: >-
   Rebase the current branch onto the base branch, resolving conflicts per
   commit, then force-with-lease push. Use for "rebase onto main".

@@ -52,7 +52,7 @@ Six rules that follow from this and are easy to get wrong:
 
 A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to Dependabot, and Dependabot owns its branch. Once anyone else pushes to that branch, Dependabot stops rebasing it, and a later `@dependabot recreate` discards the push. So on a Dependabot PR this skill never pushes, and four steps change:
 
-- **Step 5, syncing the branch**: do not invoke `merge-main`. Ask Dependabot instead, once per head SHA:
+- **Step 5, syncing the branch**: do not invoke `sync-with-main:merge`. Ask Dependabot instead, once per head SHA:
 
   ```bash
   gh pr comment PR_NUMBER --repo OWNER/REPO --body "@dependabot rebase"
@@ -68,7 +68,7 @@ Under `--no-fix`, report the rebase request that would have been posted instead 
 
 ## Skill dependencies
 
-- **Required:** `lint-and-fix`, `merge-main`, `monitor-pr:resolve-copilot-feedback`
+- **Required:** `lint-and-fix`, `sync-with-main:merge`, `monitor-pr:resolve-copilot-feedback`
 - **Optional:** None
 
 ## Workflow
@@ -222,10 +222,10 @@ On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs), and t
 
 ### 5. Sync the Branch
 
-Invoke the `merge-main` skill:
+Invoke the `sync-with-main:merge` skill:
 
 ```text
-merge-main
+sync-with-main:merge
 
 Parent continuation:
 - Caller: monitor-pr
@@ -234,7 +234,7 @@ Parent continuation:
 - On conflicts requiring a decision, or on any question raised: Stop the watch and escalate per Step 9.
 ```
 
-`merge-main` has no parent continuation contract of its own and will ask the user directly about uncommitted changes and non-trivial conflicts. That is acceptable here: a question it raises is exactly the kind of decision this skill is supposed to surface rather than guess at. Treat any such question as an escalation.
+`sync-with-main:merge` has no parent continuation contract of its own and will ask the user directly about uncommitted changes and non-trivial conflicts. That is acceptable here: a question it raises is exactly the kind of decision this skill is supposed to surface rather than guess at. Treat any such question as an escalation.
 
 After a clean merge and push, resume at step 3. The head SHA has moved, so Copilot's prior review is now stale.
 
@@ -577,7 +577,7 @@ The terminal report uses the same table plus the readiness verdict for all four 
 - **`mergeable` is `UNKNOWN`**: GitHub is still computing it. Treat as pending and re-poll. Do not report it as a failure.
 - **`gh pr checks` exits non-zero**: Not an error. It exits non-zero for pending checks as well as failing ones. Classify from the JSON.
 - **No checks configured on the repository**: Not an error. Treat the checks axis as clean and say so explicitly in the report.
-- **`merge-main` stops on conflicts it cannot resolve**: Escalate with the conflicted file list.
+- **`sync-with-main:merge` stops on conflicts it cannot resolve**: Escalate with the conflicted file list.
 - **`monitor-pr:resolve-copilot-feedback` reports `Partial` or `Failed`**: Escalate with its failure details, final summary comment URL if one was posted, and any originating review URLs.
 - **`monitor-pr:resolve-copilot-feedback` reports `Completed` or `No unresolved Copilot feedback` but the next probe still reports open threads**: Escalate per step 9. Open threads should have cleared and did not, so nothing further changes on its own. **A review-body finding is not such a signal.** It stays in the immutable body for the life of the PR, and step 7b's processed-review record is what clears it, so escalating there would stop a PR that is finished. Include the resolver summary and originating review links so the reported disposition is visible beside the immutable finding. Do not invoke the skill again against the same review; step 4's once-per-review `id` guard already prevents it.
 - **Copilot never reviews despite an explicit request**: Escalate. Copilot review may be disabled for the repository, in which case the user must decide whether to proceed without it.
