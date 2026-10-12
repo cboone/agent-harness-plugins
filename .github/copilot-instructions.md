@@ -11,6 +11,7 @@ For full project conventions, see `AGENTS.md` in the repository root.
 - [Shell script review instructions](instructions/shell.instructions.md) cover `**/scripts/**`, `**/bin/**`, and `**/tests/fixtures/**`.
 - [Worktree naming review instructions](instructions/worktree-naming.instructions.md) cover `plugins/create-worktree/**`, `plugins/address-issue-in-worktree/**`, and their corresponding `dist/codex/plugins/` mirrors.
 - [Copilot rounds report review instructions](instructions/copilot-rounds-report.instructions.md) cover `bin/copilot-rounds-report` and its scrut tests and fixture data.
+- [Review anti-patterns review instructions](instructions/review-anti-patterns.instructions.md) cover `plugins/review-anti-patterns/**` and its `dist/codex/plugins/` mirror.
 - [Trim comments review instructions](instructions/trim-comments.instructions.md) cover `plugins/trim-comments/**` and its `dist/codex/plugins/` mirror.
 
 ## PR review

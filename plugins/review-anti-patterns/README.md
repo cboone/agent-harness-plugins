@@ -17,6 +17,8 @@ The checklist has thirteen patterns, and each names the kinds of files it applie
 
 It never edits. Nothing but its instructions enforces that unless you run it somewhere that cannot write, and `--run-checks` lets project code run, which can write; the report says which applied and lists anything a check left behind. It returns JSON whose findings have the same fields as [Review Until Clean](../review-until-clean/README.md)'s, each with the case that goes wrong and the evidence, plus whether the review covered the whole scope and what it left unverified. A plain-text report follows, naming the siblings examined for each finding, so a fix can cover the whole class at once.
 
+It is built for your own changes in your own checkout: it trusts your git and SSH configuration and the repository's own tooling, and does not defend against a deliberately malicious diff. Review a contributor's pull request crafted to attack the reviewer with a sandboxed tool instead.
+
 ## Requirements
 
 - A Git repository with an `origin` remote. The skill finds the default branch from `origin/HEAD`, falling back to the [GitHub CLI](https://cli.github.com/). The GitHub CLI also reads the open pull request's body; without it, the report says the body was not reviewed.
