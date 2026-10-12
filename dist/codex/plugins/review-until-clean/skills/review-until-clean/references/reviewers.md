@@ -69,9 +69,9 @@ Run it from the repository root as one script under `bash -e -o pipefail`, with 
 tmp="$(mktemp -d)"
 reviewer='<the --reviewer value, exactly as given>'
 if bash -e -o pipefail -c "${reviewer}" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"; then
-  status=0
+  reviewer_status=0
 else
-  status=$?
+  reviewer_status=$?
 fi
 ```
 
@@ -80,6 +80,7 @@ Each part is there for a reason:
 - **One `bash -c`, with `pipefail`.** The value may be a pipeline, such as `tool --json | jq -s '…'`. Written out bare, the redirects attach only to its last command: the first one keeps the harness's stdin, its stderr escapes the capture, and the status is the last command's. A reviewer that exits non-zero having printed a finding then comes back as status 0 with `jq`'s empty result, which is a failed review recorded as a clean one. Running the whole value as one script puts every command under the redirects, and `pipefail` makes a failure in any stage the script's status. Pass the value as a single argument, as above, rather than splicing it into the command line.
 - **`-e`.** `pipefail` covers one pipeline at a time, so in `tool | cat; echo done` a later command that succeeds would still set the status to 0. `-e` ends the script at the first command that fails, so that failure is the script's status. It has exceptions, such as a command tested by `if` or joined by `&&` or `||`, so a reviewer value should be the reviewer command itself, optionally piped into its output processing, and not a script that wraps it in further logic.
 - **The `if` around it.** It records the status even when the caller runs under `set -e`, which would otherwise end the caller before the diagnostics were captured.
+- **`reviewer_status`, not `status`.** The lines around `bash -c` run in the caller's shell, which is often zsh, and zsh reserves `status` as a read-only alias for `$?`. Assigning it fails with `read-only variable: status` whatever the reviewer returned, so the exit status is lost.
 - **`< /dev/null`.** Many CLIs read stdin when it is not a terminal. An agent harness's stdin is a pipe that never reaches end of file, so without the redirect such a CLI waits forever and the round produces nothing at all.
 - **Files outside the working tree.** The snapshot covers every non-ignored path in the tree, so an output file written into the repository is itself a change. It would move the snapshot, turn every round into an edit round, and hand the next round the reviewer's own output as new code. `./ledger.md` gives the same rule for the ledger.
 - **The exit status, kept.** It is one of the two completion signals, so record it before anything else runs.

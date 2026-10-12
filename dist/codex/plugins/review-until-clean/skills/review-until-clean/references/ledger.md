@@ -14,6 +14,8 @@ That is not tidiness. The snapshot covers every non-ignored path in the tree, so
 
 The final location is `docs/reviews/<date>-<branch>-until-clean.md`, with the branch name sanitized the way `review-branch` sanitizes it: `/`, spaces, colons and backslashes become `-`, repeated hyphens collapse, leading and trailing hyphens are trimmed, an empty result becomes `branch`, and a detached head becomes `HEAD`.
 
+When that file already exists, from an earlier run on the same branch and day, add the first free numeric suffix instead, as in `<date>-<branch>-until-clean-2.md`, and name the earlier ledger in the new one's header. Never overwrite or append to it: each ledger records one run, and the earlier one may already be committed.
+
 The `-until-clean` suffix keeps the file clear of `review-branch`, which writes `<date>-<branch>.md` and overwrites it. Two skills silently overwriting each other's reviews would lose work.
 
 Under `--no-save`, the ledger stays at its temporary path and that path is reported. It is still written either way, because `address-review` needs a file to read. Whether a saved ledger is committed follows the repository's own convention; this skill does not commit it and never pushes.
