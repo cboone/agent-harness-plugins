@@ -2,7 +2,7 @@
 name: review-config
 description: >-
   Review dependabot.yml and Dependabot settings, then apply selected fixes. Use
-  for "review dependabot config"; for PRs, use triage-dependabot-prs.
+  for "review dependabot config"; for PRs, use dependabot:triage-prs.
 argument-hint: "[--repo OWNER/REPO] [--report-only]"
 ---
 
@@ -159,7 +159,7 @@ Use `AskUserQuestion` where it exists. Without it (Codex CLI), print the options
    lint-and-fix --no-commit
 
    Parent continuation:
-   - Caller: review-dependabot-config
+   - Caller: dependabot:review-config
    - Resume target: Step 7, summarize.
    - On lint success: Continue immediately to the summary without asking the user for confirmation.
    - On lint failure or skipped required lint work: Continue to the summary, and report the unresolved lint state under Follow-up.

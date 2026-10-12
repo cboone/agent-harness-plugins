@@ -3,7 +3,7 @@ name: triage-prs
 description: >-
   Sort open Dependabot PRs by merge safety, then merge, rebase, or close them as
   approved. Use for "triage dependabot PRs" or "are these Dependabot PRs safe to
-  merge"; for config, use review-dependabot-config.
+  merge"; for config, use dependabot:review-config.
 argument-hint: "[pr-number...] [--repo OWNER/REPO] [--verify] [--report-only]"
 ---
 
@@ -48,7 +48,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/dependabot-prs" fetch --repo OWNER/REPO
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
-**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/triage-dependabot-prs/**/scripts/dependabot-prs`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
+**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/dependabot/**/scripts/dependabot-prs`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
 
 The examples below abbreviate the path to `dependabot-prs`. Expand it when you run a command.
 
@@ -217,10 +217,10 @@ Carry out the selected actions per `./references/actions.md`:
 - For a single PR the user wants watched until it is ready to merge, invoke the `monitor-pr:monitor` skill. If it is not installed, report the watch as skipped with its installation command, and continue with the next selected action:
 
   ```text
-  monitor-pr <number>
+  monitor-pr:monitor <number>
 
   Parent continuation:
-  - Caller: triage-dependabot-prs
+  - Caller: dependabot:triage-prs
   - Resume target: Step 7, the next selected action.
   - On a ready PR: Continue with the remaining selected actions without asking again.
   - On escalation: Stop and report the escalation alongside the remaining selected actions.

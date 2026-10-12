@@ -419,18 +419,6 @@ manage-resource-claims: cannot list worktrees; run prune inside a git repository
 [1]
 ```
 
-## The create-worktree copy is wired and runnable
-
-`bin/validate-plugins` rule 18 requires each plugin to ship its own copy, and `tests/scrut/repo-tooling.md` keeps the two byte-identical. This confirms the second copy is reachable through its own variable.
-
-```scrut
-$ setup_claims \
->   && env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/wt-live --branch feature/live \
->   && claims_list
-claimed "logic" for feature/live
-resource=logic state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live (glob)
-```
-
 ## Help is available before jq is required
 
 `--help` has to work on a machine that has not installed jq yet, which is exactly when someone reads it.

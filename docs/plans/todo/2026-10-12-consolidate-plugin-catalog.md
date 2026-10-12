@@ -8,7 +8,7 @@ The catalog has 70 plugins on `main` at `b89fff26`. Several pairs ship byte-iden
 
 Decisions taken during planning:
 
-- Merged skills are renamed to short names inside their plugin namespace. The bare short form of every old name stops working, so every caller is updated and the README carries a mapping.
+- Merged skills use short names inside their plugin namespace. Every caller uses the qualified name and the README carries a mapping. Claude Code still resolves the retained bare names `create-worktree` and `create-issue` to their new plugins, as the scratch-session check confirms; the migration does not promise their rejection.
 - Plugins that drive workmux become one `workmux` plugin. A plugin that dealt with git worktrees alone would take a worktree name; these two depend on workmux throughout. The upstream workmux marketplace is also named `workmux` and ships one plugin, `workmux-status`; marketplaces scope plugin names, so the names do not collide, though an upstream plugin named `workmux` would share the `workmux:` skill prefix.
 - `address-issue` stays standalone. It runs on the current branch without workmux, and ships no scripts, so merging it removes no copies. The launched worktree sessions keep calling `/address-issue`, which is why the issue-launching skill is named `start-issue` rather than `address-issue`.
 - `review-until-clean` and `review-pr-with-codex` stay separate while both are under active development, keeping their hand-maintained `review-scope` copies, the drift testcase, and the paragraph in `docs/plugin-development.md` that describes them.

@@ -4,7 +4,7 @@ A foreground checkpoint ends an invocation while preserving the watch. Resumptio
 
 ## Checkpoint Fields
 
-Print a labelled `monitor-pr checkpoint` block with every field below, including explicit empty values for guards that have not been set. Store only watch metadata, never credentials or environment variable values.
+Print a labelled `monitor-pr:monitor checkpoint` block with every field below, including explicit empty values for guards that have not been set. Store only watch metadata, never credentials or environment variable values.
 
 | Field              | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

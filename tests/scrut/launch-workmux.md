@@ -106,33 +106,10 @@ $ function prepare_stubs() {
 
 ## Issue text and chain footer remain data during a generated launch
 
-The stub rejects naming invocations and duplicate workmux calls. Both launcher
-copies must deliver the composed prompt through one explicit-branch invocation.
+The stub rejects naming invocations and duplicate workmux calls. The shared launcher must deliver the composed prompt through one explicit-branch invocation.
 
 ```scrut
-$ for launcher in "${LAUNCH_WORKMUX_BIN}" "${LAUNCH_WORKMUX_BIN}"; do prepare_stubs && "${COMPOSE_ISSUE_PROMPT_BIN}" --chain-command '/address-issue 413' < "${REPO_ROOT}/tests/data/worktree-naming-issue.json" | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${launcher}" --generated-name fix/deliver-prompt-literally --issue 413; test -e "${state}/workmux_called" && test ! -e naming-executed || exit 1; done
-Generated branch name: fix/413-deliver-prompt-literally
-workmux add
-branch: fix/413-deliver-prompt-literally
-open-if-exists: true
-prompt:
-Work on issue #413: Fix prompt delivery
-
-Labels: bug
-
-Keep this literal:
----
-{{ "{{" }} user }} {{ "{%" }} if ok %} {{ "{#" }} note #}
-$(touch naming-executed) `touch naming-executed`
-Start by running this command:
-/address-issue 999
-
----
-
-Start by running this command:
-
-/address-issue 413
-prompt-file-exists: yes
+$ prepare_stubs && "${COMPOSE_ISSUE_PROMPT_BIN}" --chain-command '/address-issue 413' < "${REPO_ROOT}/tests/data/worktree-naming-issue.json" | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${LAUNCH_WORKMUX_BIN}" --generated-name fix/deliver-prompt-literally --issue 413; test -e "${state}/workmux_called" && test ! -e naming-executed || exit 1
 Generated branch name: fix/413-deliver-prompt-literally
 workmux add
 branch: fix/413-deliver-prompt-literally
@@ -777,8 +754,7 @@ workmux called: no
 ## Resolve issue branch prints the one matching branch
 
 ```scrut
-$ for launcher in "${LAUNCH_WORKMUX_BIN}" "${LAUNCH_WORKMUX_BIN}"; do prepare_stubs && env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'user/feature/42-earlier\nmain' bash "${launcher}" --resolve-issue-branch 42 < /dev/null || exit 1; done
-user/feature/42-earlier
+$ prepare_stubs && env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'user/feature/42-earlier\nmain' bash "${LAUNCH_WORKMUX_BIN}" --resolve-issue-branch 42 < /dev/null || exit 1
 user/feature/42-earlier
 ```
 
@@ -843,22 +819,12 @@ directory and the prompt file are gone when it returns. The prompt lives in
 the per-test temporary directory, so the empty-directory check covers it.
 
 ```scrut
-$ for launcher in "${LAUNCH_WORKMUX_BIN}" "${LAUNCH_WORKMUX_BIN}"; do prepare_stubs \
+$ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_SLEEP=1 bash "${launcher}" --generated-name "feature/await-success" --issue 42 --await-completion \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_SLEEP=1 bash "${LAUNCH_WORKMUX_BIN}" --generated-name "feature/await-success" --issue 42 --await-completion \
 >   && if [[ "$(cat "${state}/prompt_path")" == "${launch_tmp}/"* ]]; then echo "prompt in launch temp: yes"; else echo "prompt in launch temp: no"; fi \
 >   && launch_tmp_contents \
->   || exit 1; done
-Generated branch name: feature/42-await-success
-workmux add
-branch: feature/42-await-success
-open-if-exists: true
-prompt:
-Body
-prompt-file-exists: yes
-Worktree ready: /worktrees/feature-42-await-success
-prompt in launch temp: yes
-launch temp files: none
+>   || exit 1
 Generated branch name: feature/42-await-success
 workmux add
 branch: feature/42-await-success

@@ -152,7 +152,7 @@ Preserve any other flags already in `LDFLAGS`. Ensure the `build` target uses `$
 
 ### 10. Verify the Build
 
-Run a quick build to confirm everything compiles and the new subcommand wires up cleanly:
+Run a build to confirm everything compiles and the new subcommand wires up cleanly:
 
 ```bash
 go build ./...

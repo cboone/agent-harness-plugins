@@ -5,6 +5,7 @@ A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthro
 ## Contents
 
 - [Install](#install): [Claude Code](#claude-code), [Codex CLI](#codex-cli), [OpenCode](#opencode)
+- [Moved and removed plugins](#moved-and-removed-plugins)
 - [Skills](#skills): [Git](#git), [Issues and Worktrees](#issues-and-worktrees), [Code Review](#code-review), [Code Quality](#code-quality), [Writing](#writing), [Scaffolding](#scaffolding), [CI and Release](#ci-and-release), [Agents](#agents)
 - [Hooks](#hooks)
 - [Using with Codex CLI](#using-with-codex-cli)
@@ -37,6 +38,38 @@ See [Using with Codex CLI](#using-with-codex-cli) below for selective installati
 
 OpenCode is no longer supported. The last `dist/opencode/` mirror is available at commit [`41605e95`](https://github.com/cboone/agent-harness-plugins/tree/41605e95bd814e354799722eae2fc9c8d50e2796/dist/opencode).
 
+## Moved and removed plugins
+
+The catalog consolidates related workflows into plugins with several skills and folds focused workflows into their existing hosts. Reinstall the destination plugin and update saved invocations using this mapping. The old plugin registrations are removed. Use qualified invocations to identify both the plugin and skill; Claude Code still resolves the retained bare names `create-worktree` and `create-issue` to their new plugins.
+
+| Former plugin or skill        | Install plugin      | Invocation or workflow                 |
+| ----------------------------- | ------------------- | -------------------------------------- |
+| `create-worktree`             | `workmux`           | `/workmux:create-worktree`             |
+| `address-issue-in-worktree`   | `workmux`           | `/workmux:start-issue`                 |
+| `monitor-pr`                  | `monitor-pr`        | `/monitor-pr:monitor`                  |
+| `resolve-copilot-pr-feedback` | `monitor-pr`        | `/monitor-pr:resolve-copilot-feedback` |
+| `merge-main`                  | `sync-with-main`    | `/sync-with-main:merge`                |
+| `rebase-onto-main`            | `sync-with-main`    | `/sync-with-main:rebase`               |
+| `review-dependabot-config`    | `dependabot`        | `/dependabot:review-config`            |
+| `triage-dependabot-prs`       | `dependabot`        | `/dependabot:triage-prs`               |
+| `create-issue`                | `use-git`           | `/use-git:create-issue`                |
+| `add-goreleaser-homebrew`     | `set-up-installers` | GoReleaser mode                        |
+| `write-homebrew-formula`      | `set-up-installers` | Homebrew formula mode                  |
+| `add-cobra-version`           | `scaffold-go-cli`   | Existing CLI version mode              |
+| `check-zsh-scripts`           | `write-zsh-scripts` | Lint workflow                          |
+| `write-lean-tests`            | `write-lean-code`   | Mirrored test-library reference        |
+| `optimize-runner-usage`       | `set-up-ci`         | Runner-usage mode                      |
+| `add-community-files`         | `scaffold-new-repo` | Community-files mode                   |
+
+Install the destination using `/plugin install PLUGIN@agent-harness-plugins` in Claude Code or `codex plugin add PLUGIN@agent-harness-plugins` in Codex CLI, replacing `PLUGIN` with the table's Install plugin value. For example:
+
+```text
+/plugin install workmux@agent-harness-plugins
+codex plugin add workmux@agent-harness-plugins
+```
+
+Folded workflows retain requests such as "add a version command", "add community files", "reduce CI costs" and "write a Homebrew formula". They run only the selected mode when updating an existing project. See each destination's README for usage and requirements.
+
 ## Skills
 
 Each skill links to its own README. The `Trigger` column shows the slash command. Some style-guide skills also activate automatically when you touch their target file types; see the per-plugin README for activation rules.
@@ -54,25 +87,24 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 **External tools:**
 
-- _PR:_ [`gh`](https://cli.github.com/)
-- _Merge Main, Rebase Onto Main, Review Branch:_ [`gh`](https://cli.github.com/) for default-branch detection; each falls back to a local git query if unavailable
+- _PR, Use Git:_ [`gh`](https://cli.github.com/)
+- _Sync With Main, Review Branch:_ [`gh`](https://cli.github.com/) for default-branch detection; each falls back to a local git query if unavailable
 - _Release:_ [`jq`](https://jqlang.org/) for marketplace catalog releases; [`gh`](https://cli.github.com/) optional for GitHub Release creation
 
 ### Issues and Worktrees
 
-| Plugin                                                               | Trigger                                            | What it does                                                                                                                                               |
-| -------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Address Issue](./plugins/address-issue/README.md)                   | `/address-issue <issue>`                           | Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.                                             |
-| [Workmux](./plugins/workmux/README.md)                               | `/workmux:create-worktree`, `/workmux:start-issue` | Create worktrees, branches and tmux windows with workmux, or launch issue planning in a new session.                                                       |
-| [Create Deferred Issues](./plugins/create-deferred-issues/README.md) | `/create-deferred-issues`                          | Scan the session, branch, and pull request for concerns set aside as out of scope, propose them as one batch, and file the approved ones as GitHub issues. |
-| [Suggest Next Issue](./plugins/suggest-next-issue/README.md)         | `/suggest-next-issue`                              | Recommend the next open GitHub issue in a focused terminal answer, with reasoning, progress signals and resource constraints.                              |
-| [WTAF](./plugins/wtaf/README.md)                                     | `/wtaf`                                            | Summarize where the conversation, branch, and tasks stand and what comes next, with a thorough mode that also reads the history.                           |
+| Plugin                                                               | Trigger                                                                           | What it does                                                                                                                                               |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Address Issue](./plugins/address-issue/README.md)                   | `/address-issue <issue>`                                                          | Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.                                             |
+| [Workmux](./plugins/workmux/README.md)                               | `/workmux:create-worktree <issue-or-description>`, `/workmux:start-issue <issue>` | Create worktrees, branches and tmux windows with workmux, or launch issue planning in a new session.                                                       |
+| [Create Deferred Issues](./plugins/create-deferred-issues/README.md) | `/create-deferred-issues`                                                         | Scan the session, branch, and pull request for concerns set aside as out of scope, propose them as one batch, and file the approved ones as GitHub issues. |
+| [Suggest Next Issue](./plugins/suggest-next-issue/README.md)         | `/suggest-next-issue`                                                             | Recommend the next open GitHub issue in a focused terminal answer, with reasoning, progress signals and resource constraints.                              |
+| [WTAF](./plugins/wtaf/README.md)                                     | `/wtaf`                                                                           | Summarize where the conversation, branch, and tasks stand and what comes next, with a thorough mode that also reads the history.                           |
 
 **External tools:**
 
-- _Address Issue, Create Deferred Issues, Create Issue, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
-- _Address Issue in Worktree:_ [`gh`](https://cli.github.com/), [`workmux`](https://github.com/raine/workmux), [`jq`](https://jqlang.org/)
-- _Create Worktree:_ [`workmux`](https://github.com/raine/workmux), plus [`gh`](https://cli.github.com/) when given an issue number and [`jq`](https://jqlang.org/) for an issue number or a resource claim
+- _Address Issue, Create Deferred Issues, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
+- _Workmux:_ [`workmux`](https://github.com/raine/workmux), plus [`gh`](https://cli.github.com/) when given an issue number and [`jq`](https://jqlang.org/) for an issue number or a resource claim
 - _WTAF:_ optional [`gh`](https://cli.github.com/) for pull request, issue, and CI state; without it, the summary uses the conversation and local git alone
 
 ### Code Review
@@ -173,13 +205,12 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 **External tools:**
 
-- _Add GoReleaser Homebrew:_ [`gh`](https://cli.github.com/) and [`goreleaser`](https://goreleaser.com/)
 - _Monitor PR:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (both required; the skill reads check, review, and merge state over the GitHub API and pipes paginated review JSON through `jq`)
 - _Pin Everything:_ [`gh`](https://cli.github.com/), [`jq`](https://jqlang.org/); optional [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn or pnpm) and [`reuse`](https://reuse.software/) (only in REUSE-licensed repos)
-- _Review Dependabot Config:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (reads repository settings, labels, alerts, and Dependabot secrets); optional [`uv`](https://docs.astral.sh/uv/) for schema validation with `check-jsonschema`
+- _Dependabot configuration:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (reads repository settings, labels, alerts, and Dependabot secrets); optional [`uv`](https://docs.astral.sh/uv/) for schema validation with `check-jsonschema`
 - _Set-Up Installers:_ [`gh`](https://cli.github.com/) to detect the repository owner and probe for a `homebrew-tap` repo
-- _Triage Dependabot PRs:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (both required; the bundled script reads PRs, comparisons, and alerts over the GitHub API and summarizes them with `jq`)
-- _Write Homebrew Formula:_ [Homebrew](https://brew.sh/) for formula audit, style, install, and test validation
+- _Dependabot PR triage:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (both required; the bundled script reads PRs, comparisons, and alerts over the GitHub API and summarizes them with `jq`)
+- _Set-Up Installers:_ authenticated [`gh`](https://cli.github.com/) for GoReleaser publishing; optional [`goreleaser`](https://goreleaser.com/) for configuration checks; [Homebrew](https://brew.sh/) for formula validation
 
 ### Agents
 

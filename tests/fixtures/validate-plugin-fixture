@@ -247,7 +247,7 @@ function main() {
     block-scalar-argument-hint)
       perl -pi -e 's/^argument-hint: .*$/argument-hint: >-\n  [--dry-run]/' "${FIXTURE_ROOT}/${RELEASE_SKILL}"
       ;;
-    # create-issue takes no options, so a heading inside an example fence must
+    # use-git:create-issue takes no options, so a heading inside an example fence must
     # not demand a hint of it.
     fenced-options-heading)
       printf '%s\n' '' '```markdown' '## Options' '```' >> "${FIXTURE_ROOT}/plugins/use-git/skills/create-issue/SKILL.md"

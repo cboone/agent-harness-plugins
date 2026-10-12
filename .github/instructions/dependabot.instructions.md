@@ -1,5 +1,5 @@
 ---
-applyTo: "plugins/pin-everything/skills/pin-everything/references/dependabot.md,tests/fixtures/gh-stub,plugins/dependabot/**,plugins/dependabot/**,plugins/monitor-pr/**,plugins/upgrade-everything/**,tests/scrut/dependabot-prs.md,tests/data/dependabot-prs/**"
+applyTo: "plugins/pin-everything/skills/pin-everything/references/dependabot.md,tests/fixtures/gh-stub,plugins/dependabot/**,plugins/monitor-pr/**,plugins/upgrade-everything/**,tests/scrut/dependabot-prs.md,tests/data/dependabot-prs/**"
 ---
 
 # Dependabot Facts for Review

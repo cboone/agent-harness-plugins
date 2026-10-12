@@ -1,5 +1,5 @@
 ---
-applyTo: "plugins/workmux/**,plugins/workmux/**,dist/codex/plugins/workmux/**,dist/codex/plugins/workmux/**"
+applyTo: "plugins/workmux/**,dist/codex/plugins/workmux/**"
 ---
 
 # Worktree naming review instructions

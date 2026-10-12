@@ -99,13 +99,3 @@ compose-issue-prompt: --chain-command requires a command
 $ jq -n '{number: 7, title: "Update README", state: "OPEN"}' | "${COMPOSE_ISSUE_PROMPT_BIN}" --nope 2>&1 | tail -n 1
 compose-issue-prompt: unexpected argument: --nope
 ```
-
-## The create-worktree copy omits the footer by default
-
-`workmux:create-worktree` ships the same script but never passes `--chain-command`,
-because it creates the worktree and stops.
-
-```scrut
-$ jq -n '{number: 42, title: "Fix login crash", state: "OPEN"}' | "${COMPOSE_ISSUE_PROMPT_BIN}"
-Work on issue #42: Fix login crash
-```
