@@ -96,18 +96,18 @@ Run `review-scope` again into `<tmp>/scope-after.json` with the same `--base`, t
 
 If `changed` is not empty, something wrote to the tree during a read-only review. Report the paths and treat every finding as unreliable, since the reviewers may have read different versions of those files. Do not run `simplify`, and do not revert the changes yourself: they may be the user's own edits made in the meantime.
 
-An empty `changed` means no tracked file, and no untracked file outside the ignore rules, differs between the two scans. It does not prove nothing was written: a change only to the index, a write to an ignored, untracked file, an edit reverted before the second scan, or an edit that Git normalization maps back to the same content leaves no trace in the comparison. Report the check as "no lasting changes found", never as "nothing was written".
+An empty `changed` does not prove nothing was written: the comparison has blind spots, listed in [Checking the tree](./references/invocation.md#checking-the-tree). Report the check as "no lasting changes found", never as "nothing was written".
 
 ### 6. Decide on `simplify`
 
 Run `simplify` only when it was selected, every review aspect succeeded, no review aspect reported a `critical` finding, and step 5 found no changes. Otherwise record it as skipped with the reason.
 
-When it runs, take the scope again, then run it alone:
+When it runs, run it alone, with `<tmp>/scope-after.json` from step 5 as its scope, since nothing has changed the tree since. If something could have, such as a pause for the user, run `review-scope` into `<tmp>/scope-after.json` again first.
 
-- **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-simplify.json --out-dir <tmp>/out [--model] [--effort]`, which uses `--sandbox workspace-write`.
+- **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-after.json --out-dir <tmp>/out [--model] [--effort]`, which uses `--sandbox workspace-write`.
 - **Subagent path:** one subagent with the rendered `simplify` task, then `validate` its reply.
 
-Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-simplify.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, with `git diff <before_tree> <after_tree>` for the content, and call out any path in `outside_scope`, which `simplify` was told not to touch. The measured diff is the record of what changed, not `simplify`'s own account. If `simplify` failed, report it as failed and still report whatever `changes` shows.
+Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-after.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, with `git diff <before_tree> <after_tree>` for the content, and call out any path in `outside_scope`, which `simplify` was told not to touch. The measured diff is the record of what changed, not `simplify`'s own account. If `simplify` failed, report it as failed and still report whatever `changes` shows.
 
 ### 7. Report
 
