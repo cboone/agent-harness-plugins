@@ -57,6 +57,6 @@ This skill runs GitHub CLI commands that trigger permission prompts. To allow th
 ## See Also
 
 - [Create Issue](../create-issue/README.md): create new GitHub issues
-- [Address Issue in Worktree](../address-issue-in-worktree/README.md): run this skill in a new worktree instead of the current branch
+- [Address Issue in Worktree](../workmux/README.md): run this skill in a new worktree instead of the current branch
 - [Suggest Next Issue](../suggest-next-issue/README.md): find which issue to work on next
 - [All plugins](../../../../README.md)

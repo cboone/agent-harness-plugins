@@ -1,25 +1,33 @@
-# Create Worktree
+# Workmux
+
+Create worktrees, branches and tmux windows with workmux, or launch issue planning in a new session.
+
+**Type:** Skills
+
+See the [installation instructions](../../../../README.md#install).
+
+## workmux:create-worktree
 
 Create a git worktree, branch, and tmux window from an issue number or a task description, with a prompt injected using workmux.
 
 **Type:** Skill
-**Trigger:** `/create-worktree <issue-or-description>`
+**Trigger:** `/workmux:create-worktree <issue-or-description>`
 
-## Requirements
+### Requirements
 
 - [`workmux`](https://github.com/raine/workmux), whenever a worktree is created. `--list-resources` and `--release-resource` only need `jq`.
 - [`gh`](https://cli.github.com/), authenticated, only when you pass an issue number.
 - [`jq`](https://jqlang.org/), when you pass an issue number or use any of the resource options. The bundled `compose-issue-prompt` script parses the issue JSON with it, and `manage-resource-claims` reads and writes the claim file with it. Both exit if it is missing. A task description or an explicit branch name with no resource needs neither `gh` nor `jq`.
 
-### Choosing the type prefix
+#### Choosing the type prefix
 
 The invoking agent generates a semantic name using the skill's bundled rules: lowercase kebab-case, an imperative verb and noun, and `fix/`, `feature/`, `chore/`, or `docs/` according to the work. The descriptive slug targets at most five words and 50 characters. Repository-specific naming conventions take precedence. Naming runs in the current session before the destination prompt is composed, without a separate naming command or workmux naming configuration.
 
-## Installation
+### Installation
 
 See the [marketplace install instructions](../../../../README.md#install).
 
-## What It Does
+### What It Does
 
 Takes an issue number, a task description, or an explicit branch name.
 
@@ -29,15 +37,15 @@ The invoking agent reads the issue title, labels, and body or task description a
 
 Rerunning for the same issue reuses a local branch that already carries that number, so the same worktree reopens rather than a second one appearing under a differently worded name.
 
-Either way, it creates the worktree via `workmux add` and stops. It does not start the work. To have the new session also plan the issue, use [Address Issue in Worktree](../address-issue-in-worktree/README.md).
+Either way, it creates the worktree via `workmux add` and stops. It does not start the work. To have the new session also plan the issue, use [Address Issue in Worktree](../workmux/README.md).
 
-### Several issues
+#### Several issues
 
 Two or more issue numbers, such as `42 57` or `#42, #57`, are read as a list of issues rather than a task description; `--no-issue` still forces the description path. By default they produce **one** worktree for the combined work. Closed issues you decline are dropped first; the first remaining issue supplies the branch number, and the prompt carries every remaining issue.
 
 With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch and tmux window. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and the run ends with one table covering every issue. Nothing is marked in progress in either mode. With one distinct issue, the flag has no effect and `--resource` and `--branch` work as usual. With several distinct issues, those two options are rejected. `--no-issue` cannot accompany a fan-out flag because it forces the description path.
 
-### Exclusive resources
+#### Exclusive resources
 
 Some work cannot run in parallel across worktrees because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `--resource <name>` records which worktree holds one, so the constraint is written down instead of remembered.
 
@@ -53,19 +61,19 @@ A worktree is identified by its git admin directory, which is what lets a claim 
 
 Where a project declares its resources under an "exclusive resources" heading in `AGENTS.md`, `CLAUDE.md`, or a plan, the skill reads that list and matches a loose phrase against it, so "the DAW" resolves to `logic` without retyping. The name is a free string with no registry, so an undeclared one still works.
 
-## Usage
+### Usage
 
 ```text
-/create-worktree 42
-/create-worktree add dark mode support
-/create-worktree fix/my-branch-name
-/create-worktree 42 --base develop
-/create-worktree 42 --resource logic
-/create-worktree --list-resources
-/create-worktree --release-resource logic
-/create-worktree 42 57
-/create-worktree 42 57 --fan-out
-/create-worktree 42 --separate --branch feature/my-branch-name
+/workmux:create-worktree 42
+/workmux:create-worktree add dark mode support
+/workmux:create-worktree fix/my-branch-name
+/workmux:create-worktree 42 --base develop
+/workmux:create-worktree 42 --resource logic
+/workmux:create-worktree --list-resources
+/workmux:create-worktree --release-resource logic
+/workmux:create-worktree 42 57
+/workmux:create-worktree 42 57 --fan-out
+/workmux:create-worktree 42 --separate --branch feature/my-branch-name
 ```
 
 | Option                      | Description                                                                               |
@@ -79,7 +87,7 @@ Where a project declares its resources under an "exclusive resources" heading in
 | `--branch <name>`           | Use this exact branch name and skip generation                                            |
 | `--list-resources`          | Report every claim and stop, creating nothing                                             |
 
-## Recommended Permissions
+### Recommended Permissions
 
 This skill runs workmux, git, and (for the issue path) GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
@@ -93,7 +101,7 @@ This skill runs workmux, git, and (for the issue path) GitHub CLI commands that 
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-## Examples
+### Examples
 
 - "create worktree for issue 42": generates a name for the issue, inserts `42`, and injects the issue context
 - "create worktree for adding dark mode": generates a name such as `feature/add-dark-mode`
@@ -105,8 +113,90 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - "create a worktree for issues 42 and 57": creates one worktree for the combined work, numbered for issue 42
 - "create worktrees for 42 and 57, one each": creates two worktrees with `--fan-out`
 
-## See Also
+### See Also
 
-- [Address Issue in Worktree](../address-issue-in-worktree/README.md): the same worktree setup, plus the new session plans the issue and stops for approval
+- [Address Issue in Worktree](../workmux/README.md): the same worktree setup, plus the new session plans the issue and stops for approval
 - [Address Issue](../address-issue/README.md): plan and address an issue in the current branch
+- [All plugins](../../../../README.md)
+
+## workmux:start-issue
+
+Create a worktree, branch, and tmux window for a GitHub issue, then have the new session run address-issue to plan the work and stop for approval.
+
+**Type:** Skill
+**Trigger:** `/workmux:start-issue <issue>`
+**Requires:** [`gh`](https://cli.github.com/), [`workmux`](https://github.com/raine/workmux), [`jq`](https://jqlang.org/)
+
+### Installation
+
+See the [marketplace install instructions](../../../../README.md#install).
+
+### What It Does
+
+Finds a GitHub issue by number or fuzzy text search, self-assigns the issue, labels it "in progress", and creates a worktree via `workmux add` with the full issue context injected as a prompt. The injected prompt ends with an instruction telling the new session to run `/address-issue <number>` first, so the work begins with a plan that stops for your approval.
+
+The invoking agent generates a semantic branch name from the issue title, labels, and body, treating them as task data before composing the destination prompt and chain footer. The launcher receives the candidate, validates it, and inserts the issue number: `feature/add-dark-mode` for issue 42 becomes `feature/42-add-dark-mode`. Rerunning an issue reuses its matching local branch. Workmux receives an explicit branch and starts the configured destination agent.
+
+Naming runs in the current session using bundled rules: lowercase kebab-case, an imperative verb and noun, and a `fix/`, `feature/`, `chore/`, or `docs/` prefix. The descriptive slug targets at most five words and 50 characters. Repository-specific naming conventions take precedence. No separate naming command or workmux naming configuration is needed. Explicit user-supplied names bypass generation. See [Create Worktree](../workmux/README.md#choosing-the-type-prefix).
+
+The approval gate itself lives in [Address Issue](../address-issue/README.md). This skill creates the worktree and stops; the plan is produced and approved in the new session.
+
+The "in progress" label is retained until the related PR is merged or the user explicitly abandons the effort.
+
+### Usage
+
+```text
+/workmux:start-issue 42
+/workmux:start-issue the dark mode issue
+/workmux:start-issue 42 --no-approval
+/workmux:start-issue 42 --resource logic
+/workmux:start-issue 42 --each --resource logic
+/workmux:start-issue 42 57
+/workmux:start-issue 42 57 61 --fan-out
+```
+
+Provide an issue number, several issue numbers, or descriptive text to search for.
+
+| Option              | Description                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `--no-approval`     | Pass `--no-approval` through, so the new session plans and executes without stopping    |
+| `--resource <name>` | Claim a named exclusive resource, reporting the holder first if one holds it already    |
+| `--fan-out`         | With several issues, open one worktree per issue; `--each` and `--separate` are aliases |
+
+#### Several issues
+
+By default, several issue numbers open **one** worktree for the combined work. Closed issues you decline are dropped first. The first remaining issue supplies the branch number, the prompt carries every remaining issue, every open one is marked in progress, and the new session runs `/address-issue 42 57` to plan them together under one approval.
+
+With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch, tmux window and session, running `/address-issue N` for that issue. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and each issue is marked in progress only after its worktree exists. The run ends with one table covering every issue. With one distinct issue, the flag has no effect and `--resource` works as usual. With several distinct issues, `--resource` is rejected because one exclusive resource cannot be held by several worktrees.
+
+`--resource` records which worktree holds a resource that only one worktree can use at a time: a DAW, a simulator, a device, a database, a port, a shared install location. The check runs before the issue is self-assigned and labeled, so declining a held resource leaves nothing behind on an issue nobody started. See [Create Worktree](../workmux/README.md) for how claims are stored, when they go stale, and how to list or release them.
+
+### Recommended Permissions
+
+This skill runs GitHub CLI, workmux, and git commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh issue edit *)", "Bash(gh label create *)", "Bash(gh repo view *)", "Bash(bash \"*/compose-issue-prompt\")", "Bash(bash \"*/compose-issue-prompt\" *)", "Bash(bash \"*/launch-workmux\" *)", "Bash(bash \"*/manage-resource-claims\" *)", "Bash(git remote show origin*)", "Bash(git worktree list*)", "Bash(workmux list *)", "Bash(mktemp *)", "Bash(rm -f *issue-json-*)", "Bash(rm -f *issue-prompt-*)"]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
+### Examples
+
+- "address issue #42 in a worktree": looks up issue 42, creates a worktree, and the new session plans it
+- "start issue #42": same thing
+- "work on the dark mode issue in a worktree": searches for a matching issue by title
+- "start issue #42, it needs the simulator": claims `simulator` for the new worktree, or reports which branch already holds it and asks first
+- "work on #42 and #57 together in a worktree": opens one worktree whose session plans both issues
+- "start #42, #57 and #61, each in its own worktree": opens three worktrees with `--fan-out`
+
+### See Also
+
+- [Address Issue](../address-issue/README.md): plan and address an issue in the current branch
+- [Create Worktree](../workmux/README.md): create a worktree from an issue number or a task description, without chaining into address-issue
+- [Suggest Next Issue](../suggest-next-issue/README.md): get a recommendation for which issue to work on
 - [All plugins](../../../../README.md)
