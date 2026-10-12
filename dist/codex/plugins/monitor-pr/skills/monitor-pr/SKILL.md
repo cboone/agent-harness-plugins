@@ -88,6 +88,8 @@ If this conversation contains a foreground checkpoint for that same repository a
 
 Also record whether `author.login` is `app/dependabot`, which switches on the rules in [Dependabot PRs](#dependabot-prs).
 
+Unless a checkpoint restores it, count the PR's earlier Copilot reviews for `--triage-after` now: read every Copilot review body with one `fetch-reviews` call, as step 3 shows, classify each as step 3 does, and record the count of those classified `review` with their ids in the watch state. Skip this under `--triage-after never`.
+
 **If the branch has no PR**, report that and stop, pointing the user at `/pr`.
 
 ### 2. Establish the Wait Mechanism
@@ -371,7 +373,7 @@ This is a budget, not a verdict about progress. **Do not treat the shape of the 
 
 What matters is whether the findings are real. Keep going while each round produces valid, fixable defects, and escalate early per step 9 only when a round produces something that needs the user's judgment, per the escalation rules in step 6d. The budget exists to bound an unattended watch, not to second-guess a productive one.
 
-**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is this watch's round count plus the PR's earlier Copilot reviews. Count those once at step 1: read their bodies with one `fetch-reviews` call, classify each as step 3 does, and count only those classified `review`. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Deferred rounds still count toward the round budget.
+**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is this watch's round count plus the earlier reviews step 1 counted. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Deferred rounds still count toward the round budget.
 
 `--rounds <n>` sets a different budget. `--rounds unlimited` removes it: the watch then runs until the PR is genuinely clean and never pauses to ask for more rounds, though every other escalation rule still applies.
 
@@ -424,7 +426,7 @@ If the plugin-root path was not substituted, locate `**/monitor-pr/**/scripts/me
    ```text
    create-deferred-issues
 
-   Include the findings listed under `### Deferred to follow-up` in this PR's Copilot Feedback Summary comments.
+   Include the findings listed under `### Deferred to follow-up` in the Copilot Feedback Summary comments on <PR URL>, which may already be merged.
 
    Parent continuation:
    - Caller: monitor-pr
