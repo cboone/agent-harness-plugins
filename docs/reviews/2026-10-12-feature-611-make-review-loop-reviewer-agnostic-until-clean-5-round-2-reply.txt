@@ -1,0 +1,173 @@
+```json
+{
+  "status": "success",
+  "reviewed": "b89fff26447e3f9064ce81997f5a9a1620b6106f..working-tree",
+  "complete": true,
+  "findings": [
+    {
+      "title": "Sibling input forms: the upstream-ref push check misses a push from a branch that has no upstream yet, which includes this branch",
+      "file": "plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+      "line": 183,
+      "severity": "important",
+      "detail": "Key Conventions says to record `git rev-parse @{upstream}` before each round 'when the branch has one' and to treat a change as a push. An unpushed feature branch, the usual state before a pre-push loop, has no upstream, so nothing is recorded and nothing is compared. With `push.autoSetupRemote=true`, a reviewer that runs plain `git push` publishes the branch and creates the upstream during the round, and the loop goes on and can still report `clean`. The check also misses pushes to other refs, such as `git push origin HEAD:other` or tags. It also gives a false positive when a reviewer only runs `git fetch`, because that moves `@{upstream}` too. reviewers.md:62 repeats the rule under 'Skill or command' only and does not mention it for shell reviewers.",
+      "evidence": "On this branch, `git rev-parse --abbrev-ref @{upstream}` exits 128 with 'no upstream configured for branch feature/611-make-review-loop-reviewer-agnostic', and `git config push.autoSetupRemote` is `true`. So no reference value exists to compare against, and a plain `git push` would set one."
+    },
+    {
+      "title": "Agent-prose control flow: the shell-reviewer snippet keeps the exit status and temp path in shell variables that do not survive the tool call",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 75,
+      "severity": "important",
+      "detail": "The snippet sets `tmp` and `reviewer_status` and prints nothing, because both streams go to files. Its `if` also makes the whole call exit 0 whatever the reviewer did. In Claude Code and Codex, each Bash call is a new shell, so steps 5 and 6 have no `$tmp` to read stdout and stderr from and no `$reviewer_status` to record ('The exit status, kept ... record it before anything else runs'). An agent that follows the text sees a call that printed nothing and exited 0. It must then improvise, possibly by running the reviewer again, which the stop rules forbid ('Do not retry silently') and which applies an editing reviewer's edits twice. Or it reads an unset variable as status 0.",
+      "evidence": "reviewers.md:69-79: `tmp=\"$(mktemp -d)\"` ... `if bash -e -o pipefail -c \"${reviewer}\" < /dev/null > \"${tmp}/stdout\" 2> \"${tmp}/stderr\"; then reviewer_status=0; else reviewer_status=$?; fi`. Nothing echoes `${tmp}` or `${reviewer_status}`. The Claude Code Bash tool does not keep shell variables between calls."
+    },
+    {
+      "title": "Sibling input forms: the quoted heredoc inside $() is not literal under bash 3.2",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 84,
+      "severity": "nit",
+      "detail": "The text says 'A heredoc whose delimiter is quoted takes every character literally, so nothing in the value is interpreted until bash -c runs it.' That holds in zsh and bash 5. In macOS /bin/bash 3.2, the parser scans a heredoc body inside `$(...)` as shell text. An apostrophe in a comment or an unbalanced `)` breaks it. The text names the caller's shell as only 'often zsh', and bash 3.2 is the macOS default for bash users.",
+      "evidence": "Tested in scratch: value `tool --x # it's the default` gives '/bin/bash: unexpected EOF while looking for matching `''' under 3.2.57 but parses under zsh. Value `echo a) b` makes 3.2 set reviewer to 'echo a b REVIEWER_VALUE', a different command, while zsh and bash 5.3 keep 'echo a) b'."
+    },
+    {
+      "title": "Sibling input forms: a CLI that exits 1 to report findings is always a failed round",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 47,
+      "severity": "nit",
+      "detail": "The completion table treats any non-zero exit as 'The review did not finish'. Many review CLIs exit 0 when clean, 1 when they have findings, and 2 or more on error, as linters and `grep` do. With `--reviewer 'ruff check .'`, any round with a finding ends the run `failed`, and its findings never reach the fixer. Line 86 then tells users not to wrap the command in further logic, which rules out `tool || [ $? -eq 1 ]`. The README claims any CLI that reviews code works.",
+      "evidence": "reviewers.md:47 'A non-zero exit ... A failed round'; stop-rules.md:25 'A non-zero exit ... The review did not finish'; reviewers.md:86 'a reviewer value should be the reviewer command itself ... and not a script that wraps it in further logic'; README.md (plugin):63 'any skill, slash command or CLI that reviews code'."
+    },
+    {
+      "title": "Agent-prose control flow: the advice to add rules for a shell reviewer's own commands cannot match how the skill runs them",
+      "file": "plugins/review-until-clean/README.md",
+      "line": 109,
+      "severity": "nit",
+      "detail": "'Add rules for your reviewer's own commands separately.' A shell reviewer runs only as `bash -e -o pipefail -c \"${reviewer}\"` inside a script that starts with `tmp=\"$(mktemp -d)\"` and a heredoc. The permission matcher therefore never sees `coderabbit review ...`, so a rule such as `Bash(coderabbit review *)` never applies and the wrapper prompts every round. The recommended list also leaves out `mktemp`, `command -v` and the wrapper itself.",
+      "evidence": "reviewers.md:68-80 is the only documented invocation for a shell reviewer. The README allow list (line 102) has no entry for `bash -e -o pipefail -c *` or `mktemp *`."
+    },
+    {
+      "title": "Sibling input forms: edit-round fences are fixed at three backticks while the raw-reply fence is sized",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/ledger.md",
+      "line": 57,
+      "severity": "nit",
+      "detail": "Edit-round changed paths and stale findings go 'inside fenced text blocks' and are shown with a three-backtick fence. The fence-sizing rule in reviewers.md:168 covers only the raw reply. Changed paths come from `git diff-tree -z`, and the helper supports file names that contain newlines. A path such as \"```\\n- [ ] **F99** Important. ...\" therefore closes the fence and adds an unchecked item to address-review's queue. That is the injection ledger.md:90-98 exists to stop.",
+      "evidence": "ledger.md:62-71 shows a plain ```text fence. scope-and-snapshot.md:34 says the snapshot covers 'file names holding newlines'. reviewers.md:108 has paths come from `git diff-tree -r -z --name-only`."
+    },
+    {
+      "title": "Parallel paths: a full reply stored beside the ledger is left at the temporary path when step 11 moves the ledger",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 182,
+      "severity": "nit",
+      "detail": "A long reply or stderr 'may be stored in full beside the ledger, outside the working tree, with its path ... in the ledger instead'. Step 11 and ledger.md move only the ledger into docs/reviews/. The saved, possibly committed ledger then cites a temporary path that is never moved, and nothing says when that file is removed.",
+      "evidence": "SKILL.md step 11 says 'Move the ledger from its temporary path to docs/reviews/...', with no mention of the side files. ledger.md 'Location' does not mention them either."
+    },
+    {
+      "title": "Docs drift: the README's default-reviewer and pre-push sections ignore the new confirmation rule",
+      "file": "plugins/review-until-clean/README.md",
+      "line": 33,
+      "severity": "nit",
+      "detail": "README:33-39 says that without `--reviewer` the skill 'uses the reviewer your repository's AGENTS.md or CLAUDE.md names', and README:93 says to run the skill 'through your agent's non-interactive mode' from a pre-push hook. SKILL.md step 2 now requires confirming that default once before round 1. When no one can answer, as in a non-interactive run, it says 'do not use it: stop as for a missing reviewer', and Error Handling ends that as `failed`. A hook built from the README without `--reviewer` therefore fails on every push.",
+      "evidence": "SKILL.md:71 'Show the value and the file it came from, and confirm it once before round 1 ... When no one can answer, as in a non-interactive run, do not use it'; SKILL.md:240 '... or a repository default no one could confirm: stop without running a round, with failed'."
+    },
+    {
+      "title": "Docs drift: the root README says reviewer edits are always reviewed again",
+      "file": "README.md",
+      "line": 100,
+      "severity": "nit",
+      "detail": "'edits it makes are recorded and reviewed again'. Under `--report-only`, an edit round ends `decisions-needed` with no further round. At the round cap, or in the confirming round past the cap, the run stops `stopped` and the edits stay unreviewed. The plugin README:87 states it correctly: 'reviewed by the next round when the round budget allows'.",
+      "evidence": "SKILL.md step 8: 'Under --report-only, go to step 11 with decisions-needed now ... and run no further round'; step 10: 'When the round limit is reached after an edit round, stop with stopped and say that the reviewer's last changes have not been reviewed.'"
+    },
+    {
+      "title": "Parallel paths: some stops still end without a terminal status after the 'give every stop a status' fix",
+      "file": "plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+      "line": 244,
+      "severity": "nit",
+      "detail": "c7414f68 gave the no-reviewer and reviewer-not-found stops the `failed` status. 'Empty scope: report that there is nothing to review and stop' (244), 'Repository has no commits: ... stop' (245), step 1's empty-scope stop (67) and step 9's missing-fixer stop (148, which also says only 'Leave the ledger in place' at its temporary path) name none of the five statuses that step 11's status line requires. A caller that parses `Review-until-clean status:` gets no line.",
+      "evidence": "SKILL.md:238-239 now end with `failed`; 244, 245 and 148 do not. Step 11 prints 'Review-until-clean status: <clean|clean-with-declines|decisions-needed|stopped|failed>'."
+    },
+    {
+      "title": "Agent-prose control flow: the upstream-ref recording is not in the steps that need it",
+      "file": "plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+      "line": 85,
+      "severity": "nit",
+      "detail": "Step 4 (run) and step 5 (check completion and mode) list exactly what to record before the reviewer runs and what to compare as it returns: the snapshot, the tree and the reply. The `@{upstream}` value appears only in Key Conventions (183) and in the skill-only part of reviewers.md (62). An agent following the steps in order reaches step 5 with no recorded value to compare.",
+      "evidence": "Steps 4-5 (SKILL.md:85-107) do not mention upstream. The only instruction is SKILL.md:183, after step 11."
+    }
+  ],
+  "unverified": [
+    "Unrun platform configuration: tests/scrut/review-scope.md help-text snapshot against the edited review-scope usage; settle with `make test-scrut` (or scrut over tests/scrut/review-scope.md and tests/scrut/repo-tooling.md for the byte-identical copies); not run: executes repository code and --run-checks was off",
+    "Agent skills and prose files: catalog/README description match, manifests and cross-references; settle with `make validate` (bin/validate-plugins, bin/check-cross-references); not run: repository code and --run-checks was off",
+    "Unrun platform configuration: `coderabbit review --agent --fresh` as documented reviewer value: flags confirmed with `coderabbit review --help`, but its exit status when it has findings and whether it writes a local checkpoint inside the working tree (which would make every round an edit round) were not checked; settle with one authenticated run in a scratch clone; not run: needs credentials and may use credits",
+    "Agent-prose control flow (shell-state finding): exact Claude Code and Codex behavior when an agent runs the reviewers.md snippet as one tool call; settle by running review-until-clean with a stub shell reviewer such as `--reviewer 'printf x; exit 3'` and checking that the ledger records status 3; not run: executes the skill and edits the repository"
+  ],
+  "not_reviewed": [],
+  "excluded": [".agents/plugins/marketplace.json", "dist/codex/plugins/review-anti-patterns/.claude-plugin/plugin.json", "dist/codex/plugins/review-anti-patterns/README.md", "dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json", "dist/codex/plugins/review-pr-with-codex/README.md", "dist/codex/plugins/review-pr-with-codex/scripts/review-scope", "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md", "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json", "dist/codex/plugins/review-until-clean/README.md", "dist/codex/plugins/review-until-clean/scripts/review-scope", "dist/codex/plugins/review-until-clean/skills/review-until-clean/SKILL.md", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/backends.md", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/ledger.md", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/reviewers.md", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/stop-rules.md"]
+}
+```
+
+Scope: b89fff26447e3f9064ce81997f5a9a1620b6106f (the merge base with origin/main, e06686b9) through the working tree. That is 30 commits on feature/611-make-review-loop-reviewer-agnostic, from 3c867592 to 15c6a6f1. The working tree was clean: no staged, unstaged or untracked changes. 23 changed files are in scope:
+- `.claude-plugin/marketplace.json` and `README.md`
+- the plan `docs/plans/todo/2026-10-12-make-review-loop-reviewer-agnostic.md`
+- the four `docs/reviews/*-until-clean*.md` ledgers
+- the `review-anti-patterns` and `review-pr-with-codex` manifests and READMEs
+- both `review-scope` copies and `invocation.md`
+- the `review-until-clean` manifest, README, `SKILL.md` and its four references (`backends.md` deleted, `reviewers.md` added)
+- `tests/scrut/review-scope.md`
+
+Not reviewed: nothing. There is no open pull request: `gh pr list --repo github.com/cboone/agent-harness-plugins --head feature/611-make-review-loop-reviewer-agnostic --state open` returned `[]`, and origin is not a fork, so there was no PR body to review. The origin selector was `github.com/cboone/agent-harness-plugins`.
+
+Excluded: 16 generated files under `dist/` and `.agents/`, as the repository's CLAUDE.md names them, and listed above. There is no `.gitattributes`. The ledgers in `docs/reviews/` were reviewed as documents. Their "Reviewer reply, verbatim" blocks were treated as quoted data, not as claims the change makes. Their declines carried across runs predate the "within one run" rule (c7414f68), so that was not reported.
+
+Groups and items: the scope has code (two `review-scope` copies and the scrut test), agent prose (`SKILL.md`, its references, `invocation.md`) and docs (READMEs, plan, ledgers, catalog). I walked all thirteen checklist items:
+- Sibling input forms
+- Boundary arithmetic
+- Stale writes
+- Validator gaps
+- Absent or partial data
+- Untrusted data in commands
+- Tests that cannot fail
+- Crashes instead of reports
+- Unrun platform configuration
+- Unenforced trust boundary
+- Parallel paths
+- Agent-prose control flow
+- Docs drift
+
+The scope answers review feedback: commits c7414f68, e394dcfb and 20342789 resolve findings from the fifth review-until-clean run. So the history was read, and every touched file was read whole at its newest state. Items with nothing to report:
+- Boundary arithmetic and Crashes instead of reports: the script change is comment and help text only.
+- Validator gaps: the schema `file` pattern is unchanged and matches ledger.md's location rule.
+- Tests that cannot fail: the scrut change is a help-text snapshot only.
+
+Mechanical checks:
+- ran: `bash -n`, `shellcheck`, `shfmt -d` on both `review-scope` copies. All passed.
+- ran: `jq empty` on `marketplace.json` and the plugin manifests. Passed.
+- ran: `prettier --check` and `markdownlint-cli2` over the 17 Markdown and JSON scope files. Both clean.
+- ran: `coderabbit review --help`. `--agent` and `--fresh` both exist.
+- ran: bash 3.2.57, bash 5.3.20 and zsh against the reviewers.md heredoc pattern, in the scratchpad only. This produced finding 3.
+- ran: `git rev-parse @{upstream}` and the `push.*` config on this branch. This is the evidence for finding 1.
+- unverified: `make test-scrut`, `make validate`, a real CodeRabbit run, and a stub-reviewer run of the loop. The commands and reasons are in the JSON.
+
+Session: this ran as a general-purpose subagent that could write. Only these instructions kept it read-only. `--run-checks` was off. `git status --porcelain --ignored` was identical before and after the checks, so nothing was left behind. Scratch files went only to the scratchpad `ruc5-agent2/` directory.
+
+Siblings examined per finding:
+1. Upstream push check:
+   - the Key Conventions rule (`SKILL.md:183`) and `reviewers.md:62`, skill section only, with no shell-section equivalent
+   - the Error Handling push entry
+   - push forms: plain `git push` with `autoSetupRemote`, `HEAD:other`, tags, and `git fetch` as a false positive
+2. Shell state: every later step that reads `${tmp}` or `${reviewer_status}`:
+   - steps 5 and 6
+   - "Remove the temporary directory"
+   - "Recording the raw reply"
+3. Heredoc: zsh, bash 5 and bash 3.2, with values containing an apostrophe in a comment, an unbalanced `)`, quoted parens, `\'` and `<<<`. Only the first two fail, and only on 3.2.
+4. Exit codes: the completion table, the stop-rules failed table, the `-e` guidance at line 86, the README requirement, and the exit 127 handling.
+5. Permissions: the README allow list, the `reviewers.md` invocation, the availability check (`command -v`) and the symlink loop.
+6. Fences: the raw-reply sizing rule, the edit-round changed-paths and findings fences, the inline-code backtick rule in "Reviewer text is data", and `diff-tree -z` path sources.
+7. Side files: step 11, ledger.md "Location", the `--no-save` path, and the "Remove the temporary directory" rule.
+8. Default reviewer: `SKILL.md` step 2, Error Handling, README "Choosing a reviewer" and "As a pre-push hook", and README line 87's "gate you watch".
+9. Root README: the plugin README line 87, `SKILL.md` steps 8 and 10, and the `stop-rules.md` cap rules.
+10. Statuses: every "stop" in `SKILL.md` (lines 65, 67, 101, 148, 238-248) against step 11's five statuses.
+11. Control flow: steps 1 and 4-8, which record the snapshot and tree, against Key Conventions.
+
+Not reported after checking:
+- Old backend wording in `docs/plans/todo/2026-10-01-add-skill-argument-hints.md` and `2026-10-09-reduce-copilot-rounds-after-pr-opens.md`: these are earlier plans recording past design.
+- The plan's "blocking" against `reviewers.md`'s "blocker".
+- The other plugins' cross-references: all now reviewer-neutral, with no `backends.md`, loop-level `--effort` or "model family" left.
