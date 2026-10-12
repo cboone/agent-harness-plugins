@@ -59,38 +59,49 @@ A reviewer that echoes what it reviewed adds another: the echoed value must matc
 
 Invoke it in this session exactly as given, with nothing added to its arguments. Run it over the repository as it is; do not narrow its scope, and do not tell it which findings to look for.
 
-A skill or command runs with this session's own tools, so nothing structural stops it writing. That is allowed: see [Report rounds and edit rounds](#report-rounds-and-edit-rounds). What is not allowed is a reviewer pushing, posting to a pull request, or rewriting history. Do not run a reviewer with an option that does any of those. If its report shows it did, or the branch's upstream ref moved while it ran, stop the run as `failed` and say what it did.
+A skill or command runs with this session's own tools, so nothing structural stops it writing. That is allowed: see [Report rounds and edit rounds](#report-rounds-and-edit-rounds). What is not allowed is a reviewer pushing, posting to a pull request, or rewriting history. Do not run a reviewer with an option that does any of those. If its report shows it did, or the remote refs moved while it ran, stop the run as `failed` and say what it did. [Pushes and fetches](#pushes-and-fetches) applies to both kinds of reviewer.
 
 ### Shell command
 
-Run it from the repository root as one script under `bash -e -o pipefail`, with stdin closed and both output streams captured to files **outside the working tree**:
+Run it from the repository root, in **one** tool call, as a script file under `bash -e -o pipefail`, with stdin closed and both output streams captured to files **outside the working tree**:
 
 ```bash
 tmp="$(mktemp -d)"
-reviewer="$(
-  cat << 'REVIEWER_VALUE'
-<the --reviewer value, exactly as given, on its own line>
+cat > "${tmp}/reviewer.sh" << 'REVIEWER_VALUE'
+<the --reviewer value, exactly as given>
 REVIEWER_VALUE
-)"
-if bash -e -o pipefail -c "${reviewer}" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"; then
+if bash -e -o pipefail "${tmp}/reviewer.sh" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"; then
   reviewer_status=0
 else
   reviewer_status=$?
 fi
+printf 'reviewer_tmp=%s reviewer_status=%s\n' "${tmp}" "${reviewer_status}"
 ```
 
 Each part is there for a reason:
 
-- **The value through a quoted heredoc.** The value usually contains quotes of its own, such as `jq -s '…'`. Inside single quotes, its first `'` would end the string, and the rest would run in the caller's shell, outside every redirect, leaving `reviewer` empty and the round looking like an empty review. A heredoc whose delimiter is quoted takes every character literally, so nothing in the value is interpreted until `bash -c` runs it. Pick a delimiter that does not appear as a line of its own in the value.
-- **One `bash -c`, with `pipefail`.** The value may be a pipeline, such as `tool --json | jq -s '…'`. Written out bare, the redirects attach only to its last command: the first one keeps the harness's stdin, its stderr escapes the capture, and the status is the last command's. A reviewer that exits non-zero having printed a finding then comes back as status 0 with `jq`'s empty result, which is a failed review recorded as a clean one. Running the whole value as one script puts every command under the redirects, and `pipefail` makes a failure in any stage the script's status. Pass the value as a single argument, as above, rather than splicing it into the command line.
+- **The value written to a script file through a quoted heredoc.** The value usually contains quotes of its own, such as `jq -s '…'`, so it cannot go inside single quotes: its first `'` would end the string, and the rest would run in the caller's shell, outside every redirect. A heredoc whose delimiter is quoted writes every character literally. It is not inside `$( )`, because macOS's bash 3.2 still parses a heredoc there as shell text, so an apostrophe in a comment or an unbalanced `)` would break it. Pick a delimiter that does not appear as a line of its own in the value.
+- **One script, with `pipefail`.** The value may be a pipeline, such as `tool --json | jq -s '…'`. Written out bare, the redirects attach only to its last command: the first one keeps the harness's stdin, its stderr escapes the capture, and the status is the last command's. A reviewer that exits non-zero having printed a finding then comes back as status 0 with `jq`'s empty result, which is a failed review recorded as a clean one. Running the whole value as one script puts every command under the redirects, and `pipefail` makes a failure in any stage the script's status.
 - **`-e`.** `pipefail` covers one pipeline at a time, so in `tool | cat; echo done` a later command that succeeds would still set the status to 0. `-e` ends the script at the first command that fails, so that failure is the script's status. It has exceptions, such as a command tested by `if` or joined by `&&` or `||`, so a reviewer value should be the reviewer command itself, optionally piped into its output processing, and not a script that wraps it in further logic.
+- **A reviewer that exits 1 to report findings.** Many CLIs, linters among them, exit 0 when clean, 1 when they found something, and higher on error, and the loop reads every non-zero exit as a failed round. Declare the findings code inside the value, as in `ruff check . || test $? -eq 1`: the `||` keeps `-e` from ending the script on the 1, and `test` passes only that code, so a real error still fails the round.
 - **The `if` around it.** It records the status even when the caller runs under `set -e`, which would otherwise end the caller before the diagnostics were captured.
-- **`reviewer_status`, not `status`.** The lines around `bash -c` run in the caller's shell, which is often zsh, and zsh reserves `status` as a read-only alias for `$?`. Assigning it fails with `read-only variable: status` whatever the reviewer returned, so the exit status is lost.
+- **`reviewer_status`, not `status`.** The surrounding lines run in the caller's shell, which is often zsh, and zsh reserves `status` as a read-only alias for `$?`. Assigning it fails with `read-only variable: status` whatever the reviewer returned, so the exit status is lost.
+- **The last line prints both.** An agent's shell does not keep variables from one tool call to the next, and the run itself prints nothing, since both streams go to files. Read `reviewer_tmp` and `reviewer_status` from that line, and record the status before anything else runs; never run the reviewer again to recover them, since that is a silent retry and repeats an editing reviewer's edits.
 - **`< /dev/null`.** Many CLIs read stdin when it is not a terminal. An agent harness's stdin is a pipe that never reaches end of file, so without the redirect such a CLI waits forever and the round produces nothing at all.
 - **Files outside the working tree.** The snapshot covers every non-ignored path in the tree, so an output file written into the repository is itself a change. It would move the snapshot, turn every round into an edit round, and hand the next round the reviewer's own output as new code. `./ledger.md` gives the same rule for the ledger.
-- **The exit status, kept.** It is one of the two completion signals, so record it before anything else runs.
+- **The exit status, kept.** It is one of the two completion signals, so record it, from the printed line, before anything else runs.
 
 Remove the temporary directory when the round ends, including when it fails, and only after both streams are in the ledger in full, or saved beside it as [Recording the raw reply](#recording-the-raw-reply) allows.
+
+## Pushes and fetches
+
+Record every remote-tracking ref and tag before the reviewer runs, and compare them as it returns, for both kinds of reviewer:
+
+```bash
+git for-each-ref --format='%(refname) %(objectname)' refs/remotes refs/tags
+```
+
+A push updates the remote-tracking ref of what it pushed, whichever ref or tag it was and whether or not the branch had an upstream before, as with `push.autoSetupRemote`. A fetch updates them too. A reviewer has no reason to do either, so any difference ends the run as `failed`, naming the refs that moved. Posting to a pull request leaves no local trace, so for that the reviewer's report is the only evidence.
 
 ## Report rounds and edit rounds
 
@@ -179,7 +190,7 @@ await refresh(token);
 ````
 `````
 
-A very long reply or stderr may be stored in full beside the ledger, outside the working tree, with its path and its first and last lines in the ledger instead. The same fence rule applies to the excerpt.
+A very long reply or stderr may be stored in full beside the ledger, outside the working tree, with its file name and its first and last lines in the ledger instead. The same fence rule applies to the excerpt. Such a file travels with the ledger: step 11 moves it too, and the ledger names it by a path relative to itself.
 
 ## Transcribing findings
 
