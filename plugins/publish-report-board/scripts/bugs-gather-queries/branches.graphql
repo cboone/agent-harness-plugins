@@ -1,9 +1,9 @@
-# One page of a repository's branches, the most recently committed first, for
-# the branch stage of the progress model. gh api graphql --paginate supplies
-# $endCursor.
+# One page of a repository's branches, in name order, for the branch stage
+# of the progress model. gh api graphql --paginate supplies $endCursor; the
+# gather reads every page, so the order only needs to be stable.
 query ($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
-    refs(refPrefix: "refs/heads/", first: 100, after: $endCursor, orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+    refs(refPrefix: "refs/heads/", first: 100, after: $endCursor, orderBy: { field: ALPHABETICAL, direction: ASC }) {
       pageInfo {
         hasNextPage
         endCursor
