@@ -341,7 +341,7 @@ The run check is what separates "Copilot has not started" from "Copilot is mid-r
 Invoke the `resolve-copilot-pr-feedback` skill:
 
 ```text
-resolve-copilot-pr-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id> [DEFER_SEVERITIES=Medium,Low]
+resolve-copilot-pr-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id> [DEFER_SEVERITIES=Medium,Low] [DECISION="<answer>"]
 
 Parent continuation:
 - Caller: monitor-pr
@@ -352,7 +352,7 @@ Parent continuation:
 
 Pass `DEFER_SEVERITIES=Medium,Low` when the review's triage round, per step 7c, is above `--triage-after`, and leave it out otherwise. Record every finding the resolver's summary lists under `### Deferred to follow-up`, with its severity, location, summary and source link, for the batch step 8a files.
 
-**A `Partial` with a `### Sibling chain` section is a design question, not a failure.** The resolver left a finding unpatched because it is another instance of a class an earlier fix on this PR addressed. Escalate per step 9 with the chain quoted from that section, each finding with its link and the fixes already made, and its design option. The question is whether to adopt the design option or patch the sibling. Carry out the answer before resuming the watch, so the push it makes brings a new review.
+**A `Partial` with a `### Sibling chain` section is a design question, not a failure.** The resolver left a finding unpatched because it is another instance of a class an earlier fix on this PR addressed. Escalate per step 9 with the chain quoted from that section, each finding with its link and the fixes already made, and its design option. The question is whether to adopt the design option or patch the sibling. On the answer, carry it out in this session under the resolver's Valid Concerns steps, commit and push, and resume the watch at step 3. Record the answer, and pass it as `DECISION` on the next step 7b dispatch, so the resolver settles the sibling it carries forward instead of escalating it again.
 
 Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's script calls require all three and it does not document how to derive them, so supplying them here saves it from re-deriving them or asking the user. Pass `REVIEW_ID`, the review this dispatch is for: the resolver must read it and list it under `Reviews read`. **A clearing outcome whose `Reviews read` line does not list `REVIEW_ID` does not clear that review.** Treat it like a `Partial` outcome and escalate per step 9, because nothing shows the review was read.
 
@@ -372,7 +372,7 @@ This is a budget, not a verdict about progress. **Do not treat the shape of the 
 
 What matters is whether the findings are real. Keep going while each round produces valid, fixable defects, and escalate early per step 9 only when a round produces something that needs the user's judgment, per the escalation rules in step 6d. The budget exists to bound an unattended watch, not to second-guess a productive one.
 
-**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is its position among the PR's Copilot reviews, notices left out, so rounds from before this watch began count too. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Triage does not change the round budget: deferred rounds still count toward it.
+**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is its position among the PR's Copilot reviews classified `review`, so rounds from before this watch began count too. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Triage does not change the round budget: deferred rounds still count toward it.
 
 `--rounds <n>` sets a different budget. `--rounds unlimited` removes it: the watch then runs until the PR is genuinely clean and never pauses to ask for more rounds, though every other escalation rule still applies.
 
@@ -430,11 +430,11 @@ If the plugin-root path was not substituted, locate `**/monitor-pr/**/scripts/me
    Parent continuation:
    - Caller: monitor-pr
    - Resume target: Step 8b, settle the merge policy.
-   - On completion: Report the filed issues, or that none were approved, and continue to Step 8b.
+   - On completion: Report the `Deferred issues:` outcome with any filed issues and any already-tracked or unfileable findings, and continue to Step 8b.
    - On filing failure: Report the findings left unfiled with their source links, and continue to Step 8b.
    ```
 
-   List the filed issues, and any finding left unfiled, in the terminal report. A finding the user declines stays recorded in the resolver's summary comment.
+   Append the filed issues, and any finding left unfiled, to the terminal report. A finding the user declines stays recorded in the resolver's summary comment.
 
 #### 8b. Settle the Merge Policy
 
