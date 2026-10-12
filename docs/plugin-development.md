@@ -50,7 +50,7 @@ plugins/workmux/
 
 `review-until-clean` and `review-pr-with-codex` ship byte-identical copies of `review-scope`, guarded by a scrut testcase. `review-pr-with-codex` takes its scope buckets for the reviewers' prompts and compares its content trees to detect lasting changes the read-only aspects made to tracked files and to untracked files outside the ignore rules, so a fix to either behavior belongs in both copies.
 
-A skill refers to each script it ships by its plugin-root path, so `workmux:create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `monitor-pr:resolve-copilot-feedback` and `monitor-pr:monitor` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their own copy. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
+A skill refers to each script it ships by its plugin-root path, so `workmux:create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `monitor-pr:resolve-copilot-feedback` and `monitor-pr:monitor` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their shared helper. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
 
 A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI, where the placeholder is not substituted in skills. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
 
@@ -140,7 +140,7 @@ Rule 17 of `bin/validate-plugins` checks the budget. It renders each generated `
 ```yaml
 description: >-
   Merge the base branch into the current branch, resolve conflicts, and push.
-  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
+  Use for "merge main" or "sync with main"; to rebase, use sync-with-main:rebase.
 ```
 
 Add `agents/openai.yaml` to a canonical skill only for supported interface metadata or an MCP tool dependency; no skill needs one today, and an invocation-policy override belongs in `disable-model-invocation`, which the generator [translates into that manifest](#invocation-policy) for Codex alone. Never set its `interface.short_description`: Codex prints that in place of `description`, silently replacing the routing description. Do not add keys this repository invents to portable plugin manifests or to `agents/openai.yaml`.

@@ -39,7 +39,7 @@ The maintenance companion to [Bootstrap Project](../bootstrap-project/README.md)
 ## See Also
 
 - [Bootstrap Project](../bootstrap-project/README.md): initial project setup
-- [Optimize Runner Usage](../optimize-runner-usage/README.md): CI optimization only
+- [Optimize Runner Usage](../set-up-ci/README.md): CI optimization only
 - [Clean Up Agent Config](../clean-up-agent-config/README.md): agent config audit only
 - [Set-Up Review Config](../set-up-review-config/README.md): installs and updates the review config this skill audits
 - [Review Dependabot Config](../dependabot/README.md): full Dependabot config and settings review

@@ -1,10 +1,3 @@
----
-name: optimize-runner-usage
-description: >-
-  Add paths-ignore, concurrency groups, and timeouts to existing GitHub Actions
-  workflows. Use for "reduce CI costs"; for new CI, use set-up-ci.
----
-
 # Optimize Runner Usage
 
 Scan existing GitHub Actions workflows and add missing runner-usage optimizations: `paths-ignore` filters, concurrency groups, and `timeout-minutes` on jobs.

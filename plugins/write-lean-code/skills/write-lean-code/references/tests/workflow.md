@@ -1,12 +1,3 @@
----
-name: write-lean-tests
-description: >-
-  Write compile-time, example-based Lean 4 tests that mirror a library's public
-  surface. Use for a NameTest/ directory, a new module's tests, wiring lake
-  test, or checking a PR keeps tests mirrored. For library code, use
-  write-lean-code.
----
-
 # Write Lean Tests
 
 > **Note on examples.** Code examples in this skill use the `strength-model` Lean formalization project (the codebase from which this skill was originally extracted) as a concrete case study. The library name `StrengthModel`, module paths under `proofs/StrengthModel/`, and domain types like `Attacker` and `VerificationFunction` are specific to that project. Substitute your project's library name, paths, and domain types when applying these patterns. Prose in this skill uses `<Name>` as the placeholder for the host project's library name.
@@ -15,7 +6,7 @@ description: >-
 
 Lean libraries that adopt this convention ship a sibling `<Name>Test/` directory of compile-time, `example`-based API regression tests. The test modules pin each exported definition and lemma to its public signature so that accidental renames, tightened hypotheses, or removed re-exports break the test build in a deliberate, localized way. Tests are not runtime behavior checks (there is no runtime); they are a machine-checked contract that the public API of a milestone still types, still composes, and still suffices for the downstream consequences the milestone is supposed to unblock.
 
-This skill codifies the style. `write-lean-code` still governs library code (naming, proofs, Mathlib conventions); this skill governs only the test modules under `<Name>Test/`.
+This reference covers test modules under `<Name>Test/`; the main guide covers naming, proofs and Mathlib conventions in both library and test code.
 
 ## Core Principles
 

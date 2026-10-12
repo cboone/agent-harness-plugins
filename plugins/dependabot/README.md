@@ -86,7 +86,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - [Triage Dependabot PRs](../dependabot/README.md): work through the open Dependabot PRs this config produces
 - [Pin Everything](../pin-everything/README.md): write the baseline config, and audit the version pins Dependabot cannot see
 - [Refresh Project Scaffolding](../refresh-project-scaffolding/README.md): detect a missing or incomplete config among other scaffolding drift
-- [Optimize Runner Usage](../optimize-runner-usage/README.md): cut the CI cost of Dependabot PR volume
+- [Optimize Runner Usage](../set-up-ci/README.md): cut the CI cost of Dependabot PR volume
 - [All plugins](../../README.md)
 
 ## dependabot:triage-prs

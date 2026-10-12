@@ -51,7 +51,7 @@ Codex skill inventory: * (glob)
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" entry-version 2>&1
-::error::Marketplace entry 'add-cobra-version' must not contain a version
+::error::Marketplace entry 'scaffold-go-cli' must not contain a version
 Codex skill inventory: * (glob)
 1 plugin validation error(s) found.
 [1]

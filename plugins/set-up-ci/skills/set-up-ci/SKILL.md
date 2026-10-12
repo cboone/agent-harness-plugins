@@ -2,7 +2,8 @@
 name: set-up-ci
 description: >-
   Create GitHub Actions CI with test, lint, format, and vulnerability jobs and
-  matching Makefile targets. Use for "set up CI" or "add a CI workflow".
+  matching Makefile targets, or optimize existing workflows' filters, concurrency
+  and timeouts. Use for "set up CI", "add a CI workflow", or "reduce CI costs".
 ---
 
 # Set-Up CI
@@ -10,6 +11,8 @@ description: >-
 Detect the project's language(s), create a GitHub Actions CI workflow with appropriate parallel jobs (test, lint, format, vulnerability check), and create matching Makefile targets for local development.
 
 ## Workflow
+
+For a request to optimize existing workflows, read `./references/runner-usage/workflow.md` and run only that workflow, preserving existing jobs and Makefile targets. For newly generated workflows, apply that reference's classification, path-filter eligibility, concurrency and timeout rules before presenting the workflow for approval. Confirm whether Markdown is source code before excluding it; preserve project-specific settings and non-standard concurrency groups.
 
 ### 1. Detect Project Type
 
@@ -139,7 +142,7 @@ Print a summary of what was created or modified:
   - The set-up-secret-scanning skill for secret scanning
   - The set-up-linters skill for linter configuration (if no linter configs detected)
   - The add-scrut-cli-tests skill for CLI snapshot testing (if CLI project detected)
-  - The add-goreleaser-homebrew skill for release automation (if Go project detected)
+  - The set-up-installers skill for release automation (if Go project detected)
 
 ## Error Handling
 

@@ -1,11 +1,3 @@
----
-name: add-goreleaser-homebrew
-description: >-
-  Add GoReleaser, a release workflow, and Homebrew tap cask publishing to an
-  existing Go CLI. Use for "add goreleaser" or "publish a Go CLI to Homebrew";
-  for a hand-written tap formula, use write-homebrew-formula.
----
-
 # Add GoReleaser Homebrew
 
 Add GoReleaser configuration and a GitHub Actions release workflow to an existing Go CLI project with Homebrew tap publishing.
@@ -49,7 +41,7 @@ If the user already provided some or all of these in their initial request, do n
 
 ### 4. Detect Project Features
 
-Check for three conditional features. For each, use the detection steps described in `./references/conditional-features.md`:
+Check for three conditional features. For each, use the detection steps described in `./references/goreleaser/conditional-features.md`:
 
 **Shell completions:**
 
@@ -90,20 +82,20 @@ Check where `func main()` is defined:
 
 ### 7. Generate .goreleaser.yml
 
-Read `./references/goreleaser-base.md` for the base GoReleaser template and create `.goreleaser.yml` from it:
+Read `./references/goreleaser/goreleaser-base.md` for the base GoReleaser template and create `.goreleaser.yml` from it:
 
 1. Replace `PROJECT-NAME`, `PROJECT-DESCRIPTION`, and `GITHUB-USERNAME` with the gathered values
 1. Adjust the ldflags `-X` path based on step 5
 1. Adjust the `main` path based on step 6
-1. Apply conditional modifications from `./references/conditional-features.md`:
+1. Apply conditional modifications from `./references/goreleaser/conditional-features.md`:
    - If completions detected: add completion generation to `before.hooks`, include in `archives.files`, and set the `completions:` field
    - If man pages detected: add `before.hooks`, archive `files` section, and set the `manpages:` field
    - If macOS-only: restrict `goos`/`goarch`, remove Windows format override
-   - If multiple features detected: combine per the "Combining Features" section in `./references/conditional-features.md`
+   - If multiple features detected: combine per the "Combining Features" section in `./references/goreleaser/conditional-features.md`
 
 ### 8. Generate Release Workflow
 
-Read `./references/release-workflow.md` for the release workflow template and create `.github/workflows/release.yml` from it.
+Read `./references/goreleaser/release-workflow.md` for the release workflow template and create `.github/workflows/release.yml` from it.
 
 - If the project is macOS-only, use the macOS-only variant (`runs-on: macos-latest`)
 - Otherwise, use the default (`runs-on: ubuntu-latest`)
@@ -115,7 +107,7 @@ Create the `.github/workflows/` directory if it does not exist.
 If a `Makefile` exists in the project root:
 
 1. Check whether a `release-dry-run` target already exists
-1. If not, offer to add it using the snippet in `./references/makefile-targets.md`
+1. If not, offer to add it using the snippet in `./references/goreleaser/makefile-targets.md`
 1. Append `release-dry-run` to the `.PHONY` declaration
 1. Add the target block
 
@@ -135,7 +127,7 @@ If `goreleaser` is not installed, skip validation and note that the user can ins
 
 ### 11. Set Up HOMEBREW_TAP_TOKEN
 
-The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew casks. Read `./references/homebrew-tap-token.md` for the full setup steps.
+The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew casks. Read `./references/goreleaser/homebrew-tap-token.md` for the full setup steps.
 
 Ask the user whether they want to set up the token now or defer it to later. If they defer, note in the summary that the token must be configured before the first release.
 
@@ -148,7 +140,7 @@ Print a summary of what was created and modified:
 - Remind the user to:
   - Tag a release to trigger the workflow: `git tag v0.1.0 && git push origin v0.1.0`
   - Test locally first with `goreleaser release --snapshot --clean` (or `make release-dry-run` if the Makefile was updated)
-- If `HOMEBREW_TAP_TOKEN` setup was deferred in step 11: remind the user to add it as a repository secret before the first release (see `./references/homebrew-tap-token.md`)
+- If `HOMEBREW_TAP_TOKEN` setup was deferred in step 11: remind the user to add it as a repository secret before the first release (see `./references/goreleaser/homebrew-tap-token.md`)
 
 ## Error Handling
 
@@ -162,12 +154,12 @@ Print a summary of what was created and modified:
 
 ## Reference Templates
 
-- `./references/goreleaser-base.md` -- base `.goreleaser.yml` template
-- `./references/release-workflow.md` -- `.github/workflows/release.yml`
-- `./references/makefile-targets.md` -- `release-dry-run` Makefile snippet
-- `./references/conditional-features.md` -- completions, man pages, and macOS-only modifications
-- `./references/homebrew-tap-token.md` -- `HOMEBREW_TAP_TOKEN` repository-secret setup
-- `./references/migration-guide.md` -- migrating from older GoReleaser configurations
+- `./references/goreleaser/goreleaser-base.md` -- base `.goreleaser.yml` template
+- `./references/goreleaser/release-workflow.md` -- `.github/workflows/release.yml`
+- `./references/goreleaser/makefile-targets.md` -- `release-dry-run` Makefile snippet
+- `./references/goreleaser/conditional-features.md` -- completions, man pages, and macOS-only modifications
+- `./references/goreleaser/homebrew-tap-token.md` -- `HOMEBREW_TAP_TOKEN` repository-secret setup
+- `./references/goreleaser/migration-guide.md` -- migrating from older GoReleaser configurations
 
 ## Refresh `cboone/gh-actions` SHAs before scaffolding
 

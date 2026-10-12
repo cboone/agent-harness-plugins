@@ -1,11 +1,3 @@
----
-name: check-zsh-scripts
-description: >-
-  Lint and check zsh scripts with shellcheck, shfmt, zsh -n, zcompile, and
-  scoping options, including .zshrc and other startup files. Use for "check
-  zsh", "lint zsh", or "validate zsh".
----
-
 # Check Zsh Scripts
 
 Check and evaluate zsh scripts using multiple complementary static analysis, syntax checking, and formatting tools.
@@ -68,7 +60,7 @@ zsh -n <file>
 
 If this fails, report the syntax errors prominently. Syntax errors may block meaningful results from other tools, but continue running other tools anyway since they may catch different issues.
 
-See `./references/tools/zsh-n.md`.
+See `./references/lint/tools/zsh-n.md`.
 
 #### 3b. Compile Check
 
@@ -82,7 +74,7 @@ Then clean up:
 rm -f <file>.zwc
 ```
 
-See `./references/tools/zcompile.md`.
+See `./references/lint/tools/zcompile.md`.
 
 #### 3c. Static Analysis
 
@@ -92,7 +84,7 @@ shellcheck --shell=bash --exclude=SC1090,SC2039,SC2154,SC2168,SC2296,SC2299 <fil
 
 The `--exclude` flag suppresses stable false-positive codes. Note: SC3000-series codes only fire with `--shell=sh`, not `--shell=bash`. Since this workflow uses `--shell=bash`, no SC3xxx filtering is needed. If the project ever switches to `--shell=sh`, add SC3xxx filtering at that point.
 
-See `./references/tools/shellcheck.md` for the full list of applicable vs. false-positive SC codes.
+See `./references/lint/tools/shellcheck.md` for the full list of applicable vs. false-positive SC codes.
 
 #### 3d. Bashism Detection
 
@@ -102,7 +94,7 @@ checkbashisms <file>
 
 Most output is informational for zsh scripts. Focus on constructs that truly differ between bash and zsh: `BASH_SOURCE`, `shopt`, `declare -n`, `readarray`/`mapfile`, `compgen`/`complete`.
 
-See `./references/tools/checkbashisms.md`.
+See `./references/lint/tools/checkbashisms.md`.
 
 #### 3e. Safety Suggestions
 
@@ -118,7 +110,7 @@ shellharden --suggest <file>
 
 Note that some quoting suggestions are less critical in zsh (zsh does not split unquoted parameter expansions by default), but quoting remains good practice for portability.
 
-See `./references/tools/shellharden.md`.
+See `./references/lint/tools/shellharden.md`.
 
 #### 3f. Variable Scope Warnings
 
@@ -140,7 +132,7 @@ fi
 
 The `set-up-ci` zsh CI template sets `SKIP_SETOPT_CHECK: "1"` in the workflow `env`, so generated check scripts must honor this env var to interoperate with that template.
 
-See `./references/tools/setopt-warnings.md`.
+See `./references/lint/tools/setopt-warnings.md`.
 
 #### 3g. Shell Formatting
 
@@ -150,7 +142,7 @@ shfmt -ln zsh -d <file>
 
 If shfmt fails to parse a zsh-specific construct, skip it gracefully for that file.
 
-See `./references/tools/shfmt.md`.
+See `./references/lint/tools/shfmt.md`.
 
 ### 4. Report Results
 

@@ -1,10 +1,3 @@
----
-name: add-community-files
-description: >-
-  Add CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, and a PR template to a project.
-  Use for "add community files" or "prepare for open source".
----
-
 # Add Community Files
 
 Add standard community files to a project preparing for public release. Detects the project's build system and tooling to populate contribution guidelines with relevant setup, test, and lint commands.
@@ -98,7 +91,7 @@ Report findings to the user before proceeding.
 
 ### 3. Generate CONTRIBUTING.md
 
-1. Read `./references/contributing.md`.
+1. Read `./references/community-files/contributing.md`.
 1. Substitute all placeholders (`PROJECT-NAME`, `GITHUB-OWNER`, etc.) with detected values.
 1. Fill the Development Setup section with detected build commands:
    - Replace `REQUIREMENT-LIST` with detected language runtime and tools.
@@ -110,21 +103,21 @@ Report findings to the user before proceeding.
 
 ### 4. Generate CODE_OF_CONDUCT.md
 
-1. Read `./references/code-of-conduct.md`.
+1. Read `./references/community-files/code-of-conduct.md`.
 1. Substitute `CONTACT-EMAIL` with the user's chosen contact method.
 1. Remove the `## Notes` section.
 1. Write to `./CODE_OF_CONDUCT.md`.
 
 ### 5. Generate .github/SECURITY.md
 
-1. Read `./references/security.md`.
+1. Read `./references/community-files/security.md`.
 1. Optionally adapt the "What Qualifies" section based on project type (e.g., add "container escape vulnerabilities" for container tools, "credential exposure" for CLI tools that handle secrets).
 1. Remove the `## Notes` section.
 1. Write to `./.github/SECURITY.md`.
 
 ### 6. Generate .github/PULL_REQUEST_TEMPLATE.md
 
-1. Read `./references/pr-template.md`.
+1. Read `./references/community-files/pr-template.md`.
 1. Adapt the checklist:
    - If a specific test command was detected, reference it in the "tests pass" item (e.g., "All new and existing tests pass (`make test`)").
    - If a `CHANGELOG.md` exists in the project, add: "I have updated \[CHANGELOG](../CHANGELOG.md) if this is a user-facing change".

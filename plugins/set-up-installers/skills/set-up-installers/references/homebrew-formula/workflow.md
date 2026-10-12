@@ -1,11 +1,3 @@
----
-name: write-homebrew-formula
-description: >-
-  Write, update, or review Homebrew formulae following cboone/homebrew-tap
-  conventions. Use for "write a Homebrew formula" or "update a formula"; to wire
-  up a project's installers, use set-up-installers.
----
-
 # Write Homebrew Formula
 
 Write or update Homebrew formulae with official Homebrew rules and `cboone/homebrew-tap` conventions.
@@ -38,12 +30,12 @@ Collect these facts before editing:
 
 Read only the reference files needed for the requested formula type:
 
-| Reference                          | Use When                                                                  |
-| ---------------------------------- | ------------------------------------------------------------------------- |
-| `./references/homebrew-current.md` | You need current Homebrew DSL, naming, test, service, or validation rules |
-| `./references/cboone-tap.md`       | You need `cboone/homebrew-tap` conventions or current local examples      |
-| `./references/patterns.md`         | You need a concrete formula template or migration shape                   |
-| `./references/validation.md`       | You are ready to run Homebrew checks                                      |
+| Reference                                           | Use When                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
+| `./references/homebrew-formula/homebrew-current.md` | You need current Homebrew DSL, naming, test, service, or validation rules |
+| `./references/homebrew-formula/cboone-tap.md`       | You need `cboone/homebrew-tap` conventions or current local examples      |
+| `./references/homebrew-formula/patterns.md`         | You need a concrete formula template or migration shape                   |
+| `./references/homebrew-formula/validation.md`       | You are ready to run Homebrew checks                                      |
 
 ### 3. Choose the Formula Shape
 
@@ -73,7 +65,7 @@ Required defaults:
 
 ### 5. Validate
 
-Run the relevant checks from `./references/validation.md`.
+Run the relevant checks from `./references/homebrew-formula/validation.md`.
 
 If Homebrew is unavailable, report which checks were skipped and why. If a check fails, diagnose the cause from the output and adjust the formula instead of forcing the command through.
 
