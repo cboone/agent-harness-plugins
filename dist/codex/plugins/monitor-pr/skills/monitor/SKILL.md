@@ -88,9 +88,9 @@ If this conversation contains a foreground checkpoint for that same repository a
 
 Also record whether `author.login` is `app/dependabot`, which switches on the rules in [Dependabot PRs](#dependabot-prs).
 
-Unless a checkpoint restores it, count the PR's earlier Copilot reviews for `--triage-after` now: read every Copilot review body with one `fetch-reviews` call, as step 3 shows, classify each as step 3 does, and record the count of those classified `review` with their ids in the watch state. Skip this under `--triage-after never`.
-
 **If the branch has no PR**, report that and stop, pointing the user at `/pr`.
+
+When `--triage-after` is a number and the watch state holds no earlier-review count, including after a resume that changed it from `never`, count the PR's earlier Copilot reviews now: read every Copilot review body with one `fetch-reviews` call, as step 3 shows, classify each as step 3 does, and record the count of those classified `review` with their ids in the watch state.
 
 ### 2. Establish the Wait Mechanism
 
@@ -432,7 +432,7 @@ If the plugin-root path was not substituted, locate `**/monitor-pr/**/scripts/me
    - Caller: monitor-pr
    - Resume target: the step that ran the batch: step 8b, step 8f, or the step 9 report.
    - On completion: Report the `Deferred issues:` outcome and continue at the resume target.
-   - On filing failure: Report the findings left unfiled and continue at the resume target.
+   - On filing failure: Report the findings left unfiled with their source links. From step 8b or step 8f, escalate per Step 9 instead of continuing, without running the batch again there; from step 9, continue the report.
    ```
 
    Append the outcome to the report. Under `--no-fix`, list the findings the batch would propose instead of invoking it.
