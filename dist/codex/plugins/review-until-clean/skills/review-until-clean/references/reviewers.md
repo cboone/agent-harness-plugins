@@ -67,7 +67,7 @@ A skill or command runs with this session's own tools, so nothing structural sto
 Run it from the repository root, in **one** tool call, as a script file under `bash -e -o pipefail`, with stdin closed and both output streams captured to files **outside the working tree**:
 
 ```bash
-tmp="$(mktemp -d)"
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/review-until-clean.XXXXXX")"
 printf 'reviewer_tmp=%s\n' "${tmp}"
 cat > "${tmp}/reviewer.sh" << 'REVIEWER_VALUE'
 <the --reviewer value, exactly as given>

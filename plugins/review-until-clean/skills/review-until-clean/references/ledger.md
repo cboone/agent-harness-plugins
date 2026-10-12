@@ -28,7 +28,7 @@ Under `--no-save`, the ledger stays at its temporary path and that path is repor
 Base: <base-ref> (<base-sha>)
 Reviewer: <the --reviewer value> (<from --reviewer | from agent config | chosen when asked>)
 Rounds: <n> of <max>
-Status: <clean|clean-with-declines|decisions-needed|stopped|failed>
+Status: <clean|clean-with-declines|decisions-needed|stopped|failed|no-op>
 Confirmation: <off | rounds <n> and <m> over snapshot <snapshot> | unconfirmed>
 
 ## Round 1
@@ -131,7 +131,7 @@ A round whose only findings at or above the threshold are carried declines is **
 
 A decline from an earlier run carries the same way, naming the ledger and the finding it came from, so a settled question is not asked again in every run. The branch's ledgers are those named `<date>-<branch>-until-clean*.md` for this branch.
 
-Do not carry a decline across a change to the code it was about. If the finding's location changed in the interim, raise it fresh; the reason it was declined may no longer hold.
+Do not carry a decline across a change to the code it was about. If the code the finding is about has changed since it was declined, raise it fresh, because the reason it was declined may no longer hold. A line number that moved only because of edits elsewhere in the file is not such a change.
 
 ## What a clean ledger says
 

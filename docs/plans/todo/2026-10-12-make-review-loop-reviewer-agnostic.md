@@ -90,6 +90,6 @@ Each is signed, references (#611), and lands at a logical boundary:
 ## Verification
 
 - `make build`, then `make lint`, `make validate` (catalog description match and cross-references, including no dangling `backends.md` links) and `make test-scrut`. Finish with `make test-all`, and observe the final result.
-- No reference to `backends.md` remains, no loop-level `--effort` option is documented (a reviewer's own `--effort` inside a quoted `--reviewer` value is expected), and no `review-until-clean` source mentions a named reviewer outside examples.
+- No plugin source, README or generated mirror references `backends.md` (plans and review records that describe its removal keep the name), no loop-level `--effort` option is documented (a reviewer's own `--effort` inside a quoted `--reviewer` value is expected), and no `review-until-clean` source mentions a named reviewer outside examples.
 - The `check-versions` skill confirms the version bumps: review-until-clean 2.0.0, review-pr-with-codex 1.0.1 and review-anti-patterns 1.0.1.
 - Read-through check of the workflow against the four invariants above. In particular, no path turns an empty, error-only or missing reply into `"findings": []`, and an edit round can never be reported clean.

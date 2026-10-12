@@ -99,14 +99,14 @@ This skill runs git commands, and your reviewer's own commands, that trigger per
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)", "Bash(git diff-tree *)", "Bash(git for-each-ref *)"]
+    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(command -v *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)", "Bash(git diff-tree *)", "Bash(git for-each-ref *)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-The first two rules cover the bundled helper, which runs at least twice every round. A shell reviewer runs inside a wrapper script, `bash -e -o pipefail <temporary file>`, so a rule for the reviewer's own command, such as `Bash(coderabbit review *)`, never matches it, and each round asks you to approve the wrapper; that approval is where you see what is about to run. `git add -N` and `git reset` are left out on purpose: the skill asks before touching the index, so approving those two each time is the point.
+The first two rules cover the bundled helper, which runs at least twice every round. `Bash(command -v *)` covers the availability check run on a shell reviewer's first word before round 1. A shell reviewer runs inside a wrapper script, `bash -e -o pipefail <temporary file>`, so a rule for the reviewer's own command, such as `Bash(coderabbit review *)`, never matches it, and each round asks you to approve the wrapper; that approval is where you see what is about to run. `git add -N` and `git reset` are left out on purpose: the skill asks before touching the index, so approving those two each time is the point.
 
 ## Examples
 
