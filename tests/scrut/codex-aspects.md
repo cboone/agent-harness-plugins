@@ -430,6 +430,34 @@ codex-aspects: --out-dir must be outside the working tree
 exit=1
 ```
 
+## An output directory reached through a symlink is judged by its target
+
+The check resolves the physical path, so a link that looks external but points
+into the repository is refused before any run starts, and nothing is written
+through it.
+
+```scrut
+$ mkdir inside-target && ln -s "${PWD}/inside-target" "${FIXTURE}/link-into-repo" \
+>   && { "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
+>        --out-dir "${FIXTURE}/link-into-repo" 2>&1; echo "exit=$?"; } \
+>   && ls -A inside-target | wc -l | tr -d ' ' \
+>   && rmdir inside-target
+codex-aspects: --out-dir must be outside the working tree
+exit=1
+0
+```
+
+A link that points outside the repository is accepted.
+
+```scrut
+$ mkdir "${FIXTURE}/external-target" && ln -s "${FIXTURE}/external-target" "${FIXTURE}/link-outside" \
+>   && "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
+>      --out-dir "${FIXTURE}/link-outside" | jq -r '.[0].status' \
+>   && ls "${FIXTURE}/external-target" | grep -c '^code\.json$'
+ok
+1
+```
+
 ## The output directory must exist
 
 ```scrut
