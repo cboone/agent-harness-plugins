@@ -78,7 +78,7 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
 ## Skill dependencies
 
 - **Required:** None
-- **Optional:** `create-issue`, `monitor-pr:monitor`
+- **Optional:** `use-git:create-issue`, `monitor-pr:monitor`
 
 ## Workflow
 

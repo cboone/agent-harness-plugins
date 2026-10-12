@@ -64,7 +64,7 @@ Categories currently used in this repository. Each marketplace category correspo
 - `"code-quality"` -- style guides for code, linting, formatting, language-specific testing (e.g., `lint-and-fix`, `write-go-code`)
 - `"code-review"` -- responding to external review feedback (e.g., `address-review`, `monitor-pr:resolve-copilot-feedback`)
 - `"git"` -- the commit-to-PR pipeline (e.g., `commit`, `pr`, `sync-with-main:merge`, `release`, `review-branch`, `use-git`)
-- `"issues-and-worktrees"` -- issue management and multi-agent worktree workflows (e.g., `create-issue`, `workmux:create-worktree`, `suggest-next-issue`)
+- `"issues-and-worktrees"` -- issue management and multi-agent worktree workflows (e.g., `use-git:create-issue`, `workmux:create-worktree`, `suggest-next-issue`)
 - `"scaffolding"` -- project and repository scaffolding (e.g., `scaffold-go-cli`, `scaffold-new-repo`, `bootstrap-project`, `refresh-project-scaffolding`)
 - `"workflow"` -- general workflow utility hooks (e.g., `notify`)
 - `"writing"` -- style and structure guides for prose and document artifacts (e.g., `write-markdown`, `write-pandoc-markdown`, `write-math`, `write-formalization-roadmap`)

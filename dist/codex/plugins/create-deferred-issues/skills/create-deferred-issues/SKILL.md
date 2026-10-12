@@ -18,7 +18,7 @@ While working, an agent regularly names a concern and sets it aside: a formatter
 Two rules shape everything below:
 
 - **The proposal is never skipped.** Filing without confirmation would turn every hedge in the session into an issue, which is worse than filing nothing.
-- **Under-propose.** A missed deferral costs the user one manual `/create-issue`. A wrong one costs triage, and erodes trust in every later batch.
+- **Under-propose.** A missed deferral costs the user one manual `/use-git:create-issue`. A wrong one costs triage, and erodes trust in every later batch.
 
 ## Options
 

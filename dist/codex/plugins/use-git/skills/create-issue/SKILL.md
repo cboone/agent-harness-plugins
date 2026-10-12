@@ -36,18 +36,7 @@ If the user specifies a repository (e.g., "file an issue on org/repo"), use the 
 
 ### 3. Write the Issue Body to a Tmpfile
 
-First, generate a unique temporary file path using `mktemp -u`:
-
-```bash
-mktemp -u "${TMPDIR:-/tmp}/gh-issue-body-XXXXXX"
-# Returns a unique path that does NOT exist on disk, e.g.: /tmp/claude-501/gh-issue-body-a1b2c3
-```
-
-The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.
-
-Then use the **Write** tool to write the full issue body in Markdown format to the exact path returned by `mktemp -u`. In the examples below, `TMPFILE` is a placeholder for that path.
-
-This is the critical step that avoids permission prompts: the Write tool handles multiline content natively, keeping the subsequent Bash command short and simple.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/use-git/references/tmpfile-pattern.md` and follow its non-secret GitHub body-file procedure. Create a unique path, write the full issue body, and wait for the write to finish before calling `gh`. In the examples below, `TMPFILE` is that exact path.
 
 ### 4. Create the Issue
 
@@ -69,7 +58,7 @@ For a different repository:
 gh issue create --repo owner/repo --title "Issue title here" --body-file TMPFILE
 ```
 
-**Never batch the Write call and `gh issue create` into one message.** Issue them as two separate, sequential tool calls, and wait for the Write to return before invoking `gh`. `gh` reads the body file at invocation time, so a parallel batch can start `gh issue create` before the file exists and open the issue with an empty body. The command still succeeds and still prints a URL, so the failure is silent. This is a deliberate exception to the general preference for parallel tool calls: that preference covers calls with no dependencies between them, and these two are dependent, because `gh issue create` consumes the file Write produces.
+The write and `gh issue create` are dependent calls. Keep them sequential as the tmpfile reference requires; an empty body can still produce a successful command and an issue URL.
 
 ### 5. Verify the Issue Body
 
