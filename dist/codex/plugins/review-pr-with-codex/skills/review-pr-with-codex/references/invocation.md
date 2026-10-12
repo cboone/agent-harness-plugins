@@ -36,6 +36,8 @@ Each part is there for a reason:
 
 Stopping `codex-aspects run`, with TERM or by a failure partway through, stops every Codex run it started, so a `simplify` run cannot go on editing after the caller has measured its changes.
 
+`codex-aspects` refuses to run from inside the repository under review, because the change could then rewrite the aspect instructions its own review runs with. Run the installed copy of the plugin. Untracked file names and symlink targets go into the prompt as JSON strings, so a crafted name cannot start a line of its own.
+
 The prompt goes in as one argument, because stdin must stay `/dev/null`. The helper refuses a prompt above 120,000 bytes, under Linux's per-argument limit. Only untracked files are listed one by one; committed, staged and unstaged changes take one diff command each. To shrink a prompt that is too large, commit the untracked files, which moves them into a diff, or add the ones that are not part of the change to `.gitignore`.
 
 ### Signals
