@@ -25,7 +25,7 @@ Every push it makes invalidates Copilot's previous review, so the loop naturally
 
 ### It stops and asks
 
-This is not a continue-at-all-costs skill. It halts the watch and puts the question to you when the fix is a judgment call about intended behavior, when the same check fails again after a fix attempt for it, when the fix would reach outside what the branch already changes, when the logs do not identify a cause, when `merge-main` or `resolve-copilot-pr-feedback` reports something it could not finish, when GitHub refuses the merge for a reason other than a new push or no merge method is left, when a change is requested while an approval is awaited, when the merge watch can no longer read the PR, or when Copilot feedback comes back reportedly resolved while the same review still reads as unresolved. That last one covers both forms Copilot's feedback takes. An inline thread clears when it is resolved, but a finding filed in a review body has no thread and the body is immutable, so it stays visible in that review permanently. The resolver records it as handled in a summary row that links back to the exact review and includes the fixing commit or no-change rationale; monitor reports that summary link instead of implying that the original review body changed.
+This is not a continue-at-all-costs skill. It halts the watch and puts the question to you when the fix is a judgment call about intended behavior, when the same check fails again after a fix attempt for it, when the fix would reach outside what the branch already changes, when the logs do not identify a cause, when `merge-main` or `resolve-copilot-pr-feedback` reports something it could not finish, when the resolver leaves a finding unpatched because it is another instance of a class an earlier fix on the PR addressed (it quotes the chain and a design option, such as an allowlist or a structural parser, and asks whether to adopt it or patch the instance), when GitHub refuses the merge for a reason other than a new push or no merge method is left, when a change is requested while an approval is awaited, when the merge watch can no longer read the PR, or when Copilot feedback comes back reportedly resolved while the same review still reads as unresolved. That last one covers both forms Copilot's feedback takes. An inline thread clears when it is resolved, but a finding filed in a review body has no thread and the body is immutable, so it stays visible in that review permanently. The resolver records it as handled in a summary row that links back to the exact review and includes the fixing commit or no-change rationale; monitor reports that summary link instead of implying that the original review body changed.
 
 ### What counts as a Copilot sign-off
 
@@ -40,6 +40,8 @@ Copilot's output varies between runs over identical code, so a review that surfa
 The Copilot round budget defaults to 10. On reaching it the skill stops and asks whether to continue and for how many more rounds; `--rounds <n>` sets a different budget and `--rounds unlimited` removes the question entirely, committing to run until the PR is genuinely clean.
 
 The budget bounds an unattended watch. It is not a judgment about whether the work is going well, and the skill does not read the finding counts as a trend. Copilot swings between busy and quiet rounds over the same code, so a rising count does not mean divergence, and four rounds is often not enough to finish. A watch still turning up real defects at round 8 is working, not thrashing. What ends a watch early is a finding that needs your judgment, not an unflattering shape in the numbers.
+
+Late rounds triage instead of blocking. From the Copilot round after `--triage-after`, 5 by default, only High findings drive fixes. Medium and Low findings are deferred: the resolver resolves their threads with a deferral reply and lists them, and at readiness the watch proposes them as one batch of follow-up issues through [Create Deferred Issues](../create-deferred-issues/README.md), so you approve the whole batch once. Rounds are counted across the PR, including reviews from before the watch began. `--triage-after never` keeps every finding blocking.
 
 ### The merge
 
@@ -83,18 +85,20 @@ Quiet ticks print a single line and are collapsed by the harness where it suppor
 /monitor-pr --interval 10m
 /monitor-pr --ticks 5
 /monitor-pr --rounds unlimited
+/monitor-pr --triage-after 3
 /monitor-pr --confirm-clean
 /monitor-pr --no-fix
 ```
 
-| Option                    | Description                                                                                        |
-| ------------------------- | -------------------------------------------------------------------------------------------------- |
-| `<pr-number>`             | Monitor a specific PR instead of the current branch's PR                                           |
-| `--interval <d>`          | Override adaptive pacing with a fixed wait                                                         |
-| `--ticks <n\|unlimited>`  | Bound all foreground paths, including scheduler fallbacks; the default is 3                        |
-| `--rounds <n\|unlimited>` | Change the Copilot round budget from its default of 10; `unlimited` commits to running until clean |
-| `--confirm-clean`         | Require two consecutive clean Copilot reviews rather than one                                      |
-| `--no-fix`                | Observe and report only: never push, invoke a fixing skill, request a review, or merge             |
+| Option                      | Description                                                                                        |
+| --------------------------- | -------------------------------------------------------------------------------------------------- |
+| `<pr-number>`               | Monitor a specific PR instead of the current branch's PR                                           |
+| `--interval <d>`            | Override adaptive pacing with a fixed wait                                                         |
+| `--ticks <n\|unlimited>`    | Bound all foreground paths, including scheduler fallbacks; the default is 3                        |
+| `--rounds <n\|unlimited>`   | Change the Copilot round budget from its default of 10; `unlimited` commits to running until clean |
+| `--triage-after <n\|never>` | Defer Medium and Low Copilot findings to follow-up issues from round `n + 1`; the default is 5     |
+| `--confirm-clean`           | Require two consecutive clean Copilot reviews rather than one                                      |
+| `--no-fix`                  | Observe and report only: never push, invoke a fixing skill, request a review, or merge             |
 
 ## Recommended Permissions
 
@@ -126,5 +130,6 @@ Four notes on these rules. **The script rules are deliberately path-agnostic**: 
 - [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): the Copilot half of the loop, invoked once a review lands on the current head
 - [Merge Main](../merge-main/README.md): invoked when the branch falls behind or conflicts with its base
 - [Lint and Fix](../lint-and-fix/README.md): invoked to repair lint and format failures
+- [Create Deferred Issues](../create-deferred-issues/README.md): files the follow-up issues for findings deferred in late rounds
 - [Triage Dependabot PRs](../triage-dependabot-prs/README.md): decide what to do with a Dependabot PR before watching it
 - [All plugins](../../README.md)
