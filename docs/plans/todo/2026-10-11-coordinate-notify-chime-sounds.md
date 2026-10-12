@@ -41,7 +41,7 @@ This plan is the integration record for work that spans this repository and a pr
 - [x] Real Claude Code Stop alerts from two repositories play different chimes (2026-10-12).
 - [ ] The same from Codex CLI.
 - [x] Two worktrees of one repository play the same variant (2026-10-12).
-- [ ] Several overlapping alerts sound consonant and do not clip, including alerts with different timbres.
+- [x] Several overlapping alerts sound consonant and do not clip, including alerts with different timbres (2026-10-12).
 
 ## Log
 
@@ -56,3 +56,4 @@ This plan is the integration record for work that spans this repository and a pr
 - 2026-10-12: Range confirmed one octave lower again, F#3 to E5, after a side-by-side comparison with F#4 to E6; the installed set already uses it. Level set just below Tink. Generation PR open.
 - 2026-10-12: #595 merged as #619 (notify 4.1.0). Dotfiles opt in. Real Stop alerts through the installed plugin from two repositories played two different chimes.
 - 2026-10-12: Generation PR merged. Live checks: worktrees share a chime; unset falls back to Glass; five Stop alerts 0.6 s apart from five repositories play as overlapping chimes, while alerts 0.15 s apart play only one sound, so macOS appears to drop sounds posted almost together. Perceptual loudness equalization filed as a generation follow-up.
+- 2026-10-12: Overlap confirmed: two steady test tones posted 1.5 s apart sounded as a chord, so macOS lets notification sounds overlap. Five Stop alerts 0.35 s apart from five repositories sounded clean, with no abrupt changes.
