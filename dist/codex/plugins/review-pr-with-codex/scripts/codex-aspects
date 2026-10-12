@@ -404,10 +404,13 @@ function render_scope() {
     || die "could not create a temporary file for the untracked paths"
   while IFS= read -r -d '' path; do
     if [[ -L "${top_level}/${path}" ]]; then
-      if ! target="$(readlink "${top_level}/${path}")"; then
+      # The sentinel keeps a trailing newline in the link text, which command
+      # substitution would otherwise strip.
+      if ! target="$(readlink -n "${top_level}/${path}" && echo x)"; then
         unreadable_link="${path}"
         break
       fi
+      target="${target%x}"
       printf '%s\0link\0%s\0' "${path}" "${target}" >> "${records}"
     else
       printf '%s\0file\0\0' "${path}" >> "${records}"
@@ -442,6 +445,15 @@ function require_trusted_aspects() {
   if [[ "${aspects_physical}" == "${top_level}" || "${aspects_physical}" == "${top_level}/"* ]]; then
     die "the aspect instructions at ${ASPECTS_DIR} are inside the repository under review, so the change could rewrite its own review instructions; run an installed copy of codex-aspects instead"
   fi
+
+  # A symlinked file could point back into the repository from a directory
+  # that passed the check above. The plugin ships none.
+  local aspect
+  for aspect in "${KNOWN_ASPECTS[@]}"; do
+    if [[ -L "${ASPECTS_DIR}/${aspect}.md" ]]; then
+      die "the aspect instructions at ${ASPECTS_DIR}/${aspect}.md are a symlink, which could lead into the repository under review"
+    fi
+  done
 }
 
 # Prints an aspect's instructions without its attribution comment, which is for

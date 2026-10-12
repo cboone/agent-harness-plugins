@@ -666,3 +666,31 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/self" && cd "${FIXTURE}/self" \
 exit=1
 codex-aspects: the aspect instructions at FIXTURE/self/aspects-copy are inside the repository under review, so the change could rewrite its own review instructions; run an installed copy of codex-aspects instead
 ```
+
+## A symlinked aspect file is refused
+
+An outside directory passes the location check, but one of its files could
+still link back into the repository under review.
+
+```scrut
+$ mkdir "${FIXTURE}/linked-aspects" \
+>   && cp "$(dirname "${CODEX_ASPECTS_BIN}")/../skills/review-pr-with-codex/references/aspects/"*.md "${FIXTURE}/linked-aspects/" \
+>   && rm "${FIXTURE}/linked-aspects/code.md" \
+>   && ln -s "${FIXTURE}/repo/lib.sh" "${FIXTURE}/linked-aspects/code.md" \
+>   && cd "${FIXTURE}/repo" \
+>   && { CODEX_ASPECTS_DIR="${FIXTURE}/linked-aspects" "${CODEX_ASPECTS_BIN}" prompt --aspect errors \
+>        --scope "${FIXTURE}/scope.json" > "${FIXTURE}/linked.err" 2>&1; echo "exit=$?"; } \
+>   && sed -e "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/linked.err"
+exit=1
+codex-aspects: the aspect instructions at FIXTURE/linked-aspects/code.md are a symlink, which could lead into the repository under review
+```
+
+## A symlink target ending in a newline keeps it
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/newline-link" && cd "${FIXTURE}/newline-link" \
+>   && link_text="$(printf "target\nx")" && ln -s "${link_text%x}" trailing \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/newline-link-scope.json" \
+>   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/newline-link-scope.json" | grep -F '"trailing" ->'
+  - "trailing" -> "target\n" (a symlink; review the link text only and do not open its target)
+```
