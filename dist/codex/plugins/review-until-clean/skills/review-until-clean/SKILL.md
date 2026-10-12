@@ -100,7 +100,7 @@ Also compare the remote-tracking refs and tags with step 4's record, and, when `
 
 Then decide whether the review finished, from what the reviewer actually returned. Treat all of these as a **failed round**, never a clean one:
 
-- a shell command that exited non-zero, timed out, or printed nothing, or printed only an error
+- a shell command that exited non-zero, timed out, produced no output as `./references/reviewers.md` defines it (stdout with a non-whitespace character), or printed only an error
 - a skill or command that produced no report, only an error, or a report that ends partway or says it could not run
 - output that was meant to be structured and does not parse
 - for a reviewer that echoes what it reviewed, a value that is not this round's
@@ -170,7 +170,7 @@ When the round limit is reached after an edit round, stop with `stopped` and say
 
 ### 11. Report
 
-Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Move any reply or stderr file stored beside it along with it, named after the ledger, as in `<ledger name>-round-2-reply.txt`, and update the names in the ledger. Use `.txt`: a reply kept verbatim is not formatted, and Markdown linting and formatting would fail on it or change it. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
+Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, reserving the name with an exclusive create before the move, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Move any reply or stderr file stored beside it along with it, named after the ledger, as in `<ledger name>-round-2-reply.txt`, and update the names in the ledger. Use `.txt`: a reply kept verbatim is not formatted, and Markdown linting and formatting would fail on it or change it. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
 
 Print the status line, the ledger path, the reviewer, and the coverage:
 

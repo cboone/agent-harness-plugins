@@ -43,12 +43,14 @@ They are separate on purpose. Transcription is allowed. Letting the transcriptio
 
 ### Completion signals
 
-| Kind          | A finished review                                                                                                   | A failed round                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Shell command | Exit status 0 **and** non-empty stdout                                                                              | A non-zero exit, a timeout, empty stdout even with stderr, output that is only an error, output that is cut off |
-| Skill/command | A report that says the review completed, whether with findings or with none, recorded verbatim before transcription | No report, a report that is only an error, a report that ends partway, a report that says it could not run      |
+| Kind          | A finished review                                                                                                   | A failed round                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Shell command | Exit status 0 **and** output, as defined below                                                                      | A non-zero exit, a timeout, no output even with stderr, output that is only an error, output that is cut off |
+| Skill/command | A report that says the review completed, whether with findings or with none, recorded verbatim before transcription | No report, a report that is only an error, a report that ends partway, a report that says it could not run   |
 
-Every signal, not any one. A process that exits 0 having printed nothing passes an exit-status check on its own, and that is exactly the case this loop must not read as clean. The output that counts is stdout: many CLIs write progress lines to stderr, so a run that exits 0 with only stderr has reported nothing.
+Every signal, not any one. A process that exits 0 having printed nothing passes an exit-status check on its own, and that is exactly the case this loop must not read as clean.
+
+**A shell reviewer's output is its stdout, and only when stdout holds at least one non-whitespace character.** Every rule in this skill that asks whether a reviewer printed anything means this, and nothing else. Stderr does not count, because many CLIs write progress lines there, so a run that exits 0 with only stderr has reported nothing. Whitespace does not count either: a stdout of a newline or a few spaces carries no review, and it transcribes to no findings exactly as a crash does.
 
 A reviewer that emits structured output, such as JSON, adds a signal: the output must parse. Output that was supposed to be structured and does not parse is a failed round. Do not repair it by hand, and do not fall back to reading it as prose; the reviewer did not do what it does, and its content is unknown.
 
@@ -174,6 +176,8 @@ Then:
 - **A symlink is in scope only as its link text.** A wrong or dangling target is reviewable, and that is all there is to review in a link. `git add -N` satisfies this on its own: git diffs a symlink as its target string, so the link text reaches the review and the target's contents do not.
 - **Never hand a reviewer a symlink as a file to open**, and never resolve the target and pass that path either; the resolved path is the same content by another name. A reply that quotes a symlink's target contents is redacted before any of it is saved, in the raw reply and in every finding alike; see [Recording the raw reply](#recording-the-raw-reply).
 - **A symlink is in the scope, and its target is not.** A round whose untracked bucket holds symlinks is still full coverage. The snapshot agrees: git records a symlink as its target string.
+
+**The loop does not sandbox reviewers, and this rule does not make it one.** A skill or command runs with this session's own tools, and a shell command runs from the repository root as the user, so either can open any file the user can, an untracked symlink's target included. The rule limits what the loop itself hands a reviewer and what reaches the ledger. It does not stop a reviewer that follows a link, or reads any other file, on its own. Choose a reviewer on the understanding that it can read what you can, as with any tool you run.
 
 The rule does not depend on where the target points. A target inside the repository is already in the scope on its own merits, so following the link would only show the reviewer the same bytes twice.
 

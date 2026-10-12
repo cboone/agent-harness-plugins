@@ -44,7 +44,7 @@ Judge emptiness on **what the reviewer returned**, before any transcription. A c
 
 This is an absence claim, so it has a bad default answer: a loop that never checks will report clean forever. Check it the way `plant-defects` checks any instrument, by making the failure happen on purpose. Do it for every kind of reviewer, because each fails silently in its own way:
 
-- **A shell command:** pass `--reviewer` a stub that exits zero and prints nothing, and confirm the run reports `failed`. Repeat with a non-zero exit, with output that stops partway, and with structured output that does not parse.
+- **A shell command:** pass `--reviewer` a stub that exits zero and prints nothing, and one that prints only whitespace, and confirm each run reports `failed`. Repeat with a non-zero exit, with output that stops partway, and with structured output that does not parse.
 - **A skill or command:** pass a skill whose only instruction is to end without a report, and one that reports an error, and confirm both report `failed`.
 - **An editing reviewer:** pass a stub that edits a file in scope and reports no findings, and confirm the round is recorded as an edit round and not reported clean.
 

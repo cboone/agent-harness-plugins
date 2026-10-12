@@ -16,6 +16,20 @@ The final location is `docs/reviews/<date>-<branch>-until-clean.md`, with the br
 
 When that file already exists, from an earlier run on the same branch and day, add the first free numeric suffix instead, as in `<date>-<branch>-until-clean-2.md`, and name the earlier ledger in the new one's header. Never overwrite or append to it: each ledger records one run, and the earlier one may already be committed.
 
+Reserve the name before moving the ledger onto it, because checking for a free name and then moving is a race: two runs on the same branch and day can both see the same name free, and the second move overwrites the first ledger. Create the destination with `noclobber` set, which fails when the name already exists, take the next suffix on each failure, and only then move the ledger onto the name you reserved:
+
+```bash
+n=1
+dest="docs/reviews/${stem}.md"
+until (set -o noclobber && : > "${dest}") 2> /dev/null; do
+  n=$((n + 1))
+  dest="docs/reviews/${stem}-${n}.md"
+done
+mv -f "${ledger_tmp}" "${dest}"
+```
+
+`stem` is `<date>-<branch>-until-clean`, and `ledger_tmp` is the ledger's temporary path. The `-f` is safe here: the file it replaces is the empty one this run just created.
+
 The `-until-clean` suffix keeps the file clear of `review-branch`, which writes `<date>-<branch>.md` and overwrites it. Two skills silently overwriting each other's reviews would lose work.
 
 Under `--no-save`, the ledger stays at its temporary path and that path is reported. It is still written either way, because `address-review` needs a file to read. Whether a saved ledger is committed follows the repository's own convention; this skill does not commit it and never pushes.

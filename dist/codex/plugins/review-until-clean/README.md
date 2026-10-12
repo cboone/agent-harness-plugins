@@ -88,6 +88,8 @@ Before each fix pass, [Address Review](../address-review/README.md), which does 
 
 When untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. It restores the index with `git reset -- <paths>` afterward, touching only those paths. Declining is fine; the untracked bucket is then recorded as not covered, unless the reviewer's report shows it read those files anyway. The snapshot is computed from file content rather than from index state, so staging a file this way does not move it. Only a change to which paths are tracked does, such as force-adding an ignored file.
 
+The skill does not sandbox the reviewer. A reviewer skill runs with your agent's own tools and a shell reviewer runs as you, so either can read any file you can, including the target of an untracked symlink. The skill keeps a symlink's target out of what it hands the reviewer and out of the ledger, but cannot stop a reviewer that opens it on its own.
+
 ### As a pre-push hook
 
 The skill is deliberately agent-invoked rather than a shipped git hook, because a hook adds latency to every push and one that fails open is worse than no hook at all. To wire one up yourself, have your `pre-push` hook ask before running, and run the skill through your agent's non-interactive mode with an explicit `--reviewer`: a reviewer named only in agent instructions needs a confirmation that a non-interactive run cannot give, so without `--reviewer` the run ends `failed`.
