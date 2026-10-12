@@ -189,8 +189,8 @@ function require_scope_file() {
       | type == "object"
       and (.head | type == "string" and length > 0)
       and (.base == null or (.base | type == "string" and length > 0))
-      and (.snapshot | type == "string")
-      and (.tree | type == "string")
+      and (.snapshot | type == "string" and length > 0)
+      and (.tree | type == "string" and length > 0)
       and (.committed | paths)
       and (.staged | paths)
       and (.unstaged | paths)

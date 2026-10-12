@@ -140,6 +140,24 @@ exit=1
 codex-aspects: scope file 'FIXTURE/no-base.json' is not review-scope output
 ```
 
+## A scope with an empty snapshot or tree
+
+Results are matched to the scope by its snapshot, so an empty one would let an
+empty `reviewed` pass.
+
+```scrut
+$ for field in snapshot tree; do
+>   jq --arg field "${field}" '.[$field] = ""' "${FIXTURE}/scope.json" > "${FIXTURE}/empty-${field}.json"
+>   "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/empty-${field}.json" > /dev/null 2> "${FIXTURE}/empty-${field}.err"
+>   echo "${field}: exit=$?"
+>   sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/empty-${field}.err"
+> done
+snapshot: exit=1
+codex-aspects: scope file 'FIXTURE/empty-snapshot.json' is not review-scope output
+tree: exit=1
+codex-aspects: scope file 'FIXTURE/empty-tree.json' is not review-scope output
+```
+
 ## A scope path that leaves the repository
 
 The prompt tells the reviewer to read each untracked path by name, so a `..`
