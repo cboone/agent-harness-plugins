@@ -4,7 +4,7 @@
 # Each hook event is a subcommand; reads the hook's JSON payload from stdin
 # and shells out to alerter with per-event title, subtitle, body, sound, group,
 # and per-harness icon. Titles name the action; the icon names the harness.
-# Events fire detached through ./fire-alerter, which stops alerter shortly after launch.
+# Events fire detached, and each alerter is stopped shortly after launch.
 #
 # Must parse under macOS /bin/bash 3.2, what `env bash` finds without Homebrew.
 # A syntax error exits 2, and Claude Code treats exit 2 as blocking the event.
@@ -13,11 +13,23 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "${0}")"
 SCRIPT_DIR="$(cd "$(dirname "${0}")" && pwd)"
 ASSETS_DIR="${SCRIPT_DIR}/../assets"
-FIRE_SCRIPT="${SCRIPT_DIR}/fire-alerter"
-readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR FIRE_SCRIPT
+readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR
 
 # Body length budget: a banner shows about two lines, an expanded alert about four.
 readonly BODY_LIMIT=140
+
+# alerter's own timeout, a backstop for when run_alerter is stopped before its
+# SIGKILL: alerter removes the banner when it expires.
+readonly FIRE_TIMEOUT=86400
+
+# Seconds alerter gets to post its banner, capped at 60. A waiting alerter
+# polls usernoted, at a cost that grows with the number waiting. The nine-digit
+# match keeps bash arithmetic from overflowing.
+WAIT_LIMIT=2
+if [[ "${NOTIFY_WAIT_LIMIT:-}" =~ ^[1-9][0-9]{0,8}$ ]]; then
+  WAIT_LIMIT=$((NOTIFY_WAIT_LIMIT > 60 ? 60 : NOTIFY_WAIT_LIMIT))
+fi
+readonly WAIT_LIMIT
 
 # Reduces a reply to plain prose for a banner body. Lengths count Unicode code
 # points.
@@ -441,10 +453,23 @@ function plan_heading() {
 # alerter dispatch
 # -----------------------------------------------------------------------------
 
-# Fires alerter through fire-alerter, detached so the harness is never blocked.
-# Groups are suffixed with the session key. Stop groups fire once per turn (an atomic mkdir
-# marker) and are skipped while the originating pane is visible. An empty
-# sound omits --sound, so the notification is silent.
+# Runs alerter with the given arguments and stops it with SIGKILL WAIT_LIMIT
+# seconds later unless it has exited. SIGKILL leaves the delivered banner in
+# Notification Center, while SIGTERM or SIGINT would make alerter remove it.
+function run_alerter() {
+  alerter "$@" --timeout "${FIRE_TIMEOUT}" &
+  local pid=$! waited=0
+  while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+  kill -KILL "${pid}" 2> /dev/null || true
+}
+
+# Fires alerter through run_alerter, detached so the harness is never blocked.
+# Groups are suffixed with the session key. Stop groups fire once per turn (an
+# atomic mkdir marker) and are skipped while the originating pane is visible.
+# An empty sound omits --sound, so the notification is silent.
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
@@ -465,7 +490,7 @@ function fire_alerter_detached() {
     sound_args=(--sound "${sound}")
   fi
 
-  "${FIRE_SCRIPT}" \
+  run_alerter \
     --title "${title}" \
     --subtitle "${subtitle}" \
     --message "${message}" \

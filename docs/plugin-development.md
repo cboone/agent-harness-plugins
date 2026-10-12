@@ -70,7 +70,6 @@ plugins/notify/
 │   ├── codex.hooks.json
 │   └── hooks.json
 └── scripts/
-    ├── fire-alerter
     └── notify
 ```
 
