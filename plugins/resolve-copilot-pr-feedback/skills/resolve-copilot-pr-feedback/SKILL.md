@@ -305,7 +305,7 @@ A review-body concern that step 1d settled as **Matched** takes the category of 
 bash resolve-copilot-threads resolve THREAD_ID
 ```
 
-Resolve a thread only when its handling is complete. A Nitpick, Outdated, Incorrect or Deferred thread is resolved in step 4 as its section says. A Valid thread is resolved in step 8, after its fix is pushed, so a run that stops before the push never leaves a thread resolved over a fix that exists only locally. A sibling left `Pending` is never resolved.
+Resolve a thread only when its handling is complete. A Nitpick, Outdated or Deferred thread is resolved in step 4 as its section says. A thread whose handling commits a change, Valid or Incorrect, is resolved in step 8, after that change is pushed, so a run that stops before the push never leaves a thread resolved over a fix that exists only locally. A sibling left `Pending` is never resolved.
 
 ### 4. Handle Each Category
 
@@ -358,7 +358,7 @@ The cleanup must be a separate Bash tool call: each tool invocation runs uncondi
 1. Reply to the thread with professional explanation:
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
    - Incorrect: "This conflicts with our {convention name} convention. {Brief explanation}. See {reference file} for project guidelines."
-1. Resolve the thread using `bash resolve-copilot-threads resolve THREAD_ID`
+1. Resolve an Outdated thread now with `bash resolve-copilot-threads resolve THREAD_ID`. Leave an Incorrect thread open: step 8 resolves it once the instructions change below is pushed.
 1. **Update Copilot instructions** to prevent recurrence:
    - **Prefer a path-specific file** (e.g., `.github/instructions/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
    - **Use `.github/copilot-instructions.md`** only for repo-wide conventions
@@ -391,7 +391,7 @@ For a sibling, thread or review-body alike:
 
 1. **Do not patch it.** Record it with Category `Valid` and Outcome `Pending`. For a thread, leave it unresolved and reply to it naming the chain: the earlier findings and fixes, and the design option below. A review-body finding has no thread, so its summary row is the record.
 1. **Propose one design option** that would close the class instead of the instance: an allowlist of exact accepted forms, a structural parser, a narrower contract that stops promising the property, one shared implementation instead of copies, or an explicit threat model or scope statement in the documentation when the findings keep widening what the code must defend against.
-1. **End the run with `Partial`**, even when the sibling was the only finding. The summary's `### Sibling chain` section quotes each finding in the chain with its link, names the fixes already made, and states the design option. `monitor-pr` escalates on `Partial`, so the chain reaches the user as a design question rather than another patch.
+1. **End the run with `Partial`**, even when the sibling was the only finding. The summary's `### Sibling chain` section quotes each finding in the chain with its link, names the fixes already made, and states the design option, and its `Remaining Required Action` asks the user to choose between the design option and patching the sibling. `monitor-pr` escalates on `Partial`, so the chain reaches the user as a design question rather than another patch.
 
 Patch a sibling only when the user, told of the chain, asks for that patch. When the user chooses the design option, implement it under the Valid Concerns steps above, as one fix for the whole class. A later run that carries the `Pending` sibling forward without such a decision in its invocation records it `Pending` again and ends `Partial`.
 
@@ -415,7 +415,7 @@ Apply the same categories, minus the thread operations:
 | Category       | What to do                                                                                                              | Outcome recorded                    |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | **Valid**      | Fix the class per Valid Concerns and commit (do not push; steps 5 to 7 run first); for a sibling, follow Sibling Chains | `Fixed`, or `Pending` for a sibling |
-| **Incorrect**  | Update the Copilot instructions file so it stops recurring                                                              | `Noted`                             |
+| **Incorrect**  | Update the Copilot instructions file so it stops recurring, and commit it (do not push; steps 5 to 7 run first)         | `Noted`                             |
 | **Deferred**   | Track the follow-up work in a GitHub issue, PROJECT.md, or similar                                                      | `Tracked`                           |
 | **Outdated**   | Confirm against current code, then record it; no code change                                                            | `Noted`                             |
 | **Nitpick**    | Record it; no code change                                                                                               | `Noted`                             |
@@ -461,12 +461,12 @@ Copilot reviews the code a fix adds as closely as the code it was asked about, a
 
    Parent continuation:
    - Caller: resolve-copilot-pr-feedback
-   - Resume target: Step 6, record the review, then Step 7.
+   - Resume target: Step 6, record the review, then Step 7 unless a standing Important finding stops the push.
    - On success or no-op: Return the JSON findings; record them without fixing them.
    - On failure or unavailable: Record a workflow-level failure quoting the reason, skip Step 8's push, and go to Step 9.
    ```
 
-   Do not fix anything this review reports, and do not review a third time. When it reports an Important finding still standing, do not push: record the finding under `Remaining Required Action`, skip step 7 and step 8's push, and go to step 9, which reports the run `Partial`.
+   Do not fix anything this review reports, and do not review a third time. When it reports an Important finding still standing, do not push: record the finding under `Remaining Required Action` and record the review per the next item, then skip step 7 and step 8's push and go to step 9, which reports the run `Partial`.
 
 1. **Record the review** for step 9's `### Fix review` section: each range reviewed, the findings fixed, the findings declined with their rationale, and what the review reported as unverified, not reviewed, or excluded. A review that returns `complete: false` is not a failure, but what it did not cover goes in that section.
 
@@ -496,10 +496,10 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 
 ### 8. Verify Completion
 
-Do not run this step if step 6 or step 7 stopped the push: a missing or failed fix review, an Important finding still standing after the second review, a lint failure, or skipped required lint work. In that case, go directly to step 9 and report why in the final summary; the Valid threads stay open and the pull request body unchanged.
+Do not run this step if step 6 or step 7 stopped the push: a missing or failed fix review, an Important finding still standing after the second review, a lint failure, or skipped required lint work. In that case, go directly to step 9 and report why in the final summary; Valid and Incorrect threads stay open and the pull request body unchanged.
 
 1. **Push any changes:** `git push`
-1. **Resolve each Valid thread** whose fix this push carried, using the script. Leave a sibling `Pending` thread open.
+1. **Resolve each Valid or Incorrect thread** whose commit this push carried, using the script. Leave a sibling `Pending` thread open.
 1. **Apply the pull request body correction** step 5 prepared, if any, with the tmpfile pattern from [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments): `mktemp -u "${TMPDIR:-/tmp}/copilot-body-XXXXXX"`, write the body with the Write tool, then, as a separate call, `gh pr edit PR_NUMBER --repo OWNER/REPO --body-file TMPFILE`, and remove the tmpfile in another separate call.
 1. Re-fetch to confirm all Copilot threads resolved:
 
@@ -619,7 +619,7 @@ Head SHA: `abc1234`
 
 | Source                                                                                       | Finding            | Category | Outcome  | Disposition                                |
 | -------------------------------------------------------------------------------------------- | ------------------ | -------- | -------- | ------------------------------------------ |
-| Thread                                                                                       | `src/foo.ts:42`    | Valid    | Resolved | Fixed null check                           |
+| Thread | `src/foo.ts:42` | Valid | Pending | Null check fixed in commit `abc1234`; the push failed, so the thread stays open |
 | Thread                                                                                       | `src/bar.ts:7`     | Outdated | Failed   | Reply failed                               |
 | Thread                                                                                       | `lib/baz.ts:9`     | Nitpick  | Pending  | Resolution still required                  |
 | [Review body 5035762218](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218) | `docs/plan.md:243` | Valid    | Fixed    | Corrected phase status in commit `abc1234` |
@@ -637,9 +637,9 @@ Reviews read: 5035762218.
 
 - Resolve the failed reply for `src/bar.ts:7`
 - Resolve the pending nitpick at `lib/baz.ts:9`
-- Push branch changes
+- Push branch changes, then resolve the thread for `src/foo.ts:42`
 
-Counts: 4 fetched, 2 resolved, 1 pending, 1 failed, 1 review-body finding, 2 code-change threads, 1 workflow failure.
+Counts: 4 fetched, 2 pending, 1 failed, 1 review-body finding, 1 code-change thread, 1 workflow failure.
 ```
 
 **No-op summary idempotency:** Before posting a `No unresolved Copilot feedback` summary, inspect existing top-level PR comments for a `## Copilot Feedback Summary` comment with the same head SHA and no-op status. If one already exists, its `Reviews read:` line lists every review this run read, and this invocation did not recover a failed summary-post attempt, do not add another no-op comment. A run that read a review the existing summary does not list, such as a confirming review requested on the same head, posts its own no-op summary, because that line is the only record that the review was read. Report the existing summary comment URL locally and treat that existing same-head no-op summary as satisfying the final summary requirement for this no-op run. This idempotency exception applies only to runs where the thread fetch, the review-body fetch and the audit all came back with nothing needing attention; if this invocation processed threads or review-body findings, made code changes, or is recovering a failed summary-post attempt, post the required outcome summary.
@@ -690,7 +690,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 
 1. All code changes pushed to the PR branch
 1. **`fetch`, `fetch-reviews` and `audit` were all run** (a thread fetch alone cannot see review-body findings, and neither fetch sees a Copilot comment outside a Copilot thread)
-1. **EVERY addressed thread resolved via the script** (not just code fixed!), a Valid thread only after its fix is pushed, and never a sibling left `Pending`
+1. **EVERY addressed thread resolved via the script** (not just code fixed!), a Valid or Incorrect thread only after its commit is pushed, and never a sibling left `Pending`
 1. **Every Valid fix closes its class**: the summary names the class and the extra sites fixed, and a sibling of an earlier fix is escalated per Sibling Chains rather than patched
 1. **When files changed: the consistency sweep ran and the fix review ran**, each Important finding of the fix review fixed or declined with a rationale, and step 9's `### Fix review` section records it
 1. **EVERY review step 1b chose read in full, and every concern it states and every uncovered item handled and recorded** in the step 9 summary, since there is no thread to resolve and the summary row is the only record
@@ -726,7 +726,7 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 - **Finding**: `path:line`, or normalized path plus identifying text when the finding has no line
 - **Category**: Nitpick, Valid, Outdated, Incorrect, Deferred, Advisory, or No concern (review-body text that states nothing to act on)
 - **Action taken**: Brief description of resolution (10 words max)
-- **Status**: `Resolved`, `Failed`, or `Pending` for threads; `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed` for review-body findings
+- **Status**: `Resolved`, `Failed`, or `Pending` for threads; `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed` for review-body findings, plus `Pending` for a review-body sibling left unpatched
 
 **Common failure modes:**
 
