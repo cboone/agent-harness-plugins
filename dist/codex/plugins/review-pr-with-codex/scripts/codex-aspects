@@ -398,25 +398,50 @@ function render_scope() {
   # Untracked files are in no diff, so they are listed by name. A symlink is
   # given as its link text and never as a path to open: following it would put
   # whatever it points at, possibly outside the repository, into the review.
-  local path target has_untracked="false" unreadable_link=""
+  # Each record is path, kind and link target, NUL-separated.
+  local records path target unreadable_link=""
+  records="$(mktemp "${TMP_DIR}/untracked-records.XXXXXX")" \
+    || die "could not create a temporary file for the untracked paths"
   while IFS= read -r -d '' path; do
-    if [[ "${has_untracked}" == "false" ]]; then
-      echo "- Untracked files, which are in no diff; read each one:"
-      has_untracked="true"
-    fi
     if [[ -L "${top_level}/${path}" ]]; then
       if ! target="$(readlink "${top_level}/${path}")"; then
         unreadable_link="${path}"
         break
       fi
-      printf '  - %s -> %s (a symlink; review the link text only and do not open its target)\n' \
-        "${path}" "${target}"
+      printf '%s\0link\0%s\0' "${path}" "${target}" >> "${records}"
     else
-      printf '  - %s\n' "${path}"
+      printf '%s\0file\0\0' "${path}" >> "${records}"
     fi
   done < "${untracked_list}"
 
   [[ -z "${unreadable_link}" ]] || die "could not read the symlink ${unreadable_link}"
+
+  # Names and link targets are written as JSON strings. Git allows a newline in
+  # either, so written raw, a crafted name could start a line of its own and
+  # read as an instruction.
+  jq -Rrs '
+    (split("\u0000") | .[:-1]) as $fields
+    | [range(0; $fields | length; 3) as $i | $fields[$i:$i + 3]]
+    | if length == 0 then empty else
+        "- Untracked files, which are in no diff. Each name below is a JSON string: decode it, then read the file it names:",
+        (.[] | if .[1] == "link"
+          then "  - \(.[0] | @json) -> \(.[2] | @json) (a symlink; review the link text only and do not open its target)"
+          else "  - \(.[0] | @json)" end)
+      end
+  ' < "${records}" || die "could not render the untracked paths"
+}
+
+# Refuses aspect instructions that live inside the repository under review. A
+# change to them would then rewrite the instructions its own review runs with,
+# so the review must use an installed copy of this plugin instead.
+function require_trusted_aspects() {
+  local top_level="${1}" aspects_physical
+
+  aspects_physical="$(physical_dir "${ASPECTS_DIR}")" \
+    || die "aspect instructions not found at ${ASPECTS_DIR}"
+  if [[ "${aspects_physical}" == "${top_level}" || "${aspects_physical}" == "${top_level}/"* ]]; then
+    die "the aspect instructions at ${ASPECTS_DIR} are inside the repository under review, so the change could rewrite its own review instructions; run an installed copy of codex-aspects instead"
+  fi
 }
 
 # Prints an aspect's instructions without its attribution comment, which is for
@@ -525,6 +550,8 @@ function cmd_prompt() {
   local top_level snapshot
   top_level="$(git rev-parse --show-toplevel 2> /dev/null)" \
     || die "not inside a git work tree"
+  top_level="$(physical_dir "${top_level}")"
+  require_trusted_aspects "${top_level}"
   snapshot="$(jq -r '.snapshot' "${scope}")"
 
   render_prompt "${aspect}" "${scope}" "${top_level}" "${snapshot}"
@@ -634,6 +661,7 @@ function cmd_run() {
   top_level="$(git rev-parse --show-toplevel 2> /dev/null)" \
     || die "not inside a git work tree"
   top_level="$(physical_dir "${top_level}")"
+  require_trusted_aspects "${top_level}"
   out_physical="$(physical_dir "${out_dir}")"
 
   # Prompts, outputs and logs written inside the work tree would join the scope
