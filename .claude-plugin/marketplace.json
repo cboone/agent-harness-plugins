@@ -247,7 +247,7 @@
         "name": "Christopher Boone"
       },
       "category": "ci-and-release",
-      "description": "Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands.",
+      "description": "Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands; resolve Copilot feedback on demand.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["ci", "copilot", "github", "pull-requests", "workflow"],
       "license": "MIT",
@@ -384,19 +384,6 @@
       "name": "release",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./plugins/release"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "code-review",
-      "description": "Process and resolve GitHub Copilot automated PR review comments.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["code-review", "copilot", "github", "pull-requests"],
-      "license": "MIT",
-      "name": "resolve-copilot-pr-feedback",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./plugins/resolve-copilot-pr-feedback"
     },
     {
       "author": {

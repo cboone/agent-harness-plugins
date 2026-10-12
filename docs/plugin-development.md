@@ -32,7 +32,7 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A skill can ship executable helpers too. `workmux:start-issue`, `workmux:create-worktree`, `publish-report-board`, `push-notification`, `resolve-copilot-pr-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
+A skill can ship executable helpers too. `workmux:start-issue`, `workmux:create-worktree`, `publish-report-board`, `push-notification`, `monitor-pr:resolve-copilot-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
 
 ```text
 plugins/workmux/
@@ -48,11 +48,9 @@ plugins/workmux/
         └── SKILL.md
 ```
 
-`resolve-copilot-pr-feedback` and `monitor-pr` share `resolve-copilot-threads` the same way, guarded by a fourth testcase. `monitor-pr` calls only its read-only `fetch`, `fetch-reviews` and `audit` commands, to see whether Copilot reviewed the current head and what is left open before it decides whether to dispatch to the resolver. Sharing the file is the point: the watch and the resolver read the same review data, so they cannot disagree about what Copilot left.
+`review-until-clean` and `review-pr-with-codex` ship byte-identical copies of `review-scope`, guarded by a scrut testcase. `review-pr-with-codex` takes its scope buckets for the reviewers' prompts and compares its content trees to detect lasting changes the read-only aspects made to tracked files and to untracked files outside the ignore rules, so a fix to either behavior belongs in both copies.
 
-`review-until-clean` and `review-pr-with-codex` share `review-scope` the same way, guarded by a fifth testcase. `review-pr-with-codex` takes its scope buckets for the reviewers' prompts and compares its content trees to detect lasting changes the read-only aspects made to tracked files and to untracked files outside the ignore rules, so a fix to either behavior belongs in both copies.
-
-A skill refers to each script it ships by its plugin-root path, so `workmux:create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` and `monitor-pr` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their own copy. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
+A skill refers to each script it ships by its plugin-root path, so `workmux:create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `monitor-pr:resolve-copilot-feedback` and `monitor-pr:monitor` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their own copy. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
 
 A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI, where the placeholder is not substituted in skills. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
 
@@ -101,7 +99,7 @@ Widening the allowlist means measuring the new field first. Install a skill that
 
 ### Argument hints
 
-Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr` displays its options. Every skill that accepts arguments should declare one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` rejects any other form of the value, and requires the field only on skills with an `## Options` heading outside fenced code, so a skill that describes its arguments in prose elsewhere, such as `review-plan`, needs the hint added by hand. Codex CLI ignores it, so it passes through the Codex mirror unchanged.
+Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr:monitor` displays its options. Every skill that accepts arguments should declare one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` rejects any other form of the value, and requires the field only on skills with an `## Options` heading outside fenced code, so a skill that describes its arguments in prose elsewhere, such as `review-plan`, needs the hint added by hand. Codex CLI ignores it, so it passes through the Codex mirror unchanged.
 
 ### Invocation policy
 
@@ -195,7 +193,7 @@ Declare every skill a workflow composes in a `## Skill dependencies` section of 
 ## Skill dependencies
 
 - **Required:** `lint-and-fix`
-- **Optional:** `review-branch`, `resolve-copilot-pr-feedback`
+- **Optional:** `review-branch`, `monitor-pr:resolve-copilot-feedback`
 ```
 
 Write `None` for an empty category. A skill that composes nothing omits the section.

@@ -1,5 +1,5 @@
 ---
-name: resolve-copilot-pr-feedback
+name: resolve-copilot-feedback
 description: >-
   Process GitHub Copilot PR review comments: fix, reply to, and resolve each
   thread. Use for "resolve copilot feedback" or "handle copilot comments", or
@@ -170,7 +170,7 @@ bash resolve-copilot-threads audit OWNER REPO PR_NUMBER
 
 The script automatically handles pagination and filters for Copilot-authored content. `HEAD_SHA` is the pull request's `headRefOid` (`gh pr view PR_NUMBER --repo OWNER/REPO --json headRefOid`). Step 1b says which `--skip` ids to pass, and step 1d covers what `audit` reports. A command that exits nonzero has not read anything: record a workflow-level failure quoting its stderr, never an empty result.
 
-Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. A caller such as `monitor-pr` may also pass `REVIEW_ID`, the review it dispatched for: that review must be among the reviews step 1d reads and lists under `Reviews read`, and if `fetch-reviews` does not return it, record a workflow-level failure that names it. This establishes PR context for the required final workflow summary in step 7. If PR context or GitHub authentication cannot be established, report that the required final summary could not be posted and do not mark the workflow complete.
+Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. A caller such as `monitor-pr:monitor` may also pass `REVIEW_ID`, the review it dispatched for: that review must be among the reviews step 1d reads and lists under `Reviews read`, and if `fetch-reviews` does not return it, record a workflow-level failure that names it. This establishes PR context for the required final workflow summary in step 7. If PR context or GitHub authentication cannot be established, report that the required final summary could not be posted and do not mark the workflow complete.
 
 #### 1a. Threads (`fetch`)
 
@@ -265,7 +265,7 @@ Always verify against the current code before deciding. Verification is what kee
 This step is the core of the review-body work. Do it for every review step 1b chose, and record each review's id for the summary's `Reviews read:` line, including a review that turns out to state no concern at all.
 
 1. **Read the whole body before deciding anything.** Never stop at the first heading or paragraph: findings appear anywhere, including in table cells and collapsed `<details>` blocks.
-1. **Decide whether it is a review or a notice.** A notice says Copilot did not review the head: for example, it hit an error, or every changed file was excluded. A notice has no findings, which is exactly what a clean review looks like, so never read one as clean. If the newest Copilot review against the current head is a notice, record a workflow-level failure whose failure row names it as a **Copilot notice** with its review `id` and quotes it. A body that is plainly neither a review nor a notice is also a workflow-level failure, quoted the same way. `monitor-pr` reads that row to take its notice path.
+1. **Decide whether it is a review or a notice.** A notice says Copilot did not review the head: for example, it hit an error, or every changed file was excluded. A notice has no findings, which is exactly what a clean review looks like, so never read one as clean. If the newest Copilot review against the current head is a notice, record a workflow-level failure whose failure row names it as a **Copilot notice** with its review `id` and quotes it. A body that is plainly neither a review nor a notice is also a workflow-level failure, quoted the same way. `monitor-pr:monitor` reads that row to take its notice path.
 1. **List every concern the review states, wherever it states it.** Typical places are the lead paragraph, lists of open, new or previously missed findings, file-summary table cells (often with a severity and a vote count), suppressed or low-confidence sections, and any section Copilot introduces later. Skip text that states no finding, such as "no final comments" in a file summary, descriptions of what the change does, and calls to action. One sentence can hold several concerns: "A moderate cleanup-trap defect and two unresolved sandbox-path documentation gaps remain" is three.
 1. **Settle each concern**, in the first of these that applies:
    1. **Matched**: it restates a thread from `fetch`, open or already resolved, or a `Previously handled` row from step 1c. A concern beside a `#discussion_r` link usually belongs to the thread whose comment `databaseId` matches; confirm by reading. Record it against that item; nothing new is processed.
@@ -502,7 +502,7 @@ The `Reviews read:` line is required in every summary for which `fetch-reviews` 
 - If the table would make the PR comment too large, replace thread details with aggregate category/outcome rows first and state how many detail rows were omitted. Keep the full row-by-row table in the local final output for the agent/user audit trail. **Never aggregate away a review-body source link or finding identity**, since step 1c reads those back to avoid re-processing on the next run.
 - Incorrect category notes Copilot instruction additions in the Disposition column
 - Thread IDs omitted (meaningless to human reviewers)
-- Non-thread failures, including a Copilot notice or an unreadable body in place of a review, must be described in a failure details section, not forced into the feedback table. A notice row says `Copilot notice`, links the review and names its `id`, so `monitor-pr` can find it.
+- Non-thread failures, including a Copilot notice or an unreadable body in place of a review, must be described in a failure details section, not forced into the feedback table. A notice row says `Copilot notice`, links the review and names its `id`, so `monitor-pr:monitor` can find it.
 
 If neither the fetches nor the audit surfaced anything needing attention, use this no-op form:
 
@@ -648,7 +648,7 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 
 - API failures: Retry with proper auth
 - Thread ID issues: Use alternative queries
-- A Copilot notice in place of a review: record a workflow failure that names it as a Copilot notice with its review `id` and quotes it. Do not request a new review from this skill; `monitor-pr` owns review requests.
+- A Copilot notice in place of a review: record a workflow failure that names it as a Copilot notice with its review `id` and quotes it. Do not request a new review from this skill; `monitor-pr:monitor` owns review requests.
 - A skipped review on stderr (`Warning: skipping review ID: its body is not a string.`): the other reviews still came through. Open that review at its URL and read it by hand, then list it under `Reviews read`; if it cannot be read, record a workflow failure that names it.
 - Fix failures: Retry with alternative approach or defer if out of scope
 - Summary comment failures: Log the error, preserve the intended summary Markdown in the local final output, and treat the workflow as incomplete until the required final summary posts successfully
