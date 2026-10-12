@@ -19,7 +19,7 @@ All four, every round. The failure this prevents is specific and common: the age
 
 ## What the snapshot is
 
-`review-scope` reports a `snapshot`: a digest over the head commit, the resolved base, and a git tree object built from the entire working tree in a temporary index. The tree object is git's own content address, so the snapshot is a function of file content and nothing else.
+`review-scope` reports a `snapshot`: a digest over the head commit, the resolved base, and a git tree object built from the entire working tree in a temporary index. The tree object is git's own content address, so within the tree the snapshot is a function of file content and of which paths are tracked, and nothing else.
 
 ## Why it is content-addressed
 
@@ -35,14 +35,15 @@ The same property covers deletions, symlinks, the executable bit, and file names
 
 ## What moves it, and what does not
 
-| Action                                      | Snapshot |
-| ------------------------------------------- | -------- |
-| `git add`, `git add -N`, `git reset` a path | Holds    |
-| Editing one byte of a file in scope         | Moves    |
-| Creating or deleting a file in scope        | Moves    |
-| Committing the working tree                 | Moves    |
-| Changing the base ref                       | Moves    |
-| Another session editing the tree            | Moves    |
+| Action                                                              | Snapshot |
+| ------------------------------------------------------------------- | -------- |
+| `git add`, `git add -N`, `git reset` a path                         | Holds    |
+| `git add -f` an ignored file, or `git reset` a tracked ignored file | Moves    |
+| Editing one byte of a file in scope                                 | Moves    |
+| Creating or deleting a file in scope                                | Moves    |
+| Committing the working tree                                         | Moves    |
+| Changing the base ref                                               | Moves    |
+| Another session editing the tree                                    | Moves    |
 
 The last row is the reason step 8 recomputes the snapshot instead of trusting the value from step 1. A worktree is not private, and a clean result is a claim about the code on disk now.
 
