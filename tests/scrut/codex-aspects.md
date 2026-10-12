@@ -402,6 +402,28 @@ child stopped
 no write after cancellation
 ```
 
+## Denied process inspection retains artifacts and reports incomplete cancellation
+
+```scrut
+$ mkdir "${FIXTURE}/denied-bin" "${FIXTURE}/denied-pids" "${FIXTURE}/denied-out" \
+>   && printf '#!/bin/sh\necho "inspection denied" >&2\nexit 2\n' > "${FIXTURE}/denied-bin/ps" \
+>   && chmod +x "${FIXTURE}/denied-bin/ps" \
+>   && { PATH="${FIXTURE}/denied-bin:${PATH}" CODEX_STUB_MODES="simplify=hang" CODEX_STUB_PID_DIR="${FIXTURE}/denied-pids" \
+>        "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/scope.json" \
+>        --out-dir "${FIXTURE}/denied-out" > "${FIXTURE}/denied.log" 2>&1 & } \
+>   && helper=$! \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/denied-pids/simplify.child.pid" ] && break; sleep 0.1; done \
+>   && kill -TERM "${helper}" \
+>   && { wait "${helper}"; echo "helper exit=$?"; } \
+>   && grep 'cancellation is incomplete' "${FIXTURE}/denied.log" \
+>   && retained="$(sed -n 's/^codex-aspects: retained cancellation artifacts in //p' "${FIXTURE}/denied.log")" \
+>   && test -d "${retained}" && echo 'artifacts retained' \
+>   && rm -r "${retained}"
+helper exit=4
+codex-aspects: cancellation is incomplete; a process is active or its state could not be checked
+artifacts retained
+```
+
 ## A prompt too large for one argument stops the run before Codex starts
 
 The prompt is passed as one argument, which Linux caps at 128 KiB. Thousands of

@@ -32,6 +32,9 @@ readonly MAX_PROMPT_BYTES
 EXIT_ASPECT_FAILED=3
 readonly EXIT_ASPECT_FAILED
 
+EXIT_CANCELLATION_INCOMPLETE=4
+readonly EXIT_CANCELLATION_INCOMPLETE
+
 # The diff command the prompt tells reviewers to run. See render_scope.
 PROMPT_GIT_DIFF="git --no-pager diff --no-ext-diff --no-textconv --no-color --no-relative"
 readonly PROMPT_GIT_DIFF
@@ -41,6 +44,7 @@ readonly PROMPT_GIT_DIFF
 RUNNING_PIDS=()
 GUIDE_NAMES=()
 DESCENDANT_PIDS=()
+CANCELLATION_UNCERTAIN=false
 STOP_POLL_LIMIT=50
 readonly STOP_POLL_LIMIT
 
@@ -51,6 +55,7 @@ function collect_descendants() {
   children="$(pgrep -P "${pid}" 2> "${TMP_DIR}/children-${pid}.err")" || status=$?
   if [[ "${status}" -gt 1 || -s "${TMP_DIR}/children-${pid}.err" ]]; then
     echo "${SCRIPT_NAME}: process inspection is unavailable; cancellation may be incomplete" >&2
+    CANCELLATION_UNCERTAIN=true
     return 0
   fi
   while IFS= read -r child; do
@@ -75,6 +80,7 @@ function stop_running_codex() {
   local pid attempt active="false"
 
   DESCENDANT_PIDS=()
+  CANCELLATION_UNCERTAIN=false
   for pid in ${RUNNING_PIDS[@]+"${RUNNING_PIDS[@]}"}; do
     if kill -0 "${pid}" 2> /dev/null; then
       collect_descendants "${pid}"
@@ -91,10 +97,9 @@ function stop_running_codex() {
     if [[ "${active}" == "false" ]]; then break; fi
     sleep 0.1
   done
-  if [[ "${active}" == "true" ]]; then
+  if [[ "${active}" == "true" || "${CANCELLATION_UNCERTAIN}" == "true" ]]; then
     echo "${SCRIPT_NAME}: cancellation is incomplete; a process is active or its state could not be checked" >&2
-    RUNNING_PIDS=()
-    return 0
+    return 1
   fi
   for pid in ${RUNNING_PIDS[@]+"${RUNNING_PIDS[@]}"}; do
     wait "${pid}" 2> /dev/null || true
@@ -108,7 +113,10 @@ function stop_running_codex() {
 TMP_DIR=""
 
 function cleanup() {
-  stop_running_codex
+  if ! stop_running_codex; then
+    echo "${SCRIPT_NAME}: retained cancellation artifacts in ${TMP_DIR}" >&2
+    exit "${EXIT_CANCELLATION_INCOMPLETE}"
+  fi
   if [[ -n "${TMP_DIR}" ]]; then
     rm -rf "${TMP_DIR}" \
       || echo "${SCRIPT_NAME}: could not remove ${TMP_DIR}" >&2
@@ -120,6 +128,8 @@ function cleanup() {
 # 3.2 and 5 both run the EXIT trap for. It does not run when a command
 # substitution's subshell exits, so TMP_DIR survives prompt rendering.
 trap cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 
 function usage() {
   cat << 'USAGE_TEXT'
