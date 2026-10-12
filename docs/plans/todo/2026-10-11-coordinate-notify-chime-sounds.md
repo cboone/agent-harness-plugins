@@ -49,3 +49,4 @@ This plan is the integration record for work that spans this repository and a pr
 - 2026-10-11: Catalog entry merged. Generation experiment and installer built; listening grids rendered for a timbre, decay and key choice. A duplicate catalog PR from the generation session is open.
 - 2026-10-11: First listening round chose three timbres, each with its own decay, and asked for a fourth with a sonar-ping quality, all four in the hash. Duplicate catalog PR closed.
 - 2026-10-11: #606 removed OpenCode support (notify 3.0.0). #595 narrowed to the `notify` script; #594 needs a new major version.
+- 2026-10-11: #594 rebased on #606 and moved to notify 4.0.0, with a new `fire-alerter` launch helper; #595 selects sounds in `notify` before that helper and is a minor bump on 4.0.0.
