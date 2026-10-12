@@ -1,5 +1,5 @@
 ---
-name: monitor-pr
+name: monitor
 description: >-
   Watch a PR until checks pass, Copilot feedback is resolved, and it is
   mergeable, fixing failures, then offer the merge; on a Dependabot PR, never
@@ -21,7 +21,7 @@ This skill starts where `pr` stops. It is not a passive observer: it repairs fai
 
 The user may provide these options inline:
 
-- **`<pr-number>`**: Monitor a specific PR instead of the current branch's PR (e.g., `/monitor-pr 361`)
+- **`<pr-number>`**: Monitor a specific PR instead of the current branch's PR (e.g., `/monitor-pr:monitor 361`)
 - **--interval `<duration>`**: Override adaptive pacing with a fixed wait (e.g., `--interval 10m`)
 - **--ticks `<n|unlimited>`**: Limit foreground polling, including scheduler fallbacks, to `n` ticks before producing a resumable checkpoint. The default is 3; `unlimited` keeps the foreground turn active until a terminal condition or escalation
 - **--rounds `<n|unlimited>`**: Change the Copilot round budget from its default of 10. `--rounds unlimited` commits to running until the PR is genuinely clean, however many rounds that takes, and never pauses to ask for more
@@ -61,14 +61,14 @@ A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to 
   Then wait for the head SHA to change, and resume at step 3. The request works even on a PR whose automatic rebases Dependabot disabled after 30 days. If Dependabot replies that it will not rebase, usually because someone else pushed to the branch, escalate per step 9: `@dependabot recreate` would rebuild the PR but discards those commits, so that is the user's decision.
 
 - **Step 6, failing checks**: diagnose as in step 6a, but do not repair. A failure caused by a secret the Dependabot run cannot read (`Input required and not supplied: token`, an empty cloud credential, a refused OIDC exchange) says nothing about the update: escalate per step 9, reporting it as an environment problem and pointing the user at the `review-dependabot-config` skill. Escalate any other failure per step 9 too, pointing at the `triage-dependabot-prs` skill, which decides whether the update needs work, a migration, or an ignore. Either way the watch stops, because no further tick can change a failure this skill may not repair.
-- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one, and never wait for one. A missing review, a review against an older head (which every `@dependabot rebase` produces), or a current-head review classified `notice` leaves the Copilot axis not applicable: report it as `n/a (Dependabot)` and treat the axis as clean. A notice belongs with the missing review because it is one: Copilot reviewed nothing at that head, and since this path never requests a review, no retry can replace it, so holding the axis open would wait forever. Only a Copilot review at the current head matters. Run the step 3 feedback probe and classification here exactly as anywhere else: they are reads, so nothing about this path pushes. Because this path never invokes `resolve-copilot-pr-feedback`, whose fixes would be pushes, read the classified body in full yourself and list every concern it states, wherever it states it. When the probe reports open threads or audit items, the body states any concern, or the classification is `unclear`, report the thread locations, the concerns quoted with the review URL, or the audit item links, and escalate. When none of these holds, the review is clean and the axis is clean.
+- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one, and never wait for one. A missing review, a review against an older head (which every `@dependabot rebase` produces), or a current-head review classified `notice` leaves the Copilot axis not applicable: report it as `n/a (Dependabot)` and treat the axis as clean. A notice belongs with the missing review because it is one: Copilot reviewed nothing at that head, and since this path never requests a review, no retry can replace it, so holding the axis open would wait forever. Only a Copilot review at the current head matters. Run the step 3 feedback probe and classification here exactly as anywhere else: they are reads, so nothing about this path pushes. Because this path never invokes `monitor-pr:resolve-copilot-feedback`, whose fixes would be pushes, read the classified body in full yourself and list every concern it states, wherever it states it. When the probe reports open threads or audit items, the body states any concern, or the classification is `unclear`, report the thread locations, the concerns quoted with the review URL, or the audit item links, and escalate. When none of these holds, the review is clean and the axis is clean.
 - **Step 8, the terminal report**: say the PR is a Dependabot PR. The merge policy, merge offer, and post-merge steps apply as for any other PR.
 
 Under `--no-fix`, report the rebase request that would have been posted instead of posting it.
 
 ## Skill dependencies
 
-- **Required:** `lint-and-fix`, `merge-main`, `resolve-copilot-pr-feedback`
+- **Required:** `lint-and-fix`, `merge-main`, `monitor-pr:resolve-copilot-feedback`
 - **Optional:** None
 
 ## Workflow
@@ -81,7 +81,7 @@ If the user supplied a PR number, use it. Otherwise derive the PR from the curre
 gh pr view <number-or-omitted> --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit
 ```
 
-Record `OWNER`, `REPO`, and `PR_NUMBER`. The `resolve-copilot-pr-feedback` skill needs all three and does not document how to derive them, so pass them explicitly when invoking it.
+Record `OWNER`, `REPO`, and `PR_NUMBER`. The `monitor-pr:resolve-copilot-feedback` skill needs all three and does not document how to derive them, so pass them explicitly when invoking it.
 
 If this conversation contains a foreground checkpoint for that same repository and PR, treat the invocation as a continuation: restore its options and watch state using [Checkpoint and Resume](./references/checkpoint.md) before dispatching the opening snapshot. Resume at step 3 with fresh GitHub state. Do not initialize a new watch or reset its action guards merely because the user reran the command.
 
@@ -94,10 +94,10 @@ Also record whether `author.login` is `app/dependabot`, which switches on the ru
 Choose exactly one mechanism and name it on the first tick:
 
 1. **Claude Code**: Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small. Select this mechanism only when the tool is available and accepts the wakeup.
-1. **Codex with scheduled tasks**: Create a task that resumes this conversation after the selected interval. Select this mechanism only after successful task creation, and retain its task ID for updates and cancellation. Its prompt must say to resume this `monitor-pr` watch at step 3, retain the recorded PR identity, options, counters, and action guards, and stop the task on escalation, on a terminal report, or at readiness, where step 8c replaces it. Use the watch-state fields in [Checkpoint and Resume](./references/checkpoint.md). On each nonterminal tick, schedule or update the next wakeup using the selected interval. A scheduled task is a new tick, not a delayed final response.
+1. **Codex with scheduled tasks**: Create a task that resumes this conversation after the selected interval. Select this mechanism only after successful task creation, and retain its task ID for updates and cancellation. Its prompt must say to resume this `monitor-pr:monitor` watch at step 3, retain the recorded PR identity, options, counters, and action guards, and stop the task on escalation, on a terminal report, or at readiness, where step 8c replaces it. Use the watch-state fields in [Checkpoint and Resume](./references/checkpoint.md). On each nonterminal tick, schedule or update the next wakeup using the selected interval. A scheduled task is a new tick, not a delayed final response.
 1. **Foreground, including Codex CLI and scheduler fallbacks**: When no scheduler is available, or scheduling is rejected or fails, announce the fallback and run a foreground polling loop. If replacing an existing scheduled watch, cancel its pending task or wakeup first; if cancellation fails, escalate rather than start a second loop. A blocking `sleep` by itself is not a continuation mechanism: after every sleep, take the step 3 snapshot and dispatch it in the same active turn. Do not print a terminal response merely because a tick is waiting. Stop only on a terminal condition, an escalation, or the `--ticks` foreground limit.
 
-The default `--ticks 3` bounds every foreground loop, including scheduler fallbacks. Count one tick for each step 3 snapshot and its step 4 dispatch, including the opening snapshot. Finish the dispatch before applying the limit; escalation and the step 8 transition at readiness take precedence over a checkpoint. At the limit, checkpoint before the next wait, following [Checkpoint and Resume](./references/checkpoint.md): include the PR URL, current head SHA, all four axes, complete watch state, selected interval, and the exact `/monitor-pr` invocation with the original options. Report a **resumable checkpoint**, not a readiness verdict. `--ticks unlimited` removes this foreground limit, but the user may still interrupt the active session. Never claim that a blocking wait will resume after the agent has returned a final response.
+The default `--ticks 3` bounds every foreground loop, including scheduler fallbacks. Count one tick for each step 3 snapshot and its step 4 dispatch, including the opening snapshot. Finish the dispatch before applying the limit; escalation and the step 8 transition at readiness take precedence over a checkpoint. At the limit, checkpoint before the next wait, following [Checkpoint and Resume](./references/checkpoint.md): include the PR URL, current head SHA, all four axes, complete watch state, selected interval, and the exact `/monitor-pr:monitor` invocation with the original options. Report a **resumable checkpoint**, not a readiness verdict. `--ticks unlimited` removes this foreground limit, but the user may still interrupt the active session. Never claim that a blocking wait will resume after the agent has returned a final response.
 
 Adaptive intervals by phase, unless `--interval` overrides them:
 
@@ -123,7 +123,7 @@ gh api --paginate --slurp repos/OWNER/REPO/pulls/PR_NUMBER/reviews |
 Three details in that command are load-bearing:
 
 - **`--slurp`, and no `--jq`.** Without `--slurp`, `--paginate` emits one JSON array per page and `gh` applies `--jq` to each page separately, so a filter like `[...] | last` returns the last match _per page_ rather than the last overall. On a PR with enough reviews to paginate, that silently reads the wrong review and the skill compares the wrong SHA against the head. `--slurp` collects the pages into an array of arrays, which `.[][]` then flattens. `gh` rejects `--slurp` together with `--jq` (`the --slurp option is not supported with --jq or --template`), so the filtering has to move to a standalone `jq` after a pipe.
-- **Every Copilot login, not just one.** REST reports the account as `copilot-pull-request-reviewer[bot]` while GraphQL reports it as `copilot-pull-request-reviewer`, and `copilot` and `github-copilot[bot]` also appear. Matching a single login makes a real review invisible, which reads as "Copilot has not reviewed yet" and sends the skill into a pointless wait and then an escalation. This is the same login set that `resolve-copilot-pr-feedback` matches on, tested the same way: bind the login, lowercase it, then `any(. == ...)` over an explicit array, so `Copilot` matches as it does in `fetch-reviews` and the two never disagree about which review is newest. `.user.login? // ""` and the string check keep a review with no author, or a malformed one, from breaking the comparison.
+- **Every Copilot login, not just one.** REST reports the account as `copilot-pull-request-reviewer[bot]` while GraphQL reports it as `copilot-pull-request-reviewer`, and `copilot` and `github-copilot[bot]` also appear. Matching a single login makes a real review invisible, which reads as "Copilot has not reviewed yet" and sends the skill into a pointless wait and then an escalation. This is the same login set that `monitor-pr:resolve-copilot-feedback` matches on, tested the same way: bind the login, lowercase it, then `any(. == ...)` over an explicit array, so `Copilot` matches as it does in `fetch-reviews` and the two never disagree about which review is newest. `.user.login? // ""` and the string check keep a review with no author, or a malformed one, from breaking the comparison.
 - **Flag position, and no quotes around the endpoint.** `--paginate` and `--slurp` come before the path, so a `Bash(gh api repos/*)` rule does not match `gh api --paginate repos/*`; the rule has to spell the flags out in order. Leave the endpoint unquoted as shown: the recommended allow rule matches an unquoted path, and a quoted one begins with `"` where the pattern expects `r`, so it fails to match and prompts. Nothing in the endpoint needs quoting, since owner, repo, and PR number contain no shell metacharacters. The trailing `|` ends the line without a continuation backslash, which keeps the command intact when copied.
 
 Copilot's review `state` is always `COMMENTED`, never `APPROVED`, so never treat an approval state as the pass signal.
@@ -132,7 +132,7 @@ Copilot's review `state` is always `COMMENTED`, never `APPROVED`, so never treat
 
 #### The Copilot feedback probe
 
-The metadata above says a review exists and which commit it ran against. It says nothing about what the review found. Probe what is open directly, using the same script `resolve-copilot-pr-feedback` reads with, so the two skills always see the same review data.
+The metadata above says a review exists and which commit it ran against. It says nothing about what the review found. Probe what is open directly, using the same script `monitor-pr:resolve-copilot-feedback` reads with, so the two skills always see the same review data.
 
 This plugin ships its own copy of that script. Invoke it via `bash` followed by the quoted path:
 
@@ -186,7 +186,7 @@ Never truncate the body or read only its start. Copilot can place the text that 
 
 The resolver reads the same body in full during its own run, which makes it a second check. If its summary for a review this skill classified as `review` has a failure row naming that review as a Copilot notice, reclassify that `id` as `notice` and take step 4's notice condition instead of escalating the resolver's outcome. A misreading in either skill therefore cannot turn a notice into a clean axis.
 
-The probe and the classification answer exactly four questions, and step 4 asks no more of them than these: is the current-head review a review, a notice, or unclear, are there open Copilot threads, has step 7b processed this review `id` and with what outcome, and does the audit report Copilot feedback the other two cannot reach. What a review body says, whether a finding is real, already handled, or needs no code change, is `resolve-copilot-pr-feedback`'s judgment, not this skill's, except on the Dependabot path, where no resolver runs.
+The probe and the classification answer exactly four questions, and step 4 asks no more of them than these: is the current-head review a review, a notice, or unclear, are there open Copilot threads, has step 7b processed this review `id` and with what outcome, and does the audit report Copilot feedback the other two cannot reach. What a review body says, whether a finding is real, already handled, or needs no code change, is `monitor-pr:resolve-copilot-feedback`'s judgment, not this skill's, except on the Dependabot path, where no resolver runs.
 
 Reduce the snapshot to the four axes in [Ready Criteria](#ready-criteria).
 
@@ -330,16 +330,16 @@ Both quiet cases are counted the same way and lead to the same remedy, because i
 gh pr edit PR_NUMBER --add-reviewer "@copilot"
 ```
 
-This is the correct mechanism. Do **not** request a review by posting an `@copilot` mention with `gh pr comment`: that adds PR comment noise, and `resolve-copilot-pr-feedback` treats writing PR comments as forbidden outside its own single summary. Request the review at most once per head SHA. If none arrives after a further two ticks, escalate per step 9.
+This is the correct mechanism. Do **not** request a review by posting an `@copilot` mention with `gh pr comment`: that adds PR comment noise, and `monitor-pr:resolve-copilot-feedback` treats writing PR comments as forbidden outside its own single summary. Request the review at most once per head SHA. If none arrives after a further two ticks, escalate per step 9.
 
 The run check is what separates "Copilot has not started" from "Copilot is mid-review", which the review list alone cannot distinguish: both look like an absent review. Without it, a slow review gets a redundant request, and a review that was never triggered waits out the same two ticks as one that is already running.
 
 #### 7b. Reviewed at the Current Head
 
-Invoke the `resolve-copilot-pr-feedback` skill:
+Invoke the `monitor-pr:resolve-copilot-feedback` skill:
 
 ```text
-resolve-copilot-pr-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id>
+monitor-pr:resolve-copilot-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id>
 
 Parent continuation:
 - Caller: monitor-pr
@@ -356,7 +356,7 @@ Only invoke it once a review exists at the current head. Invoking it earlier mak
 
 **Escalate when a source that should have cleared did not.** After a `Completed` or `No unresolved Copilot feedback` report for a review `id`, escalate per step 9 when the next snapshot's probe still reports open threads. Nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. A new review or a push is what makes another invocation meaningful.
 
-**Review-body findings are the exception, and getting this backwards is the trap.** An open thread clears when it is resolved, so a repeat there means something genuinely failed. A review-body finding has no thread to resolve and review bodies are immutable, so it stays in that review permanently, for the life of the PR. `resolve-copilot-pr-feedback` records it as handled in a linked summary row and reads that record back on its next run; that record, plus this step's own processed-review record, is the disposition. Escalating on a body that cannot change would turn every noted or previously handled review-body finding into a false escalation on a PR that is finished. Retain the final summary comment URL and the originating review URL for terminal or escalation reporting.
+**Review-body findings are the exception, and getting this backwards is the trap.** An open thread clears when it is resolved, so a repeat there means something genuinely failed. A review-body finding has no thread to resolve and review bodies are immutable, so it stays in that review permanently, for the life of the PR. `monitor-pr:resolve-copilot-feedback` records it as handled in a linked summary row and reads that record back on its next run; that record, plus this step's own processed-review record, is the disposition. Escalating on a body that cannot change would turn every noted or previously handled review-body finding into a false escalation on a PR that is finished. Retain the final summary comment URL and the originating review URL for terminal or escalation reporting.
 
 #### 7c. Round Budget
 
@@ -462,7 +462,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" watch OWNER REPO PR_NUMBER READY
 
 A `pending` event carries `failures` and `mergedReads` for the next tick; record them, with `T`, in the watch state. Any other event stops the task and is handled below.
 
-On the foreground path, a harness with neither a background task nor a scheduled task, no watch can run alongside an open question. Claude Code always has the background task, even when `ScheduleWakeup` was unavailable, so this path is for the others. Make the offer per step 8e, or during an approval wait report "Ready, awaiting approval" per step 8d, then end the turn with a resumable checkpoint carrying the step 8 fields, per [Checkpoint and Resume](./references/checkpoint.md). Say that a merge made elsewhere is picked up when `/monitor-pr` next runs, since step 4 sends a merged PR to step 8f.
+On the foreground path, a harness with neither a background task nor a scheduled task, no watch can run alongside an open question. Claude Code always has the background task, even when `ScheduleWakeup` was unavailable, so this path is for the others. Make the offer per step 8e, or during an approval wait report "Ready, awaiting approval" per step 8d, then end the turn with a resumable checkpoint carrying the step 8 fields, per [Checkpoint and Resume](./references/checkpoint.md). Say that a merge made elsewhere is picked up when `/monitor-pr:monitor` next runs, since step 4 sends a merged PR to step 8f.
 
 Handle the watch's `event`:
 
@@ -471,7 +471,7 @@ Handle the watch's `event`:
 - **`head`**: a push arrived after readiness, so the readiness verdict no longer holds. Keep the merge policy, clear the offer and the approval wait, re-establish the step 2 wait mechanism, and resume at step 3. A push resets an approval as far as this skill is concerned, whatever GitHub's dismissal rules do.
 - **`decision`**: go to step 8d's change rules.
 - **`failed`**: escalate per step 9, quoting its `error`.
-- **`expired`**: the watch outlived its 24-hour lifetime with the PR still open. Report that, and that `/monitor-pr` starts a new watch, and stop.
+- **`expired`**: the watch outlived its 24-hour lifetime with the PR still open. Report that, and that `/monitor-pr:monitor` starts a new watch, and stop.
 
 #### 8d. Wait for Approval
 
@@ -536,7 +536,7 @@ When an escalation rule fires, stop the wait loop, including any scheduled task 
 1. What was already tried, including any commits pushed during this watch.
 1. The specific question the user needs to answer.
 
-Then tell the user that `/monitor-pr` resumes the watch once they have decided.
+Then tell the user that `/monitor-pr:monitor` resumes the watch once they have decided.
 
 ## Reporting Format
 
@@ -578,8 +578,8 @@ The terminal report uses the same table plus the readiness verdict for all four 
 - **`gh pr checks` exits non-zero**: Not an error. It exits non-zero for pending checks as well as failing ones. Classify from the JSON.
 - **No checks configured on the repository**: Not an error. Treat the checks axis as clean and say so explicitly in the report.
 - **`merge-main` stops on conflicts it cannot resolve**: Escalate with the conflicted file list.
-- **`resolve-copilot-pr-feedback` reports `Partial` or `Failed`**: Escalate with its failure details, final summary comment URL if one was posted, and any originating review URLs.
-- **`resolve-copilot-pr-feedback` reports `Completed` or `No unresolved Copilot feedback` but the next probe still reports open threads**: Escalate per step 9. Open threads should have cleared and did not, so nothing further changes on its own. **A review-body finding is not such a signal.** It stays in the immutable body for the life of the PR, and step 7b's processed-review record is what clears it, so escalating there would stop a PR that is finished. Include the resolver summary and originating review links so the reported disposition is visible beside the immutable finding. Do not invoke the skill again against the same review; step 4's once-per-review `id` guard already prevents it.
+- **`monitor-pr:resolve-copilot-feedback` reports `Partial` or `Failed`**: Escalate with its failure details, final summary comment URL if one was posted, and any originating review URLs.
+- **`monitor-pr:resolve-copilot-feedback` reports `Completed` or `No unresolved Copilot feedback` but the next probe still reports open threads**: Escalate per step 9. Open threads should have cleared and did not, so nothing further changes on its own. **A review-body finding is not such a signal.** It stays in the immutable body for the life of the PR, and step 7b's processed-review record is what clears it, so escalating there would stop a PR that is finished. Include the resolver summary and originating review links so the reported disposition is visible beside the immutable finding. Do not invoke the skill again against the same review; step 4's once-per-review `id` guard already prevents it.
 - **Copilot never reviews despite an explicit request**: Escalate. Copilot review may be disabled for the repository, in which case the user must decide whether to proceed without it.
 - **Copilot answers a retry with another notice**: Escalate with the notice text. An `error` notice that repeats points at Copilot itself; a `no-files` notice means every changed file is excluded from review, which only the user can decide to accept.
 - **Push rejected because the remote moved**: Someone else pushed to the branch. Re-poll, sync per step 5, and retry once. If it is rejected again, escalate.

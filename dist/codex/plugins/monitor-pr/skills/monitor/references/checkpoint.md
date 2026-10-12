@@ -25,7 +25,7 @@ Print a labelled `monitor-pr checkpoint` block with every field below, including
 Print the exact resume command with the explicit PR number and all effective options. For example:
 
 ```text
-/monitor-pr 361 --ticks 3 --rounds 10 --confirm-clean --no-fix --interval 10m
+/monitor-pr:monitor 361 --ticks 3 --rounds 10 --confirm-clean --no-fix --interval 10m
 ```
 
 Say to run that command in this conversation. For transfer to another conversation, say to paste the complete checkpoint first and verify the repository and branch there. Do not create a state file in the monitored repository automatically.

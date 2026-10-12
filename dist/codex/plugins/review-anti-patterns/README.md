@@ -66,6 +66,6 @@ If you already have a `permissions.allow` array, merge these entries into it. Th
 ## See Also
 
 - [Review Until Clean](../review-until-clean/README.md): a looping review with fixes, from another model family
-- [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): fixes Copilot findings
+- [Resolve Copilot PR Feedback](../monitor-pr/README.md): fixes Copilot findings
 - [Plant Defects](../plant-defects/README.md): proves a test can fail
 - [All plugins](../../../../README.md)

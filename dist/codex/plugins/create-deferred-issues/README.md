@@ -80,6 +80,6 @@ The write rules (`gh issue create`, `gh issue edit`, and the two comment command
 - [Create Issue](../create-issue/README.md): file a single issue; this skill's filing mechanics follow its pattern
 - [PR](../pr/README.md): open the pull request, listing the filed issues as follow-ups
 - [Review Branch](../review-branch/README.md): its saved review documents are one of the sources read
-- [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): its summary comments record the deferred findings this skill picks up
+- [Resolve Copilot PR Feedback](../monitor-pr/README.md): its summary comments record the deferred findings this skill picks up
 - [Address Issue](../address-issue/README.md): work on an issue this skill filed
 - [All plugins](../../../../README.md)

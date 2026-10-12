@@ -228,7 +228,7 @@ gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/revi
 gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/comments --jq '.[] | {id, in_reply_to_id, path, line, body, url: .html_url, author: .user.login, created_at, updated_at}'
 ```
 
-The first returns the PR body. The three API calls return all pages of conversation comments, review bodies, and inline review comments respectively. Preserve comment IDs, reply-to IDs, and timestamps so replies can be associated with the correct finding. A top-level review body, inline comment, or reply is eligible when it states a concrete concern and a decision to defer it. Also inspect review-feedback summaries, such as the one the `resolve-copilot-pr-feedback` skill posts, that carry a Deferred category.
+The first returns the PR body. The three API calls return all pages of conversation comments, review bodies, and inline review comments respectively. Preserve comment IDs, reply-to IDs, and timestamps so replies can be associated with the correct finding. A top-level review body, inline comment, or reply is eligible when it states a concrete concern and a decision to defer it. Also inspect review-feedback summaries, such as the one the `monitor-pr:resolve-copilot-feedback` skill posts, that carry a Deferred category.
 
 #### Documents
 
