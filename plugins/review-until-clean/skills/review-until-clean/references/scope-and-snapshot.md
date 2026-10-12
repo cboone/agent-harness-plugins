@@ -19,38 +19,27 @@ All four, every round. The failure this prevents is specific and common: the age
 
 ## What the snapshot is
 
-`review-scope` reports a `snapshot`: a digest over the head commit, the resolved base, and a git tree object built from the entire working tree in a temporary index. The tree object is git's own content address, so the snapshot is a function of file content and nothing else.
+`review-scope` reports a `snapshot` digest of HEAD, the resolved base tip and merge base, disk content, semantic index entries (paths, blob identifiers, modes and merge stages), and the four bucket lists. It excludes index stat-cache timestamps. `tree` measures lasting disk-content changes using a Git tree built in a temporary index.
 
-## Why it is content-addressed
+Reviewers inspect staged and unstaged diffs separately, so index-only edits must invalidate review. Staging, unstaging and intent-to-add move `snapshot` even when `tree` stays unchanged.
 
-The obvious implementations are wrong in the same way. A digest of `git status` output, or of `git diff HEAD`, changes when a file moves between buckets even though not one byte of it changed:
+## Authorized coverage preparation
 
-- `git add <path>` moves a path from unstaged to staged.
-- `git add -N <path>` moves a path from untracked to tracked, which is how an untracked file becomes visible to a reviewer that only reads the diff.
-- `git reset -- <path>` moves it back.
+The Claude backend may need intent-to-add entries to expose untracked files. Prepare them before snapshot capture and retain them through validity checks and consecutive confirming rounds. Restore only this run's entries afterward or on failure/cancellation. Preserve pre-existing entries and concurrently staged content. Report the reviewed snapshot separately from subsequent index restoration.
 
-Every one of those is something this loop does, or asks the user to do, in the ordinary course of a round. A snapshot that moved for any of them would throw away clean results that are still perfectly good, and would do it most often on exactly the runs that had to stage an untracked file to get full coverage. Building the digest from a tree object sidesteps all of it: identical content yields an identical tree, whatever the index says.
+## What moves it
 
-The same property covers deletions, symlinks, the executable bit, and file names holding newlines, none of which a path-parsing implementation handles without effort.
+- Disk content, file modes, additions and deletions.
+- Indexed content and bucket membership, including staging and intent-to-add.
+- HEAD, the resolved base tip or the merge base.
 
-## What moves it, and what does not
-
-| Action                                      | Snapshot |
-| ------------------------------------------- | -------- |
-| `git add`, `git add -N`, `git reset` a path | Holds    |
-| Editing one byte of a file in scope         | Moves    |
-| Creating or deleting a file in scope        | Moves    |
-| Committing the working tree                 | Moves    |
-| Changing the base ref                       | Moves    |
-| Another session editing the tree            | Moves    |
-
-The last row is the reason step 8 recomputes the snapshot instead of trusting the value from step 1. A worktree is not private, and a clean result is a claim about the code on disk now.
+A change outside the ignore rules invalidates the prior review even if it affects only indexed content. Ignored untracked files, edits reverted between scans and byte changes normalized away by Git remain outside these checks.
 
 ## One run reports one state
 
 The file lists and the digest come from different git invocations, and a tree that changes between them would make a single `review-scope` run self-inconsistent. That is worse than it sounds. A file created after the lists were read but before the digest was written would be covered by the snapshot and named in no list, so the reviewer would never be shown it, and step 8 would find the snapshot exactly where it left it. The round would report clean over code nobody read, which is the one result the whole design exists to prevent.
 
-So the helper writes the tree, reads the lists, and writes the tree again. Equal trees mean nothing on disk moved while the scope was being read, so everything the run reports describes one state. Unequal trees mean it might not, and the run fails with `the working tree changed while the scope was being read` rather than emitting a scope it cannot vouch for. Rerun once the tree has settled; a formatter on save or another session in the same worktree is the usual cause.
+The helper brackets the lists with disk-tree and semantic-index reads and rechecks HEAD and the base tip. Matching inputs show no lasting change between reads. Changed inputs fail the run rather than emit an inconsistent scope. Rerun once the tree has settled; a formatter on save or another session may be changing it.
 
 ## What it costs
 
@@ -65,18 +54,7 @@ That is the cost: two hashing passes for each half of the stability check above,
 
 ## Checking it by hand
 
-The invariant worth re-checking after any change to the helper:
-
-```bash
-printf 'new\n' > fresh.txt
-review-scope --base main | jq -r '.snapshot'
-git add -N fresh.txt
-review-scope --base main | jq -r '.snapshot'   # the same value
-printf 'x' >> fresh.txt
-review-scope --base main | jq -r '.snapshot'   # a different value
-```
-
-If the second value differs from the first, the snapshot is tracking representation rather than content and the loop will discard good clean results. If the third matches the second, it is not tracking content at all and the loop will report clean for code that changed, which is the worse of the two.
+Capture `tree` and `snapshot`, stage an existing disk change, then recapture both. `tree` must hold while `snapshot` moves. The same must happen when an indexed blob changes without a disk edit. Unchanged scans must preserve both identifiers. Scrut covers these cases and the authorized intent-to-add lifecycle.
 
 ## When there is no base
 

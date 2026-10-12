@@ -30,9 +30,9 @@ Print one JSON object describing every local change and a snapshot identifier
 bound to their content: committed branch changes, staged changes, unstaged
 changes, and untracked files.
 
-The snapshot is content-addressed, so it does not move when a file changes
-which bucket it is in: staging a file, unstaging it, or recording an intent to
-add it with `git add -N` all leave it alone, while changing a byte moves it.
+The snapshot covers HEAD, the base tip and merge base, disk content, index
+content and bucket membership. Staging, unstaging and intent-to-add move it.
+The separate tree identifier measures disk content only.
 
 Options:
   --base <ref>  Take the merge base with this ref instead of with the default
@@ -203,10 +203,10 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 ["we\nird.txt"]
 ```
 
-## The snapshot does not move when a file is staged
+## The snapshot moves when a file is staged
 
-Staging changes which bucket a path is reported in and changes nothing about
-its content, so a clean result bound to the snapshot stays valid.
+Staging changes bucket membership and the reviewed diffs, invalidating review
+without changing disk content.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
@@ -219,15 +219,14 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && git add tracked.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && [[ -n "${before}" && "${before}" == "${after}" ]] && printf 'snapshot held: %s\n' "${before}"
-snapshot held: * (glob)
+>   && [[ -n "${before}" && "${before}" != "${after}" ]] && printf 'snapshot moved: %s\n' "${before}"
+snapshot moved: * (glob)
 ```
 
-## The snapshot does not move when an untracked file gets an intent to add
+## The snapshot moves when an untracked file gets an intent to add
 
-`git add -N` moves a path from untracked to tracked without changing a byte of
-it. A snapshot that hashed `git status` or `git diff HEAD` would move here, and
-the loop would discard a clean result that is still good.
+`git add -N` changes bucket membership without changing disk content. Prepare
+it before capturing the round snapshot.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
@@ -240,8 +239,8 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && git add -N fresh.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && [[ -n "${before}" && "${before}" == "${after}" ]] && printf 'snapshot held: %s\n' "${before}"
-snapshot held: * (glob)
+>   && [[ -n "${before}" && "${before}" != "${after}" ]] && printf 'snapshot moved: %s\n' "${before}"
+snapshot moved: * (glob)
 ```
 
 ## The snapshot moves when one byte changes
@@ -464,7 +463,7 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 exit=1
 ```
 
-## Unstaging does not move the snapshot
+## Unstaging moves the snapshot
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
@@ -478,8 +477,8 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && git reset -q -- tracked.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && [[ -n "${before}" && "${before}" == "${after}" ]] && printf 'snapshot held: %s\n' "${before}"
-snapshot held: * (glob)
+>   && [[ -n "${before}" && "${before}" != "${after}" ]] && printf 'snapshot moved: %s\n' "${before}"
+snapshot moved: * (glob)
 ```
 
 ## A repository with no commits reports it
@@ -641,4 +640,67 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '{base_unrelated, committed_covered}'
 {"base_unrelated":false,"committed_covered":true}
+```
+
+## Index-only content invalidates review while the disk tree holds
+
+```scrut
+$ cd "${work}" && "${REVIEW_SCOPE_BIN}" --base base > "${work}/../scope-before.json" \
+>   && blob="$(printf 'indexed-only\n' | git hash-object -w --stdin)" \
+>   && git update-index --cacheinfo "100644,${blob},tracked.txt" \
+>   && "${REVIEW_SCOPE_BIN}" --base base > "${work}/../scope-after.json" \
+>   && jq -cn --slurpfile a "${work}/../scope-before.json" --slurpfile b "${work}/../scope-after.json" \
+>     '{tree_held: ($a[0].tree == $b[0].tree), snapshot_moved: ($a[0].snapshot != $b[0].snapshot)}'
+{"tree_held":true,"snapshot_moved":true}
+```
+
+## Prepared coverage survives confirmation and restores only its own entries
+
+```scrut
+$ cd "${work}" && saved="$(git ls-files --stage -z | git hash-object --stdin)" \
+>   && printf 'new\n' > coverage.txt && git add -N coverage.txt \
+>   && round="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .snapshot)" \
+>   && confirm="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .snapshot)" \
+>   && test "${round}" = "${confirm}" && echo "confirming snapshot held" \
+>   && git reset -q -- coverage.txt \
+>   && test "${saved}" = "$(git ls-files --stage -z | git hash-object --stdin)" && echo "pre-existing index preserved"
+confirming snapshot held
+pre-existing index preserved
+```
+
+## An unrelated index edit invalidates a prepared round
+
+```scrut
+$ cd "${work}" && git add -N coverage.txt \
+>   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .snapshot)" \
+>   && blob="$(printf 'another indexed version\n' | git hash-object -w --stdin)" \
+>   && git update-index --cacheinfo "100644,${blob},tracked.txt" \
+>   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .snapshot)" \
+>   && test "${before}" != "${after}" && echo "prepared round invalidated" \
+>   && git reset -q -- coverage.txt
+prepared round invalidated
+```
+
+## An index edit during collection refuses an inconsistent scope
+
+```scrut
+$ cd "${work}" \
+>   && ( function git() { \
+>          if [[ "${1:-}" == diff && "${4:-}" == HEAD ]]; then \
+>            local blob; blob="$(printf 'during scan\n' | command git hash-object -w --stdin)" || return; \
+>            command git update-index --cacheinfo "100644,${blob},tracked.txt" || return; \
+>          fi; \
+>          command git "$@"; \
+>        }; export -f git; "${REVIEW_SCOPE_BIN}" --base base ) 2>&1
+review-scope: the index, HEAD or base changed while the scope was being read; rerun once it has settled
+[1]
+```
+
+## Temporary index files must remain outside the scope
+
+```scrut
+$ cd "${work}" && mkdir internal-tmp \
+>   && TMPDIR="${work}/internal-tmp" "${REVIEW_SCOPE_BIN}" --base base 2>&1
+review-scope: TMPDIR must point outside the working tree
+[1]
 ```

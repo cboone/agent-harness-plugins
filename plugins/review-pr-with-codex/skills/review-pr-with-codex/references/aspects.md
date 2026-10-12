@@ -13,9 +13,9 @@ Each aspect is one focused review, adapted from an agent in `pr-review-toolkit` 
 
 ## Arguments
 
-- No aspect arguments, or `all`, selects every aspect, and step 2 then drops the ones that do not apply.
+- Omitted arguments or `all` select review aspects except `simplify`; step 2 drops inapplicable aspects.
 - Named aspects select exactly those, in any order, and each runs even when the criteria below would skip it.
-- `all` together with names is the same as `all`.
+- Review names added to `all` do not change its selection. Explicit `simplify` authorizes the later editing pass. `simplify` alone is rejected; use `all simplify` or include at least one review aspect.
 - An unknown name stops the skill before any review runs: report it and list the valid names. Do not guess what was meant.
 
 ## Deciding what applies
@@ -26,6 +26,6 @@ Read the diff of every bucket in the scope, not only the file names. When unsure
 - **`tests`**: test files changed, or code changed whose behavior tests should pin, which is most logic changes. A change only to documentation, comments or configuration that no test exercises does not qualify.
 - **`comments`**: code comments, docstrings, or documentation files such as READMEs and Markdown references were added or changed. A change that leaves comments next to changed code untouched also qualifies when those comments may now be wrong.
 - **`types`**: a type, class, struct, interface, enum, schema or other data definition was added or its fields or invariants changed. A change that only uses existing types does not qualify.
-- **`simplify`**: selected by `all` or by name, then gated by step 6 of the workflow. It never runs alongside the review aspects.
+- **`simplify`**: selected explicitly by name only, then gated by step 6 of the workflow. It never runs alongside the review aspects.
 
 Record every aspect left out, with the specific reason, for the report's **Aspect runs** table.
