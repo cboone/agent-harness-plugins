@@ -96,7 +96,7 @@ Both `scaffold-go-cli` and `scaffold-go-library` generate LICENSE, README, .giti
 - `set-up-ci`, `set-up-secret-scanning`, and the language scaffolders already emit SHA-pinned actions, so a full pinning pass would repeat their work on files written moments earlier.
 - Exact-pinning dependencies and adding a version audit are choices about how the project manages versions, which the user should make deliberately rather than as a side effect of setup.
 
-The Dependabot config is what a freshly scaffolded repository is missing: without it, every SHA pin the other tools wrote stays frozen at the version current on the day of the bootstrap. It runs last so the config covers every workflow and manifest the earlier tools created. When a `.github/dependabot.yml` or `.github/dependabot.yaml` already exists at plan time, the plan marks it `Already set up` and `pin-everything` does not run; the `dependabot:review-config` skill is the tool for checking an existing config.
+Run Dependabot configuration last to cover every workflow and manifest created earlier. If `.github/dependabot.yml` or `.github/dependabot.yaml` exists at plan time, mark it `Already set up` and skip `pin-everything`. Use `dependabot:review-config` to check existing configuration.
 
 ### set-up-review-config during bootstrap
 

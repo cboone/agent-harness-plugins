@@ -20,8 +20,6 @@ See the [marketplace install instructions](../../README.md#install).
 
 ### What It Does
 
-A Dependabot config fails quietly. An ecosystem nobody listed gets no updates and no warning. A label that does not exist is dropped from every PR. A directory added after the config was written is never scanned. A job that needs a secret fails on every Dependabot PR, which teaches everyone to ignore red checks on those PRs. This skill goes looking for all of it.
-
 It inventories the repository first: every manifest and lockfile with its directory, every workflow and composite action, separate install trees, and the version pins Dependabot cannot see. It then reviews the default-branch `dependabot.yml` against that inventory and against current GitHub behavior, and reads the repository settings Dependabot depends on.
 
 | Area                | Checks                                                                                                                                                |
@@ -39,7 +37,7 @@ With no config at all, it reports what a config would cover and offers to write 
 
 #### It verifies before it calls something wrong
 
-Dependabot gains options regularly. The skill checks the current GitHub documentation before reporting a key as invalid, validates with the SchemaStore schema through `check-jsonschema` when `uv` is available, and treats a schema error on a documented option as schema lag rather than a defect.
+The skill checks current GitHub documentation before reporting a key as invalid. When `uv` is available, it validates with the SchemaStore schema through `check-jsonschema`. A schema error on a documented option is treated as schema lag.
 
 #### It asks before it changes anything
 

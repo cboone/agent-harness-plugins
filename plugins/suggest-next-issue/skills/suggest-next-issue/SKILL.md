@@ -11,7 +11,7 @@ argument-hint: "[--label <name>] [--parallel-only] [filters...]"
 
 Analyze open GitHub issues and recommend what to work on next.
 
-This workflow gives a focused terminal answer. For a persistent view of the full backlog, lanes, dependencies and work in progress, use the `publish-report-board` skill's backlog-triage board. Both use the shared progress model to distinguish work available to start from work already in progress.
+Give a focused terminal answer. For a persistent view of the full backlog, lanes, dependencies and work in progress, use the `publish-report-board` skill's backlog-triage board. Both use the shared progress model to distinguish available work from work in progress.
 
 ## Options
 

@@ -40,7 +40,7 @@ OpenCode is no longer supported. The last `dist/opencode/` mirror is available a
 
 ## Moved and removed plugins
 
-The catalog consolidates related workflows into plugins with several skills and folds focused workflows into their existing hosts. Reinstall the destination plugin and update saved invocations using this mapping. The old plugin registrations are removed. Use qualified invocations to identify both the plugin and skill; Claude Code still resolves the retained bare names `create-worktree` and `create-issue` to their new plugins.
+Reinstall the destination plugin and update saved invocations using this mapping. Related workflows share plugins; focused workflows live in their existing hosts. Old plugin registrations are removed. Qualified invocations identify the plugin and skill. Claude Code still resolves the bare names `create-worktree` and `create-issue` to their destination plugins.
 
 | Former plugin or skill        | Install plugin      | Invocation or workflow                 |
 | ----------------------------- | ------------------- | -------------------------------------- |

@@ -18,7 +18,7 @@ Works for both brand-new and existing repositories.
 
 ## Workflow
 
-When selecting folded workflows, pass the intended mode: `scaffold-new-repo` community-files for community documents, `set-up-installers` goreleaser for release configuration, and `set-up-ci` runner-usage for CI optimization. Keep foundation scaffolding and installer distribution as separate selections with their own scope. A mode selection runs only that mode, preserving existing project files.
+Select `scaffold-new-repo` community-files mode for community documents, `set-up-installers` goreleaser mode for release configuration, and `set-up-ci` runner-usage mode for CI optimization. Run only the selected mode, preserving existing project files. Select and scope foundation scaffolding and installer distribution separately.
 
 ### 1. Detect Project Type
 
@@ -83,12 +83,12 @@ Determine which tools to run based on the project type, existing infrastructure,
 Key overlap rules:
 
 - If `scaffold-go-cli` will run: skip `set-up-ci`, skip `set-up-installers` (both are included). Scope down `scaffold-new-repo` to only generate agent config files (AGENTS.md, CLAUDE.md, .claude/settings.json, .github/copilot-instructions.md).
-- If `scaffold-go-library` will run: skip `set-up-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. `set-up-installers` and `set-up-installers` are not applicable for libraries.
+- If `scaffold-go-library` will run: skip `set-up-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. `set-up-installers` is not applicable for libraries.
 - If `scaffold-go-library` will run: still run `set-up-linters` but only for cross-language tools (Prettier, EditorConfig, markdownlint) since `.golangci.yml` is already configured.
 - If `scaffold-go-cli` will run: still run `set-up-linters` for `.golangci.yml` configuration and cross-language tools (the Makefile lint target exists but no golangci config).
 - If `scaffold-rust-cli` will run: skip `set-up-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. Still run `set-up-linters` but only for cross-language tools since Rust linting is already configured.
 - If `scaffold-lean-library` will run: skip `set-up-ci` (included). Scope down `scaffold-new-repo` to only generate missing agent/config extras not produced by the Lean scaffolder. Scope down `set-up-linters` to extra cross-language or Pandoc-academic refinements only, since the Lean scaffolder generates `lintDriver`, `lean-lint`, Markdown and cspell configs, and split CI workflows.
-- If `scaffold-lean-library` will run: mark `set-up-installers`, `set-up-installers`, and `add-scrut-cli-tests` as not applicable because Lean libraries do not produce distributable binaries.
+- If `scaffold-lean-library` will run: mark `set-up-installers` and `add-scrut-cli-tests` as not applicable because Lean libraries do not produce distributable binaries.
 - `set-up-secret-scanning` is always independent (no overlap with other tools).
 - `add-scrut-cli-tests` is applicable only if the project produces a CLI binary.
 - `set-up-review-config` runs after the scaffolders, CI, linters and scrut tests, so it sees the final file types and the checks CI runs, and it adds its review rules to the `AGENTS.md` that `scaffold-new-repo` or a scaffolder wrote. It is applicable when the project has, or will have once the plan runs, a file type with a review checklist (Go, Lean, Bash, Zsh, Markdown or scrut tests). Managed blocks in both `.github/skills/code-review/SKILL.md` and `REVIEW.md` at plan time make it `Already set up`. One without the other leaves a reviewer unconfigured, so the skill runs and fills the gap. `AGENTS.md` is not part of this test, because a repository may have declined it.

@@ -36,7 +36,7 @@ If the user specifies a repository (e.g., "file an issue on org/repo"), use the 
 
 ### 3. Write the Issue Body to a Tmpfile
 
-Read [the tmpfile procedure](../use-git/references/tmpfile-pattern.md), resolving the path relative to this `SKILL.md` file's directory, and follow its non-secret GitHub body-file procedure. Create a unique path, write the full issue body, and wait for the write to finish before calling `gh`. In the examples below, `TMPFILE` is that exact path.
+Follow [the tmpfile procedure](../use-git/references/tmpfile-pattern.md) for non-secret GitHub bodies. Resolve its path relative to this `SKILL.md` file's directory. Create a unique path and write the full issue body there. Wait for the write to finish before calling `gh`. `TMPFILE` below means that exact path.
 
 ### 4. Create the Issue
 

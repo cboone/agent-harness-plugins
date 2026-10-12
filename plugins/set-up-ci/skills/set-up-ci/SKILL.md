@@ -12,7 +12,7 @@ Detect the project's language(s), create a GitHub Actions CI workflow with appro
 
 ## Workflow
 
-For a request to optimize existing workflows, read `./references/runner-usage/workflow.md` and run only that workflow, preserving existing jobs and Makefile targets. For newly generated workflows, apply that reference's classification, path-filter eligibility, concurrency and timeout rules before presenting the workflow for approval. Confirm whether Markdown is source code before excluding it; preserve project-specific settings and non-standard concurrency groups.
+To optimize existing workflows, run only `./references/runner-usage/workflow.md`, preserving existing jobs and Makefile targets. Before presenting generated workflows for approval, apply the reference's classification, path-filter eligibility, concurrency and timeout rules. Confirm whether Markdown is source code before excluding it. Preserve project-specific settings and non-standard concurrency groups.
 
 ### 1. Detect Project Type
 

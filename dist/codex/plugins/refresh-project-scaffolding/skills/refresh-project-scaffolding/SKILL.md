@@ -22,7 +22,7 @@ This is the maintenance companion to `bootstrap-project`: bootstrap sets things 
 
 ## Workflow
 
-When selecting folded workflows, pass the intended mode: `scaffold-new-repo` community-files for community documents, `set-up-installers` goreleaser for release configuration, and `set-up-ci` runner-usage for CI optimization. Keep foundation scaffolding and installer distribution as separate selections with their own scope. A mode selection runs only that mode, preserving existing project files.
+Select `scaffold-new-repo` community-files mode for community documents, `set-up-installers` goreleaser mode for release configuration, and `set-up-ci` runner-usage mode for CI optimization. Run only the selected mode, preserving existing project files. Select and scope foundation scaffolding and installer distribution separately.
 
 ### 1. Detect Project Type
 

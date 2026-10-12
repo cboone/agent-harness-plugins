@@ -75,7 +75,7 @@ When reviewing a pull request, apply `./references/review-checklist.md`: the rul
 
 ## Validation
 
-For a lint or validation request, read `./references/lint/workflow.md` and follow its file selection, tool checks, scoping rules and result reporting. That workflow also covers startup files such as `.zshrc`.
+For lint or validation, follow `./references/lint/workflow.md` for file selection, tool checks, scoping and reporting, including startup files such as `.zshrc`.
 
 Whenever possible, validate the script before finishing. Prefer using a project-specific validation script, if available. Common locations include declarations in `package.json`, `Makefile` targets, and scripts stored in `bin/`.
 

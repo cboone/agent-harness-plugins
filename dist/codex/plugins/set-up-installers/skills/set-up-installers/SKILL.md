@@ -18,7 +18,7 @@ Installer types:
 
 ## Workflow
 
-For a request to add or configure GoReleaser publishing for an existing Go CLI, read `./references/goreleaser/workflow.md` and run that workflow. For writing, updating or reviewing a formula in an existing tap, read `./references/homebrew-formula/workflow.md` and run only that workflow. These modes preserve existing project files and do not require the full installer setup below.
+To add or configure GoReleaser publishing for an existing Go CLI, run `./references/goreleaser/workflow.md`. To write, update or review a formula in an existing tap, run only `./references/homebrew-formula/workflow.md`. Preserve existing project files in both modes; neither requires the full installer setup below.
 
 ### 1. Detect Project Type
 

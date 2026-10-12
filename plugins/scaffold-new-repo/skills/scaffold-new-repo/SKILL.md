@@ -12,7 +12,7 @@ Generate the language-agnostic foundation files that every new repository starts
 
 ## Workflow
 
-For a request limited to community files, including a parent workflow selecting the community-files mode, read `./references/community-files/workflow.md` and run only that workflow. It adds or updates CONTRIBUTING, CODE_OF_CONDUCT, SECURITY and the PR template without generating foundation files. During full scaffolding, offer this workflow as an optional step after the foundation files are generated.
+For a community-files request or a parent workflow's community-files mode, run only `./references/community-files/workflow.md` to add or update CONTRIBUTING, CODE_OF_CONDUCT, SECURITY and the PR template. Skip foundation files. During full scaffolding, offer this optional workflow after generating foundation files.
 
 ### 1. Gather Project Information
 

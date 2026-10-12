@@ -12,7 +12,7 @@ Generate the full boilerplate for a new Go CLI project.
 
 ## Workflow
 
-For an existing Cobra CLI whose request is to add or repair a version command or build metadata, read `./references/existing-cli-version/workflow.md` and run only that workflow. Preserve the existing project; skip the new-project scaffolding below.
+To add or repair a version command or build metadata in an existing Cobra CLI, run only `./references/existing-cli-version/workflow.md`. Preserve the existing project; skip the new-project scaffolding below.
 
 ### 1. Gather Project Information
 
