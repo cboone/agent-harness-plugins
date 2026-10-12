@@ -23,7 +23,7 @@ This plan is the integration record for work that spans this repository and a pr
 | ----------------------------------- | ---------------------- | ------------------------------ |
 | Sound-set selection in notify, #595 | this repository        | implemented locally; no PR yet |
 | Catalog entry for the chime set     | private catalog        | merged                         |
-| Chime generation and install        | private generation lab | installed; no PR yet           |
+| Chime generation and install        | private generation lab | installed; PR open             |
 | Set `NOTIFY_SOUND_SET`              | dotfiles               | open                           |
 
 ## Sequencing
@@ -52,3 +52,4 @@ This plan is the integration record for work that spans this repository and a pr
 - 2026-10-11: #594 rebased on #606 and moved to notify 4.0.0, with a new `fire-alerter` launch helper; #595 selects sounds in `notify` before that helper and is a minor bump on 4.0.0.
 - 2026-10-12: #594 merged (#607), unblocking #595. Second listening round chose F# minor pentatonic one octave lower (F#4 to E6, ten degrees), all four timbres with the bar kept, and a sonar ping with a faint short echo.
 - 2026-10-12: Chime set installed: 120 files (40 per role), 16-bit mono AIFF, 1.65 s; the level was raised toward Tink's. #595 implemented on its branch.
+- 2026-10-12: Range confirmed one octave lower again, F#3 to E5, after a side-by-side comparison with F#4 to E6; the installed set already uses it. Level set just below Tink. Generation PR open.
