@@ -16,7 +16,7 @@ The loop has no adapter for any reviewer. Everything here applies to every revie
 | Skill/command | `/pr-review-toolkit:review-pr`, `/review-pr-with-codex --effort high` | In this session, as a skill or command |
 | Shell command | `coderabbit review --plain`                                           | As a process, from the repository root |
 
-A value that starts with `/` is a skill or command; anything else is a shell command. The reviewer's own options go inside the value, and the loop passes them through untouched. One run uses one reviewer. Combining reviewers means running the loop once for each.
+Classify by the first word. When it names a skill or command available in this session, such as `/simplify` or `/pr-review-toolkit:review-pr`, the value is a skill or command. Anything else is a shell command, including one given by absolute path, such as `/opt/homebrew/bin/coderabbit review --plain`. A leading `/` alone does not decide it. The reviewer's own options go inside the value, and the loop passes them through untouched. One run uses one reviewer. Combining reviewers means running the loop once for each.
 
 **Not a reviewer:** anything that needs a confirmation or a billing approval an agent cannot give. `/code-review ultra`, Claude Code's built-in cloud review, is one: its launch needs an interactive confirmation, and an agent cannot start it. Do not use it, and do not suggest it as a substitute when the requested reviewer is unavailable.
 
@@ -77,7 +77,7 @@ Each part is there for a reason:
 - **Files outside the working tree.** The snapshot covers every non-ignored path in the tree, so an output file written into the repository is itself a change. It would move the snapshot, turn every round into an edit round, and hand the next round the reviewer's own output as new code. `./ledger.md` gives the same rule for the ledger.
 - **The exit status, kept.** It is one of the two completion signals, so record it before anything else runs.
 
-Remove the temporary directory when the round ends, including when it fails, after its content is in the ledger.
+Remove the temporary directory when the round ends, including when it fails, and only after both streams are in the ledger in full, or saved beside it as [Recording the raw reply](#recording-the-raw-reply) allows.
 
 ## Report rounds and edit rounds
 
@@ -86,7 +86,7 @@ A reviewer either **reports** findings or **edits** the code itself, as `/simpli
 Compare the snapshot from step 1 with `review-scope`'s snapshot taken **immediately after the reviewer returns**, before transcribing anything:
 
 - **Unchanged:** a report round. The reviewer's findings go through steps 6 to 9 as usual.
-- **Moved:** an edit round. Whatever moved it happened while the reviewer ran, so it is that round's result. Record the paths that changed, and any findings the reviewer also reported. An edit round is never clean, whatever it reported, because the code it reviewed is no longer the code on disk; the next round reviews the new snapshot.
+- **Moved:** an edit round. Whatever moved it happened while the reviewer ran, so it is that round's result. Record the paths that changed. Any findings the reviewer also reported are recorded but never queued for the fixer, since they name lines in code its edits replaced. An edit round is never clean, whatever it reported, because the code it reviewed is no longer the code on disk; the next round reviews the new snapshot.
 
 A change made by something other than the reviewer during its run, such as a formatter on save or another session, is indistinguishable from the reviewer's own edit. It is recorded the same way, which costs at most one more round and never a wrong clean result.
 
@@ -144,7 +144,7 @@ The rule does not depend on where the target points. A target inside the reposit
 
 ## Recording the raw reply
 
-**Record the reviewer's reply verbatim in the round's ledger section before extracting a single finding.** For a shell command, that is its stdout, with its exit status and the first lines of stderr; for a skill or command, the report it produced. A round with no recorded raw reply is `failed`, whatever you believe you saw. Capturing it first is what keeps "the reviewer said nothing" and "the reviewer found nothing" different states.
+**Record the reviewer's reply verbatim in the round's ledger section before extracting a single finding.** For a shell command, that is its exit status, its stdout and its stderr, each in full and each in its own fence, since the decisive error is often the last line a CLI prints; for a skill or command, the report it produced. A round with no recorded raw reply is `failed`, whatever you believe you saw. Capturing it first is what keeps "the reviewer said nothing" and "the reviewer found nothing" different states.
 
 **Record it inside a fenced code block**, never as loose prose. The ledger is handed to `address-review`, which reads unchecked list items and headings as actionable work, so a reply pasted raw can put the reviewer's own sentences into the fixer's queue.
 
@@ -158,7 +158,7 @@ Reviewer reply, verbatim:
 ```
 ````
 
-A very long reply may be stored in full beside the ledger, outside the working tree, with its path and its first and last lines in the ledger instead. The same fence rule applies to the excerpt.
+A very long reply or stderr may be stored in full beside the ledger, outside the working tree, with its path and its first and last lines in the ledger instead. The same fence rule applies to the excerpt.
 
 ## Transcribing findings
 

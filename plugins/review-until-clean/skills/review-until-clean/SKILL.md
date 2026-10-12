@@ -20,7 +20,7 @@ Run one reviewer over every local change, fix the findings at or above a severit
 - **--severity `<important|nit>`**: lowest severity the loop fixes; default `important`
 - **--max-rounds `<n>`**: cap the rounds; default 3
 - **--confirm-clean**: require two consecutive clean rounds over the same snapshot rather than one. After the first clean round, run a confirming round with no fix pass in between
-- **--report-only**: run one round, write the ledger, change nothing; under `--confirm-clean`, also run the confirming round when the first is clean
+- **--report-only**: run one round, write the ledger, and fix nothing; under `--confirm-clean`, also run the confirming round when the first is clean. A reviewer that edits still edits, and its changes are kept and reported
 - **--no-save**: leave the ledger at its temporary path instead of saving it to `docs/reviews/`
 
 ## Skill dependencies
@@ -129,7 +129,7 @@ The round is **clean** when all of these hold:
 
 Check the snapshot again here rather than trusting step 5. Anything that touched the tree since, including another session, invalidates the result.
 
-**An edit round is never clean.** It changed the code it reviewed, so its verdict is about code that no longer exists. Record its changes as the round's result. If it also reported findings at or above `--severity`, go to step 9 with them, unless `--report-only` is set; otherwise go to step 10, so the next round reviews what the reviewer left.
+**An edit round is never clean.** It changed the code it reviewed, so its verdict is about code that no longer exists. Record its changes as the round's result. Record any findings it also reported, but never queue them: they name paths and lines in the tree the reviewer read, which its own edits replaced, so handing them to the fixer would apply edits computed for one version of a file to another. Go to step 10, so the next round reviews what the reviewer left; a finding that still holds comes back there with locations that match the code on disk.
 
 **A snapshot that moved after step 5 invalidates the findings, not only a clean result.** The findings name paths and lines in the tree the reviewer read, and that tree is gone. Handing them to the fixer would apply edits computed for one version of a file to a different one, which is how a review turns into damage. So when the snapshot has moved since step 5, discard the round's findings along with any clean verdict, record in the ledger that the round was invalidated and why, and start a new round from step 1 against the current snapshot if one is left in `--max-rounds`. If none is left, including when the invalidated round was the extra confirming round past the cap, go to step 11 with `stopped` and say the tree changed during the round; under `--confirm-clean`, report any clean round it was confirming as unconfirmed. Under `--report-only`, which has no round budget, report that clean round as unconfirmed instead of `stopped`. Do not go to step 9 with findings from a snapshot that no longer exists.
 
@@ -137,7 +137,7 @@ If the round is clean, go to step 11, unless `--confirm-clean` is set and this i
 
 **If this round is the extra confirming round past the cap**, it finished, and it left a finding at or above `--severity` undeclined or was an edit round, record its findings and changes in the ledger and go to step 11 with `stopped`. A failed round never reaches this branch: step 5 already ended it as `failed`. Do not go to step 9: that round only confirms, so its findings are never fixed and its edits are never reviewed. If the snapshot moved after step 5 instead, the invalidation rule above applies, and it has no round left to start.
 
-Under `--report-only`, go to step 11 whatever the result, except that the confirming round above still runs when `--confirm-clean` is set, the first round was a clean report round, and the snapshot has not moved since. The loop edits nothing. An edit round under `--report-only` ends `decisions-needed`, reported with its changed paths, and nothing is reverted: whether to keep the reviewer's edits is the user's call. `--report-only` has no round budget, so the cap rules never apply to it and it never reports `stopped`; `./references/stop-rules.md` says what it reports instead.
+Under `--report-only`, go to step 11 whatever the result, except that the confirming round above still runs when `--confirm-clean` is set, the first round was a clean report round, and the snapshot has not moved since. The loop fixes nothing. An edit round under `--report-only` ends `decisions-needed`, reported with its changed paths, and nothing is reverted: whether to keep the reviewer's edits is the user's call. `--report-only` has no round budget, so the cap rules never apply to it and it never reports `stopped`; `./references/stop-rules.md` says what it reports instead.
 
 ### 9. Fix
 
