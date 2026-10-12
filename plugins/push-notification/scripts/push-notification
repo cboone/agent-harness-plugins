@@ -151,8 +151,14 @@ function is_config_key() {
 # Prints the closest ancestor of a path that exists, so a missing default
 # config can be told apart from one hidden behind a file or a closed directory.
 function nearest_existing_ancestor() {
-  local path="${1%/*}"
+  local path="${1}"
   while [[ -n "${path}" && ! -e "${path}" ]]; do
+    # A relative path runs out of slashes before it runs out of components,
+    # and then the current directory is its last ancestor.
+    [[ "${path}" == */* ]] || {
+      path="."
+      break
+    }
     path="${path%/*}"
   done
   printf '%s' "${path:-/}"
@@ -385,6 +391,14 @@ function backend_ntfy_send() {
   parse_error="$(jq empty 2>&1 <<< "${response}")" || status=$?
   if ((status != 0)); then
     echo "${SCRIPT_NAME}: could not read the answer from ${url} as JSON (jq exited ${status}: $(ntfy_redact "${parse_error%%$'\n'*}")), so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
+    return 1
+  fi
+  # jq reads every top-level value in the answer, so a confirmation followed by
+  # an error would otherwise pass; a publish answer is exactly one value.
+  local value_count
+  value_count="$(jq -s 'length' <<< "${response}")" || value_count=""
+  if [[ "${value_count}" != "1" ]]; then
+    echo "${SCRIPT_NAME}: ${url} answered with ${value_count:-unreadable} JSON values instead of one, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
     return 1
   fi
   local id

@@ -210,6 +210,14 @@ push-notification: cannot look for WORK/as-file/push-notification/config: WORK/a
 [3]
 ```
 
+A default path under a relative `XDG_CONFIG_HOME` that does not exist is
+looked up from the current directory, and the lookup ends.
+
+```scrut
+$ (cd "${work}" && pn XDG_CONFIG_HOME=no-such-relative-dir NTFY_TOPIC=env-topic check | grep "^config file")
+config file: no-such-relative-dir/push-notification/config (not found)
+```
+
 ## A dry run prints the request without the topic or token
 
 ```scrut
@@ -429,6 +437,15 @@ push-notification: https://ntfy.sh/ answered, but not with an ntfy confirmation 
 [1]
 ```
 
+An answer of several JSON values is not a confirmation, even when one of them
+is.
+
+```scrut
+$ pn STUB_CURL_RESPONSE='{"id":"m1","event":"message","topic":"sample-topic"} {"error":"upstream unavailable","code":50301}' send --title Done 2>&1
+push-notification: https://ntfy.sh/ answered with 2 JSON values instead of one, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
+[1]
+```
+
 An error object in an answer is relayed, so the cause is not lost.
 
 ```scrut
@@ -493,10 +510,13 @@ jq ran
 ## A token file that cannot be prepared stops the send
 
 ```scrut
-$ log="${work}/no-tmp.log"
-> pn TMPDIR="${work}/no-such-dir" STUB_CURL_LOG="${log}" send --title Done 2>&1 | grep -v '^mktemp'
-> test -e "${log}" || echo "curl not called"
+$ pn TMPDIR="${work}/no-such-dir" STUB_CURL_LOG="${work}/no-tmp.log" send --title Done 2>&1 | grep -v '^mktemp'
 push-notification: could not create a temporary directory for the authorization header
+[1]
+```
+
+```scrut
+$ test -e "${work}/no-tmp.log" || echo "curl not called"
 curl not called
 ```
 

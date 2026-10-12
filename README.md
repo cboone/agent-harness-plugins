@@ -199,7 +199,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 **External tools:**
 
-- _Push Notification:_ [`curl`](https://curl.se/), [`jq`](https://jqlang.org/), and an [ntfy](https://ntfy.sh) topic on ntfy.sh or a self-hosted server
+- _Push Notification:_ [`curl`](https://curl.se/) 7.76.0 or newer, [`jq`](https://jqlang.org/), and an [ntfy](https://ntfy.sh) topic on ntfy.sh or a self-hosted server
 
 ## Hooks
 

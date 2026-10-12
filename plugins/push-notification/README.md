@@ -4,7 +4,7 @@ Send push notifications through ntfy when work finishes or needs a decision, on 
 
 **Type:** Skill
 **Trigger:** `/push-notification [message]`
-**Requires:** [`curl`](https://curl.se/), [`jq`](https://jqlang.org/), and an [ntfy](https://ntfy.sh) topic (ntfy.sh or self-hosted)
+**Requires:** [`curl`](https://curl.se/) 7.76.0 or newer, [`jq`](https://jqlang.org/), and an [ntfy](https://ntfy.sh) topic (ntfy.sh or self-hosted)
 
 ## Installation
 
