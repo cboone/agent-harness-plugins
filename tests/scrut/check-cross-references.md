@@ -4,6 +4,54 @@ Tests for `bin/check-cross-references`, which resolves the paths and skill names
 a skill body points at. Every testcase writes one skill body into the fixture
 tree from `tests/fixtures/cross-reference-fixture` and checks that file alone.
 
+## Qualified names resolve both the plugin and its skill
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Use `/other:other` or the `other:other` skill.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md
+All skill cross-references resolve.
+```
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** `other:other`' '- **Optional:** None' '' '## Workflow' '' 'Invoke the `/other:other` skill.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md
+All skill cross-references resolve.
+```
+
+## Qualified names do not resolve through another plugin
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Use `/missing:other`.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+::error::plugins/demo/skills/demo/SKILL.md references the skill /missing:other but plugins/missing/skills/other/SKILL.md does not exist
+```
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Use the `other:missing` skill.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+::error::plugins/demo/skills/demo/SKILL.md references the skill other:missing but plugins/other/skills/missing/SKILL.md does not exist
+```
+
+## Qualified compositions still require declarations
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Invoke the `other:other` skill.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md invokes the other:other skill, but plugins/demo/skills/demo/SKILL.md does not declare it under ## Skill dependencies
+[1]
+```
+
+## Qualified declarations must be used
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** `other:other`' '- **Optional:** None' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md declares the dependency other:other but never names it outside ## Skill dependencies
+[1]
+```
+
+## Qualified near misses produce warnings
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Invoke `other:other`.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::warning::plugins/demo/skills/demo/SKILL.md says "invoke `other:other`"; if that step runs the other:other skill, write "Invoke the `other:other` skill" and declare it under ## Skill dependencies
+All skill cross-references resolve.
+```
+
 ## A path into this repository that does not resolve is reported
 
 ```scrut

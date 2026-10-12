@@ -64,12 +64,12 @@ CANDIDATE_PREFILTER='\$\{CLAUDE_PLUGIN_ROOT\}/|\./references/|(plugins|dist/code
 # they need no declaration. Lowercase names only: `NAME` is a stand-in. The
 # backticks are literal text to match, not a command substitution.
 # shellcheck disable=SC2016
-COMPOSITION_PATTERN='[Ii]nvoke the `/?[a-z][a-z0-9-]*` skill'
+COMPOSITION_PATTERN='[Ii]nvoke the `/?[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?` skill'
 
 # Wording that reads like composition without the canonical phrase, which the
 # declaration checks cannot see. The backticks are literal here too.
 # shellcheck disable=SC2016
-NEAR_MISS_PATTERN='[Ii]nvoke `/?[a-z][a-z0-9-]*`'
+NEAR_MISS_PATTERN='[Ii]nvoke `/?[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?`'
 
 # Every declaration comment, ignore and repository-paths alike, matches this.
 # check_candidate_file reads ignores and repository paths only from a file that
@@ -236,9 +236,9 @@ function collect_candidates() {
     if [[ "${body}" == *'`/'* ]]; then
       while IFS= read -r name; do
         [[ -n "${name}" ]] || continue
-        printf 'skill\t/%s\tplugins/%s\n' "${name}" "${name}"
+        printf 'skill\t/%s\t%s\n' "${name}" "$(skill_reference_path "${name}")"
       done < <(printf '%s\n' "${body}" \
-        | grep -oE '`/[a-z][a-z0-9-]*`' \
+        | grep -oE '`/[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?`' \
         | tr -d '`' \
         | sed 's|^/||' \
         | sort -u)
@@ -247,11 +247,11 @@ function collect_candidates() {
     if [[ "${body}" == *skill* ]]; then
       while IFS= read -r name; do
         [[ -n "${name}" ]] || continue
-        printf 'skill\t%s\tplugins/%s\n' "${name}" "${name}"
+        printf 'skill\t%s\t%s\n' "${name}" "$(skill_reference_path "${name}")"
       done < <({
-        printf '%s\n' "${body}" | grep -oE '`[a-z][a-z0-9-]+`[[:space:]]+skills?([^A-Za-z0-9-]|$)'
-        printf '%s\n' "${body}" | grep -oE 'skills?[[:space:]]+`[a-z][a-z0-9-]+`'
-      } | grep -oE '`[a-z0-9-]+`' | tr -d '`' | sort -u)
+        printf '%s\n' "${body}" | grep -oE '`[a-z][a-z0-9-]+(:[a-z][a-z0-9-]*)?`[[:space:]]+skills?([^A-Za-z0-9-]|$)'
+        printf '%s\n' "${body}" | grep -oE 'skills?[[:space:]]+`[a-z][a-z0-9-]+(:[a-z][a-z0-9-]*)?`'
+      } | grep -oE '`[a-z0-9:-]+`' | tr -d '`' | sort -u)
     fi
   } | sort -u
 }
@@ -348,7 +348,7 @@ function dependency_records() {
         next
       }
 
-      if (count > 1 || ($0 != "None" && $0 !~ /^`[a-z][a-z0-9-]*`(, `[a-z][a-z0-9-]*`)*$/)) {
+      if (count > 1 || ($0 != "None" && $0 !~ /^`[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?`(, `[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?`)*$/)) {
         print "malformed\t" line
         next
       }
@@ -398,7 +398,7 @@ function composition_references() {
   # shellcheck disable=SC2016
   printf '%s\n' "${1}" \
     | { grep -oE "${COMPOSITION_PATTERN}" || true; } \
-    | sed -E 's|^.*`/?([a-z0-9-]+)`.*$|\1|' \
+    | sed -E 's|^.*`/?([a-z0-9:-]+)`.*$|\1|' \
     | sort -u
 }
 
@@ -409,8 +409,23 @@ function declared_dependencies() {
   dependency_records "${skill_md}" | awk -F '\t' '$1 == "required" || $1 == "optional" { print $2 }' | sort -u
 }
 
+function skill_reference_path() {
+  local name="${1}"
+
+  if [[ "${name}" == *:* ]]; then
+    printf 'plugins/%s/skills/%s/SKILL.md\n' "${name%%:*}" "${name#*:}"
+  else
+    printf 'plugins/%s\n' "${name}"
+  fi
+}
+
 function skill_exists() {
   local candidate
+
+  if [[ "${1}" == *:* ]]; then
+    [[ -f "$(skill_reference_path "${1}")" ]]
+    return
+  fi
 
   for candidate in plugins/*/skills/"${1}"/SKILL.md; do
     [[ -f "${candidate}" ]] && return 0
@@ -455,7 +470,7 @@ function check_near_misses() {
   names="$(
     printf '%s\n' "${body}" \
       | { grep -oE "${NEAR_MISS_PATTERN}" || true; } \
-      | sed -E 's|^.*`/?([a-z0-9-]+)`$|\1|' \
+      | sed -E 's|^.*`/?([a-z0-9:-]+)`$|\1|' \
       | sort -u
   )"
   [[ -n "${names}" ]] || return 0
@@ -465,6 +480,9 @@ function check_near_misses() {
   while IFS= read -r name; do
     [[ -n "${name}" ]] || continue
     [[ "${name}" != "${skill_dir##*/}" ]] || continue
+    if [[ "${name}" == *:* ]] && [[ "$(skill_reference_path "${name}")" == "${skill_dir}/SKILL.md" ]]; then
+      continue
+    fi
     if contains_line "${declared}" "${name}" || ! skill_exists "${name}"; then
       continue
     fi
@@ -514,7 +532,11 @@ function check_declarations() {
       error "${skill_md} declares ${name} as both required and optional"
     fi
     if ! skill_exists "${name}"; then
-      error "${skill_md} declares the dependency ${name}, but no plugins/*/skills/${name}/SKILL.md exists"
+      if [[ "${name}" == *:* ]]; then
+        error "${skill_md} declares the dependency ${name}, but $(skill_reference_path "${name}") does not exist"
+      else
+        error "${skill_md} declares the dependency ${name}, but no plugins/*/skills/${name}/SKILL.md exists"
+      fi
     fi
     if ! grep -qE "\`/?${name}\`" <<< "${body}"; then
       error "${skill_md} declares the dependency ${name} but never names it outside ## Skill dependencies"
@@ -583,7 +605,11 @@ function check_candidate_file() {
     fi
 
     if [[ "${kind}" == "skill" ]]; then
-      [[ -d "${resolved}" ]] || report_unresolved "${file}" "${kind}" "${reference}" "${resolved}"
+      if [[ "${reference}" == *:* ]]; then
+        [[ -f "${resolved}" ]] || report_unresolved "${file}" "${kind}" "${reference}" "${resolved}"
+      else
+        [[ -d "${resolved}" ]] || report_unresolved "${file}" "${kind}" "${reference}" "${resolved}"
+      fi
     else
       [[ -e "${resolved}" ]] || report_unresolved "${file}" "${kind}" "${reference}" "${resolved}"
     fi

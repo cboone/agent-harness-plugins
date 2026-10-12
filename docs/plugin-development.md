@@ -273,12 +273,13 @@ Skills name each other and point at files by path, and a stale one fails only in
 
 What gets resolved, and against what:
 
-| Spelling                                                    | Resolved against              |
-| ----------------------------------------------------------- | ----------------------------- |
-| `plugins/…`, `dist/codex/…`                                 | the repository root           |
-| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill |
-| `./references/…`                                            | the skill directory           |
-| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`  |
+| Spelling                                                    | Resolved against                       |
+| ----------------------------------------------------------- | -------------------------------------- |
+| `plugins/…`, `dist/codex/…`                                 | the repository root                    |
+| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill          |
+| `./references/…`                                            | the skill directory                    |
+| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`           |
+| `` `/plugin:skill` `` and a qualified name beside "skill"   | `plugins/plugin/skills/skill/SKILL.md` |
 
 `${CLAUDE_PLUGIN_ROOT}/scripts/…` is left to rule 18, which also checks the executable bit. A bare backticked name is not checked: nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the sentence around it.
 
@@ -295,7 +296,7 @@ The same script checks skill dependencies, which the [Skill dependencies](#skill
 
 - Every composition reference, "Invoke the `NAME` skill" with or without a slash before the name, in a `SKILL.md` or any file under its `references/`, is declared in that skill's `## Skill dependencies` section.
 - The section has exactly one `- **Required:**` line and one `- **Optional:**` line, each holding `None` or backticked skill names separated by commas, and nothing else.
-- Every declared name resolves to a `plugins/*/skills/NAME/SKILL.md`, appears in only one category, and appears only once.
+- Every declared bare name resolves to a `plugins/*/skills/NAME/SKILL.md`; a qualified `plugin:skill` name resolves to `plugins/plugin/skills/skill/SKILL.md`. Each name appears in only one category and only once. Use qualified names for skills in multi-skill plugins so resolution identifies both the plugin and skill. Composition references, dependency declarations and their uses accept the same qualified syntax; invocation references may include a leading slash.
 - Every declared name is used: the skill names it, backticked with or without a leading slash, somewhere outside the section, as a selection list does for each candidate.
 
 Other wording, such as "use the `review-branch` skill instead" or "run `/lint-and-fix` next", is not composition and needs no declaration. The exception is "invoke `NAME`" without the canonical phrase: it reads as composition but escapes the checks above, so it draws a warning when `NAME` is a skill that the owning skill neither declares nor is itself. Rewrite a real composition with the canonical phrase and declare it, and reword a mention that is not one. A warning does not fail validation. An ignore comment does not exempt a dependency finding.
