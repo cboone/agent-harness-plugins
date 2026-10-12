@@ -53,7 +53,7 @@ Its only remaining use, `--bundle-id`, moves into `notify`.
 
 ### 7. Versions and mirrors
 
-- Bump notify to `3.0.0` in `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`.
+- Bump notify to the next major version in `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`: `4.0.0`, since #606 released `3.0.0` while this work was under review.
 - `make build`, then run the `check-versions` skill.
 
 ## Commits
@@ -77,6 +77,10 @@ Run with Homebrew's unpatched `alerter` 26.5 first on `PATH`, ahead of the local
 - Five `cc-question` alerts from separate sessions fired back to back: all five banners appeared and stayed in Notification Center, and no `alerter` remained at 4 seconds.
 - Alerts fired within the same moment play a single sound. macOS appears to merge the sounds before the stop applies.
 - OpenCode was not checked by hand. Its detached `sh` stop was checked with Bun 1.4.2 and a stub `alerter`.
+
+### Merge with #606
+
+#606 removed the OpenCode adapter and released notify `3.0.0`. Merging `main` dropped this branch's OpenCode changes (section 3) and the OpenCode caller of `scripts/fire-alerter`, which now serves the Claude Code and Codex hooks only.
 
 ## Follow-up
 
