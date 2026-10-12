@@ -111,7 +111,7 @@ Run `simplify` only when explicitly selected and every selected review aspect su
 
 Run it alone with `<tmp>/scope-after.json` from step 5. Immediately before editing, recapture that scope and rerun the gate against the original reviewed scope. Never pair a refreshed scope with stale review results after a pause.
 
-- **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-after.json --out-dir <tmp>/out [--guide-name <name>...] [--model <model>] [--effort <level>]`, which uses `--sandbox workspace-write`.
+- **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-after.json --out-dir <tmp>/out --reviewed-scope <tmp>/scope.json --results <tmp>/initial-results.json --statuses <tmp>/initial-statuses.json --reviewed-aspect <name>... [--guide-name <name>...] [--model <model>] [--effort <level>]`, which reruns the gate, recaptures the scope and refuses to launch unless it still matches `--scope`, then uses `--sandbox workspace-write`. Another session can still edit between that check and the launch.
 - **Subagent path:** one subagent with the rendered `simplify` task, then `validate` its reply.
 
 Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-after.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, their content diff from `git diff <before_tree> <after_tree>`, and any prohibited edits in `outside_scope`. Use the measured diff rather than `simplify`'s account, even when simplification failed; report that failure too.

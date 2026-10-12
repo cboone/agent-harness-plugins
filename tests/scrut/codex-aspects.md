@@ -374,21 +374,21 @@ tests
 
 ## Stopping the helper stops its Codex runs
 
-A `simplify` run has write access, so a run left going after the helper stops
-could keep editing after its changes were measured. The stub here starts a
+A run left going after the helper stops could keep reading, or for `simplify`
+editing, after its changes were measured. The stub here starts a
 long-running child, standing in for a process Codex starts, and waits until
 stopped. Once the helper receives TERM, the stub and its child must both be
 gone.
 
 ```scrut
 $ mkdir "${FIXTURE}/pids" "${FIXTURE}/cancel-out" \
->   && { CODEX_STUB_MODES="simplify=hang" CODEX_STUB_PID_DIR="${FIXTURE}/pids" CODEX_STUB_SENTINEL="${FIXTURE}/continued" \
->        "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/scope.json" \
+>   && { CODEX_STUB_MODES="code=hang" CODEX_STUB_PID_DIR="${FIXTURE}/pids" CODEX_STUB_SENTINEL="${FIXTURE}/continued" \
+>        "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
 >        --out-dir "${FIXTURE}/cancel-out" > /dev/null 2>&1 & } \
 >   && helper=$! \
->   && for attempt in $(seq 50); do [ -s "${FIXTURE}/pids/simplify.pid" ] && break; sleep 0.1; done \
->   && stub="$(cat "${FIXTURE}/pids/simplify.pid")" \
->   && child="$(cat "${FIXTURE}/pids/simplify.child.pid")" \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/pids/code.pid" ] && break; sleep 0.1; done \
+>   && stub="$(cat "${FIXTURE}/pids/code.pid")" \
+>   && child="$(cat "${FIXTURE}/pids/code.child.pid")" \
 >   && kill -TERM "${helper}" \
 >   && { wait "${helper}"; echo "helper exit=$?"; } \
 >   && sleep 1.2 \
@@ -408,11 +408,11 @@ no write after cancellation
 $ mkdir "${FIXTURE}/denied-bin" "${FIXTURE}/denied-pids" "${FIXTURE}/denied-out" \
 >   && printf '#!/bin/sh\necho "inspection denied" >&2\nexit 2\n' > "${FIXTURE}/denied-bin/ps" \
 >   && chmod +x "${FIXTURE}/denied-bin/ps" \
->   && { PATH="${FIXTURE}/denied-bin:${PATH}" CODEX_STUB_MODES="simplify=hang" CODEX_STUB_PID_DIR="${FIXTURE}/denied-pids" \
->        "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/scope.json" \
+>   && { PATH="${FIXTURE}/denied-bin:${PATH}" CODEX_STUB_MODES="code=hang" CODEX_STUB_PID_DIR="${FIXTURE}/denied-pids" \
+>        "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
 >        --out-dir "${FIXTURE}/denied-out" > "${FIXTURE}/denied.log" 2>&1 & } \
 >   && helper=$! \
->   && for attempt in $(seq 50); do [ -s "${FIXTURE}/denied-pids/simplify.child.pid" ] && break; sleep 0.1; done \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/denied-pids/code.child.pid" ] && break; sleep 0.1; done \
 >   && kill -TERM "${helper}" \
 >   && { wait "${helper}"; echo "helper exit=$?"; } \
 >   && grep 'cancellation is incomplete' "${FIXTURE}/denied.log" \
@@ -618,8 +618,12 @@ $ "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/scope.json" --after "${FIX
 ```scrut
 $ cp -R "${FIXTURE}/repo" "${FIXTURE}/simplify" && cd "${FIXTURE}/simplify" \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/before.json" \
+>   && "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/before.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/simplify-statuses.json" \
+>   && jq -s . "${FIXTURE}/out/code.json" > "${FIXTURE}/simplify-results.json" \
 >   && CODEX_STUB_MODES="simplify=write" CODEX_STUB_WRITE="${FIXTURE}/simplify/lib.sh" \
->      "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/before.json" --out-dir "${FIXTURE}/out" | jq -r '.[0].status' \
+>      "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/before.json" --out-dir "${FIXTURE}/out" \
+>      --reviewed-scope "${FIXTURE}/before.json" --results "${FIXTURE}/simplify-results.json" \
+>      --statuses "${FIXTURE}/simplify-statuses.json" --reviewed-aspect code | jq -r '.[0].status' \
 >   && grep -A1 '^--sandbox$' "${FIXTURE}/log/simplify.args" | tail -1 \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/after.json" \
 >   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/before.json" --after "${FIXTURE}/after.json" | jq -c '{changed, outside_scope}'
@@ -982,4 +986,18 @@ $ cd "${FIXTURE}/repo" \
 >   && TMPDIR="${FIXTURE}/repo/internal-tmp" "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" 2>&1
 codex-aspects: TMPDIR must point outside the working tree
 [1]
+```
+
+## Simplify refuses to run without the gate or after the scope changes
+
+```scrut
+$ cd "${FIXTURE}/simplify" \
+>   && { "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/after.json" --out-dir "${FIXTURE}/out" 2>&1; echo "exit=$?"; } \
+>   && { "${CODEX_ASPECTS_BIN}" run --aspect simplify --scope "${FIXTURE}/before.json" --out-dir "${FIXTURE}/out" \
+>        --reviewed-scope "${FIXTURE}/before.json" --results "${FIXTURE}/simplify-results.json" \
+>        --statuses "${FIXTURE}/simplify-statuses.json" --reviewed-aspect code 2>&1; echo "exit=$?"; }
+codex-aspects: simplify requires --reviewed-scope, --results, --statuses and --reviewed-aspect
+exit=1
+codex-aspects: the scope changed after --scope was captured; capture it again and rerun the gate
+exit=1
 ```

@@ -142,6 +142,10 @@ Usage: codex-aspects schema
        codex-aspects run --aspect <name> [--aspect <name>...] --scope <file>
                          --out-dir <dir> [--guide-name <name>...]
                          [--model <model>] [--effort <level>]
+       codex-aspects run --aspect simplify --scope <file> --out-dir <dir>
+                         --reviewed-scope <file> --results <file>
+                         --statuses <file> --reviewed-aspect <name>...
+                         [--guide-name <name>...] [--model <model>] [--effort <level>]
        codex-aspects validate --aspect <name> --scope <file> <output-file>
        codex-aspects changes --before <file> --after <file>
 
@@ -158,7 +162,8 @@ Commands:
             wrote to <file>
   run       Run one `codex exec` per aspect, in parallel, and print a JSON
             array with one status per aspect. Review aspects run in a
-            read-only sandbox; simplify runs alone, with workspace-write
+            read-only sandbox; simplify runs alone, with workspace-write,
+            only after it passes the gate and the scope still matches
   validate  Check one aspect's saved output and print its status
   changes   Compare two review-scope results and print the paths that changed
             between them, and those outside the first one's scope
@@ -169,6 +174,8 @@ Options:
   --model <model>   Codex model; default gpt-6.1-sol
   --effort <level>  Codex reasoning effort; default medium
   --guide-name <name>  Additional instruction fallback name, repeatable
+  --reviewed-scope <file>  Scope the review aspects read; simplify only
+  --reviewed-aspect <name> Review aspect the gate checks, repeatable
   -h, --help        Show this help
 
 Exit status: 0 on success, 1 on a usage or environment error, 3 when `run`
@@ -852,7 +859,7 @@ function physical_dir() {
 
 function cmd_run() {
   local scope="" out_dir="" model="${DEFAULT_MODEL}" effort="${DEFAULT_EFFORT}"
-  local aspects=()
+  local aspects=() gate_args=()
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
@@ -886,6 +893,11 @@ function cmd_run() {
         add_guide_name "${2}"
         shift 2
         ;;
+      --reviewed-scope | --results | --statuses | --reviewed-aspect)
+        require_value "$@"
+        gate_args+=("${1}" "${2}")
+        shift 2
+        ;;
       *) die "unexpected argument: ${1}" ;;
     esac
   done
@@ -904,6 +916,28 @@ function cmd_run() {
   # edit the tree they are still reading.
   if [[ "${seen}" == *" simplify "* && ${#aspects[@]} -gt 1 ]]; then
     die "simplify runs alone, after the review aspects"
+  fi
+
+  # The only writable run checks the review gate itself, so a direct call
+  # cannot skip it. --scope is the scope measured after the review, and the
+  # gate compares it with the scope the review aspects read.
+  local gate reviewed_aspects=() gate_inputs=() index
+  if [[ "${seen}" == " simplify " ]]; then
+    for ((index = 0; index < ${#gate_args[@]}; index += 2)); do
+      case "${gate_args[${index}]}" in
+        --reviewed-scope) gate_inputs+=(--scope "${gate_args[$((index + 1))]}") ;;
+        --reviewed-aspect) reviewed_aspects+=(--aspect "${gate_args[$((index + 1))]}") ;;
+        *) gate_inputs+=("${gate_args[${index}]}" "${gate_args[$((index + 1))]}") ;;
+      esac
+    done
+    [[ ${#gate_inputs[@]} -eq 6 && ${#reviewed_aspects[@]} -gt 0 ]] \
+      || die "simplify requires --reviewed-scope, --results, --statuses and --reviewed-aspect"
+    gate="$(cmd_gate "${gate_inputs[@]}" --after "${scope}" "${reviewed_aspects[@]}")" \
+      || die "could not check the review gate"
+    [[ "$(jq -r '.eligible' <<< "${gate}")" == "true" ]] \
+      || die "simplify is not eligible: $(jq -r '.reason' <<< "${gate}")"
+  elif [[ ${#gate_args[@]} -gt 0 ]]; then
+    die "--reviewed-scope, --results, --statuses and --reviewed-aspect apply to simplify only"
   fi
 
   require_scope_file "${scope}"
@@ -954,7 +988,20 @@ function cmd_run() {
   # prompt, and an agent harness's stdin is a pipe that never closes, so the
   # run would wait forever and never write its output file. --ephemeral keeps
   # each run from persisting a session.
-  local sandbox index extra_args=()
+  # Recapture the scope immediately before the writable launch. Another
+  # session can still edit between this check and the launch; nothing here
+  # locks the tree.
+  if [[ "${seen}" == " simplify " ]]; then
+    local base_ref current base_args=()
+    base_ref="$(jq -r '.base_ref // empty' "${scope}")"
+    [[ -z "${base_ref}" ]] || base_args=(--base "${base_ref}")
+    current="$(cd "${top_level}" && "${SCRIPT_DIR}/review-scope" ${base_args[@]+"${base_args[@]}"})" \
+      || die "could not recapture the scope before simplify"
+    [[ "$(jq -r '.snapshot' <<< "${current}")" == "${snapshot}" ]] \
+      || die "the scope changed after --scope was captured; capture it again and rerun the gate"
+  fi
+
+  local sandbox extra_args=()
   mkdir "${TMP_DIR}/work"
   for index in "${!aspects[@]}"; do
     aspect="${aspects[${index}]}"
