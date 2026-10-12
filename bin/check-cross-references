@@ -453,11 +453,9 @@ function check_compositions() {
   done <<< "${references}"
 }
 
-# "invoke `NAME`" is usually a composition written without the canonical
-# phrase, but the same words also say what not to do ("do not invoke
-# `sync-with-main:merge`") or name a command ("invoke `gh`"). Only a skill that exists,
-# is not the file's own, and is not already declared is reported, and only as a
-# warning, since an ignore comment does not reach dependency findings.
+# Warn when "invoke `NAME`" names an existing, undeclared skill other than
+# this file's own. The phrase can also prohibit an invocation or name a command,
+# so findings are warnings; ignore comments do not suppress dependency findings.
 function check_near_misses() {
   local file="${1}" skill_dir="${2}" body="${3}"
   local names declared name

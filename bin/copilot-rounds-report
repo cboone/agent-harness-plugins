@@ -343,9 +343,8 @@ readonly REPORT_FILTER='
   | .[]
 '
 
-# Copilot's review logins. Keep in step with COPILOT_DIRECT_LOGINS in
-# plugins/monitor-pr/scripts/resolve-copilot-threads, shipped inside its plugin
-# rather than shared with this repository-level tool.
+# Match COPILOT_DIRECT_LOGINS in
+# plugins/monitor-pr/scripts/resolve-copilot-threads.
 readonly COPILOT_LOGINS='["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"]'
 
 function main() {
