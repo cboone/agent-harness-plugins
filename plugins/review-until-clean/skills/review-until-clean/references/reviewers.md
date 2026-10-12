@@ -160,15 +160,19 @@ The rule does not depend on where the target points. A target inside the reposit
 
 **Record it inside a fenced code block**, never as loose prose. The ledger is handed to `address-review`, which reads unchecked list items and headings as actionable work, so a reply pasted raw can put the reviewer's own sentences into the fixer's queue.
 
-**Size the fence to the reply.** A review of code routinely contains code blocks, so a fixed three-backtick fence can be closed early by the reply's own. Count the longest run of consecutive backticks anywhere in the reply and open with at least one more than that, never fewer than three. CommonMark closes a fence only on a run at least as long as the one that opened it, so a fence longer than anything inside it cannot be closed from within. With the reply's own fence at three and the ledger's at four:
+**Size the fence to the reply.** A review of code routinely contains code blocks, so a fixed three-backtick fence can be closed early by the reply's own. Count the longest run of consecutive backticks anywhere in the reply and open with at least one more than that, never fewer than three. CommonMark closes a fence only on a run at least as long as the one that opened it, so a fence longer than anything inside it cannot be closed from within. For a reply whose longest run is a three-backtick code block, the ledger's fence takes four:
 
-````markdown
+`````markdown
 Reviewer reply, verbatim:
 
-```text
-<the reply, exactly as it came back>
+````text
+F1 src/session.ts:142: token refresh races with logout.
+
+```ts
+await refresh(token);
 ```
 ````
+`````
 
 A very long reply or stderr may be stored in full beside the ledger, outside the working tree, with its path and its first and last lines in the ledger instead. The same fence rule applies to the excerpt.
 
