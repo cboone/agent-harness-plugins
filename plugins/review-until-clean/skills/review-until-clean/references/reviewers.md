@@ -63,16 +63,18 @@ A skill or command runs with this session's own tools, so nothing structural sto
 
 ### Shell command
 
-Run it from the repository root, with stdin closed and both output streams captured to files **outside the working tree**:
+Run it from the repository root as one script under `bash -o pipefail`, with stdin closed and both output streams captured to files **outside the working tree**:
 
 ```bash
 tmp="$(mktemp -d)"
-<reviewer command> < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"
+reviewer='<the --reviewer value, exactly as given>'
+bash -o pipefail -c "${reviewer}" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"
 status=$?
 ```
 
 Each part is there for a reason:
 
+- **One `bash -c`, with `pipefail`.** The value may be a pipeline, such as `tool --json | jq -s '…'`. Written out bare, the redirects attach only to its last command: the first one keeps the harness's stdin, its stderr escapes the capture, and the status is the last command's. A reviewer that exits non-zero having printed a finding then comes back as status 0 with `jq`'s empty result, which is a failed review recorded as a clean one. Running the whole value as one script puts every command under the redirects, and `pipefail` makes a failure in any stage the script's status. Pass the value as a single argument, as above, rather than splicing it into the command line.
 - **`< /dev/null`.** Many CLIs read stdin when it is not a terminal. An agent harness's stdin is a pipe that never reaches end of file, so without the redirect such a CLI waits forever and the round produces nothing at all.
 - **Files outside the working tree.** The snapshot covers every non-ignored path in the tree, so an output file written into the repository is itself a change. It would move the snapshot, turn every round into an edit round, and hand the next round the reviewer's own output as new code. `./ledger.md` gives the same rule for the ledger.
 - **The exit status, kept.** It is one of the two completion signals, so record it before anything else runs.
@@ -87,6 +89,8 @@ Compare the snapshot from step 1 with `review-scope`'s snapshot taken **immediat
 
 - **Unchanged:** a report round. The reviewer's findings go through steps 6 to 9 as usual.
 - **Moved:** an edit round. Whatever moved it happened while the reviewer ran, so it is that round's result. Record the paths that changed. Any findings the reviewer also reported are recorded but never queued for the fixer, since they name lines in code its edits replaced. An edit round is never clean, whatever it reported, because the code it reviewed is no longer the code on disk; the next round reviews the new snapshot.
+
+The snapshot sees lasting changes to content as Git would store it, and nothing else. An unchanged snapshot does not prove the reviewer wrote nothing: a change only to the index, a write to an ignored untracked file, an edit reverted before the reviewer returned, and an edit Git normalizes away, such as a line-ending change under text normalization, all leave it where it was. Such a round is recorded as a report round. None of them changes the content the snapshot binds a clean result to, which is why the mode is decided from it; say what the snapshot covers rather than that nothing was written.
 
 A change made by something other than the reviewer during its run, such as a formatter on save or another session, is indistinguishable from the reviewer's own edit. It is recorded the same way, which costs at most one more round and never a wrong clean result.
 
@@ -137,14 +141,16 @@ done < <(git ls-files -z --others --exclude-standard)
 Then:
 
 - **A symlink is in scope only as its link text.** A wrong or dangling target is reviewable, and that is all there is to review in a link. `git add -N` satisfies this on its own: git diffs a symlink as its target string, so the link text reaches the review and the target's contents do not.
-- **Never hand a reviewer a symlink as a file to open**, and never resolve the target and pass that path either; the resolved path is the same content by another name. A finding whose evidence quotes a symlink's target contents is recorded with that evidence withheld.
+- **Never hand a reviewer a symlink as a file to open**, and never resolve the target and pass that path either; the resolved path is the same content by another name. A reply that quotes a symlink's target contents is redacted before any of it is saved, in the raw reply and in every finding alike; see [Recording the raw reply](#recording-the-raw-reply).
 - **A symlink is in the scope, and its target is not.** A round whose untracked bucket holds symlinks is still full coverage. The snapshot agrees: git records a symlink as its target string.
 
 The rule does not depend on where the target points. A target inside the repository is already in the scope on its own merits, so following the link would only show the reviewer the same bytes twice.
 
 ## Recording the raw reply
 
-**Record the reviewer's reply verbatim in the round's ledger section before extracting a single finding.** For a shell command, that is its exit status, its stdout and its stderr, each in full and each in its own fence, since the decisive error is often the last line a CLI prints; for a skill or command, the report it produced. A round with no recorded raw reply is `failed`, whatever you believe you saw. Capturing it first is what keeps "the reviewer said nothing" and "the reviewer found nothing" different states.
+**Record the reviewer's reply verbatim in the round's ledger section before extracting a single finding.** For a shell command, that is its exit status, its stdout and its stderr, each in full and each in its own fence, since the decisive error is often the last line a CLI prints; for a skill or command, the report it produced. A round with no recorded raw reply is `failed`, whatever you believe you saw.
+
+**One exception to verbatim: redact a symlink target's contents first.** If the reply, or either output stream, quotes the contents of a file an untracked symlink points to, replace that text with `[redacted: contents of the target of <symlink path>]` before anything is written, to the ledger or beside it, and say in the round's section that a redaction was made. The rule above keeps those contents out of the review; a verbatim record would put them back into the ledger and every commit made from it. Redact only that text, and record the rest exactly as it came back. Capturing it first is what keeps "the reviewer said nothing" and "the reviewer found nothing" different states.
 
 **Record it inside a fenced code block**, never as loose prose. The ledger is handed to `address-review`, which reads unchecked list items and headings as actionable work, so a reply pasted raw can put the reviewer's own sentences into the fixer's queue.
 
