@@ -15,7 +15,7 @@ Fetch a GitHub issue, plan the work, stop for approval, then execute changes and
 
 The user may provide these options inline:
 
-- **--dry-run**: Fetch and analyze the issue, present the plan, but do not make changes
+- **--dry-run**: Fetch and analyze the issue, present the plan, but do not change files or GitHub state, including assignments and labels
 - **--no-approval**: Skip the approval stop in step 6 and go straight from the plan to execution
 - **--no-commit**: Make changes but do not commit them
 - **--commit-per-change**: Commit after each logical change instead of grouping at the end
@@ -28,7 +28,7 @@ Several issue numbers, as in `/address-issue 42 57`, share one plan and one appr
 
 - **Step 1:** fetch every issue by number. Several issues are always given as numbers; descriptive text names one issue and follows the single-issue workflow.
 - **Step 2:** check each issue's state. Ask about every closed issue at once, and drop any the user declines.
-- **Step 3:** self-assign and label each open issue, recording the result for each one.
+- **Step 3:** unless `--dry-run` was specified, self-assign and label each open issue, recording the result for each one.
 - **Step 4:** show every issue's context, one block per issue.
 - **Step 5:** classify each issue and extract its sub-tasks, keeping track of which issue each sub-task came from.
 - **Step 6:** collect every issue's requirements into one plan, headed `## Plan for Issues #42, #57`, that says which change serves which issue. There is one approval gate for the whole plan, not one per issue.
@@ -67,7 +67,9 @@ If the issue is closed, warn the user and ask whether to proceed. Do not proceed
 
 ### 3. Mark Issue In Progress
 
-If the issue is open, signal that work is starting. Skip this step for closed issues.
+**If `--dry-run` was specified, skip this entire step.** Do not self-assign, create a label or add a label. Record that status marking was skipped, then continue to step 4.
+
+Otherwise, if the issue is open, signal that work is starting. Skip this step for closed issues.
 
 **Self-assign:**
 
