@@ -80,14 +80,16 @@ Run every review aspect except `simplify`, in parallel.
 
 ```bash
 codex-aspects run --aspect code --aspect errors ... \
-  --scope <tmp>/scope.json --out-dir <tmp>/out [--model <model>] [--effort <level>]
+  --scope <tmp>/scope.json --out-dir <tmp>/out [--guide-name <name>...] [--model <model>] [--effort <level>]
 ```
+
+Pass each entry of the Codex `project_doc_fallback_filenames` setting, in order, as a `--guide-name` to every `prompt` and `run` command; the helper does not read Codex configuration, so without them a guide that only has a fallback name is left out of the prompt.
 
 It starts one `codex exec --sandbox read-only` per aspect, waits for all of them, and prints a JSON array with one status per aspect. Exit status 3 means at least one aspect failed; the array still says which. Give the command a generous timeout: each aspect is a full Codex review.
 
 **On the subagent path**, for each aspect:
 
-1. Render its task with `codex-aspects prompt --aspect <name> --scope <tmp>/scope.json`. Do not shorten or paraphrase it; it carries the read-only rules, the scope and the output contract.
+1. Render its task with `codex-aspects prompt --aspect <name> --scope <tmp>/scope.json [--guide-name <name>...]`. Do not shorten or paraphrase it; it carries the read-only rules, the scope and the output contract.
 1. Check available slots, including the parent and existing workers. Start only as many aspects as slots allow. Collect and validate replies before starting queued aspects. Close or release completed agents when supported; completion alone may not release slots. Use fresh context (`fork_turns="none"` where supported) for model and reasoning-effort overrides. Obey session policy and report actual settings.
 1. Preserve successful results if a spawn fails. When capacity cannot be released, run queued aspects sequentially in this session or use the standalone entry point. Report the fallback and actual settings; do not duplicate already completed aspects.
 1. On cancellation, stop and observe every launched worker before measuring the scope. If the harness cannot confirm they stopped, report the review as incomplete and do not simplify.
@@ -109,7 +111,7 @@ Run `simplify` only when explicitly selected and every selected review aspect su
 
 Run it alone with `<tmp>/scope-after.json` from step 5. Immediately before editing, recapture that scope and rerun the gate against the original reviewed scope. Never pair a refreshed scope with stale review results after a pause.
 
-- **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-after.json --out-dir <tmp>/out [--model <model>] [--effort <level>]`, which uses `--sandbox workspace-write`.
+- **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-after.json --out-dir <tmp>/out [--guide-name <name>...] [--model <model>] [--effort <level>]`, which uses `--sandbox workspace-write`.
 - **Subagent path:** one subagent with the rendered `simplify` task, then `validate` its reply.
 
 Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-after.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, their content diff from `git diff <before_tree> <after_tree>`, and any prohibited edits in `outside_scope`. Use the measured diff rather than `simplify`'s account, even when simplification failed; report that failure too.
