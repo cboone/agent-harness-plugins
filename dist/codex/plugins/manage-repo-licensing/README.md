@@ -40,5 +40,5 @@ The skill activates when the user mentions licensing, SPDX headers, `REUSE.toml`
 
 ## See Also
 
-- [Add Community Files](../scaffold-new-repo/README.md): adds CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, PR template (sibling repo-bootstrap concern)
+- [Add Community Files](../scaffold-new-repo/README.md#additional-workflows): adds CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, PR template (sibling repo-bootstrap concern)
 - [All plugins](../../../../README.md)
