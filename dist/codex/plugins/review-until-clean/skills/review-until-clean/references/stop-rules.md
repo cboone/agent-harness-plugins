@@ -71,7 +71,7 @@ A single clean round is the default finish. It is also the weakest point in the 
 
 The terminal status follows the same table as an unconfirmed run: `clean-with-declines` when either round of the pair relied on carried declines, and `clean` otherwise. Coverage still applies, so a confirmed pair with `partial` or `unverified` coverage reports it, as for a single round.
 
-Under `--report-only`, the confirming round still runs when the first round is clean and the snapshot has not moved since. Neither round edits anything. `--report-only` has no round budget, so the cap rules above do not apply to it and it never reports `stopped`:
+Under `--report-only`, the confirming round still runs when the first round is clean and the snapshot has not moved since. The loop fixes nothing in either round; a reviewer that edits still does, and its edits are kept and reported. `--report-only` has no round budget, so the cap rules above do not apply to it and it never reports `stopped`:
 
 - **The confirming round turns up findings, or edits the tree.** The run reports them exactly as a `--report-only` run reports a first round that did.
 - **The snapshot moved before the confirming round.** The confirming round does not run. The run reports the first round's clean result as unconfirmed, says the tree changed after it, and records `Confirmation: unconfirmed` in the ledger.

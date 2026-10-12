@@ -52,7 +52,7 @@ Reviewer reply, verbatim:
 ...
 ````
 
-An edit round adds a `Changed:` list of the paths whose content moved while the reviewer ran, and any findings it also reported. Its changes are the round's result; they are not findings, and they are not checked items.
+An edit round adds a `Changed:` list of the paths whose content moved while the reviewer ran. Its changes are the round's result; they are not findings, and they are not checked items. Any findings it also reported are recorded as notes under the round's raw reply, never as unchecked items: they describe code the reviewer's own edits replaced, so they must not reach `address-review`. The next round raises again whatever still holds.
 
 Each round appends a section. Earlier rounds are never rewritten, because the point of the record is what was true when the review ran.
 
