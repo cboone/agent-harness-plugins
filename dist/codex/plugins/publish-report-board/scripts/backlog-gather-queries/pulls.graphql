@@ -1,0 +1,64 @@
+# One page of a repository's open pull requests, with what places each in a
+# progress stage: draft, review, mergeability, and the latest check state.
+# Files feed implicit affinity for the pull requests the viewer wrote.
+query ($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(states: OPEN, first: 50, after: $endCursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        number
+        title
+        url
+        headRefName
+        isDraft
+        reviewDecision
+        mergeable
+        mergeStateStatus
+        createdAt
+        updatedAt
+        author {
+          login
+        }
+        reviewRequests(first: 1) {
+          totalCount
+        }
+        latestReviews(last: 1) {
+          nodes {
+            submittedAt
+          }
+        }
+        commits(last: 1) {
+          nodes {
+            commit {
+              statusCheckRollup {
+                state
+              }
+            }
+          }
+        }
+        closingIssuesReferences(first: 100) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            number
+            repository {
+              nameWithOwner
+            }
+          }
+        }
+        files(first: 100) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            path
+          }
+        }
+      }
+    }
+  }
+}

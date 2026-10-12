@@ -9,4 +9,5 @@ Read [plugin development](../docs/plugin-development.md) before changing a plugi
 - Reference files and skill names are checked by `../bin/check-cross-references`. The guide describes repository-path declarations and file-scoped exemptions; an unused exemption also fails validation.
 - Add bundled-script coverage to `../tests/scrut/` and register needed paths in both the Makefile's `SCRUT_ENV` and CI's `scrut-env` list.
 - A style guide's `references/review-checklist.md` follows the review checklist format in the plugin development guide. `make build` copies it into `set-up-review-config`, so a checklist change needs forward version bumps in both plugins.
+- `publish-report-board`'s `references/progress-model.md` is copied into `suggest-next-issue` by `make build`, so a change to it needs forward version bumps in both plugins. Never edit the copy. Both gather scripts apply the model from `publish-report-board/scripts/progress.jq`; change a rule there and in the model together.
 - Rebuild the Codex mirror with `make build` and run relevant validation after source changes. Never edit generated mirrors directly.

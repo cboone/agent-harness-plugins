@@ -1,0 +1,87 @@
+# One page of open issues; gh api graphql --paginate supplies $endCursor. Each
+# carries labels, assignees, recent comments, and the pull requests that link
+# it by closing reference (manual links included) or cross-reference.
+query ($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    issues(states: OPEN, first: 50, after: $endCursor, orderBy: { field: CREATED_AT, direction: ASC }) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        number
+        title
+        body
+        url
+        createdAt
+        updatedAt
+        author {
+          login
+        }
+        milestone {
+          title
+        }
+        assignees(first: 20) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            login
+          }
+        }
+        labels(first: 100) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            name
+          }
+        }
+        comments(last: 100) {
+          pageInfo {
+            hasPreviousPage
+          }
+          nodes {
+            author {
+              login
+            }
+            createdAt
+          }
+        }
+        closedByPullRequestsReferences(first: 100, includeClosedPrs: true) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            number
+            mergedAt
+            repository {
+              nameWithOwner
+            }
+          }
+        }
+        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], last: 100) {
+          pageInfo {
+            hasPreviousPage
+          }
+          nodes {
+            __typename
+            ... on CrossReferencedEvent {
+              willCloseTarget
+              source {
+                __typename
+                ... on PullRequest {
+                  number
+                  mergedAt
+                  repository {
+                    nameWithOwner
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

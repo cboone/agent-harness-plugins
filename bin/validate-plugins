@@ -1029,6 +1029,20 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
   fi
 done
 
+# ─── 22. Shared reference copies are current ────────────────────────────────
+# Each copy bin/build-shared-references writes must match its source byte for
+# byte; a hand-edited copy or an unbuilt source gives two skills different rules.
+
+if ! shared_reference_output="$(bin/build-shared-references --check 2>&1)"; then
+  printf '%s\n' "${shared_reference_output}"
+  shared_reference_errors="$(grep -c '^::error::' <<< "${shared_reference_output}" || true)"
+  if [[ "${shared_reference_errors}" -gt 0 ]]; then
+    errors=$((errors + shared_reference_errors))
+  else
+    error "bin/build-shared-references failed without reporting a finding"
+  fi
+fi
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then

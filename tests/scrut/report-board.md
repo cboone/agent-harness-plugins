@@ -330,7 +330,7 @@ report-board: */data.json is not valid board data: (glob)
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.startNow += [{"issue": 102, "why": "x"}, {"issue": 105, "why": "x"}, {"issue": 103, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - startNow #102 waits on #101 and cannot start
-  - startNow #105 is already in progress on fix/105-broken-links
+  - startNow #105 is already in progress (branch on fix/105-broken-links)
   - startNow #103 shares a branch with #101; list #101 instead
   - lane L1 runs one branch at a time, but startNow picks 3 of its issues: #101, #102, #103
 [1]
@@ -341,9 +341,9 @@ report-board: */data.json is not valid board data: (glob)
 Issue #103 rides on the branch of #101, so work on it is work on #101.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 103)).inProgress = "feature/103-columns"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(103; .progress = progress("branch"; {"branch": "feature/103-columns"}))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - startNow #101 is already in progress on feature/103-columns, through #103 on the same branch
+  - startNow #101 is already in progress (branch on feature/103-columns), through #103 on the same branch
 [1]
 ```
 
@@ -364,14 +364,14 @@ Lane L2 is a head lane, and #105 is in progress in it.
 ```scrut
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 104)) |= del(.waitingOn, .blockedBecause) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - startNow #104: lane L2 already has #105 in progress on fix/105-broken-links, and a head lane runs one branch at a time
+  - startNow #104: lane L2 already has #105 in progress (branch on fix/105-broken-links), and a head lane runs one branch at a time
 [1]
 ```
 
 ## Nothing in a head lane starts before its head
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 105)) |= del(.inProgress) | (.issues[] | select(.number == 104)) |= del(.waitingOn, .blockedBecause) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 105)).progress = null | (.issues[] | select(.number == 104)) |= del(.waitingOn, .blockedBecause) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - startNow #104: lane L2 is a head lane, and nothing in it starts before its head, #105
 [1]
@@ -392,7 +392,7 @@ report-board: */data.json is valid: 7 issues in 3 lanes (glob)
 Validation accepts it, so the board shows the overlap rather than hiding it.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 101)).inProgress = "feature/101-tokenizer" | (.issues[] | select(.number == 107)).inProgress = "feature/107-color" | .startNow = [{"issue": 106, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = progress("branch"; {"branch": "feature/101-tokenizer"})) | on(107; .progress = progress("draft"; {"pr": 12})) | .startNow = [{"issue": 106, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is valid: 7 issues in 3 lanes (glob)
 ```
 
@@ -525,25 +525,26 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
-## An in-progress value with a dot segment
+## A branch carrier with a dot segment
 
-The page turns a single unspaced `inProgress` value into a branch comparison, so
-it reaches `/compare/` the same way a branch blocker does.
+The page turns a branch carrier into a branch comparison, so it reaches
+`/compare/` the same way a branch blocker does, and an extra carrier is held to
+the same rule.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 105)).inProgress = "../other"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress.carrier = {"branch": "../other"}) | on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"branch": "a/../b"}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v startNow
 report-board: */data.json is not valid board data: (glob)
-  - #105: inProgress must name the branch or pull request
-[1]
+  - #101: progress.extraCarriers must be a list of carriers, empty when there are none
+  - #105: progress.carrier must name exactly one of pr, branch, label, or pipeline, and only a branch may add local: true
 ```
 
-## An in-progress phrase carrying a dot segment
+## A label carrier carrying a dot segment
 
-A value with a space in it stays text on the page and reaches no URL, so the
-guard above applies to single unspaced values alone and a phrase passes.
+A label stays text on the page and reaches no URL, so the guard above applies
+to branches alone and a label passes.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 105)).inProgress = "waiting on ../foo"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress = progress("started"; {"label": "../foo"}))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is valid: 7 issues in 3 lanes (glob)
 ```
 
@@ -803,7 +804,7 @@ This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00 in America/New_York, 0 op
 - Closed: #101 parser: replace the tokenizer; #103 cli: report parse errors with columns; #105 docs: fix broken links
 - Opened: #108 parser: benchmark suite (L1; Parser rewrite; waits on #102: Benchmarks measure the streaming path that #102 adds.)
 - Unblocked: #102 parser: stream large inputs; #104 parser tutorial
-- Started: #106 ci: cache dependencies (feature/106-cache)
+- Started: #106 ci: cache dependencies (branch on feature/106-cache)
 - Added to start now: #102 parser: stream large inputs; #104 parser tutorial
 - Dropped from start now: #101 parser: replace the tokenizer; #106 ci: cache dependencies
 - Changed lanes: #107 cli: color output (L1 to L3)
@@ -851,10 +852,10 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.
 A change inside a relation that is still set is a change, not a non-event.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 107)).after = [104]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '(.issues[] | select(.number == 107)).after = [101] | (.issues[] | select(.number == 102)).waitingOn = [104] | (.issues[] | select(.number == 105)).inProgress = "PR #9"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 3
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 107)).after = [104]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(107; .after = [101]) | on(102; .waitingOn = [104]) | on(105; .progress = progress("draft"; {"pr": 9}))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 3
 - Blockers changed: #102 parser: stream large inputs (was waiting on #101, now #104)
 - Better after changed: #107 cli: color output (was after #104, now #101)
-- Progress moved: #105 docs: fix broken links (fix/105-broken-links to PR #9)
+- Stage moved: #105 docs: fix broken links (branch to draft)
 ```
 
 ## Compare survives wrong-typed fields on a newly opened issue
@@ -1087,7 +1088,7 @@ report-board: */data.json is not valid board data: (glob)
 ## Duplicate numbers, lane keys, picks, and claims
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.issues += [{"number": 101, "title": "again", "milestone": null}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[0].issues += [101] | .contention.claims[1].issues = [107, 107] | .contention.claims += [{"name": "cli", "issues": [103, 107]}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.issues += [{"number": 101, "title": "again", "milestone": null, "progress": null, "affinity": {"owner": null, "kind": null, "tier": null, "reasons": []}}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[0].issues += [101] | .contention.claims[1].issues = [107, 107] | .contention.claims += [{"name": "cli", "issues": [103, 107]}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - issues: #101 appears more than once
   - lanes: key L1 is used more than once
@@ -1135,6 +1136,185 @@ report-board: */data.json is not valid board data: (glob)
   - #101 shares a branch with #103, so it cannot also come after it
   - startNow #101 is better after #103 and should not start before it lands
 [1]
+```
+
+## The schema version and the uniformity list are required
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq 'del(.schemaVersion, .affinityIgnored)' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - schemaVersion: expected 2; build the data with backlog-gather finish
+  - affinityIgnored: expected a list drawn from assigned, claimed, filed, commented, active, recent, empty when uniformity dropped nothing
+[1]
+```
+
+## Progress has the shape of the progress model
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("shipped"; {"pr": 0}) | .flags = ["quiet", "stale", "local", "quiet"] | .nextMove = "everyone" | .note = "x")) | on(102; .progress = (progress("draft"; {"pr": 4}) | .flags = ["leftover-label"] | .host = "studio" | .lastActivity = "yesterday")) | on(103; .progress = "branch")' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v startNow
+report-board: */data.json is not valid board data: (glob)
+  - #101: progress.stage must be one of started, branch, draft, awaiting-review, needs-author, ready-to-merge, close-out
+  - #101: progress.carrier must name exactly one of pr, branch, label, or pipeline, and only a branch may add local: true
+  - #101: progress.nextMove must be one of author, reviewer, ci, nobody
+  - #101: progress.flags lists quiet more than once
+  - #101: progress is quiet or stale, never both
+  - #101: progress.host must name the machine that saw the local branch
+  - #101: progress.note is not a progress field
+  - #102: progress.lastActivity must be an ISO 8601 time with a zone
+  - #102: progress.flags has leftover-label, which only a close-out stage carries
+  - #102: progress.host is set only with the local flag
+  - #103: progress must be an object, or null when the issue has no stage
+```
+
+## Affinity is required and has the shape of the progress model
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; del(.affinity)) | on(102; .affinity = {"owner": "you", "kind": null, "tier": 2, "reasons": []}) | on(103; .affinity = {"owner": "mallory", "kind": "implicit", "tier": 1, "reasons": ["x"], "since": "x"})' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #101: affinity is required, with owner, kind, tier, and reasons
+  - #102: affinity.owner and affinity.kind are both set or both null
+  - #102: affinity.tier is set only for implicit affinity
+  - #102: affinity.reasons must say what gives the owner
+  - #103: implicit affinity belongs to you
+  - #103: affinity.since is not an affinity field
+[1]
+```
+
+## Area names must be defined
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.areas = [{"name": "docs", "paths": ["docs/"]}, {"name": "ci", "paths": [".github/**"], "owner": "x"}, {"paths": ["x"]}] | (.issues[] | select(.number == 105)).areas = ["docs", "website", "docs"] | (.issues[] | select(.number == 106)).areas = "ci"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v contention
+report-board: */data.json is not valid board data: (glob)
+  - area ci: owner is not an area field
+  - areas[2]: expected an object with a name
+  - #105: area website is not defined in areas
+  - #105: areas lists docs more than once
+  - #106: areas must be a list of area names
+```
+
+## Claims are the areas two or more issues share
+
+With areas tagged, `backlog-gather finish` derives the claims, so validation
+accepts claims that match the areas and rejects any that drift from them.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.areas = [{"name": "parser", "paths": ["src/parser/**"]}, {"name": "cli", "paths": ["src/cli/**"], "query": "label:cli"}, {"name": "ci", "paths": [".github/**"]}] | (.issues[] | select(.number == (101, 102, 104))).areas = ["parser"] | (.issues[] | select(.number == (103, 107))).areas = ["cli"] | (.issues[] | select(.number == 106)).areas = ["ci"] | .contention.claims[1].query = "label:cli"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 && jq '.contention.claims[1] |= del(.query)' "${dir}/data.json" > "${dir}/drift.json" && "${REPORT_BOARD_BIN}" validate "${dir}/drift.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+report-board: */drift.json is not valid board data: (glob)
+  - contention.claims must be the areas that two or more issues list, in area order; backlog-gather finish derives them
+[1]
+```
+
+## A pick owned by someone else needs a reason
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 106)).affinity = {"owner": "mallory", "kind": "explicit", "tier": null, "reasons": ["assigned"]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && { "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 || true; } && jq '(.startNow[] | select(.issue == 106)).despiteOwner = "Mallory is away until November."' "${dir}/data.json" > "${dir}/reason.json" && "${REPORT_BOARD_BIN}" validate "${dir}/reason.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #106 is owned by @mallory; give despiteOwner, the reason to start it anyway
+report-board: */reason.json is valid: 7 issues in 3 lanes (glob)
+```
+
+## A close-out issue does not hold its lane
+
+A merged pull request leaves the issue to close or split, which is a cleanup
+rather than work, so the head lane is free again and its head comes first.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress = progress("close-out"; {"pr": 9})) | on(104; del(.waitingOn, .blockedBecause)) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #104: lane L2 is a head lane, and nothing in it starts before its head, #105
+[1]
+```
+
+## A close-out issue is not a start pick
+
+Its work merged, so what remains is to close or split it.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(106; .progress = progress("close-out"; {"pr": 9}))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #106 is in close-out (sample signal); close or split it instead of starting it
+[1]
+```
+
+## Progress and affinity carry every field, null where the model allows it
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(107; .progress = (progress("branch"; {"branch": "fix/107"}) | del(.since, .host)) | .affinity |= del(.tier))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: progress.since is required, null where the model allows it
+  - #107: progress.host is required, null where the model allows it
+  - #107: affinity.tier is required, null where the model allows it
+  - #107: implicit affinity needs a tier of 1, 2, or 3
+  - startNow #101: lane L1 already has #107 in progress (branch on fix/107), and a serial lane runs one branch at a time
+[1]
+```
+
+## Every issue carries progress
+
+An issue with no stage carries null, so data that skipped `backlog-gather
+finish` cannot pass as nothing in progress.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '(.issues[] | select(.number == 107)) |= del(.progress)' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: progress is required, null when the issue has no stage; backlog-gather finish writes it
+[1]
+```
+
+## Compare reports flags cleared and affinity changes
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress.flags = ["quiet"])' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress = null) | on(107; .affinity = no_affinity) | on(101; .progress = (progress("ready-to-merge"; {"pr": 2}) | .flags = ["behind"]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n +4
+- Started: #101 parser: replace the tokenizer (ready-to-merge on PR #2)
+- No longer in progress: #105 docs: fix broken links (was branch)
+- Flags raised: #101 parser: replace the tokenizer (behind)
+- Flags cleared: #105 docs: fix broken links (quiet)
+- Affinity changed: #107 cli: color output (you at tier 1 to none)
+```
+
+## Validate accepts local only on a branch carrier
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"branch": "fix/101-y", "local": true}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -c 'progress\.'
+0
+[1]
+```
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"pr": 4, "local": true}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep 'progress\.'
+  - #101: progress.extraCarriers must be a list of carriers, empty when there are none
+```
+
+## Compare reports a new carrier or next move within a stage
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("awaiting-review"; {"pr": 2}) | .nextMove = "nobody" | .nextAction = "request a review"))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("awaiting-review"; {"pr": 5}) | .nextMove = "reviewer" | .nextAction = "review it"))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | grep -E 'Carrier|Next move'
+- Carrier changed: #101 parser: replace the tokenizer (PR #2 to PR #5)
+- Next move changed: #101 parser: replace the tokenizer (nobody: request a review to reviewer: review it)
+```
+
+## Compare reports affinity that changes while the owner stays
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/previous.json" && jq '(.issues[] | select(.number == 107) | .affinity) |= (.tier = 2) | (.issues[] | select(.number == 101) | .affinity) = {owner: "you", kind: "explicit", tier: null, reasons: ["assigned"]}' "${dir}/previous.json" > "${dir}/current.json" && jq '(.issues[] | select(.number == 101) | .affinity) = {owner: "you", kind: "implicit", tier: 1, reasons: ["parser changed"]}' "${dir}/previous.json" > "${dir}/previous-101.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous-101.json" "${dir}/current.json" | grep 'Affinity changed'
+- Affinity changed: #101 parser: replace the tokenizer (you at tier 1 to you explicitly); #107 cli: color output (you at tier 1 to you at tier 2)
+```
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/previous.json" && jq '(.issues[] | select(.number == 107) | .affinity.reasons) = ["changes on feature/colors touch src/cli/**"]' "${dir}/previous.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | grep 'Affinity changed'
+- Affinity changed: #107 cli: color output (you at tier 1, new reasons)
+```
+
+## Compare against a board from before the progress model
+
+A previous board without a schemaVersion carried `inProgress` text that maps
+onto no single stage, so the report says once that the model changed rather
+than calling every issue started.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq 'del(.schemaVersion, .affinityIgnored) | .issues |= map(del(.progress, .affinity)) | (.issues[] | select(.number == 105)).inProgress = "fix/105-broken-links"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" | tail -n +4
+- Progress model changed: stage moves are reported from the next sync.
 ```
 
 ## Render refuses a directory as the output
