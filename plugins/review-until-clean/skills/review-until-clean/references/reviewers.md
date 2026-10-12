@@ -25,7 +25,7 @@ Classify by the first word. When it names a skill or command available in this s
 Check before the first round, by kind:
 
 - **Skill or command:** it appears in this session's list of available skills or commands. A name that does not resolve is a missing reviewer, not an empty review.
-- **Shell command:** `command -v <first word>` succeeds.
+- **Shell command:** `command -v` succeeds on its first word after any leading `NAME=value` assignments, so `LC_ALL=C coderabbit review --plain` checks `coderabbit`. When the value is too involved to read that way, skip the check and let the run decide: an exit status of 127, the shell's "command not found", is reported as a missing reviewer rather than as a failed review.
 
 A reviewer that is installed but not authenticated usually fails only when it runs. That is a failed round like any other: report that the reviewer is unauthenticated, rather than that it found nothing, and do not attempt to authenticate it.
 
@@ -63,18 +63,23 @@ A skill or command runs with this session's own tools, so nothing structural sto
 
 ### Shell command
 
-Run it from the repository root as one script under `bash -o pipefail`, with stdin closed and both output streams captured to files **outside the working tree**:
+Run it from the repository root as one script under `bash -e -o pipefail`, with stdin closed and both output streams captured to files **outside the working tree**:
 
 ```bash
 tmp="$(mktemp -d)"
 reviewer='<the --reviewer value, exactly as given>'
-bash -o pipefail -c "${reviewer}" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"
-status=$?
+if bash -e -o pipefail -c "${reviewer}" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"; then
+  status=0
+else
+  status=$?
+fi
 ```
 
 Each part is there for a reason:
 
 - **One `bash -c`, with `pipefail`.** The value may be a pipeline, such as `tool --json | jq -s '…'`. Written out bare, the redirects attach only to its last command: the first one keeps the harness's stdin, its stderr escapes the capture, and the status is the last command's. A reviewer that exits non-zero having printed a finding then comes back as status 0 with `jq`'s empty result, which is a failed review recorded as a clean one. Running the whole value as one script puts every command under the redirects, and `pipefail` makes a failure in any stage the script's status. Pass the value as a single argument, as above, rather than splicing it into the command line.
+- **`-e`.** `pipefail` covers one pipeline at a time, so in `tool | cat; echo done` a later command that succeeds would still set the status to 0. `-e` ends the script at the first command that fails, so that failure is the script's status. It has exceptions, such as a command tested by `if` or joined by `&&` or `||`, so a reviewer value should be the reviewer command itself, optionally piped into its output processing, and not a script that wraps it in further logic.
+- **The `if` around it.** It records the status even when the caller runs under `set -e`, which would otherwise end the caller before the diagnostics were captured.
 - **`< /dev/null`.** Many CLIs read stdin when it is not a terminal. An agent harness's stdin is a pipe that never reaches end of file, so without the redirect such a CLI waits forever and the round produces nothing at all.
 - **Files outside the working tree.** The snapshot covers every non-ignored path in the tree, so an output file written into the repository is itself a change. It would move the snapshot, turn every round into an edit round, and hand the next round the reviewer's own output as new code. `./ledger.md` gives the same rule for the ledger.
 - **The exit status, kept.** It is one of the two completion signals, so record it before anything else runs.
@@ -90,7 +95,7 @@ Compare the snapshot from step 1 with `review-scope`'s snapshot taken **immediat
 - **Unchanged:** a report round. The reviewer's findings go through steps 6 to 9 as usual.
 - **Moved:** an edit round. Whatever moved it happened while the reviewer ran, so it is that round's result. Record the paths that changed. Any findings the reviewer also reported are recorded but never queued for the fixer, since they name lines in code its edits replaced. An edit round is never clean, whatever it reported, because the code it reviewed is no longer the code on disk; the next round reviews the new snapshot.
 
-The snapshot sees lasting changes to content as Git would store it, and nothing else. An unchanged snapshot does not prove the reviewer wrote nothing: a change only to the index, a write to an ignored untracked file, an edit reverted before the reviewer returned, and an edit Git normalizes away, such as a line-ending change under text normalization, all leave it where it was. Such a round is recorded as a report round. None of them changes the content the snapshot binds a clean result to, which is why the mode is decided from it; say what the snapshot covers rather than that nothing was written.
+The snapshot binds `HEAD`, the resolved merge base, and the working tree's content as Git would store it. A reviewer that commits moves it even when no file content changed; record such a round's `HEAD` or base change in place of the changed paths, which can then be empty. Within the tree, it sees lasting changes to stored content and nothing else. An unchanged snapshot does not prove the reviewer wrote nothing: a change only to the index, a write to an ignored untracked file, an edit reverted before the reviewer returned, and an edit Git normalizes away, such as a line-ending change under text normalization, all leave it where it was. Such a round is recorded as a report round. None of them changes the content the snapshot binds a clean result to, which is why the mode is decided from it; say what the snapshot covers rather than that nothing was written.
 
 A change made by something other than the reviewer during its run, such as a formatter on save or another session, is indistinguishable from the reviewer's own edit. It is recorded the same way, which costs at most one more round and never a wrong clean result.
 
