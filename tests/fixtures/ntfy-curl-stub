@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# ntfy-curl-stub -- Test stub for the ntfy publish request push-notification makes.
+#
+# push-notification posts a JSON body on stdin as --data-binary @- and, when a
+# token is configured, its authorization header in a file named by -H @FILE.
+# The stub answers the way ntfy does, with the published message as JSON.
+#
+# STUB_CURL_LOG, when set, receives every argument on its own line, then the
+# body, then which of NTFY_TOPIC and NTFY_TOKEN its environment holds, then
+# for a header file its contents check and mode. The check compares the file
+# against "Authorization: Bearer STUB_CURL_TOKEN". STUB_CURL_FAIL=1
+# makes the request fail with HTTP 401, as ntfy answers a rejected token.
+# STUB_CURL_FAIL_BODY, when set, replaces the body of that failure, the way a
+# server or proxy error can echo the request back. STUB_CURL_RESPONSE, when
+# set, replaces the successful answer, the way a proxy in front of the server
+# can answer with its own page.
+set -euo pipefail
+
+# Prints the permission bits of a file, with GNU stat first, because BSD stat
+# has no -c.
+function file_mode() {
+  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}"
+}
+
+function main() {
+  local header_file="" arg body
+  local -a args=("$@")
+  while [[ $# -gt 0 ]]; do
+    arg="${1}"
+    shift
+    case "${arg}" in
+      -H)
+        if [[ "${1}" == @* ]]; then
+          header_file="${1#@}"
+        fi
+        shift
+        ;;
+      *) ;;
+    esac
+  done
+  body="$(cat)"
+
+  if [[ -n "${STUB_CURL_LOG:-}" ]]; then
+    {
+      printf 'arg: %s\n' "${args[@]}"
+      printf 'body: %s\n' "${body}"
+      local secrets="${NTFY_TOPIC+NTFY_TOPIC }${NTFY_TOKEN+NTFY_TOKEN}"
+      printf 'env secrets: %s\n' "${secrets:-none}"
+      if [[ -n "${header_file}" ]]; then
+        local matches=false
+        if [[ "$(< "${header_file}")" == "Authorization: Bearer ${STUB_CURL_TOKEN:-}" ]]; then
+          matches=true
+        fi
+        printf 'header matches: %s, mode %s\n' "${matches}" "$(file_mode "${header_file}")"
+      fi
+    } >> "${STUB_CURL_LOG}"
+  fi
+
+  if [[ "${STUB_CURL_FAIL:-}" == "1" ]]; then
+    local unauthorized='{"code":40101,"http":401,"error":"unauthorized"}'
+    printf '%s\n' "${STUB_CURL_FAIL_BODY:-${unauthorized}}"
+    echo "curl: (22) The requested URL returned error: 401" >&2
+    exit 22
+  fi
+  if [[ -n "${STUB_CURL_RESPONSE:-}" ]]; then
+    printf '%s\n' "${STUB_CURL_RESPONSE}"
+    return 0
+  fi
+  printf '{"id":"stub123","time":1760000000,"event":"message","topic":"%s"}\n' "$(jq -r .topic <<< "${body}")"
+}
+
+main "$@"

@@ -149,6 +149,8 @@ jobs:
         BACKLOG_GATHER_DATA_DIR=./tests/data/backlog-gather
         BACKLOG_GATHER_GH_STUB_BIN=./tests/fixtures/backlog-gather-gh-stub
         CURL_STUB_BIN=./tests/fixtures/curl-stub
+        PUSH_NOTIFICATION_BIN=./plugins/push-notification/scripts/push-notification
+        NTFY_CURL_STUB_BIN=./tests/fixtures/ntfy-curl-stub
         RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
         MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads
         MERGE_FLOW_BIN=./plugins/monitor-pr/scripts/merge-flow
