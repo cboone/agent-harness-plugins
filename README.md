@@ -97,7 +97,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 - _Review Colleague PR:_ [`gh`](https://cli.github.com/) (required; the skill reads the PR, its linked issues, its reviews, and its CI status over the GitHub API, and writes nothing)
 - _Review Plan:_ [`gh`](https://cli.github.com/) (optional; only for explicitly linked GitHub context)
 - _Review PR with Codex:_ [`codex`](https://github.com/openai/codex) (required; every aspect runs through Codex, read-only except `simplify`); `jq` (required; the bundled helpers emit and validate JSON)
-- _Review Until Clean:_ a reviewer of your choice (required; any skill, slash command or CLI, installed and authenticated; edits it makes are recorded and reviewed again); `jq` (required; the bundled scope helper emits JSON)
+- _Review Until Clean:_ a reviewer of your choice (required; any skill, slash command or CLI, installed and authenticated; edits it makes are recorded and, when the round budget allows, reviewed again); `jq` (required; the bundled scope helper emits JSON)
 - _Resolve Copilot PR Feedback:_ [`gh`](https://cli.github.com/) (required; the skill reads review threads over the GitHub API and posts its summary comment)
 - _Set-Up Review Config:_ `git` (required; the skill detects file types with `git ls-files` and pins links with `git ls-remote`); `curl` (optional; checks that the bundled checklists match the marketplace)
 

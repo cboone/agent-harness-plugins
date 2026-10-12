@@ -36,7 +36,7 @@ Without `--reviewer`, the skill uses the reviewer your repository's `AGENTS.md` 
 review-until-clean reviewer: /pr-review-toolkit:review-pr
 ```
 
-If none is named, it asks once.
+It shows the named reviewer and the file it came from, and asks you to confirm it once before the first round, because those files can be part of the change under review. If none is named, it asks once which to use. A run where no one can answer, such as a pre-push hook, needs `--reviewer`.
 
 A reviewer chooses its own diff, so the loop cannot make it read all four buckets. It offers once per run to make untracked files visible with `git add -N`, then compares what the reviewer reports it read against the scope. A round's coverage is `full`, `partial`, or `unverified` when the reviewer does not say.
 
@@ -49,7 +49,7 @@ A finding you decline is recorded in the ledger with its reason and carried forw
 Each run keeps a ledger while it works and, when it finishes, saves it to `docs/reviews/<date>-<branch>-until-clean.md`. The run ends with a status line:
 
 ```text
-Review-until-clean status: clean | clean-with-declines | decisions-needed | stopped | failed
+Review-until-clean status: clean | clean-with-declines | decisions-needed | stopped | failed | no-op
 ```
 
 Every status carries its coverage. A clean result that left part of the scope out is reported as `clean, partial scope`, and one whose reviewer did not say what it read as `clean, coverage unverified`, never as plain `clean`. One reviewer pass is a sample, not proof that the branch is defect-free, and the report says what was covered rather than claiming more.
@@ -90,7 +90,7 @@ When untracked files are in scope, the skill asks once whether to make them visi
 
 ### As a pre-push hook
 
-The skill is deliberately agent-invoked rather than a shipped git hook, because a hook adds latency to every push and one that fails open is worse than no hook at all. To wire one up yourself, have your `pre-push` hook ask before running, and run the skill through your agent's non-interactive mode.
+The skill is deliberately agent-invoked rather than a shipped git hook, because a hook adds latency to every push and one that fails open is worse than no hook at all. To wire one up yourself, have your `pre-push` hook ask before running, and run the skill through your agent's non-interactive mode with an explicit `--reviewer`: a reviewer named only in agent instructions needs a confirmation that a non-interactive run cannot give, so without `--reviewer` the run ends `failed`.
 
 ## Recommended Permissions
 
@@ -106,7 +106,7 @@ This skill runs git commands, and your reviewer's own commands, that trigger per
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-The first two rules cover the bundled helper, which runs at least twice every round. Add rules for your reviewer's own commands separately. `git add -N` and `git reset` are left out on purpose: the skill asks before touching the index, so approving those two each time is the point.
+The first two rules cover the bundled helper, which runs at least twice every round. A shell reviewer runs inside a wrapper script, `bash -e -o pipefail <temporary file>`, so a rule for the reviewer's own command, such as `Bash(coderabbit review *)`, never matches it, and each round asks you to approve the wrapper; that approval is where you see what is about to run. `git add -N` and `git reset` are left out on purpose: the skill asks before touching the index, so approving those two each time is the point.
 
 ## Examples
 
