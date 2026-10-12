@@ -347,8 +347,10 @@ function main() {
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
-    delivery)
+    delivery | delivery-leading-zero)
       export NOTIFY_TEST_HOLD=1
+      # A leading zero fails validation, so the default grace period applies.
+      [[ "${scenario}" == delivery ]] || export NOTIFY_WAIT_LIMIT=09
       local started="${SECONDS}"
       ;;
     *) ;;
@@ -391,7 +393,7 @@ function main() {
       [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
       echo "Separate sessions retain separate banners"
       ;;
-    delivery)
+    delivery | delivery-leading-zero)
       # `|| exit 1` throughout: a failing [[ ]] does not trigger errexit in bash 3.2.
       poll 150 find_held_pid || exit 1
       # The default grace period is 2 seconds; allow 6 under parallel load.

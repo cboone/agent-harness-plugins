@@ -577,3 +577,10 @@ codex.png
 $ "${CHECK_NOTIFICATIONS_BIN}" delivery
 Alerter stops after the grace period without SIGTERM
 ```
+
+## Leading-zero wait limit keeps the default
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" delivery-leading-zero
+Alerter stops after the grace period without SIGTERM
+```

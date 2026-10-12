@@ -20,6 +20,8 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 
 - **`notify`'s `run_alerter` stops each `alerter` with `SIGKILL` after `WAIT_LIMIT` seconds on purpose.** `SIGTERM` and `SIGINT` make `alerter` remove the delivered banner; `SIGKILL` leaves it in Notification Center. Each `run_alerter` stops only its own child `alerter`, within 60 seconds at most, so it needs no PID start-time check, lock or shared state. Do not ask for a gentler signal, a lock or a start-time check.
 
+- **`notify`'s `NOTIFY_WAIT_LIMIT` check rejects leading zeros before any arithmetic.** The `^[1-9][0-9]{0,8}$` match sends `09` or `010` to the 2-second default, so bash never parses them as octal. Do not ask for `10#` base prefixes or extra decimal parsing.
+
 - **A fixture may `cd` after reading a `*_BIN` variable.** Those variables are absolute wherever scrut runs: the Makefile builds them from `$(CURDIR)`, and in CI the reusable `run-scrut-tests.yml` rewrites every `./`-prefixed `scrut-env` value in `.github/workflows/ci.yml` into an absolute path before exporting it. A `./plugins/...` value there never reaches a fixture as a relative path.
 
 Two checks are disabled in `.shellcheckrc` by design and should not be raised in review: `check-extra-masked-returns` (SC2312) and `check-set-e-suppressed` (SC2310).
