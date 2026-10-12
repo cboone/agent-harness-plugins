@@ -43,7 +43,7 @@ The prompt goes in as one argument because stdin must stay `/dev/null`. The help
 `codex-aspects run` checks each aspect in this order, and the first failure is its reason:
 
 1. `codex` exited zero.
-1. The output file exists. A run that failed or was stopped never creates it.
+1. The output file exists. A run stopped early usually leaves none, but a failed run can leave a complete, valid file, which is why the exit status is checked first and the file never stands in for it.
 1. The file is not empty. `jq .` exits 0 on an empty file, so emptiness is checked by size.
 1. The file parses as JSON and holds exactly one value. jq reads a file as a stream and `jq -e` reports on the last value, so without this an invalid object followed by a valid one would pass every check after it.
 1. It matches the schema.
