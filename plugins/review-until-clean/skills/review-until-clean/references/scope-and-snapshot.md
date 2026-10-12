@@ -19,13 +19,13 @@ All four, every round. The failure this prevents is specific and common: the age
 
 ## What the snapshot is
 
-`review-scope` reports a `snapshot`: a digest over HEAD, the resolved base tip and merge base, disk content, semantic index entries (paths, blob identifiers, modes and merge stages), and the four bucket lists. It excludes index stat-cache timestamps. The separate `tree` field is a Git tree built from the working tree in a temporary index, and measures lasting changes to disk content.
+`review-scope` reports a `snapshot` digest of HEAD, the resolved base tip and merge base, disk content, semantic index entries (paths, blob identifiers, modes and merge stages), and the four bucket lists. It excludes index stat-cache timestamps. `tree` measures lasting disk-content changes using a Git tree built in a temporary index.
 
-Reviewers inspect staged and unstaged diffs separately. An indexed version can change without any disk edit, so a disk-only digest cannot bind the result to everything reviewed. Staging, unstaging and intent-to-add therefore move `snapshot`, even when `tree` stays unchanged.
+Reviewers inspect staged and unstaged diffs separately, so index-only edits must invalidate review. Staging, unstaging and intent-to-add move `snapshot` even when `tree` stays unchanged.
 
 ## Authorized coverage preparation
 
-The Claude backend may need intent-to-add entries to expose untracked files. Prepare them before capturing the review snapshot, retain them through the validity check and consecutive confirming rounds, and restore only this run's entries afterward or on failure/cancellation. Preserve pre-existing entries and leave concurrently staged content alone. Cleanup after the final validity check is an intentional representation change; report the reviewed snapshot and the restoration separately.
+The Claude backend may need intent-to-add entries to expose untracked files. Prepare them before snapshot capture and retain them through validity checks and consecutive confirming rounds. Restore only this run's entries afterward or on failure/cancellation. Preserve pre-existing entries and concurrently staged content. Report the reviewed snapshot separately from subsequent index restoration.
 
 ## What moves it
 
@@ -39,7 +39,7 @@ A change outside the ignore rules invalidates the prior review even if it affect
 
 The file lists and the digest come from different git invocations, and a tree that changes between them would make a single `review-scope` run self-inconsistent. That is worse than it sounds. A file created after the lists were read but before the digest was written would be covered by the snapshot and named in no list, so the reviewer would never be shown it, and step 8 would find the snapshot exactly where it left it. The round would report clean over code nobody read, which is the one result the whole design exists to prevent.
 
-The helper brackets the lists with disk-tree and semantic-index reads, and rechecks HEAD and the base tip. Equal inputs mean no lasting change was found between those reads. Unequal inputs mean the scope might be inconsistent, and the run fails with `the working tree changed while the scope was being read` rather than emitting a scope it cannot vouch for. Rerun once the tree has settled; a formatter on save or another session in the same worktree is the usual cause.
+The helper brackets the lists with disk-tree and semantic-index reads and rechecks HEAD and the base tip. Matching inputs show no lasting change between reads. Changed inputs fail the run rather than emit an inconsistent scope. Rerun once the tree has settled; a formatter on save or another session may be changing it.
 
 ## What it costs
 
@@ -54,7 +54,7 @@ That is the cost: two hashing passes for each half of the stability check above,
 
 ## Checking it by hand
 
-Capture `tree` and `snapshot`, stage an existing disk change, and capture both again. `tree` must hold while `snapshot` moves. Then alter the indexed blob without changing the file on disk: again `tree` must hold and `snapshot` must move. A repeated scan with no change must preserve both identifiers. The scrut suite exercises these cases and the authorized intent-to-add lifecycle.
+Capture `tree` and `snapshot`, stage an existing disk change, then recapture both. `tree` must hold while `snapshot` moves. The same must happen when an indexed blob changes without a disk edit. Unchanged scans must preserve both identifiers. Scrut covers these cases and the authorized intent-to-add lifecycle.
 
 ## When there is no base
 

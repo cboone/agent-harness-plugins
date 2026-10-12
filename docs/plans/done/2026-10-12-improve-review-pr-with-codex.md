@@ -4,7 +4,7 @@
 
 Make `review-pr-with-codex` read-only by default, bind results to everything the reviewers inspect, and make its Codex entry points reliable under instruction and concurrency constraints. Calibrate findings by impact and resolve the observed cancellation-test failure.
 
-Status: implemented on 2026-10-12, including RP-1 and RP-2. Local validation and defect controls are recorded in [the validation report](../../reviews/2026-10-12-codex-review-validation.md). Linux runtime execution, actual native spawn failures and native interruption remain unverified; no push or CI run was authorized. The scope covers the five review concerns and the cancellation failure reported on 2026-10-12.
+Status: implemented on 2026-10-12, including RP-1 and RP-2. See [the validation report](../../reviews/2026-10-12-codex-review-validation.md) for local checks and defect controls. Linux runtime execution, actual native spawn failures and native interruption remain unverified; no push or CI run was authorized. Scope covers the five review concerns and the cancellation failure reported on 2026-10-12.
 
 ## Scope
 
@@ -38,7 +38,7 @@ Validation must reproduce the reported case: replace the indexed version of a tr
 - [x] For native subagents, use fresh task context when supported and document which instructions and permissions are inherited. If the harness cannot isolate current project guidance, report that limitation explicitly. Prefer the standalone entry point when verified isolation is required and available; otherwise report the unresolved limitation rather than claiming isolation.
 - [x] Keep changed instruction files and reviewer output classified as review material. Match README and invocation claims to measured guarantees, including the distinction between sandbox-enforced read-only access and an instruction-only restriction.
 
-Use deterministic discovery tests and a controlled Codex smoke test with conflicting base and checkout instructions. Record the CLI version, active instruction sources, and observed result. Stub tests alone cannot establish instruction isolation.
+Use deterministic discovery tests and a Codex smoke test with conflicting base and checkout instructions. Record the CLI version, active instruction sources and observed result. Stub tests cannot establish instruction isolation.
 
 ## 4. Schedule native aspects within available capacity
 
@@ -75,7 +75,7 @@ The helper suite passed 55 of 56 cases on two runs. The cancellation case report
 - [x] Run `make build`, then relevant checks and `make test-all`. Confirm generated mirrors, cross-references, shared-helper identity, and the final observed test results. Use `check-versions` before a PR.
 - [x] Update this plan as implementation proceeds and create signed commits at logical boundaries.
 
-Acceptance requires read-only default invocation, explicit authorization for simplification, validation and review of final edits, invalidation on index or scope movement, accurate instruction guarantees, completion within native worker limits, impact-based findings, and a cancellation check that reliably detects continued execution.
+Acceptance requires read-only defaults, explicit simplification authorization, validated and reviewed final edits, index/scope invalidation, accurate instruction guarantees, completion within native worker limits, impact-based findings and detection of continued execution after cancellation.
 
 ## Completion record
 

@@ -13,9 +13,9 @@ Each aspect is one focused review, adapted from an agent in `pr-review-toolkit` 
 
 ## Arguments
 
-- No aspect arguments, or `all`, selects every review aspect except `simplify`, and step 2 then drops the ones that do not apply.
+- Omitted arguments or `all` select review aspects except `simplify`; step 2 drops inapplicable aspects.
 - Named aspects select exactly those, in any order, and each runs even when the criteria below would skip it.
-- `all` together with review names is the same as `all`. Adding `simplify` explicitly authorizes the later editing pass. `simplify` alone is rejected; use `all simplify` or select at least one review aspect beside it.
+- Review names added to `all` do not change its selection. Explicit `simplify` authorizes the later editing pass. `simplify` alone is rejected; use `all simplify` or include at least one review aspect.
 - An unknown name stops the skill before any review runs: report it and list the valid names. Do not guess what was meant.
 
 ## Deciding what applies

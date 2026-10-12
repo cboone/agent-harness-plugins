@@ -15,7 +15,7 @@ Run several focused Codex reviews of the current branch, one per aspect, and mer
 
 ## Options
 
-- **Aspects**: any of `code`, `errors`, `tests`, `comments`, `types`, `simplify`, or `all` (the default). Omitted arguments and `all` select applicable review aspects only. Only an explicit `simplify` authorizes edits, alongside at least one review aspect; `all simplify` reviews then simplifies
+- **Aspects**: `code`, `errors`, `tests`, `comments`, `types`, `simplify`, or `all` (the default). Omitted arguments and `all` select applicable review aspects only. Explicit `simplify` alongside at least one review aspect authorizes edits; `all simplify` reviews then simplifies
 - **--base `<ref>`**: take the merge base with this ref instead of with the default branch
 - **--model `<model>`**: Codex model for every aspect; default `gpt-6.1-sol`
 - **--effort `<level>`**: Codex reasoning effort for every aspect; default `medium`
@@ -88,7 +88,7 @@ It starts one `codex exec --sandbox read-only` per aspect, waits for all of them
 **On the subagent path**, for each aspect:
 
 1. Render its task with `codex-aspects prompt --aspect <name> --scope <tmp>/scope.json`. Do not shorten or paraphrase it; it carries the read-only rules, the scope and the output contract.
-1. Inspect available capacity, accounting for the parent and existing workers. Start only as many aspects as available slots allow, then collect and validate completed replies before starting queued aspects. Do not assume completed agents release slots: close or release them when supported. Use fresh context (`fork_turns="none"` where supported) when passing model and reasoning-effort overrides. Never assume tool availability permits a setting prohibited by the session's policy; report actual settings.
+1. Check available slots, including the parent and existing workers. Start only as many aspects as slots allow. Collect and validate replies before starting queued aspects. Close or release completed agents when supported; completion alone may not release slots. Use fresh context (`fork_turns="none"` where supported) for model and reasoning-effort overrides. Obey session policy and report actual settings.
 1. Preserve successful results if a spawn fails. When capacity cannot be released, run queued aspects sequentially in this session or use the standalone entry point. Report the fallback and actual settings; do not duplicate already completed aspects.
 1. On cancellation, stop and observe every launched worker before measuring the scope. If the harness cannot confirm they stopped, report the review as incomplete and do not simplify.
 1. Save each subagent's final reply, exactly as returned, to `<tmp>/out/<name>.json`, and check it with `codex-aspects validate --aspect <name> --scope <tmp>/scope.json <tmp>/out/<name>.json`. A reply that is empty, is not JSON or does not match the schema is a failed aspect. Do not repair it, and do not read its prose as findings.
@@ -99,28 +99,28 @@ When this Codex session cannot spawn subagents after all, run each rendered task
 
 Run `review-scope` again into `<tmp>/scope-after.json` with the same `--base`, then `codex-aspects changes --before <tmp>/scope.json --after <tmp>/scope-after.json`.
 
-If `scope_changed` is true, review inputs changed during the review. Report content paths in `changed` and any index, HEAD or base movement and treat every finding as unreliable, since the reviewers may have read different versions of those files. Do not run `simplify`, and do not revert the changes yourself: they may be the user's own edits made in the meantime.
+If `scope_changed` is true, treat every finding as unreliable. Report paths in `changed` and any index, HEAD or base movement. Do not run `simplify` or revert changes that may be the user's edits.
 
 An empty `changed` measures disk content only, while `scope_changed` checks review validity. Even when both are unchanged, the check does not prove nothing was written: the comparison has blind spots, listed in [Checking the tree](./references/invocation.md#checking-the-tree). Report the check as "no lasting changes found", never as "nothing was written".
 
 ### 6. Decide on `simplify`
 
-Run `simplify` only when explicitly selected and every selected review aspect succeeded. Assemble exactly those validated review objects into `<tmp>/initial-results.json`; do not include failed or missing aspects. Check eligibility with `codex-aspects gate --scope <tmp>/scope.json --after <tmp>/scope-after.json --results <tmp>/initial-results.json --statuses <tmp>/initial-statuses.json --aspect <name> [--aspect <name>...]`. It rejects invalid or empty results and checks snapshots and Critical findings. Save the run array, or every native `validate` status, as `<tmp>/initial-statuses.json` and pass every selected aspect exactly once. The gate checks complete, successful coverage, including a process that failed after writing valid output. A gate is eligibility, never authorization. Otherwise record simplification as skipped with the reason.
+Run `simplify` only when explicitly selected and every selected review aspect succeeded. Save exactly those validated review objects to `<tmp>/initial-results.json`, excluding failed or missing aspects. Save the run array, or every native `validate` status, to `<tmp>/initial-statuses.json`. Check eligibility with `codex-aspects gate --scope <tmp>/scope.json --after <tmp>/scope-after.json --results <tmp>/initial-results.json --statuses <tmp>/initial-statuses.json --aspect <name> [--aspect <name>...]`, passing every selected aspect exactly once. The gate rejects invalid or empty results, snapshot changes, Critical findings and incomplete or failed coverage, including a process that failed after writing valid output. Eligibility never authorizes edits. Otherwise record simplification as skipped with the reason.
 
-When it runs, run it alone, with `<tmp>/scope-after.json` from step 5 as its scope, since nothing has changed the tree since. Immediately before editing, recapture `<tmp>/scope-after.json` and rerun the gate against the original reviewed scope. A pause never permits using a refreshed scope with stale review results.
+Run it alone with `<tmp>/scope-after.json` from step 5. Immediately before editing, recapture that scope and rerun the gate against the original reviewed scope. Never pair a refreshed scope with stale review results after a pause.
 
 - **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-after.json --out-dir <tmp>/out [--model <model>] [--effort <level>]`, which uses `--sandbox workspace-write`.
 - **Subagent path:** one subagent with the rendered `simplify` task, then `validate` its reply.
 
-Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-after.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, with `git diff <before_tree> <after_tree>` for the content, and call out any path in `outside_scope`, which `simplify` was told not to touch. The measured diff is the record of what changed, not `simplify`'s own account. If `simplify` failed, report it as failed and still report whatever `changes` shows.
+Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-after.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, their content diff from `git diff <before_tree> <after_tree>`, and any prohibited edits in `outside_scope`. Use the measured diff rather than `simplify`'s account, even when simplification failed; report that failure too.
 
 ### 7. Validate and review the final state
 
-If simplification ran, preserve the initial outputs and run relevant project formatting, linting and tests. Use scoped formatting or check-only alternatives when a broad command would edit unrelated files; missing required validation leaves the result incomplete. Measure changes again after formatting and report any out-of-scope paths. If any edit is outside scope, do not claim the result is validated; report it for the user without reverting it.
+If simplification ran, preserve the initial outputs and run relevant project formatting, linting and tests. Use scoped or check-only alternatives to commands that would edit unrelated files. Missing required checks leave the result incomplete. Measure changes again after formatting. Report out-of-scope edits without reverting them or claiming validation.
 
 Even if simplification or validation failed, review the resulting state when all workers have stopped and it can be read consistently. Recapture the scope and rerun the originally selected review aspects read-only into `<tmp>/final-out`, applying the same output and scope-validity checks as steps 4 and 5. Do not simplify again. Classify the final result with `codex-aspects finish --validation passed|failed|unverified` and the same scope, after-scope, results, statuses and selected-aspect options as `gate`, using the final review artifacts. Only successful required checks justify `passed`; missing checks are `unverified`. Completion means the review finished, not that its findings permit merging. A failed validation, failed final aspect or invalidated final snapshot leaves the result incomplete. When simplification made no changes, say so and retain the still-valid initial review without an unnecessary duplicate pass.
 
-Actionable findings come from the last complete review of the final snapshot. Mark initial findings as historical or superseded after edits; never merge their old file/line anchors into the final action list. Report the initial and final snapshot identifiers, measured edits, validation results and final aspect statuses separately.
+Use actionable findings from the last complete review of the final snapshot. Mark initial findings as historical or superseded after edits; exclude their old file/line anchors from the final action list. Report initial and final snapshot identifiers, measured edits, validation results and final aspect statuses separately.
 
 ### 8. Report
 

@@ -205,8 +205,8 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ## The snapshot moves when a file is staged
 
-Staging changes which bucket a path is reported in and changes nothing about
-its disk content. The reviewed staged and unstaged diffs change, invalidating the earlier review.
+Staging changes bucket membership and the reviewed diffs, invalidating review
+without changing disk content.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
@@ -225,8 +225,8 @@ snapshot moved: * (glob)
 
 ## The snapshot moves when an untracked file gets an intent to add
 
-`git add -N` moves a path from untracked to tracked without changing a byte of
-it. Its bucket membership changes, so preparation must happen before the round snapshot is captured.
+`git add -N` changes bucket membership without changing disk content. Prepare
+it before capturing the round snapshot.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \

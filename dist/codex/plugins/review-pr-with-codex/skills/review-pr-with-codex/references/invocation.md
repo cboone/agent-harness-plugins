@@ -4,7 +4,7 @@ How each entry point runs an aspect, and how a finished aspect is told apart fro
 
 ## Every aspect meets the same contract
 
-1. A review aspect must not write. Standalone runs enforce this with a read-only sandbox; native subagents have an instruction-only restriction and the documented end-state checks.
+1. Review aspects must not write. Standalone runs use a read-only sandbox; native subagents rely on instructions and the documented end-state checks.
 1. It covers the whole scope that `review-scope` reported.
 1. Its result is one JSON object matching `codex-aspects schema`, naming its aspect and the snapshot it reviewed.
 1. **A completed aspect is distinguishable from one that did not finish**, by every signal the entry point offers. A missing, empty, unparseable or non-matching result is a failed aspect, never an empty findings list.
@@ -30,13 +30,13 @@ Each part is there for a reason:
 
 - **Plain `codex exec`, never `codex exec review` or `codex review`.** The review subcommands cannot combine a custom prompt with `--base`, and they accept `--output-schema` and ignore it. Their output could not be validated, so a crash and a clean review would look alike. Do not switch to them as a simplification.
 - **`< /dev/null`.** `codex exec` appends a non-terminal stdin to the prompt. An agent harness's stdin is a pipe that never closes, so without the redirect the run waits forever and never writes its output file.
-- **External `--cd` and `--skip-git-repo-check`.** The helper rejects a repository-local `TMPDIR`, so the internal working directory and prompt-rendering artifacts stay external too. Starting outside the repository prevents its current instruction files from joining initial project-instruction discovery. Global instructions and user configuration remain active. The prompt supplies historical project guidance and absolute reads with `git -C`; do not change the session directory into the checkout. `simplify` also receives `--add-dir <repository root>` for its authorized edits.
+- **External `--cd` and `--skip-git-repo-check`.** The helper rejects repository-local `TMPDIR` to keep its working directory and prompt artifacts external. This excludes current checkout instructions from initial project-instruction discovery. Global instructions and user configuration remain active. The prompt supplies historical guidance and absolute reads with `git -C`; keep the session directory outside the checkout. `simplify` receives `--add-dir <repository root>` for authorized edits.
 - **`--sandbox read-only`** makes the read-only rule structural. `simplify` alone gets `workspace-write`, and the helper refuses to run it beside any other aspect.
 - **`--ephemeral`** keeps each run from persisting a session.
 - **`--model` and `--config model_reasoning_effort`** apply to that run only, so the user's Codex defaults are untouched.
 - **`--output-schema` and `--output-last-message` point outside the working tree.** A file written inside it would join the scope under review and move the snapshot. The helper refuses an `--out-dir` inside the repository.
 
-Stopping `codex-aspects run` records observed descendants, requests TERM for them and each run, and polls for stopped or terminated state before collecting the runs. The poll is bounded; unobserved descendants or new processes created during shutdown remain a limitation. If process inspection is unavailable or a process remains active, cleanup exits with status `4` and retains its temporary directory for inspection. The host must not measure an apparently final state or simplify until launched workers are known to have stopped. A failed or cancelled run is incomplete even if it wrote valid output.
+Stopping `codex-aspects run` records observed descendants, sends TERM to them and each run, then polls for stopped or terminated state before collecting the runs. Polling is bounded; unobserved descendants and processes created during shutdown remain a limitation. If inspection is unavailable or a process remains active, cleanup exits with status `4` and retains its temporary directory. Do not measure final state or simplify until launched workers are known to have stopped. Failed or cancelled runs are incomplete even with valid output.
 
 `codex-aspects` refuses to run from inside the repository under review, because the change could then rewrite the aspect instructions its own review runs with. Run the installed copy of the plugin. Untracked file names and symlink targets go into the prompt as JSON strings, so a crafted name cannot start a line of its own.
 
@@ -57,7 +57,7 @@ An unauthenticated `codex` fails at step 1. Report it as an authentication probl
 
 ## The subagent path
 
-Use this path only in a session that is itself running on Codex, such as Codex CLI with `spawn_agent`. Another harness's subagents run its own models, so they would not be a Codex review. The parent session schedules aspects within available capacity, preserving completed results and using a sequential or standalone fallback for queued work when slots cannot be released. Each task uses the full rendered prompt. Use fresh task context when the tool supports it, particularly for model and reasoning-effort overrides. Fresh context does not establish isolation from the harness's project instructions or permissions; disclose those limits and prefer standalone runs when changed instructions require isolation. The read-only rule is an instruction in that prompt, not a sandbox, so step 5 of the workflow checks the tree afterwards for lasting changes. That check catches edits to the files under review, but not every write; see [Checking the tree](#checking-the-tree).
+Use subagents only in a Codex session, such as Codex CLI with `spawn_agent`; other harnesses' subagents use their own models. Schedule within available slots and preserve completed results. When slots cannot be released, run queued aspects sequentially or standalone. Supply each task's full rendered prompt and use fresh context when supported, particularly for model and reasoning-effort overrides. Fresh context does not guarantee isolation from project instructions or permissions; disclose those limits and prefer standalone runs when changed instructions require isolation. Native read-only access relies on instructions, not a sandbox. Step 5 checks for lasting edits, with the limits in [Checking the tree](#checking-the-tree).
 
 There is no process here, so there is no exit status and no output file of the subagent's own. The signals that remain are the reply itself and the schema:
 
@@ -66,7 +66,7 @@ There is no process here, so there is no exit status and no output file of the s
 
 Never transcribe a reply into the schema by hand. A subagent that did not return the JSON object it was asked for did not do what it was told, and its content is unknown.
 
-The host must stop and observe launched workers before measuring scope on cancellation. If the harness cannot confirm completion, report incomplete cancellation and skip simplification. Each subagent's task is complete on its own, so the skill needs no `[agents.<role>]` entries in the user's `~/.codex/config.toml`.
+On cancellation, stop and observe launched workers before measuring scope. If completion cannot be confirmed, report incomplete cancellation and skip simplification. Tasks are self-contained and need no `[agents.<role>]` entries in the user's `~/.codex/config.toml`.
 
 ## Checking the tree
 
@@ -82,6 +82,6 @@ Index content, HEAD, base-tip and bucket changes are detected separately by `sco
 
 ## Historical instruction discovery
 
-The helper supplies one non-empty guide per relevant directory from the merge base (or HEAD when no base exists). It checks `AGENTS.override.md`, then `AGENTS.md`, then explicit `--guide-name` fallback names, then `CLAUDE.md` for compatibility. Pass configured fallback basenames explicitly, in their configured order; the helper does not inspect user configuration or credential files. It resolves relative symlinks within that historical tree, rejects links outside it and cycles, and never follows a checkout symlink. Changed instruction files remain review material.
+The helper supplies one non-empty guide per relevant directory from the merge base, or HEAD when no base exists. Precedence is `AGENTS.override.md`, `AGENTS.md`, explicit `--guide-name` fallbacks, then `CLAUDE.md` for compatibility. Pass configured fallback basenames in their configured order; the helper does not inspect user configuration or credentials. It resolves historical relative symlinks, rejects cycles and links outside that tree, and never follows checkout symlinks. Treat changed instructions as review material.
 
-Starting externally isolates initial checkout instruction discovery; it does not disable global policy, user configuration, plugins or tools that independently discover guidance. Native subagents inherit the host's environment and cannot claim the standalone guarantee. Report those limits rather than asserting that all instruction influence is prevented. Verify any stronger claim against the installed CLI and its rendered prompt.
+External startup isolates initial checkout instruction discovery, not global policy, user configuration, plugins or tools that discover guidance independently. Native subagents inherit the host environment and cannot claim standalone isolation. Report these limits and verify stronger claims against the installed CLI and its rendered prompt.

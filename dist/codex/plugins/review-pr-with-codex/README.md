@@ -26,18 +26,18 @@ The review covers committed changes since the merge base with the default branch
 
 ### Two entry points
 
-- **In Codex CLI**, aspects use available Codex subagent slots in bounded batches. Every subagent's task carries its full instructions, so nothing needs adding to `~/.codex/config.toml`. If slots cannot be released or spawning fails, remaining aspects run sequentially or through the standalone entry point. The report records actual settings and inherited-instruction limits.
+- **In Codex CLI**, aspects run in batches within available subagent slots. Tasks carry their full instructions and need no additions to `~/.codex/config.toml`. If slots cannot be released or spawning fails, remaining aspects run sequentially or standalone. The report records actual settings and inherited-instruction limits.
 - **In Claude Code**, each aspect is its own `codex exec` run, all in parallel, and the host agent merges the results.
 
 ### Read-only, and honest about failure
 
-Every review aspect is read-only: in a `--sandbox read-only` Codex run, or under read-only instructions in a subagent. Either way, the skill compares the working tree before and after the review and reports any path whose content changed. The separate snapshot comparison also catches index-content, HEAD, base and bucket changes, invalidating stale results. The disk comparison catches lasting edits, not every write: a write to an ignored, untracked file, an edit reverted before the second scan, or an edit that Git normalization maps back to the same content leaves no trace.
+Review aspects use `--sandbox read-only` in standalone Codex runs or read-only instructions in subagents. The skill compares disk content before and after review and reports changed paths. A separate snapshot comparison invalidates results after index-content, HEAD, base or bucket changes. Disk comparison misses writes to ignored untracked files, reverted edits and changes Git normalizes to identical content.
 
 An aspect whose run failed, timed out, or returned nothing or something unparseable is reported as **failed**, never as clean. A reviewer that crashed and one that found nothing produce the same empty list unless something checks. The standalone helper checks every signal: the exit status, the output file, its size, its schema, and that it names the right aspect and snapshot.
 
 ### Simplify
 
-`simplify` is the one aspect that edits files. It runs last, alone, and only when explicitly selected alongside review aspects, every selected review succeeded, none reported a Critical finding, and the full review scope remains unchanged. Omitted arguments and `all` never authorize edits. After edits, relevant project checks and a final read-only review run; actionable findings refer to the final snapshot. Its changes are measured from the working tree, not taken from Codex's account, and listed in the report. Nothing is committed or pushed.
+`simplify` edits files last and alone. It requires explicit selection alongside review aspects, successful selected reviews, no Critical findings and an unchanged review scope. Omitted arguments and `all` never authorize edits. After edits, run relevant project checks and a final read-only review; actionable findings refer to the final snapshot. The report lists measured working-tree changes rather than Codex's account. Nothing is committed or pushed.
 
 ### The report
 
@@ -57,8 +57,8 @@ An aspect whose run failed, timed out, or returned nothing or something unparsea
 
 ## Requirements
 
-- [`codex`](https://github.com/openai/codex), authenticated. Install via Homebrew: `brew install codex`. Subagents in Codex CLI need its `multi_agent` feature, which is on by default as of `codex-cli` 0.162.1.
-- `git`, `ps`, `pgrep` and [`jq`](https://jqlang.org/). Process inspection is required to verify cancelled descendants stopped; a sandbox denial is reported as incomplete cancellation. The bundled helpers emit and validate JSON with `jq`.
+- [`codex`](https://github.com/openai/codex), authenticated. Install via Homebrew: `brew install codex`. Codex CLI subagents require the `multi_agent` feature.
+- `git`, `ps`, `pgrep` and [`jq`](https://jqlang.org/). Process inspection verifies cancelled descendants stopped; a sandbox denial means incomplete cancellation. Helpers emit and validate JSON with `jq`.
 
 ## Usage
 

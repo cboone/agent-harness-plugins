@@ -21,7 +21,7 @@ Standalone checks used `codex-cli 0.162.1`, model `gpt-6.1-sol`, and reasoning e
 1. **Explicit editing:** an initial sample's historical guide prohibited edits, and simplification reported a suggestion without changing files. A second sample explicitly permitted requested refinement. Following successful initial review and an eligibility check, simplification changed only the in-scope implementation and behavioral-check files. Syntax and behavioral checks passed, then all selected final review aspects succeeded with zero findings. The final classification was complete. Classifying the same review with failed validation correctly returned incomplete.
 1. **Calibration:** a sample combined an absent optional-cache probe with a save operation that returned success after a failed write. The error aspect accepted the optional probe and reported only the suppressed write failure, with confidence 100 and Important severity. This is a measured example, not a guarantee of reviewer accuracy.
 
-The complete editing sequence was driven by the parent session using the revised skill and helpers. The helper does not independently execute the entire host workflow.
+The parent session ran the editing workflow with the skill and helpers; the helper alone does not execute it.
 
 ## Independent implementation review
 
@@ -36,7 +36,7 @@ The original restricted test reported a remaining child. Process inspection itse
 | Omit descendant termination while stopping the parent               | Cancellation process and delayed-write checks | Expected failure: child remained active and delayed write occurred; 72 of 73 cases passed | `tests/scrut/codex-aspects.md`, stopping the helper |
 | Omit descendant termination and remove the active-process assertion | Delayed-write sentinel check                  | Expected failure: delayed-write sentinel existed; 72 of 73 cases passed                   | Same cancellation case                              |
 
-Unobserved descendants and processes created during shutdown remain a limitation. A helper exit is not proof that arbitrary detached work stopped. Incomplete cancellation prevents further edits and a complete review verdict.
+Unobserved descendants and processes created during shutdown may survive helper exit. Incomplete cancellation prevents further edits and a complete review verdict.
 
 ## Final verification
 

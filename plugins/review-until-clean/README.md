@@ -79,7 +79,7 @@ Also required:
 
 Each round asks you to confirm the item list before anything is edited, because [Address Review](../address-review/README.md) does the fixing and always confirms first. This is a gate you watch, not an unattended job.
 
-When the Claude backend is selected and untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. Preparation happens before capturing the review snapshot and stays in place through validity checks and confirming rounds. Cleanup afterward restores only intent-to-add entries created by the run, preserving pre-existing and concurrently staged entries. Declining is fine; the run then reports `partial scope`. Staging and intent-to-add now move the snapshot because the index is review input.
+With the Claude backend and untracked files in scope, the skill asks once to expose them with `git add -N`, without staging content. Preparation precedes snapshot capture and remains through validity checks and confirming rounds. Cleanup restores only the run's intent-to-add entries, preserving pre-existing and concurrently staged entries. Declining yields `partial scope`. Staging and intent-to-add move the snapshot because the index is review input.
 
 ### As a pre-push hook
 
