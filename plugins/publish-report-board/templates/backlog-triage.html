@@ -57,6 +57,18 @@
       );
       return;
     }
+    // A board before schema version 2 lacks progress fields, so ask for a sync
+    // rather than draw all work as absent.
+    if (data.schemaVersion !== 2) {
+      root.replaceChildren(
+        h(
+          "p",
+          { class: "board-message" },
+          "This page holds board data from an earlier version of publish-report-board. Sync the board again to draw it.",
+        ),
+      );
+      return;
+    }
 
     const word = (n) => WORDS[n] ?? String(n);
     const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -142,9 +154,12 @@
       }
       if (issue.sameBranchAs != null) listAt(riders, issue.sameBranchAs).push(issue.number);
     }
+    // Work in progress holds a lane slot in every stage but close-out, where
+    // the pull request has merged and only closing the issue is left.
+    const active = (issue) => Boolean(issue?.progress) && issue.progress.stage !== "close-out";
     // The issue carrying work in progress on the branch of n, counting any
     // issue that rides on it, or undefined.
-    const progressOf = (n) => [n, ...(riders.get(n) ?? [])].find((m) => byNumber.get(m)?.inProgress);
+    const progressOf = (n) => [n, ...(riders.get(n) ?? [])].find((m) => active(byNumber.get(m)));
 
     const laneOf = new Map();
     for (const lane of data.lanes) for (const n of lane.issues) laneOf.set(n, lane);
@@ -211,7 +226,7 @@
         running.flatMap((n) => [
           n,
           ...(riders.get(n) ?? []).filter(
-            (r) => !isBlocked(r) && (afters(r).every((target) => target === n) || byNumber.get(r)?.inProgress),
+            (r) => !isBlocked(r) && (afters(r).every((target) => target === n) || active(byNumber.get(r))),
           ),
         ]),
       );
@@ -225,7 +240,7 @@
           ? new Set([
               head,
               ...(riders.get(head) ?? []).filter(
-                (r) => !isBlocked(r) && (afters(r).every((target) => target === head) || byNumber.get(r)?.inProgress),
+                (r) => !isBlocked(r) && (afters(r).every((target) => target === head) || active(byNumber.get(r))),
               ),
             ])
           : new Set();
@@ -289,22 +304,145 @@
         : h("a", { class: "chip chip--none", href: milestoneUrl(null) }, "No milestone");
     }
 
-    // Work in progress links to where it lives: "PR #390" to the pull request,
-    // and a branch name to its comparison with the synced branch. Anything else
-    // stays text.
-    function progressHref(where) {
-      const pr = /^PR #(\d+)$/.exec(where);
-      if (pr) return `${repoUrl}/pull/${pr[1]}`;
-      if (/^\S+$/.test(where)) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(where)}`;
+    // Stages, flags, and affinity. Identical in backlog-triage.html and
+    // bugs.html; change both together. STAGES follows the progress model order.
+    const STAGES = [
+      ["started", "Started"],
+      ["branch", "Branch"],
+      ["draft", "Draft"],
+      ["awaiting-review", "Awaiting review"],
+      ["needs-author", "Needs author"],
+      ["ready-to-merge", "Ready to merge"],
+      ["close-out", "Close-out"],
+    ];
+    const STAGE_LABEL = new Map(STAGES);
+    const FLAG_TEXT = {
+      quiet: ["quiet", "No activity for longer than the quiet period, 7 days by default"],
+      stale: ["stale", "No activity for longer than the stale period, 30 days by default; resume or drop it"],
+      behind: ["behind", "The branch is behind the default branch"],
+      conflict: ["conflict", "The pull request conflicts with its base"],
+      multiple: ["several", "More than one branch or pull request carries this issue"],
+      local: ["local", "The branch exists only on the machine that synced"],
+      "leftover-label": ["label left", "The progress label is still on the issue"],
+    };
+    const MOVE_TEXT = { reviewer: "a reviewer moves next", ci: "CI moves next", nobody: "nobody is asked to review" };
+    const IGNORED_TEXT = {
+      assigned: "assignment",
+      claimed: "claims",
+      filed: "who filed",
+      commented: "comments",
+      active: "active work",
+      recent: "recent work",
+    };
+    const hidden = (text) => h("span", { class: "visually-hidden" }, text);
+
+    function carrierText(carrier) {
+      if (carrier?.pr != null) return `PR #${carrier.pr}`;
+      if (carrier?.branch != null) return carrier.branch;
+      if (carrier?.label != null) return `the ${carrier.label} label`;
+      if (carrier?.pipeline != null) return `the ${carrier.pipeline} pipeline`;
+      return "";
+    }
+
+    // A pull request links to itself, and a branch to its comparison with the
+    // synced branch. A label, a pipeline, or a branch only on the gathering machine stays text.
+    function carrierHref(carrier) {
+      if (carrier?.pr != null) return `${repoUrl}/pull/${carrier.pr}`;
+      if (carrier?.branch != null && carrier.local !== true) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(carrier.branch)}`;
       return null;
     }
 
-    function progressTag(where) {
-      const href = progressHref(where);
-      return h(href ? "a" : "span", { class: "tag tag--accent", href, title: `In progress on ${where}` }, [
-        "In progress",
-        h("span", { class: "visually-hidden" }, ` on ${where}`),
-      ]);
+    function carrierLink(carrier) {
+      const href = carrierHref(carrier);
+      return href ? h("a", { class: "num", href }, carrierText(carrier)) : h("span", null, carrierText(carrier));
+    }
+
+    function stageTag(progress) {
+      const label = STAGE_LABEL.get(progress.stage) ?? progress.stage;
+      const href = carrierHref(progress.carrier);
+      return h(
+        href ? "a" : "span",
+        { class: `stage stage--${progress.stage}`, href, title: `${label}: ${progress.signal}` },
+        [label, hidden(` on ${carrierText(progress.carrier)}`)],
+      );
+    }
+
+    // Only the flags in `only`, when given, so a compact row can show just the
+    // ones that explain a held lane slot.
+    function flagMarks(progress, only) {
+      const shown = (progress.flags ?? []).filter((flag) => !only || only.includes(flag));
+      if (!shown.length) return null;
+      return h(
+        "span",
+        { class: "flags" },
+        shown.map((flag) => {
+          const [text, title] = FLAG_TEXT[flag] ?? [flag, flag];
+          const where = flag === "local" && progress.host ? `, on ${progress.host}` : "";
+          return h("span", { class: `flag flag--${flag}`, title: `${title}${where}` }, [hidden("Flag: "), text]);
+        }),
+      );
+    }
+
+    // Whole days between the last activity and the sync, so the page says the
+    // same thing however long after the sync it is read.
+    function idleDays(progress) {
+      const last = new Date(progress.lastActivity);
+      if (!validTime || Number.isNaN(last.getTime())) return null;
+      return Math.max(0, Math.floor((syncedAt.getTime() - last.getTime()) / 86400000));
+    }
+
+    function nextText(progress) {
+      const move = progress.nextMove === "author" ? "" : MOVE_TEXT[progress.nextMove];
+      const idle = idleDays(progress);
+      return [
+        h("span", { class: "label" }, "Next "),
+        progress.nextAction,
+        move ? ` · ${move}` : "",
+        idle ? ` · idle ${count(idle, "day", "days")}` : "",
+      ];
+    }
+
+    function ownerText(owner) {
+      if (owner === "you") return "You";
+      if (owner === "unknown") return "Claimed, owner unknown";
+      return `@${owner}`;
+    }
+
+    function affinityNote(affinity, tag = "p") {
+      if (!affinity?.owner) return null;
+      const who = ownerText(affinity.owner);
+      const reasons = affinity.reasons ?? [];
+      return h(tag, { class: "affinity" }, [hidden("Affinity: "), who, reasons.length ? ` · ${reasons.join(", ")}` : ""]);
+    }
+
+    // The ignored signal kinds, as a sentence for the footer.
+    function ignoredNote() {
+      const kinds = (data.affinityIgnored ?? []).map((kind) => IGNORED_TEXT[kind] ?? kind);
+      if (!kinds.length) return "";
+      return ` Affinity ignores ${kinds.join(", ")} here, because one owner holds them on nearly every open issue.`;
+    }
+
+    // One link per stage that has work, in model order. `hrefFor` names where
+    // the link goes.
+    function stageStrip(progressList, hrefFor) {
+      const counts = new Map();
+      for (const progress of progressList) counts.set(progress.stage, (counts.get(progress.stage) ?? 0) + 1);
+      const present = STAGES.filter(([key]) => counts.has(key));
+      if (!present.length) return null;
+      return h(
+        "ul",
+        { class: "stage-strip", "aria-label": "Work by stage" },
+        present.map(([key, label]) =>
+          h(
+            "li",
+            null,
+            h("a", { href: hrefFor(key) }, [
+              h("span", { class: `stage stage--${key}` }, label),
+              h("span", { class: "num" }, String(counts.get(key))),
+            ]),
+          ),
+        ),
+      );
     }
 
     function section(id, kind, title, note, body) {
@@ -359,6 +497,7 @@
     window.setInterval(refreshAge, 60000);
 
     const blockedCount = issues.filter((issue) => isBlocked(issue.number)).length;
+    const inFlight = issues.filter((issue) => issue.progress);
     const runningCapacity = lanes.reduce((sum, model) => sum + model.cap, 0);
     // Each label is its own element, so a noun label must agree with its count.
     const counts = [
@@ -390,12 +529,64 @@
           h("div", { class: modifier ? `count ${modifier}` : "count" }, [h("dt", null, label), h("dd", null, String(value))]),
         ),
       ),
+      stageStrip(
+        inFlight.map((issue) => issue.progress),
+        (stage) => `#in-flight-${stage}`,
+      ),
       h("p", { class: "summary" }, prose(data.summary)),
     ]);
+
+    // In flight: every issue with work under way or left to close, by stage.
+    // Lanes still list these issues, since their order and capacity depend on them.
+    function flightRow(issue) {
+      const progress = issue.progress;
+      const extra = progress.extraCarriers ?? [];
+      return h("li", { class: "flight-row" }, [
+        h("p", { class: "flight-issue" }, [ref(issue.number), " ", shortTitle(issue.number)]),
+        h("p", { class: "flight-carrier" }, [
+          carrierLink(progress.carrier),
+          extra.length ? [" + ", extra.map((carrier, i) => [i ? ", " : "", carrierLink(carrier)])] : null,
+          " ",
+          flagMarks(progress),
+        ]),
+        h("div", { class: "flight-next" }, [h("p", { class: "next-action" }, nextText(progress)), affinityNote(issue.affinity)]),
+      ]);
+    }
+
+    // Closest to done first, with close-out, a cleanup, last.
+    const FLIGHT_ORDER = ["ready-to-merge", "needs-author", "awaiting-review", "draft", "branch", "started", "close-out"];
+    const flightGroups = FLIGHT_ORDER.map((key) => [key, STAGE_LABEL.get(key), inFlight.filter((issue) => issue.progress.stage === key)]).filter(
+      ([, , members]) => members.length,
+    );
+    const flightNote = inFlight.length
+      ? `${capitalize(word(inFlight.length))} ${inFlight.length === 1 ? "issue has" : "issues have"} work under way or left to close, grouped by how far along it is.`
+      : "No work is under way.";
+    const flightSection = section(
+      "in-flight",
+      "tier",
+      "In flight",
+      flightNote,
+      flightGroups.length
+        ? h(
+            "div",
+            { class: "flight ruled" },
+            flightGroups.map(([key, label, members]) =>
+              h("div", { class: "flight-group", id: `in-flight-${key}` }, [
+                h("h3", { class: "flight-head" }, [
+                  h("span", { class: `stage stage--${key}` }, label),
+                  h("span", { class: "label" }, count(members.length, "issue", "issues")),
+                ]),
+                h("ol", { class: "flight-list", role: "list" }, members.map(flightRow)),
+              ]),
+            ),
+          )
+        : null,
+    );
 
     // Start now
     function startRow(pick, index) {
       const n = pick.issue;
+      const issue = byNumber.get(n);
       const lane = laneOf.get(n);
       const companions = riders.get(n) ?? [];
       return h("li", { class: "rank-row" }, [
@@ -410,7 +601,13 @@
             h("dt", null, "Lane"),
             h("dd", { class: "fact-lane" }, laneName(lane)),
             pick.touches ? [h("dt", null, "Touches"), h("dd", null, pick.touches)] : null,
-            anyMilestone ? [h("dt", null, "Milestone"), h("dd", null, chip(byNumber.get(n).milestone))] : null,
+            anyMilestone ? [h("dt", null, "Milestone"), h("dd", null, chip(issue.milestone))] : null,
+            issue.affinity?.owner
+              ? [
+                  h("dt", null, "Affinity"),
+                  h("dd", null, [affinityNote(issue.affinity, "span"), pick.despiteOwner ? h("p", null, prose(pick.despiteOwner)) : null]),
+                ]
+              : null,
           ]),
         ]),
       ]);
@@ -477,13 +674,16 @@
       ]);
       // The column headings are drawn for sighted readers only, so each field
       // carries a visually hidden label; the title reads as part of "Issue #N".
-      const hidden = (text) => h("span", { class: "visually-hidden" }, text);
       // The bar's label gives only tallies, so each row states its own state.
       const stateWord = { now: "can run now", queued: "queued", blocked: "blocked" }[model.state(n)] ?? "";
       return h("li", { class: "item" }, [
         h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, [hidden("Step "), rank]),
         h("span", { class: "item-num" }, [hidden("Issue "), ref(n), stateWord ? hidden(`, ${stateWord}.`) : null]),
-        h("span", { class: "item-title" }, [issue.title, issue.inProgress ? progressTag(issue.inProgress) : null]),
+        h("span", { class: "item-title" }, [
+          issue.title,
+          issue.progress ? [" ", stageTag(issue.progress), " ", flagMarks(issue.progress, ["quiet", "stale"])] : null,
+          affinityNote(issue.affinity, "span"),
+        ]),
         anyMilestone ? h("span", { class: "item-ms" }, [hidden("Milestone: "), chip(issue.milestone)]) : null,
         h("span", { class: "item-deps" }, deps.length ? [hidden("Dependencies: "), ...deps] : deps),
       ]);
@@ -689,7 +889,9 @@
         ? `, ${count(data.sync.openPullRequests, "open PR", "open PRs")}`
         : "",
       (data.sync.extra ?? []).map((fact) => `, ${fact}`),
-      ". Re-run publish-report-board after any issue, milestone, pull request, branch, or worktree change. GitHub and the repository are the source of truth; this page is a snapshot.",
+      ".",
+      ignoredNote(),
+      " Re-run publish-report-board after any issue, milestone, pull request, branch, or worktree change. GitHub and the repository are the source of truth; this page is a snapshot.",
     ]);
 
     root.classList.toggle("no-milestones", !anyMilestone);
@@ -697,6 +899,7 @@
     root.replaceChildren(
       header,
       h("main", { class: "board-main" }, [
+        flightSection,
         startSection,
         lanesSection,
         h("p", { class: "fold label", role: "separator", "aria-label": "Report" }, "Report"),

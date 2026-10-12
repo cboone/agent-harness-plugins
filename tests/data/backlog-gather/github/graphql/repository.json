@@ -1,0 +1,15 @@
+{
+  "data": {
+    "viewer": {
+      "login": "ana"
+    },
+    "repository": {
+      "nameWithOwner": "acme/widgets",
+      "url": "https://github.com/acme/widgets",
+      "isArchived": false,
+      "defaultBranchRef": {
+        "name": "main"
+      }
+    }
+  }
+}

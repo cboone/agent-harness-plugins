@@ -18,6 +18,15 @@
 #                      with no results
 #   graphql/repository-NAME.json
 #                      gh api graphql with repository.graphql
+#   graphql/branches-NAME.json
+#                      gh api graphql with branches.graphql; a missing file
+#                      answers with no branches
+#   graphql/pulls-open.json
+#                      gh api graphql with open-pulls.graphql; a missing file
+#                      answers with no open pull requests
+#   graphql/pulls-merged.json
+#                      gh api graphql with pulls.graphql, the merged search;
+#                      a missing file answers with no results
 #   graphql/NAME.json  gh api graphql with any other NAME.graphql: the full
 #                      response, which is the array of pages for --slurp. A
 #                      response with "errors" exits 1, as gh does; a missing
@@ -164,7 +173,14 @@ function do_graphql() {
   fi
 
   local key
-  if [[ "${query_name}" == "search" ]]; then
+  if [[ "${query_name}" == "open-pulls" ]]; then
+    key="pulls-open"
+  elif [[ "${query_name}" == "pulls" ]]; then
+    case " ${search_text} " in
+      *" is:merged "*) key="pulls-merged" ;;
+      *) die "unexpected pull request search ${search_text}" ;;
+    esac
+  elif [[ "${query_name}" == "search" ]]; then
     case " ${search_text} " in
       *" is:open "*"label:"*) key="open-labels" ;;
       *" is:closed "*"label:"*) key="closed-labels" ;;
@@ -174,6 +190,8 @@ function do_graphql() {
     esac
   elif [[ "${query_name}" == "repository" ]]; then
     key="repository-${repo_name}"
+  elif [[ "${query_name}" == "branches" ]]; then
+    key="branches-${repo_name}"
   else
     key="${query_name}"
   fi
@@ -193,8 +211,12 @@ function do_graphql() {
       else type == "object" and has("errors") end' "${file}" > /dev/null 2>&1; then
       exit 1
     fi
-  elif [[ "${query_name}" == "search" ]]; then
+  elif [[ "${query_name}" == "search" || "${query_name}" == "pulls" ]]; then
     printf '[{"data":{"search":{"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}]\n'
+  elif [[ "${query_name}" == "branches" ]]; then
+    printf '[{"data":{"repository":{"refs":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}}]\n'
+  elif [[ "${query_name}" == "open-pulls" ]]; then
+    printf '[{"data":{"repository":{"pullRequests":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}}]\n'
   elif [[ "${query_name}" == "repository" ]]; then
     echo "gh: Could not resolve to a Repository with the name ${repo_name}." >&2
     exit 1

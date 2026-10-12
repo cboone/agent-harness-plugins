@@ -66,7 +66,11 @@
               "nodes": []
             },
             "labels": {
-              "nodes": []
+              "nodes": [
+                {
+                  "name": "in progress"
+                }
+              ]
             },
             "issueType": {
               "name": "Bug"
@@ -80,6 +84,42 @@
             },
             "closedByPullRequestsReferences": {
               "nodes": []
+            },
+            "timelineItems": {
+              "nodes": [
+                {
+                  "__typename": "CrossReferencedEvent",
+                  "source": {
+                    "__typename": "PullRequest",
+                    "number": 38,
+                    "url": "https://github.com/acme/widgets/pull/38",
+                    "state": "MERGED",
+                    "mergedAt": "2026-10-13T11:00:00Z",
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
+                  }
+                },
+                {
+                  "__typename": "CrossReferencedEvent",
+                  "source": {
+                    "__typename": "PullRequest",
+                    "number": 7,
+                    "url": "https://github.com/acme/gadgets/pull/7",
+                    "state": "MERGED",
+                    "mergedAt": "2026-10-13T12:00:00Z",
+                    "repository": {
+                      "nameWithOwner": "acme/gadgets"
+                    }
+                  }
+                },
+                {
+                  "__typename": "CrossReferencedEvent",
+                  "source": {
+                    "__typename": "Issue"
+                  }
+                }
+              ]
             }
           }
         ]
