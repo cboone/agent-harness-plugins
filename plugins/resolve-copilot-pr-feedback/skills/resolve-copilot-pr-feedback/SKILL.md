@@ -309,7 +309,7 @@ Resolve a thread only when its handling is complete: Nitpick, Outdated and Defer
 
 ### 4. Handle Each Category
 
-Before the first edit, record `git rev-parse HEAD` as `FIX_BASE`. Steps 5 to 7 read every change this run makes from it. **The run has changed files** when `git diff --quiet FIX_BASE --` exits nonzero or `git status --porcelain` prints anything; steps 5 to 7 use that test, since steps 4 to 6 commit as they go and a clean working tree alone does not mean nothing changed.
+Before the first edit, confirm that the required `lint-and-fix` and `review-anti-patterns` skills are available. If either is missing, record a workflow-level failure naming it and its install command (`/plugin install NAME@agent-harness-plugins` in Claude Code or `codex plugin add NAME@agent-harness-plugins` in Codex), and go to step 9 before changing anything. Then record `git rev-parse HEAD` as `FIX_BASE`. Steps 5 to 7 run only when **the run has changed files**: `git diff --quiet FIX_BASE --` exits nonzero or `git status --porcelain` prints anything. The run commits as it goes, so a clean working tree alone does not mean nothing changed. When nothing changed, go straight to step 8.
 
 #### Nitpicks (`[nitpick]` prefix)
 
@@ -365,7 +365,7 @@ The cleanup must be a separate Bash tool call: each tool invocation runs uncondi
    - Example: `- Do not suggest removing .sr-only classes - required accessibility utilities`
    - **If symlink:** Follow it and edit target file
    - **Confirm Copilot will read it** against [Make Sure Copilot Reads the File](#critical-make-sure-copilot-reads-the-file)
-   - **Commit the instructions change** before step 5 (do not push yet), so step 6 reviews it with the rest of the run's changes
+   - **Commit the instructions change** before step 5 (do not push yet), so step 5 reviews it with the rest of the run's changes
 
 #### Valid Concerns
 
@@ -420,97 +420,53 @@ Apply the same categories, minus the thread operations:
 
 Every review-body finding gets a row in the step 9 summary and in the local audit table, whatever its category. Link its source to the exact review URL. A fixed finding names the fixing commit; an Incorrect, Outdated, or Nitpick disposition states the evidence or rationale for making no code change. Since Copilot will keep re-emitting the finding and there is no thread to resolve, that linked row **is** the record that it was handled, and step 1c reads it back on the next run.
 
-### 5. Sweep for Consistency
+### 5. Review the Fixes
 
-Skip this step when the run has changed no files, per step 4's test.
+Review the fixes once, act on what the review finds, and leave the rest to step 8's closing review. Invoke `review-anti-patterns` for both reviews the same way: in a read-only subagent where the session has one, otherwise in this session, without `--run-checks`, since the checkout holds the whole pull request, and with this continuation block, where `RANGE` names the commits to review and `STEP` is the step invoking it:
 
-Before anything is pushed:
+```text
+review-anti-patterns --range RANGE
 
-1. **List what the fixes changed** that something else might describe: each identifier, option or flag, default, count, path, status or field name, and stated behavior. Read it from `git diff FIX_BASE` (with `--no-ext-diff --no-textconv`).
-1. **Search for each one** in the repository's documentation, plans, READMEs, help text, code comments and agent instructions, and in the pull request body (`gh pr view PR_NUMBER --repo OWNER/REPO --json body`).
-1. **Correct whatever now disagrees** in the repository, as a new commit. When the pull request body disagrees, prepare the corrected body now but do not apply it: step 8 applies it after the push, so the body never describes fixes that did not reach the branch.
+Parent continuation:
+- Caller: resolve-copilot-pr-feedback
+- Resume target: STEP, record the review
+- On success or no-op: Return the JSON findings.
+- On failure or unavailable: Record a workflow-level failure quoting the reason, and continue at STEP's next item.
+```
 
-### 6. Review the Fixes
+1. **Review the fix range.** Record `git rev-parse HEAD` as `REVIEWED_HEAD`, then invoke the `review-anti-patterns` skill with `RANGE` set to `FIX_BASE..REVIEWED_HEAD`.
+1. **Act on each Important finding.** Fix the real ones as Valid Concerns items 3 to 6 describe, fixing the class and committing; these findings have no thread to resolve. A finding that a check fixed more than once should become an allowlist or structural parse is a sibling chain: handle it per [Sibling Chains](#sibling-chains) instead of implementing it. Decline a finding only with a rationale, such as one outside the pull request's stated scope or threat model. Nits are listed, not fixed.
+1. **Record the review** for step 9's `### Fix review` section. A review that returns `complete: false` is not a failure; what it did not cover goes in that section.
 
-Skip this step when the run has changed no files, per step 4's test.
+### 6. Sweep for Consistency
 
-Review the fixes before pushing them, at most twice, without looping:
+Check `git diff --no-ext-diff --no-textconv FIX_BASE` against the Docs drift item of the `review-anti-patterns` checklist: every name, option, default, count, path and stated behavior the fixes changed, in the repository's documentation, plans, READMEs, help text, comments and agent instructions, and in the pull request body (`gh pr view PR_NUMBER --repo OWNER/REPO --json body`).
 
-1. **Confirm that the `review-anti-patterns` skill is available.** If it is not, record a workflow-level failure: "Required skill `review-anti-patterns` is not installed. Install it with `/plugin install review-anti-patterns@agent-harness-plugins` in Claude Code or `codex plugin add review-anti-patterns@agent-harness-plugins` in Codex, then rerun." Leave the fix commits local, skip step 8's push, and go to step 9.
-1. **Review the fix range**: invoke the `review-anti-patterns` skill, in a read-only subagent where the session has one, otherwise in this session. Omit `--run-checks`, since the checkout holds the whole pull request, and pass this continuation block:
-
-   ```text
-   review-anti-patterns --range FIX_BASE..HEAD
-
-   Parent continuation:
-   - Caller: resolve-copilot-pr-feedback
-   - Resume target: Step 6, act on the findings, then Step 7.
-   - On success or no-op: Return the JSON findings and continue to Step 6's next item.
-   - On failure or unavailable: Record a workflow-level failure quoting the reason, skip Step 8's push, and go to Step 9.
-   ```
-
-1. **Act on each Important finding.** Before the first edit, record `git rev-parse HEAD` as `SECOND_BASE`. Fix the real findings as Valid Concerns items 3 to 6 describe, fixing the class and committing; these findings have no thread to resolve. Decline one only with a rationale, such as a finding outside the pull request's stated scope or threat model. Nits are listed, not fixed.
-1. **Review the second fix once.** When the previous item changed files, first sweep `SECOND_BASE..HEAD` as step 5 does, updating the prepared pull request body correction, so the second fix's changes are described consistently. Then invoke the `review-anti-patterns` skill again with `--range SECOND_BASE..HEAD`, passing this continuation block:
-
-   ```text
-   review-anti-patterns --range SECOND_BASE..HEAD
-
-   Parent continuation:
-   - Caller: resolve-copilot-pr-feedback
-   - Resume target: Step 6, record the review, then Step 7 unless a standing Important finding stops the push.
-   - On success or no-op: Return the JSON findings; record them without fixing them.
-   - On failure or unavailable: Record a workflow-level failure quoting the reason, skip Step 8's push, and go to Step 9.
-   ```
-
-   Do not fix anything this review reports, and do not review a third time. When it reports an Important finding still standing, do not push: record the finding under `Remaining Required Action` and record the review per the next item, then skip step 7 and step 8's push and go to step 9, which reports the run `Partial`.
-
-1. **Record the review** for step 9's `### Fix review` section, including anything it reported as excluded. A review that returns `complete: false` is not a failure; what it did not cover goes in that section.
+Correct what now disagrees in the repository, as a new commit. When the pull request body disagrees, prepare the corrected body now; step 8 applies it after the push, so the body never describes fixes that did not reach the branch.
 
 ### 7. Lint and Fix
 
-**After all code changes are made (from Valid or Incorrect categories), run the `lint-and-fix` skill to catch lint errors before pushing.**
+Invoke the `lint-and-fix` skill with `--no-push`:
 
-This step prevents CI failures from lint issues introduced while resolving feedback.
+```text
+lint-and-fix --no-push
 
-1. **Check for changes**: skip this step only when the run has changed no files, per step 4's test, as when only nitpicks were resolved or threads replied to.
-1. Record `git rev-parse HEAD` as `LINT_BASE`.
-1. **Invoke the `lint-and-fix` skill** with `--no-push`:
+Parent continuation:
+- Caller: resolve-copilot-pr-feedback
+- Resume target: Step 8, close the review and push.
+- On lint success: Continue immediately to Step 8 without asking the user for confirmation.
+- On lint failure or skipped required lint work: Record a workflow-level failure with the unresolved lint state, and continue to Step 8.
+```
 
-   ```text
-   lint-and-fix --no-push
+It runs the project's linters and formatters, fixes what it can, and commits the fixes without pushing.
 
-   Parent continuation:
-   - Caller: resolve-copilot-pr-feedback
-   - Resume target: Step 8, push changes, re-fetch Copilot threads, then Step 9 summary comment.
-   - On lint success: Continue immediately to Step 8 without asking the user for confirmation.
-   - On lint failure or skipped required lint work: Record a workflow failure, skip Step 8 push and verification, then continue directly to the required terminal summary path in Step 9 because PR context exists.
-   ```
+### 8. Close, Push and Verify
 
-   This runs all detected project linters and formatters, fixes issues, and commits the fixes without pushing.
-
-1. If `lint-and-fix` reports `Lint status: success` or `Lint status: no-tools`, read what it committed with `git diff --no-ext-diff --no-textconv LINT_BASE`. Formatting and whitespace need nothing more. When its commits change anything else, such as a name, a behavior or a documented value, sweep `LINT_BASE..HEAD` as step 5 does, updating the prepared pull request body correction, and review it once with the `review-anti-patterns` skill, passing this continuation block:
-
-   ```text
-   review-anti-patterns --range LINT_BASE..HEAD
-
-   Parent continuation:
-   - Caller: resolve-copilot-pr-feedback
-   - Resume target: Step 7, record the review, then Step 8 unless a standing Important finding stops the push.
-   - On success or no-op: Return the JSON findings; record them without fixing them.
-   - On failure or unavailable: Record a workflow-level failure quoting the reason, skip Step 8's push, and go to Step 9.
-   ```
-
-   Record that review in step 9's `### Fix review` section, and fix nothing it reports. An Important finding still standing stops the push: record it under `Remaining Required Action`, skip step 8's push and go to step 9. Otherwise proceed to step 8, whose push includes the lint commits.
-
-1. If `lint-and-fix` reports unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, record a workflow-level failure. Do not claim lint success, do not push potentially non-compliant changes, skip step 8, and post the required partial or failed summary in step 9 because PR context exists.
-
-### 8. Verify Completion
-
-Do not run this step if step 6 or step 7 stopped the push: a missing or failed fix review, an Important finding still standing after the second review or the lint review, a lint failure, or skipped required lint work. In that case, go directly to step 9 and report why in the final summary; Valid and Incorrect threads stay open and the pull request body unchanged.
-
-1. **Push any changes:** `git push`
+1. **Closing review.** When `git diff --no-ext-diff --no-textconv REVIEWED_HEAD` shows anything beyond formatting and whitespace, which covers step 5's fixes, step 6's corrections and any lint change of substance, invoke the `review-anti-patterns` skill once more with `RANGE` set to `REVIEWED_HEAD..HEAD`. Record it in `### Fix review`, and fix nothing it reports. Do not review a third time.
+1. **Push gate.** Push only when no workflow-level failure is recorded and the closing review left no Important finding standing. Otherwise record each standing finding under `Remaining Required Action` and go to step 9: Valid and Incorrect threads stay open, and the pull request body stays unchanged.
+1. **Push:** `git push`
 1. **Resolve each Valid or Incorrect thread** whose commit this push carried, using the script.
-1. **Apply the pull request body correction** step 5 prepared, if any, with the tmpfile pattern from [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments): `mktemp -u "${TMPDIR:-/tmp}/copilot-body-XXXXXX"`, write the body with the Write tool, then, as a separate call, `gh pr edit PR_NUMBER --repo OWNER/REPO --body-file TMPFILE`, and remove the tmpfile in another separate call.
+1. **Apply the pull request body correction** step 6 prepared, if any, with the tmpfile pattern from [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments), using the `copilot-body-` prefix and `gh pr edit PR_NUMBER --repo OWNER/REPO --body-file TMPFILE`.
 1. Re-fetch to confirm all Copilot threads resolved:
 
    ```bash
@@ -576,7 +532,7 @@ Reviews read: 5035762218, 5035762219.
 The `Reviews read:` line is required in every summary for which `fetch-reviews` ran, whatever the status, the no-op form included. Never list a review that was not read in full.
 `matched` covers a concern restating a thread or a `Previously handled` row. That line is what makes it measurable, across a PR's summaries, how much of a review body only restates feedback the threads already carry.
 
-When step 6 ran, add a `### Fix review` section after those lines: each range reviewed, the findings fixed with their commits, the findings declined with their rationale, and what the review left unverified or unreviewed. When step 4 found a sibling chain, add a `### Sibling chain` section before `### Failure Details`: each finding in the chain quoted with its link, the fixes already made, and the proposed design option.
+When step 5 ran, add a `### Fix review` section after those lines: each range reviewed, the findings fixed with their commits, the findings declined with their rationale, and what the review left unverified or unreviewed. When step 4 found a sibling chain, add a `### Sibling chain` section before `### Failure Details`: each finding in the chain quoted with its link, the fixes already made, and the proposed design option.
 
 ```markdown
 ### Fix review
