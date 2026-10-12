@@ -367,7 +367,7 @@ $ jq '.untracked = [range(0; 3000) | "generated/untracked-path-number-\(.)-with-
 >   && sed 's/is [0-9]* bytes/is N bytes/' "${FIXTURE}/large.err" \
 >   && ls "${FIXTURE}/large-out"
 exit=1
-codex-aspects: the code prompt is N bytes, above the 120000-byte limit for one argument; narrow the scope
+codex-aspects: the code prompt is N bytes, above the 120000-byte limit for one argument; untracked files are listed one by one, so commit or ignore some of them
 schema.json
 ```
 

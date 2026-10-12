@@ -657,7 +657,7 @@ function cmd_run() {
     prompt="$(render_prompt "${aspect}" "${scope}" "${top_level}")"
     prompt_bytes="$(printf '%s' "${prompt}" | wc -c | tr -d ' ')"
     if [[ "${prompt_bytes}" -gt "${MAX_PROMPT_BYTES}" ]]; then
-      die "the ${aspect} prompt is ${prompt_bytes} bytes, above the ${MAX_PROMPT_BYTES}-byte limit for one argument; narrow the scope"
+      die "the ${aspect} prompt is ${prompt_bytes} bytes, above the ${MAX_PROMPT_BYTES}-byte limit for one argument; untracked files are listed one by one, so commit or ignore some of them"
     fi
     printf '%s\n' "${prompt}" > "${out_physical}/${aspect}.prompt.md"
     prompts+=("${prompt}")

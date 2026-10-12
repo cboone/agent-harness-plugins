@@ -36,7 +36,7 @@ Each part is there for a reason:
 
 Stopping `codex-aspects run`, with TERM or by a failure partway through, stops every Codex run it started, so a `simplify` run cannot go on editing after the caller has measured its changes.
 
-The prompt goes in as one argument because stdin must stay `/dev/null`. The helper refuses a prompt above 120,000 bytes, under Linux's per-argument limit; a scope that large needs narrowing with `--base` or by committing unrelated work separately.
+The prompt goes in as one argument because stdin must stay `/dev/null`. The helper refuses a prompt above 120,000 bytes, under Linux's per-argument limit; only the untracked files are listed one by one, since committed, staged and unstaged changes each take a single diff command, so a prompt that large means too many untracked files. Commit them, which moves them into a diff, or add the ones that are not part of the change to `.gitignore`.
 
 ### Signals
 
