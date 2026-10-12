@@ -84,13 +84,15 @@ Reviewer reply, verbatim (the three aspects that finished):
 }
 ```
 
-Findings from the finished aspects, not queued:
+Findings from the finished aspects, not queued, kept out of `address-review`'s queue by the fence:
 
-- `code`: none.
-- `errors`: none.
-- **F1** Important. `plugins/review-until-clean/skills/review-until-clean/SKILL.md:132`. No test covers edit-round decisions (tests). Matches F4 of the first run, declined.
-- **F2** Important. `plugins/review-until-clean/skills/review-until-clean/references/reviewers.md:47`. No test covers generic completion failures (tests). Matches F5 of the first run, declined.
-- **F3** Important. `plugins/review-until-clean/skills/review-until-clean/references/reviewers.md:123`. No test covers coverage classification (tests). Matches F19 of the first run, declined.
+```text
+code: none.
+errors: none.
+F1 Important. plugins/review-until-clean/skills/review-until-clean/SKILL.md:132. No test covers edit-round decisions (tests). Matches F4 of the first run, declined.
+F2 Important. plugins/review-until-clean/skills/review-until-clean/references/reviewers.md:47. No test covers generic completion failures (tests). Matches F5 of the first run, declined.
+F3 Important. plugins/review-until-clean/skills/review-until-clean/references/reviewers.md:123. No test covers coverage classification (tests). Matches F19 of the first run, declined.
+```
 
 ## Result
 
