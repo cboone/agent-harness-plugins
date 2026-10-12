@@ -694,3 +694,23 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/newline-link" && cd "${FIXTURE}/newline-li
 >   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/newline-link-scope.json" | grep -F '"trailing" ->'
   - "trailing" -> "target\n" (a symlink; review the link text only and do not open its target)
 ```
+
+## A symlink planted in the output directory is replaced, not written through
+
+Each output path is removed before it is written, so a link from the output
+directory back into the working tree cannot carry a write into it.
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/planted" && cd "${FIXTURE}/planted" \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/planted-scope.json" \
+>   && mkdir "${FIXTURE}/planted-out" \
+>   && for name in schema.json code.prompt.md code.json code.log; do ln -s "${PWD}/lib.sh" "${FIXTURE}/planted-out/${name}"; done \
+>   && cp lib.sh "${FIXTURE}/planted-lib.sh" \
+>   && "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/planted-scope.json" \
+>        --out-dir "${FIXTURE}/planted-out" | jq -r '.[] | "\(.aspect): \(.status)"' \
+>   && cmp lib.sh "${FIXTURE}/planted-lib.sh" && echo "lib.sh unchanged" \
+>   && find "${FIXTURE}/planted-out" -type l | wc -l | tr -d ' '
+code: ok
+lib.sh unchanged
+0
+```

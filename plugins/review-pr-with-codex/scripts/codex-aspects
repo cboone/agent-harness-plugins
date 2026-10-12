@@ -684,6 +684,10 @@ function cmd_run() {
 
   local snapshot
   snapshot="$(jq -r '.snapshot' "${scope}")"
+  # Each file is removed before it is written, because a write follows a
+  # symlink already at that path and could land inside the working tree.
+  rm -f "${out_physical}/schema.json" \
+    || die "could not clear ${out_physical}/schema.json"
   print_schema > "${out_physical}/schema.json"
 
   # Render every prompt before starting any run, so a prompt that cannot be
@@ -696,9 +700,10 @@ function cmd_run() {
     if [[ "${prompt_bytes}" -gt "${MAX_PROMPT_BYTES}" ]]; then
       die "the ${aspect} prompt is ${prompt_bytes} bytes, above the ${MAX_PROMPT_BYTES}-byte limit for one argument; untracked files are listed one by one, so commit or ignore some of them"
     fi
+    rm -f "${out_physical}/${aspect}".{prompt.md,json,log} \
+      || die "could not clear the ${aspect} files in ${out_physical}"
     printf '%s\n' "${prompt}" > "${out_physical}/${aspect}.prompt.md"
     prompts+=("${prompt}")
-    rm -f "${out_physical}/${aspect}.json"
   done
 
   # `< /dev/null` is required: `codex exec` appends a non-terminal stdin to the
