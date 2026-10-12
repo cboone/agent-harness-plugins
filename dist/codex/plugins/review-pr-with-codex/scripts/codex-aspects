@@ -111,18 +111,34 @@ function require_scope_file() {
 
   # Every field the prompt and the change report read is checked here, so a
   # truncated or hand-edited scope stops the command instead of rendering a
-  # prompt with a bucket silently left out.
-  jq -e '
-    def paths: type == "array" and all(type == "string");
-    type == "object"
-    and (.head | type == "string")
-    and (.base == null or (.base | type == "string"))
-    and (.snapshot | type == "string")
-    and (.tree | type == "string")
-    and (.committed | paths)
-    and (.staged | paths)
-    and (.unstaged | paths)
-    and (.untracked | paths)
+  # prompt that covers less than the scope claims. Two rules go beyond types:
+  #
+  # - A non-empty committed bucket needs a base, since without one the
+  #   committed diff is left out of the prompt with no error.
+  # - Every path is repository-relative, since the prompt tells the reviewer to
+  #   read untracked paths by name and `../` would point it outside the
+  #   repository. The rule is looser than the findings schema's on purpose:
+  #   git permits a leading `~` or a backslash in a file name, and a real file
+  #   with one must not stop the review.
+  jq -e -n '
+    def relative_path:
+      type == "string" and length > 0
+      and (startswith("/") | not)
+      and (split("/") | all(. != "" and . != "." and . != ".."));
+    def paths: type == "array" and all(relative_path);
+    [inputs] as $values
+    | ($values | length) == 1
+    and ($values[0]
+      | type == "object"
+      and (.head | type == "string" and length > 0)
+      and (.base == null or (.base | type == "string" and length > 0))
+      and (.snapshot | type == "string")
+      and (.tree | type == "string")
+      and (.committed | paths)
+      and (.staged | paths)
+      and (.unstaged | paths)
+      and (.untracked | paths)
+      and ((.committed | length) == 0 or .base != null))
   ' "${scope}" > /dev/null 2>&1 \
     || die "scope file '${scope}' is not review-scope output"
 }
@@ -681,10 +697,13 @@ function cmd_changes() {
 
   # The tree objects are review-scope's content digests of the whole working
   # tree, so diffing them lists every path whose content changed between the
-  # two reads, whichever bucket it sits in. The output goes to a file first so
-  # git's exit status is checked rather than hidden behind jq's.
+  # two reads, whichever bucket it sits in. --no-renames lists a rename as its
+  # deletion and its addition: with rename detection on, git names only the new
+  # path, so moving an out-of-scope file into the scope would hide the removed
+  # source from outside_scope. The output goes to a file first so git's exit
+  # status is checked rather than hidden behind jq's.
   raw="$(mktemp "${TMPDIR:-/tmp}/codex-aspects.XXXXXX")"
-  if ! git diff -z --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
+  if ! git diff -z --no-renames --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
     rm -f "${raw}"
     die "could not compare tree ${before_tree} with ${after_tree}"
   fi

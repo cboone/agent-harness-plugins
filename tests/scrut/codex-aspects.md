@@ -114,6 +114,32 @@ exit=1
 codex-aspects: scope file 'FIXTURE/no-untracked.json' is not review-scope output
 ```
 
+## A scope with committed changes and no base
+
+Without a base the committed diff cannot be named, and the prompt would leave
+the committed changes out with no error.
+
+```scrut
+$ jq '.base = null' "${FIXTURE}/scope.json" > "${FIXTURE}/no-base.json" \
+>   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/no-base.json" > "${FIXTURE}/no-base.err" 2>&1; echo "exit=$?"; } \
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/no-base.err"
+exit=1
+codex-aspects: scope file 'FIXTURE/no-base.json' is not review-scope output
+```
+
+## A scope path that leaves the repository
+
+The prompt tells the reviewer to read each untracked path by name, so a `..`
+segment would send it outside the repository.
+
+```scrut
+$ jq '.untracked = ["../outside.txt"]' "${FIXTURE}/scope.json" > "${FIXTURE}/escape-scope.json" \
+>   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/escape-scope.json" > "${FIXTURE}/escape-scope.err" 2>&1; echo "exit=$?"; } \
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/escape-scope.err"
+exit=1
+codex-aspects: scope file 'FIXTURE/escape-scope.json' is not review-scope output
+```
+
 ## An aspect file that cannot be read stops the run before Codex starts
 
 macOS ships Bash 3.2, where `set -e` does not reach into the command
@@ -406,4 +432,32 @@ $ cd "${FIXTURE}/simplify" && printf 'edited\n' >> other.sh \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/after-other.json" \
 >   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/before.json" --after "${FIXTURE}/after-other.json" | jq -c '{changed, outside_scope}'
 {"changed":["lib.sh","other.sh"],"outside_scope":["other.sh"]}
+```
+
+## Changes lists both paths of a rename
+
+With rename detection on, git names only a renamed file's new path, so a file
+moved out of the scope's reach would leave its old path in neither list.
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/rename" && cd "${FIXTURE}/rename" \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/rename-before.json" \
+>   && mv other.sh renamed.sh \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/rename-after.json" \
+>   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/rename-before.json" --after "${FIXTURE}/rename-after.json" | jq -c '{changed, outside_scope}'
+{"changed":["other.sh","renamed.sh"],"outside_scope":["other.sh","renamed.sh"]}
+```
+
+## A staged change is in the prompt, and an empty unstaged bucket is not
+
+The shared fixture has nothing staged, so this case stages its unstaged change
+in a copy of it.
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/staged" && cd "${FIXTURE}/staged" \
+>   && git add lib.sh \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/staged-scope.json" \
+>   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/staged-scope.json" \
+>   | grep -e '^- Staged changes' -e '^- Unstaged changes'
+- Staged changes: git diff --cached
 ```
