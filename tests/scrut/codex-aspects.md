@@ -945,3 +945,19 @@ $ cd "${FIXTURE}/guides" && mkdir sub \
 >   && echo "identical historical guidance"
 identical historical guidance
 ```
+
+## Repository-local TMPDIR cannot weaken instruction isolation
+
+```scrut
+$ cd "${FIXTURE}/repo" && mkdir internal-tmp \
+>   && TMPDIR="${FIXTURE}/repo/internal-tmp" "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/scope.json" 2>&1
+codex-aspects: TMPDIR must point outside the working tree
+[1]
+```
+
+```scrut
+$ cd "${FIXTURE}/repo" \
+>   && TMPDIR="${FIXTURE}/repo/internal-tmp" "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" 2>&1
+codex-aspects: TMPDIR must point outside the working tree
+[1]
+```

@@ -695,3 +695,12 @@ $ cd "${work}" \
 review-scope: the index, HEAD or base changed while the scope was being read; rerun once it has settled
 [1]
 ```
+
+## Temporary index files must remain outside the scope
+
+```scrut
+$ cd "${work}" && mkdir internal-tmp \
+>   && TMPDIR="${work}/internal-tmp" "${REVIEW_SCOPE_BIN}" --base base 2>&1
+review-scope: TMPDIR must point outside the working tree
+[1]
+```

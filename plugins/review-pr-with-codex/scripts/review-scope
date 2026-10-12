@@ -372,6 +372,11 @@ function main() {
   # A private directory for the temporary index, so git's own lock and
   # temporary files land beside it and one rm removes the lot.
   TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/review-scope.XXXXXX")"
+  local tmp_physical
+  tmp_physical="$(cd "${TMP_DIR}" && pwd -P)"
+  if [[ "${tmp_physical}" == "${top_level}" || "${tmp_physical}" == "${top_level}/"* ]]; then
+    die "TMPDIR must point outside the working tree"
+  fi
 
   # The tree is written before the buckets are read, and is written again after
   # them. Both describe the working tree, they are separate git invocations,
