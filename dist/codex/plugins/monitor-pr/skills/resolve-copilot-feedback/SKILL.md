@@ -171,7 +171,7 @@ bash resolve-copilot-threads audit OWNER REPO PR_NUMBER
 
 The script automatically handles pagination and filters for Copilot-authored content. `HEAD_SHA` is the pull request's `headRefOid` (`gh pr view PR_NUMBER --repo OWNER/REPO --json headRefOid`). Step 1b says which `--skip` ids to pass, and step 1d covers what `audit` reports. A command that exits nonzero has not read anything: record a workflow-level failure quoting its stderr, never an empty result.
 
-Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. A caller such as `monitor-pr:monitor` may also pass `REVIEW_ID`, the review it dispatched for: that review must be among the reviews step 1d reads and lists under `Reviews read`, and if `fetch-reviews` does not return it, record a workflow-level failure that names it. This establishes PR context for the required final workflow summary in step 9. If PR context or GitHub authentication cannot be established, report that the required final summary could not be posted and do not mark the workflow complete.
+Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. A caller may also pass `DEFER_SEVERITIES`, a comma-separated list of Copilot severities such as `Medium,Low`, which [Deferred](#deferred-out-of-scope) governs. A caller such as `monitor-pr:monitor` may also pass `REVIEW_ID`, the review it dispatched for: that review must be among the reviews step 1d reads and lists under `Reviews read`, and if `fetch-reviews` does not return it, record a workflow-level failure that names it. This establishes PR context for the required final workflow summary in step 9. If PR context or GitHub authentication cannot be established, report that the required final summary could not be posted and do not mark the workflow complete.
 
 #### 1a. Threads (`fetch`)
 
@@ -252,8 +252,8 @@ This reads comments; it never writes one, so it does not violate the PR Comments
 
 Then, for each finding:
 
-1. **Recorded before, and its disposition still holds.** A prior summary has a review-body row for the same finding: the same `path:line`, or for a line-less finding the same normalized path with a `Finding` excerpt that matches this finding's wording. That row usually links an earlier review, because Copilot repeats the finding in later reviews; the link records where the finding came from and is not part of its identity. Reading the current code confirms the recorded disposition still holds: for a `Fixed` row the fix is still in place, and for a `Noted` row (Incorrect, Outdated, or Nitpick) the code and evidence its rationale relied on are unchanged, so the same no-change decision applies. Record it as `Previously handled`, carry the prior disposition forward, and change nothing. A no-change finding never stops matching the code, so without this rule Copilot's repeats would be re-processed on every review.
-1. **Recorded before, but no longer settled.** The earlier run deferred it, a fix regressed, or the code a no-change rationale relied on has changed since. Process it normally.
+1. **Recorded before, and its disposition still holds.** A prior summary has a review-body row for the same finding: the same `path:line`, or for a line-less finding the same normalized path with a `Finding` excerpt that matches this finding's wording. That row usually links an earlier review, because Copilot repeats the finding in later reviews; the link records where the finding came from and is not part of its identity. Reading the current code confirms the recorded disposition still holds: for a `Fixed` row the fix is still in place, and for a `Noted` row (Incorrect, Outdated, Nitpick, or deferred under `DEFER_SEVERITIES` when this run's `DEFER_SEVERITIES` still lists its severity) the code and evidence its rationale relied on are unchanged, so the same no-change decision applies. Record it as `Previously handled`, carry the prior disposition forward, and change nothing. A no-change finding never stops matching the code, so without this rule Copilot's repeats would be re-processed on every review.
+1. **Recorded before, but no longer settled.** The earlier run left it `Pending` or `Failed`, a fix regressed, or the code a no-change rationale relied on has changed since. Process it normally.
 1. **Path matches, line does not.** Line numbers drift as files change. Treat it as a candidate and let the code check decide, rather than assuming it is new.
 1. **Line-less path matches, excerpt does not.** No prior row for that path has an excerpt matching this finding. Treat it as a different finding. A review can carry several findings for one path, so the path alone is not an identity.
 1. **No path at all.** A concern that names no file, wherever the body states it, has only its text and the label `(review body)`. A prior row labelled `(review body)`, or `(review overview)` as older summaries wrote it, whose `Finding` excerpt matches this concern is the same finding. Without one, it is new.
@@ -372,7 +372,7 @@ The cleanup must be a separate Bash tool call: each tool invocation runs uncondi
 Copilot names one instance of a problem; fix its whole class:
 
 1. **Read the context** around the flagged line: the whole function, rule or section it sits in.
-1. **Check for a sibling chain first**, per [Sibling Chains](#sibling-chains). If this finding is a sibling of one fixed in an earlier run on this PR, stop here and follow that section instead of patching. Findings of one class that arrive in the same run are not a chain: fix them together below.
+1. **Check for a sibling chain first**, per [Sibling Chains](#sibling-chains). If this finding is a sibling of one fixed in an earlier run on this PR, stop here and follow that section instead of patching, unless `DEFER_SEVERITIES` defers it per [Deferred](#deferred-out-of-scope), which takes precedence. Findings of one class that arrive in the same run are not a chain: fix them together below.
 1. **Name the class** in one sentence: the general problem behind the finding, not the one line. "The redactor misses `password=` with spaces around `=`" is an instance; "key and value redaction handles only some separator and quoting forms" is the class.
 1. **Find every instance of the class.** Search the branch's changes and the files they touch for the same shape elsewhere, parallel branches of the same logic, mirror or generated copies, and callers or consumers that rely on the behavior. Read each hit; keep only real instances.
 1. **Fix them together** in one commit. When a structural change would remove the class (an allowlist instead of a blocklist, a real parser instead of pattern matching, one shared helper instead of copies), prefer it, and say so in the commit message.
@@ -389,16 +389,19 @@ For a sibling, thread or review-body alike:
 1. **Propose one design option** that would close the class instead of the instance: an allowlist of exact accepted forms, a structural parser, a narrower contract that stops promising the property, one shared implementation instead of copies, or an explicit threat model or scope statement in the documentation when the findings keep widening what the code must defend against.
 1. **End the run with `Partial`**, even when the sibling was the only finding. Report the chain in step 9's `### Sibling chain` section, and in `Remaining Required Action` ask the user to choose between the design option and patching the sibling.
 
-Patch a sibling only when the user, told of the chain, asks for that patch. When the user chooses the design option, implement it under the Valid Concerns steps above, as one fix for the whole class. A later run that carries the `Pending` sibling forward without such a decision in its invocation records it `Pending` again and ends `Partial`.
+Patch a sibling only when the user, told of the chain, asks for that patch. When the user chooses the design option, implement it under the Valid Concerns steps above, as one fix for the whole class. A later run that carries the `Pending` sibling forward checks it against the current code, as step 1c does. Once a commit closes it, a thread sibling gets a reply naming that commit and is resolved in step 8 with the Valid threads, and a review-body sibling is recorded `Previously handled`. While it still holds, it is recorded `Pending` again and the run ends `Partial`.
 
 #### Deferred (Out of Scope)
 
-**When feedback is valid but out of scope for the current PR:**
+**When feedback is valid but out of scope for the current PR**, or the caller passed `DEFER_SEVERITIES` and Copilot labeled the finding with a listed severity, in its thread or in a review body's listing of it:
 
-1. **Track the follow-up work** in the project's task tracking (e.g., GitHub issue, PROJECT.md, or similar)
+1. **Track the follow-up work** in the project's task tracking (e.g., GitHub issue, PROJECT.md, or similar). Under `DEFER_SEVERITIES`, list it instead under step 9's `### Deferred to follow-up` section, and do not fix or file it: the caller files those as one batch. This applies to a sibling too, so a deferred sibling does not end the run `Partial`.
 1. **Reply to the thread** explaining the deferral:
    - "Valid suggestion. Tracked as follow-up task for a future PR."
+   - Under `DEFER_SEVERITIES`: "Deferred under late-round triage; listed for a follow-up issue in the summary comment."
 1. **Resolve the thread**
+
+A finding with no severity label, or one outside the list, is handled under its own category.
 
 **CRITICAL:** Never defer feedback without tracking it. "Acknowledged for follow-up" without creating a trackable task is INCOMPLETE WORK.
 
@@ -412,7 +415,7 @@ Apply the same categories, minus the thread operations:
 | -------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | **Valid**      | Fix the class per Valid Concerns and commit (do not push; steps 5 to 7 run first); for a sibling, follow Sibling Chains | `Fixed`, or `Pending` for a sibling |
 | **Incorrect**  | Update the Copilot instructions file so it stops recurring, and commit it (do not push; steps 5 to 7 run first)         | `Noted`                             |
-| **Deferred**   | Track the follow-up work in a GitHub issue, PROJECT.md, or similar                                                      | `Tracked`                           |
+| **Deferred**   | Track the follow-up work in a GitHub issue, PROJECT.md, or similar, or list it under `DEFER_SEVERITIES`                 | `Tracked`, or `Noted` when listed   |
 | **Outdated**   | Confirm against current code, then record it; no code change                                                            | `Noted`                             |
 | **Nitpick**    | Record it; no code change                                                                                               | `Noted`                             |
 | **Advisory**   | Quote it under `Requests for human review` in step 9; no code change                                                    | `Noted`                             |
@@ -530,7 +533,7 @@ Reviews read: 5035762218, 5035762219.
 The `Reviews read:` line is required in every summary for which `fetch-reviews` ran, whatever the status, the no-op form included. Never list a review that was not read in full.
 `matched` covers a concern restating a thread or a `Previously handled` row. That line is what makes it measurable, across a PR's summaries, how much of a review body only restates feedback the threads already carry.
 
-When step 5 ran, add a `### Fix review` section after those lines: each range reviewed, the findings fixed with their commits, the findings declined with their rationale, and what the review left unverified or unreviewed. When step 4 found a sibling chain, add a `### Sibling chain` section before `### Failure Details`: each finding in the chain quoted with its link, the fixes already made, and the proposed design option.
+When step 5 ran, add a `### Fix review` section after those lines: each range reviewed, the findings fixed with their commits, the findings declined with their rationale, and what the review left unverified or unreviewed. When `DEFER_SEVERITIES` deferred any finding, add a `### Deferred to follow-up` section after those lines, one bullet per finding: its severity, location, one-line summary and source link. When step 4 found a sibling chain, add a `### Sibling chain` section before `### Failure Details`: each finding in the chain quoted with its link, the fixes already made, and the proposed design option.
 
 ```markdown
 ### Fix review
@@ -661,7 +664,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **EVERY review read listed under `Reviews read`**, so the next run's step 1b can skip it, and every row a prior summary left `Pending` or `Failed` carried forward
 1. **EVERY Advisory request quoted** under `Requests for human review`
 1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `.github/instructions/**/*.instructions.md` preferred, or `.github/copilot-instructions.md` for repo-wide conventions)
-1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
+1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar), or listed under `### Deferred to follow-up` for a caller that passed `DEFER_SEVERITIES`
 1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
 1. Re-fetch confirms empty array `[]` for all processed **threads**, apart from siblings left `Pending`. This does not apply to `fetch-reviews`, which never empties.
 1. Output summary table (see format below)
