@@ -6,8 +6,9 @@
 # The stub answers the way ntfy does, with the published message as JSON.
 #
 # STUB_CURL_LOG, when set, receives every argument on its own line, then the
-# body, then for a header file its contents check and mode. The check compares
-# the file against "Authorization: Bearer STUB_CURL_TOKEN". STUB_CURL_FAIL=1
+# body, then which of NTFY_TOPIC and NTFY_TOKEN its environment holds, then
+# for a header file its contents check and mode. The check compares the file
+# against "Authorization: Bearer STUB_CURL_TOKEN". STUB_CURL_FAIL=1
 # makes the request fail with HTTP 401, as ntfy answers a rejected token.
 # STUB_CURL_FAIL_BODY, when set, replaces the body of that failure, the way a
 # server or proxy error can echo the request back. STUB_CURL_RESPONSE, when
@@ -43,6 +44,8 @@ function main() {
     {
       printf 'arg: %s\n' "${args[@]}"
       printf 'body: %s\n' "${body}"
+      local secrets="${NTFY_TOPIC+NTFY_TOPIC }${NTFY_TOKEN+NTFY_TOKEN}"
+      printf 'env secrets: %s\n' "${secrets:-none}"
       if [[ -n "${header_file}" ]]; then
         local matches=false
         if [[ "$(< "${header_file}")" == "Authorization: Bearer ${STUB_CURL_TOKEN:-}" ]]; then

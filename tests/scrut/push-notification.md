@@ -10,7 +10,7 @@ points the config directory and `TMPDIR` at a fresh work directory, and then
 applies the settings (`NAME=value`) given before the command. `pipefail` keeps
 the exit status of `pn` when its output is piped through `sed` to shorten paths.
 
-```scrut
+```scrut {fail_fast: true}
 $ set -o pipefail
 > function pn() {
 >   local -a settings=()
@@ -374,6 +374,7 @@ arg: --data-binary
 arg: @-
 arg: https://ntfy.sh/
 body: {"topic":"sample-topic","title":"Done","message":"Build finished","priority":3,"tags":["ci"]}
+env secrets: none
 header matches: true, mode 600
 ```
 
@@ -528,9 +529,10 @@ $ pn send --title Done | grep -c sample-topic
 ```scrut
 $ log="${work}/env-send.log"
 > pn NTFY_SERVER=https://ntfy.env.example NTFY_TOPIC=env-topic NTFY_TOKEN=tk_env STUB_CURL_TOKEN=tk_env STUB_CURL_LOG="${log}" send --title Done > /dev/null
-> grep -e '^arg: https' -e '^body' -e '^header' "${log}"
+> grep -e '^arg: https' -e '^body' -e '^env secrets' -e '^header' "${log}"
 arg: https://ntfy.env.example/
 body: {"topic":"env-topic","title":"Done","priority":3}
+env secrets: none
 header matches: true, mode 600
 ```
 

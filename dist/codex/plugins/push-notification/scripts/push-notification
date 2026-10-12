@@ -238,6 +238,8 @@ function resolve_settings() {
   resolve_setting NTFY_SERVER "${DEFAULT_NTFY_SERVER}"
   resolve_setting NTFY_TOPIC
   resolve_setting NTFY_TOKEN
+  # The copies above are unexported, so no child process inherits the secrets.
+  unset NTFY_TOPIC NTFY_TOKEN
 }
 
 function known_backend() {
