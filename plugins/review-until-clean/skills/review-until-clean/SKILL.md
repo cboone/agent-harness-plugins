@@ -169,7 +169,7 @@ When the round limit is reached after an edit round, stop with `stopped` and say
 
 ### 11. Report
 
-Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Move any reply or stderr file stored beside it along with it, named after the ledger, as in `<ledger name>-round-2-reply.md`, and update the names in the ledger. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
+Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Move any reply or stderr file stored beside it along with it, named after the ledger, as in `<ledger name>-round-2-reply.txt`, and update the names in the ledger. Use `.txt`: a reply kept verbatim is not formatted, and Markdown linting and formatting would fail on it or change it. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
 
 Print the status line, the ledger path, the reviewer, and the coverage:
 
