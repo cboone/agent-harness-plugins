@@ -4,7 +4,7 @@ Tests for the frontmatter translation in `bin/build-codex-marketplace`. Codex
 has no `SKILL.md` frontmatter field for invocation policy and ignores
 `disable-model-invocation`, so the generator drops that line from the Codex copy
 and writes `agents/openai.yaml` instead. Every other field passes through,
-because both Codex and OpenCode ignore what they do not recognize.
+because Codex ignores what it does not recognize.
 
 Every testcase starts from the fixture tree printed by
 `tests/fixtures/codex-translation-fixture`: `alpha` sets

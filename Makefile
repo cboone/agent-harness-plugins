@@ -61,6 +61,8 @@ SCRUT_ENV := \
 	CREATE_WORKTREE_MANAGE_RESOURCE_CLAIMS_BIN="$(CURDIR)/plugins/create-worktree/scripts/manage-resource-claims" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
+	COPILOT_ROUNDS_REPORT_BIN="$(CURDIR)/bin/copilot-rounds-report" \
+	COPILOT_ROUNDS_REPORT_DATA_DIR="$(CURDIR)/tests/data/copilot-rounds-report" \
 	RECORD_TRAFFIC_BIN="$(CURDIR)/bin/record-traffic" \
 	RECORD_TRAFFIC_DATA_DIR="$(CURDIR)/tests/data/record-traffic" \
 	BUGS_GATHER_BIN="$(CURDIR)/plugins/publish-report-board/scripts/bugs-gather" \
@@ -95,7 +97,7 @@ help:
 	@echo "  format             Auto-fix Markdown and formatting"
 	@echo "  validate           Validate JSON and plugin structure"
 	@echo "  validate-corpus    Validate the review case corpus (needs REVIEW_CASE_CORPUS_DIR)"
-	@echo "  build              Regenerate bundled review checklists and the Codex and OpenCode mirrors"
+	@echo "  build              Regenerate bundled review checklists and the Codex mirror"
 	@echo "  test-scrut         Run the scrut documents in parallel (SCRUT_JOBS=N to limit)"
 	@echo "  test-scrut-update  Re-record scrut expectations"
 	@echo "  test-all           lint + validate + test-scrut"
@@ -134,7 +136,6 @@ validate-corpus:
 build:
 	bin/build-review-checklists
 	bin/build-codex-marketplace
-	bin/build-opencode-mirror
 
 test-scrut:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }

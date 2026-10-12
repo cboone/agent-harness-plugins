@@ -159,7 +159,7 @@ For a script invoked with no arguments, drop the trailing space-plus-wildcard en
 
 **Caveat for SKILL.md prose:** the substitution is a global, unconditional text replacement, so a SKILL.md cannot _document_ the literal variable; every occurrence is rewritten, including inside fenced code blocks. Use the literal only where substitution is the intent. To describe the variable itself, put that prose in a `references/` file, which is read from disk and left untouched.
 
-Other harnesses differ: Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. For a script-backed skill that must run there too, add a short fallback telling Claude that an unsubstituted path still begins with `$` rather than `/`, and to locate the script with `**/plugin-name/**/scripts/script-name` (note the `**` between the plugin name and `scripts`, which tolerates the version segment), preferring a match inside the harness's own installed-plugin directory.
+Codex CLI differs: it substitutes the placeholder only in hook commands. For a script-backed skill that must run there too, add a short fallback telling Claude that an unsubstituted path still begins with `$` rather than `/`, and to locate the script with `**/plugin-name/**/scripts/script-name` (note the `**` between the plugin name and `scripts`, which tolerates the version segment), preferring a match inside the harness's own installed-plugin directory.
 
 ## Notes
 

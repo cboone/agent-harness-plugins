@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs alerter with the given arguments and stops it with SIGKILL WAIT_LIMIT
-# seconds later unless it has exited. ./notify and ../opencode/index.ts launch
-# it detached, so neither harness waits on it.
+# seconds later unless it has exited. ./notify launches it detached, so the
+# harness never waits on it.
 #
 # A waiting alerter polls usernoted, at a cost that grows with the number
 # waiting. SIGKILL leaves the delivered banner in Notification Center, while

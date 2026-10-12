@@ -130,9 +130,9 @@
         "name": "Christopher Boone"
       },
       "category": "agents",
-      "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.",
+      "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, and Copilot.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
+      "keywords": ["agents", "codex", "config", "copilot", "settings"],
       "license": "MIT",
       "name": "clean-up-agent-config",
       "repository": "https://github.com/cboone/agent-harness-plugins",
@@ -273,7 +273,7 @@
         "name": "Christopher Boone"
       },
       "category": "workflow",
-      "description": "Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention.",
+      "description": "Sends macOS notifications when Claude Code or Codex CLI finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["alerts", "macos", "notifications"],
       "license": "MIT",
@@ -644,6 +644,19 @@
       "name": "trim-comments",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/trim-comments"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "writing",
+      "description": "Trim and rewrite prose, such as PR and issue bodies and agent instructions, so it leads with what the reader needs and the minimum why, without changing what it says.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["agent-instructions", "editing", "pull-requests", "style", "writing"],
+      "license": "MIT",
+      "name": "trim-text",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./dist/codex/plugins/trim-text"
     },
     {
       "author": {

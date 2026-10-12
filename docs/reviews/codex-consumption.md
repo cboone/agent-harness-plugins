@@ -234,7 +234,7 @@ The interview established these decisions:
 - **Catalog:** preserve existing names and plugin boundaries initially.
 - **Priority:** improve and evaluate the Git and review workflow chain first.
 - **Validation:** deterministic CI checks plus real-Codex evaluations for releases and selected changes.
-- **Other harnesses:** preserve OpenCode support; desktop, IDE, and cloud differences remain documented secondary considerations.
+- **Other harnesses:** OpenCode is no longer supported ([#585](https://github.com/cboone/agent-harness-plugins/issues/585)); desktop, IDE, and cloud differences remain documented secondary considerations.
 - **Delivery:** one umbrella issue and four milestone checklists, with focused, GPG-signed commits. Additional issues are reserved for independently shippable work, deliberate deferrals, or discoveries outside this scope.
 
 ## Review findings
@@ -265,7 +265,7 @@ Codex uses `$` mentions or its `/skills` selector. Documentation should explain 
 
 A global replacement would be unsafe: legitimate harness commands such as `/skills` must remain, and dollar signs inside shell strings require correct quoting.
 
-**Milestone 1: contract established; adoption pending in milestone 3.** The invocation adapter in `docs/plugin-development.md` renders `/name` for Claude Code, `$name` or `/skills` for Codex, and a request by name for OpenCode, and keeps skill identity and arguments separate in generated prompts. The README notes the Codex form. Catalog-wide examples and generated handoffs remain for milestone 3.
+**Milestone 1: contract established; adoption pending in milestone 3.** The invocation adapter in `docs/plugin-development.md` renders `/name` for Claude Code, `$name` or `/skills` for Codex, and keeps skill identity and arguments separate in generated prompts. The README notes the Codex form. Catalog-wide examples and generated handoffs remain for milestone 3.
 
 **4. Documentation links break after installation. Reproduced.**
 
@@ -462,7 +462,7 @@ Use controlled fixtures for GitHub effects. Record CLI and model versions, confi
 
 ### Completion criteria
 
-A user following the Codex guide can install the intended plugins, discover and invoke them, and complete the evaluated workflows without translating Claude instructions manually. Claude behavior remains covered, OpenCode remains functional, and unsupported cases receive accurate explanations.
+A user following the Codex guide can install the intended plugins, discover and invoke them, and complete the evaluated workflows without translating Claude instructions manually. Claude behavior remains covered, and unsupported cases receive accurate explanations.
 
 ## Evidence, limitations, and follow-through
 

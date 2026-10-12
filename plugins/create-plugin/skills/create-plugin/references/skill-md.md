@@ -6,7 +6,7 @@
 <!-- The reference paths below illustrate how a skill being authored points at its own material; they are not this skill's reference files. -->
 <!-- validate-plugins: ignore ./references/BASH.md ./references/languages/go.md ./references/tools/actionlint.md -->
 
-Each skill has a canonical `SKILL.md` file that defines the workflow an agent follows when the skill is triggered, shared by Claude Code, Codex CLI, and OpenCode. Codex consumes generated copies under `dist/codex/plugins/*`; do not edit those copies by hand. Write steps with the conventions in the "Cross-harness workflow adapters" section of `docs/plugin-development.md`.
+Each skill has a canonical `SKILL.md` file that defines the workflow an agent follows when the skill is triggered, shared by Claude Code and Codex CLI. Codex consumes generated copies under `dist/codex/plugins/*`; do not edit those copies by hand. Write steps with the conventions in the "Cross-harness workflow adapters" section of `docs/plugin-development.md`.
 
 ## File Location
 
@@ -47,7 +47,7 @@ The description is the skill's routing description: harnesses use it to decide w
 
 Keep it short, because every enabled skill's description shares Codex's discovery budget.
 
-Every harness routes on this description: `bin/build-codex-marketplace` copies `SKILL.md` into `dist/codex/` unchanged, and the OpenCode mirror links to it. Change it here. The plugin `description` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` is the separate catalog summary and does not affect routing.
+Every harness routes on this description: `bin/build-codex-marketplace` copies `SKILL.md` into `dist/codex/` unchanged. Change it here. The plugin `description` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` is the separate catalog summary and does not affect routing.
 
 #### Examples from Existing Skills
 
@@ -69,7 +69,7 @@ description: >-
 
 ### Argument hint
 
-Claude Code shows `argument-hint` as ghost text after the user types the skill's slash command, so a skill that accepts arguments should declare one. Write it as a double-quoted string: positional arguments first, then flags in the order the `## Options` section lists them. Use `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. A skill with an `## Options` section must declare it, and repository validation enforces this. Codex CLI and OpenCode ignore the field.
+Claude Code shows `argument-hint` as ghost text after the user types the skill's slash command, so a skill that accepts arguments should declare one. Write it as a double-quoted string: positional arguments first, then flags in the order the `## Options` section lists them. Use `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. A skill with an `## Options` section must declare it, and repository validation enforces this. Codex CLI ignores the field.
 
 ## Body Structure
 

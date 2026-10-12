@@ -12,7 +12,7 @@ Commit, push, and create a pull request in one automated step. Never prompt the 
 ## Skill dependencies
 
 - **Required:** `lint-and-fix`
-- **Optional:** None
+- **Optional:** `trim-text`
 
 ## Workflow
 
@@ -335,6 +335,29 @@ If step 2 recorded follow-up issues, check the PR repository's visibility and ea
 
 Place `## Follow-ups` last, after any `## Related issues` or `## Closes` section, or after `## Test plan` when neither appears. List one publishable issue per line as `- #N` in the same repository, `- owner/name#N` in another repository on the same host, or `- https://HOST/OWNER/NAME/issues/N` across hosts. Never use a closing keyword. If no entries can be published, omit the section entirely.
 
+#### Trim the body
+
+Invoke the `trim-text` skill on the drafted body, passing this continuation block after the draft:
+
+```text
+Parent continuation:
+- Caller: pr
+- Resume target: Step 7, create the PR
+- Profile: pr-and-issue-bodies
+```
+
+Use the returned `Trimmed text` as the body when `Status` is `success`, and the draft otherwise. Before using a trimmed body, confirm all of these against the draft, and use the draft if any fails:
+
+- The body is non-empty and has exactly the draft's second-level headings, in the same order.
+- `## Summary` still has 1-4 bullets.
+- The `## Closes`, `## Related issues`, and `## Follow-ups` sections are unchanged.
+- The body has the same set of issue references and closing keywords as the draft.
+- Every unchecked checklist item in the draft appears word for word, in the same section and order, and no item changes between checked and unchecked.
+- Every link target, image, mention, code span, and code block in the draft appears unchanged.
+- Every trailer or session line in the draft, such as a session URL, appears unchanged in the body.
+
+When `Flagged` suggests a correction to a claim, check the claim against the branch diff before creating the PR: apply the correction to the body when the diff confirms it, and otherwise keep the claim and report the flag. If the `trim-text` skill is not installed, use the draft. Record the outcome for step 9.
+
 #### Create the PR
 
 First, generate a unique temporary file path using `mktemp -u`:
@@ -421,6 +444,7 @@ After the PR is created, report:
 1. A brief summary of what was committed and pushed.
 1. Connected issues (if any) and the closing keywords used.
 1. Follow-up issues listed in the PR body (if any).
+1. The body trim: trimmed, nothing to trim, failed or unavailable with the returned `Reason`, discarded with the check that failed, or skipped because `trim-text` is not installed. Relay any `Flagged` and `Cut material` lines it returned.
 
 ## Plan-Aware Commits
 

@@ -35,7 +35,7 @@
   // MD049 - Emphasis style
   // Kept disabled. Prettier normalizes emphasis to `_`, so for files it formats
   // the default `consistent` would pass. But not every Markdown file here is
-  // formatted by Prettier: `docs/plans/done/` and the generated `dist/` mirrors
+  // formatted by Prettier: `docs/plans/done/` and the generated `dist/` mirror
   // are both excluded, and they do carry mixed emphasis. Restoring the default
   // fails on exactly those files, for no benefit.
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md049.md

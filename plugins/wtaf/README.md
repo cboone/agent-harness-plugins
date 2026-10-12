@@ -40,7 +40,7 @@ The skill is read-only. It never edits, commits, pushes, stashes, or posts anyth
 | `--thorough` | Also read earlier sessions in this directory, the branch history against its plan, review threads and issue discussion, sibling worktrees, and health measured now |
 | scope (text) | An issue or PR number, a plan, a phase or step, "cross-repo", or another worktree to compare against                                                               |
 
-`/summary` is an alias that runs `wtaf` with the same arguments. In Claude Code and Codex CLI, only `wtaf` is selected automatically from natural phrasing and the alias runs when typed. OpenCode ignores `disable-model-invocation`, so there the alias stays selectable from natural phrasing too; see [Using with OpenCode](../../README.md#using-with-opencode).
+`/summary` is an alias that runs `wtaf` with the same arguments. In Claude Code and Codex CLI, only `wtaf` is selected automatically from natural phrasing and the alias runs when typed.
 
 ## Recommended Permissions
 

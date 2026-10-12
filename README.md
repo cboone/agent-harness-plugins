@@ -1,13 +1,13 @@
 # Claude Code Plugins
 
-A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), and [OpenCode](https://opencode.ai/docs/skills/), from [Christopher Boone](https://cboone.github.io).
+A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), from [Christopher Boone](https://cboone.github.io).
 
 ## Contents
 
 - [Install](#install): [Claude Code](#claude-code), [Codex CLI](#codex-cli), [OpenCode](#opencode)
 - [Skills](#skills): [Git](#git), [Issues and Worktrees](#issues-and-worktrees), [Code Review](#code-review), [Code Quality](#code-quality), [Writing](#writing), [Scaffolding](#scaffolding), [CI and Release](#ci-and-release), [Agents](#agents)
 - [Hooks](#hooks)
-- [Using with Codex CLI](#using-with-codex-cli), [Using with OpenCode](#using-with-opencode)
+- [Using with Codex CLI](#using-with-codex-cli)
 - [License](#license)
 
 ## Install
@@ -35,11 +35,7 @@ See [Using with Codex CLI](#using-with-codex-cli) below for selective installati
 
 ### OpenCode
 
-```bash
-export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"
-```
-
-See [Using with OpenCode](#using-with-opencode) below for mirror regeneration and known limitations.
+OpenCode is no longer supported. The last `dist/opencode/` mirror is available at commit [`41605e95`](https://github.com/cboone/agent-harness-plugins/tree/41605e95bd814e354799722eae2fc9c8d50e2796/dist/opencode).
 
 ## Skills
 
@@ -129,18 +125,20 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Writing
 
-| Plugin                                                                               | Trigger                           | What it does                                                                                                                                                      |
-| ------------------------------------------------------------------------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Publish Report Board](./plugins/publish-report-board/README.md)                     | `/publish-report-board`           | Publish a recurring analysis, such as backlog triage or bug triage, as a live report board with a stable URL, and re-sync it in place as the source data changes. |
-| [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md)       | `/write-formalization-roadmap`    | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.                                     |
-| [Write Manual Verification Plan](./plugins/write-manual-verification-plan/README.md) | `/write-manual-verification-plan` | Write a numbered, resumable checklist for checks run by hand, where every step says what to do, what you should see, and how to tell nothing from broken.         |
-| [Write Markdown](./plugins/write-markdown/README.md)                                 | `/write-markdown`                 | Applies Markdown style conventions when creating or editing Markdown files.                                                                                       |
-| [Write Math](./plugins/write-math/README.md)                                         | `/write-math`                     | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.                                                              |
-| [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md)                   | `/write-pandoc-markdown`          | Pandoc-flavored Markdown conventions for academic papers with LaTeX output.                                                                                       |
+| Plugin                                                                               | Trigger                           | What it does                                                                                                                                                           |
+| ------------------------------------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Publish Report Board](./plugins/publish-report-board/README.md)                     | `/publish-report-board`           | Publish a recurring analysis, such as backlog triage or bug triage, as a live report board with a stable URL, and re-sync it in place as the source data changes.      |
+| [Trim Text](./plugins/trim-text/README.md)                                           | `/trim-text`                      | Trim and rewrite prose, such as PR and issue bodies and agent instructions, so it leads with what the reader needs and the minimum why, without changing what it says. |
+| [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md)       | `/write-formalization-roadmap`    | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.                                          |
+| [Write Manual Verification Plan](./plugins/write-manual-verification-plan/README.md) | `/write-manual-verification-plan` | Write a numbered, resumable checklist for checks run by hand, where every step says what to do, what you should see, and how to tell nothing from broken.              |
+| [Write Markdown](./plugins/write-markdown/README.md)                                 | `/write-markdown`                 | Applies Markdown style conventions when creating or editing Markdown files.                                                                                            |
+| [Write Math](./plugins/write-math/README.md)                                         | `/write-math`                     | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.                                                                   |
+| [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md)                   | `/write-pandoc-markdown`          | Pandoc-flavored Markdown conventions for academic papers with LaTeX output.                                                                                            |
 
 **External tools:**
 
 - _Publish Report Board:_ [`jq`](https://jqlang.org/) (required; the bundled `report-board` script validates and renders board data with it), [`gh`](https://cli.github.com/) (required for the backlog board, which reads issues, milestones, and pull requests)
+- _Trim Text:_ an authenticated [`gh`](https://cli.github.com/) session, only for PR and issue bodies; `realpath` (GNU coreutils, or macOS 13 and later) for symlinked instruction files
 - _Write Manual Verification Plan:_ an authenticated [`gh`](https://cli.github.com/) session, only when the checklist is kept on an issue rather than in a plan
 
 ### Scaffolding
@@ -193,18 +191,18 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Agents
 
-| Plugin                                                             | Trigger                  | What it does                                                                                                                |
-| ------------------------------------------------------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| [Clean Up Agent Config](./plugins/clean-up-agent-config/README.md) | `/clean-up-agent-config` | Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode. |
-| [Create Plugin](./plugins/create-plugin/README.md)                 | `/create-plugin`         | Guide for creating new plugins in this repository with consistent structure and conventions.                                |
+| Plugin                                                             | Trigger                  | What it does                                                                                                      |
+| ------------------------------------------------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| [Clean Up Agent Config](./plugins/clean-up-agent-config/README.md) | `/clean-up-agent-config` | Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, and Copilot. |
+| [Create Plugin](./plugins/create-plugin/README.md)                 | `/create-plugin`         | Guide for creating new plugins in this repository with consistent structure and conventions.                      |
 
 ## Hooks
 
 Hooks are event-driven; they have no slash-command trigger.
 
-| Plugin                                       | What it does                                                                                                |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention. |
+| Plugin                                       | What it does                                                                                     |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code or Codex CLI finishes a task or needs your attention. |
 
 **External tools:**
 
@@ -212,7 +210,7 @@ Hooks are event-driven; they have no slash-command trigger.
 
 ## Using with Codex CLI
 
-This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories and copy every `SKILL.md` unchanged, so Codex routes on the same skill descriptions as Claude Code and OpenCode.
+This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories and copy every `SKILL.md` unchanged, so Codex routes on the same skill descriptions as Claude Code.
 
 For per-plugin metadata Codex prefers `.codex-plugin/plugin.json` when present and falls back to `.claude-plugin/plugin.json` otherwise. Hook registration requires a `.codex-plugin/plugin.json` with a non-empty `hooks` path (for example `"hooks": "./hooks/hooks.json"`); this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `PLUGIN_ROOT` to plugin-bundled hook commands, plus `CLAUDE_PLUGIN_ROOT` for compatibility with existing Claude Code plugins.
 
@@ -272,17 +270,6 @@ Plugin hooks need no feature flag, but Codex runs them only after you review and
 [codex-milestone-2]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-2-prove-the-design-on-the-git-and-review-chain
 [codex-milestone-3]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-3-apply-the-design-across-the-catalog
 [codex-milestone-4]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-4-verify-the-complete-distribution
-
-## Using with OpenCode
-
-This repository also works with the skills and hooks in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
-
-When adding or removing a plugin, regenerate the mirror with `bin/build-opencode-mirror` and commit the result. CI fails if the mirror drifts from the source plugins. Hooks are mirrored to `dist/opencode/plugins/` as TypeScript plugins, sourced from each plugin's `opencode/index.ts`.
-
-### OpenCode known limitations
-
-- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Claude Code substitutes this placeholder in SKILL.md bodies when a skill loads, which is how `/address-issue-in-worktree`, `/create-worktree`, `/monitor-pr`, `/publish-report-board`, and `/resolve-copilot-pr-feedback` name their bundled helper scripts. OpenCode does not substitute it, so the path reaches the agent as a literal string starting with `$`. Each of those five skills carries a documented fallback that locates the script by glob instead, so they stay usable at the cost of an extra search step. For the direct path, run them in Claude Code.
-- **Hook event parity is approximate.** OpenCode maps only completion, permission and error events; it has no question or plan banner, completion deduplication, visibility check or per-session grouping. See each hook's README for the specific mapping.
 
 ## License
 
