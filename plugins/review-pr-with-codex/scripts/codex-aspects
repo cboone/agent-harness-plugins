@@ -434,11 +434,17 @@ function render_scope() {
   ' < "${records}" || die "could not render the untracked paths"
 }
 
-# Refuses aspect instructions that live inside the repository under review. A
-# change to them would then rewrite the instructions its own review runs with,
-# so the review must use an installed copy of this plugin instead.
+# Refuses a helper or aspect instructions that live inside the repository under
+# review. A change to them would then rewrite the code or the instructions its
+# own review runs with, so the review must use an installed copy of this plugin
+# instead. A changed helper could skip this check, so it guards against running
+# the wrong copy by mistake, not against a hostile one.
 function require_trusted_aspects() {
   local top_level="${1}" aspects_physical
+
+  if [[ "${SCRIPT_DIR}" == "${top_level}" || "${SCRIPT_DIR}" == "${top_level}/"* ]]; then
+    die "codex-aspects at ${SCRIPT_DIR} is inside the repository under review, so the change could rewrite the helper its own review runs with; run an installed copy instead"
+  fi
 
   aspects_physical="$(physical_dir "${ASPECTS_DIR}")" \
     || die "aspect instructions not found at ${ASPECTS_DIR}"

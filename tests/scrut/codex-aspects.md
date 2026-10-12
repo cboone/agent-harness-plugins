@@ -732,3 +732,18 @@ code: ok
 lib.sh unchanged
 0
 ```
+
+## A helper inside the repository under review is refused
+
+Even with outside aspect instructions, a copy of the helper in the repository
+would let the change rewrite the code its own review runs.
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/self-helper" && cd "${FIXTURE}/self-helper" \
+>   && mkdir helper && cp "${CODEX_ASPECTS_BIN}" helper/codex-aspects \
+>   && { CODEX_ASPECTS_DIR="$(dirname "${CODEX_ASPECTS_BIN}")/../skills/review-pr-with-codex/references/aspects" \
+>        ./helper/codex-aspects prompt --aspect code --scope "${FIXTURE}/scope.json" > "${FIXTURE}/self-helper.err" 2>&1; echo "exit=$?"; } \
+>   && sed -e "s|^codex-aspects: codex-aspects at /private/|codex-aspects: codex-aspects at /|" -e "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/self-helper.err"
+exit=1
+codex-aspects: codex-aspects at FIXTURE/self-helper/helper is inside the repository under review, so the change could rewrite the helper its own review runs with; run an installed copy instead
+```
