@@ -24,6 +24,16 @@ On iOS with a self-hosted server, instant background delivery needs the server t
 
 The helper reads `${XDG_CONFIG_HOME:-$HOME/.config}/push-notification/config`, or the file named by `PUSH_NOTIFICATION_CONFIG`. It holds `KEY=value` lines; blank lines and lines starting with `#` are ignored, and the file is parsed, never run as shell.
 
+Create the file private before any topic or token goes into it, since `chmod` afterwards cannot take back what another user already read:
+
+```bash
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/push-notification"
+(umask 077 && touch "${XDG_CONFIG_HOME:-$HOME/.config}/push-notification/config")
+chmod 600 "${XDG_CONFIG_HOME:-$HOME/.config}/push-notification/config"
+```
+
+Then add the settings:
+
 ```text
 # Server URL; defaults to https://ntfy.sh
 NTFY_SERVER=https://ntfy.example.com
@@ -33,11 +43,7 @@ NTFY_TOPIC=agent-3f9c2a7e5b1d48c6a0e2f7b4
 NTFY_TOKEN=tk_...
 ```
 
-Make the file readable by its owner alone. The helper refuses to use a file that holds `NTFY_TOPIC` or `NTFY_TOKEN` and is readable by anyone else, since on ntfy.sh the topic name works like a password:
-
-```bash
-chmod 600 "${XDG_CONFIG_HOME:-$HOME/.config}/push-notification/config"
-```
+The file must stay readable by its owner alone. The helper refuses to use a file that holds `NTFY_TOPIC` or `NTFY_TOKEN` and is readable by anyone else, since on ntfy.sh the topic name works like a password.
 
 ## 4. Or use environment variables
 

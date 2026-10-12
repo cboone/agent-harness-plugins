@@ -204,6 +204,13 @@ push-notification: WORK/as-link/push-notification/config exists but is not a rea
 ```
 
 ```scrut
+$ ln -s "${work}/no-such-dir" "${work}/as-broken-link"
+> pn XDG_CONFIG_HOME="${work}/as-broken-link" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
+push-notification: cannot look for WORK/as-broken-link/push-notification/config: WORK/as-broken-link is not a searchable directory
+[3]
+```
+
+```scrut
 $ : > "${work}/as-file"
 > pn XDG_CONFIG_HOME="${work}/as-file" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
 push-notification: cannot look for WORK/as-file/push-notification/config: WORK/as-file is not a searchable directory
@@ -333,10 +340,12 @@ The stub logs every curl argument, the body read from stdin, and whether the
 header file it was given holds the expected header and its mode.
 
 ```scrut
-$ log="${work}/curl.log"
-> pn STUB_CURL_LOG="${log}" STUB_CURL_TOKEN=tk_sample send --title Done --message "Build finished" --tag ci
-> sed "s|${work}|WORK|g" "${log}"
+$ pn STUB_CURL_LOG="${work}/curl.log" STUB_CURL_TOKEN=tk_sample send --title Done --message "Build finished" --tag ci
 Sent through ntfy to https://ntfy.sh (message stub123)
+```
+
+```scrut
+$ sed "s|${work}|WORK|g" "${work}/curl.log"
 arg: -sS
 arg: --fail-with-body
 arg: --connect-timeout
@@ -366,10 +375,13 @@ $ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
 ## Without a token there is no authorization header
 
 ```scrut
-$ log="${work}/no-token.log"
-> : > "${work}/empty-config"
-> pn NTFY_TOPIC=open-topic PUSH_NOTIFICATION_CONFIG="${work}/empty-config" STUB_CURL_LOG="${log}" send --title Done > /dev/null
-> grep -c -e authorization -e "^header" "${log}"
+$ : > "${work}/empty-config"
+> pn NTFY_TOPIC=open-topic PUSH_NOTIFICATION_CONFIG="${work}/empty-config" STUB_CURL_LOG="${work}/no-token.log" send --title Done
+Sent through ntfy to https://ntfy.sh (message stub123)
+```
+
+```scrut
+$ grep -c -e authorization -e "^header" "${work}/no-token.log"
 0
 [1]
 ```
@@ -444,6 +456,19 @@ is.
 $ pn STUB_CURL_RESPONSE='{"id":"m1","event":"message","topic":"sample-topic"} {"error":"upstream unavailable","code":50301}' send --title Done 2>&1
 push-notification: https://ntfy.sh/ answered with 2 JSON values instead of one, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
 [1]
+```
+
+An otherwise valid message event for the topic still needs a non-empty string
+id.
+
+```scrut
+$ for id in '"id":7,' '"id":null,' '' '"id":"",'; do
+>   pn STUB_CURL_RESPONSE="{${id}\"event\":\"message\",\"topic\":\"sample-topic\"}" send --title Done > /dev/null 2>&1; echo "exit $?"
+> done
+exit 1
+exit 1
+exit 1
+exit 1
 ```
 
 An error object in an answer is relayed, so the cause is not lost.

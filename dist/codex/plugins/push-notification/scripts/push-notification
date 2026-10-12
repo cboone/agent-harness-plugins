@@ -148,11 +148,12 @@ function is_config_key() {
   return 1
 }
 
-# Prints the closest ancestor of a path that exists, so a missing default
-# config can be told apart from one hidden behind a file or a closed directory.
+# Prints the closest ancestor of a path that exists or is a symlink, broken or
+# not, so a missing default config can be told apart from one hidden behind a
+# file, a broken link or a closed directory.
 function nearest_existing_ancestor() {
   local path="${1}"
-  while [[ -n "${path}" && ! -e "${path}" ]]; do
+  while [[ -n "${path}" && ! -e "${path}" && ! -L "${path}" ]]; do
     # A relative path runs out of slashes before it runs out of components,
     # and then the current directory is its last ancestor.
     [[ "${path}" == */* ]] || {
@@ -501,6 +502,7 @@ function command_send() {
 
 function command_check() {
   [[ $# -eq 0 ]] || die "check takes no options"
+  require_tools jq curl
   resolve_settings
   local backend
   backend="$(selected_backend)"

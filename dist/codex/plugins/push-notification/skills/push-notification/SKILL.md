@@ -53,7 +53,7 @@ Follow [Writing the notification](#writing-the-notification) and [What never goe
 
 ### 3. Send it
 
-Run `send`. On exit 0 without `--dry-run`, report in one line that the server confirmed the notification, with its title. On exit 0 with `--dry-run`, show the preview and say that nothing was sent. On exit 1, report that the notification was not confirmed, with the error the helper printed, and stop: do not retry in a loop, and do not fall back to another channel. On exit 2, fix the command and run it once more.
+Run `send`. On exit 0 without `--dry-run`, report in one line that the server confirmed the notification, with its title. On exit 0 with `--dry-run`, show the preview and say that nothing was sent. On exit 1, report that the notification was not confirmed, with the error the helper printed, and stop: do not retry in a loop, and do not fall back to another channel. On exit 2, fix the command and run it once more. On exit 3, a setting or a required tool became unusable since step 1: report what the helper named and stop, as in step 1.
 
 ## Writing the notification
 
