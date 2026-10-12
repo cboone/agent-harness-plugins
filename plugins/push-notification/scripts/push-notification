@@ -148,6 +148,16 @@ function is_config_key() {
   return 1
 }
 
+# Prints the closest ancestor of a path that exists, so a missing default
+# config can be told apart from one hidden behind a file or a closed directory.
+function nearest_existing_ancestor() {
+  local path="${1%/*}"
+  while [[ -n "${path}" && ! -e "${path}" ]]; do
+    path="${path%/*}"
+  done
+  printf '%s' "${path:-/}"
+}
+
 # Reads the config file into CONFIG_VALUE_<KEY> globals. Each line is KEY=value,
 # with optional matching quotes around the value; blank lines and lines starting
 # with # are skipped. The file is parsed rather than sourced, so nothing in it
@@ -155,10 +165,19 @@ function is_config_key() {
 function read_config() {
   CONFIG_FILE="${PUSH_NOTIFICATION_CONFIG:-${XDG_CONFIG_HOME:-${HOME}/.config}/push-notification/config}"
   if [[ ! -f "${CONFIG_FILE}" ]]; then
-    # Only the default path may be absent. A path named explicitly that is
-    # missing would otherwise fall back to ntfy.sh without its server or token.
+    # Only a default path that does not exist yet may be skipped. A path named
+    # explicitly that is missing, or any path that exists but cannot be the
+    # file, would otherwise fall back to ntfy.sh without its server or token.
     [[ -z "${PUSH_NOTIFICATION_CONFIG:-}" ]] \
       || die "PUSH_NOTIFICATION_CONFIG names ${CONFIG_FILE}, which is not a file; fix the path or unset it" "${EXIT_NOT_CONFIGURED}"
+    if [[ -e "${CONFIG_FILE}" || -L "${CONFIG_FILE}" ]]; then
+      die "${CONFIG_FILE} exists but is not a readable regular file; replace it with the config file or remove it" "${EXIT_NOT_CONFIGURED}"
+    fi
+    local ancestor
+    ancestor="$(nearest_existing_ancestor "${CONFIG_FILE}")"
+    if [[ ! -d "${ancestor}" || ! -x "${ancestor}" ]]; then
+      die "cannot look for ${CONFIG_FILE}: ${ancestor} is not a searchable directory" "${EXIT_NOT_CONFIGURED}"
+    fi
     return 0
   fi
   [[ -r "${CONFIG_FILE}" ]] || die "cannot read config file ${CONFIG_FILE}" "${EXIT_NOT_CONFIGURED}"
@@ -249,7 +268,7 @@ function print_setting() {
 # ntfy backend
 #
 # The topic name is the only thing that guards a topic on a public server, so
-# it is treated like the token: never printed, and passed to jq through the
+# it is treated like the token: never printed unredacted, and passed to jq through the
 # environment rather than its argument list.
 
 function ntfy_server() {
@@ -358,7 +377,8 @@ function backend_ntfy_send() {
   # ntfy confirms a publish by answering with the message: event "message",
   # its id, and the topic. Anything else, such as a proxy page or an error
   # object that carries an id of its own, leaves delivery unconfirmed. The
-  # answer is never printed, because it holds the topic.
+  # answer itself is not printed, because it holds the topic; failure text and
+  # server errors are printed only after ntfy_redact.
   # jq's own message tells a response that is not JSON from a jq that could
   # not run, so it is relayed rather than replaced.
   local parse_error status=0
@@ -378,8 +398,12 @@ function backend_ntfy_send() {
     return 1
   fi
   if [[ -z "${id}" ]]; then
-    local server_error
-    server_error="$(jq -r 'if type == "object" and has("error") then "\(.error)\(if has("code") then " (code \(.code))" else "" end)" else empty end' <<< "${response}" 2> /dev/null)" || server_error=""
+    local server_error extract_status=0
+    server_error="$(jq -r 'if type == "object" and has("error") then "\(.error)\(if has("code") then " (code \(.code))" else "" end)" else empty end' <<< "${response}")" || extract_status=$?
+    if ((extract_status != 0)); then
+      echo "${SCRIPT_NAME}: could not read the ntfy answer (jq exited ${extract_status}), so delivery is unconfirmed" >&2
+      return 1
+    fi
     if [[ -n "${server_error}" ]]; then
       echo "${SCRIPT_NAME}: ${url} answered with an error, so delivery is unconfirmed: $(ntfy_redact "${server_error}")" >&2
       return 1

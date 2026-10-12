@@ -182,6 +182,34 @@ push-notification: PUSH_NOTIFICATION_CONFIG names WORK/missing-config, which is 
 [3]
 ```
 
+## A default config path that exists but cannot be the file is an error
+
+Only a default path that does not exist yet may be skipped. A directory in its
+place, a broken symlink, or a file where a directory should be would otherwise
+send to ntfy.sh without the server and token meant for it.
+
+```scrut
+$ mkdir -p "${work}/as-dir/push-notification/config"
+> pn XDG_CONFIG_HOME="${work}/as-dir" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
+push-notification: WORK/as-dir/push-notification/config exists but is not a readable regular file; replace it with the config file or remove it
+[3]
+```
+
+```scrut
+$ mkdir -p "${work}/as-link/push-notification"
+> ln -s "${work}/no-such-file" "${work}/as-link/push-notification/config"
+> pn XDG_CONFIG_HOME="${work}/as-link" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
+push-notification: WORK/as-link/push-notification/config exists but is not a readable regular file; replace it with the config file or remove it
+[3]
+```
+
+```scrut
+$ : > "${work}/as-file"
+> pn XDG_CONFIG_HOME="${work}/as-file" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
+push-notification: cannot look for WORK/as-file/push-notification/config: WORK/as-file is not a searchable directory
+[3]
+```
+
 ## A dry run prints the request without the topic or token
 
 ```scrut
@@ -385,8 +413,9 @@ $ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
 ## An answer without an ntfy message id is not a confirmed send
 
 A proxy or a misconfigured `NTFY_SERVER` can answer with HTTP success and a
-page of its own. The answer is never printed, because a real ntfy answer
-carries the topic.
+page of its own. The answer itself is not printed, because a real ntfy answer
+carries the topic; failure text and server errors are printed only after the
+topic and token are replaced.
 
 ```scrut
 $ pn STUB_CURL_RESPONSE='<html><body>Sign in</body></html>' send --title Done 2>&1
@@ -459,6 +488,16 @@ $ wrap_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 jq ran
 0
 [1]
+```
+
+## A token file that cannot be prepared stops the send
+
+```scrut
+$ log="${work}/no-tmp.log"
+> pn TMPDIR="${work}/no-such-dir" STUB_CURL_LOG="${log}" send --title Done 2>&1 | grep -v '^mktemp'
+> test -e "${log}" || echo "curl not called"
+push-notification: could not create a temporary directory for the authorization header
+curl not called
 ```
 
 ## A dry run never calls curl

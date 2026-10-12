@@ -16,6 +16,8 @@ A self-hosted ntfy server with access control can use any name, protected by an 
 
 Install the ntfy app (Android or iOS), add a subscription to that topic, and for a self-hosted server, add the server URL in the app first.
 
+For an access-controlled server, sign in to that server in the phone app with an account that can read the topic. `NTFY_TOKEN` only lets the helper publish; it does not set up the phone's subscription. See [access control](https://docs.ntfy.sh/config/#access-control).
+
 On iOS with a self-hosted server, instant background delivery needs the server to forward polls upstream, normally `upstream-base-url: "https://ntfy.sh"` in its configuration; see [iOS instant notifications](https://docs.ntfy.sh/config/#ios-instant-notifications). Without it, notifications can arrive late. A successful send confirms that the server published the message, not that the phone showed it.
 
 ## 3. Write the config file
