@@ -7,6 +7,8 @@ description: >-
 argument-hint: "[aspects...|all] [--base <ref>] [--model <model>] [--effort <level>]"
 ---
 
+<!-- Workflow and report format adapted from the review-pr command of pr-review-toolkit (Apache-2.0, Copyright Anthropic). Modified for review-pr-with-codex; see the NOTICE file at the plugin root. -->
+
 # Review PR with Codex
 
 Run several focused Codex reviews of the current branch, one per aspect, and merge their findings into one report. The aspects are adapted from the six agents of `pr-review-toolkit`; see `./references/aspects.md`.
