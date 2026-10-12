@@ -104,7 +104,7 @@ The aspect instructions, workflow and report format are adapted from Anthropic's
 
 ## See Also
 
-- [Review Until Clean](../review-until-clean/README.md): a fix loop with one general reviewer per round, run until the snapshot comes back clean
+- [Review Until Clean](../review-until-clean/README.md): a fix loop around any one reviewer, this skill included, run until the snapshot comes back clean
 - [Review Branch](../review-branch/README.md): a summary and quality review of committed branch changes
 - [Address Review](../address-review/README.md): work through the findings once they are saved to a review document
 - [All plugins](../../README.md)

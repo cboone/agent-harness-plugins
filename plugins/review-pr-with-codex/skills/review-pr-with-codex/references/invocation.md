@@ -1,6 +1,6 @@
 # Invocation
 
-How each entry point runs an aspect, and how a finished aspect is told apart from one that failed silently. The `codex exec` rules follow the Codex backend of `review-until-clean`, whose `references/backends.md` records the measurements behind them.
+How each entry point runs an aspect, and how a finished aspect is told apart from one that failed silently. The `codex exec` rules below were measured against the CLI versions they name; recheck them against a newer `codex` before relaxing one.
 
 ## Every aspect meets the same contract
 
@@ -28,12 +28,13 @@ codex exec \
 
 Each part is there for a reason:
 
-- **Plain `codex exec`, never `codex exec review` or `codex review`.** The review subcommands cannot combine a custom prompt with `--base`, and they accept `--output-schema` and ignore it. Their output could not be validated, so a crash and a clean review would look alike. Do not switch to them as a simplification.
-- **`< /dev/null`.** `codex exec` appends a non-terminal stdin to the prompt. An agent harness's stdin is a pipe that never closes, so without the redirect the run waits forever and never writes its output file.
+- **Plain `codex exec`, never `codex exec review` or `codex review`.** Measured against `codex-cli 0.155.1`, the review subcommands fail three ways at once. They accept `--output-schema` and ignore it, returning prose, so their output cannot be validated and a crash looks like a clean review. Their scope flags `--base`, `--uncommitted` and `--commit` exclude each other, so no single run covers committed and uncommitted work (`error: the argument '--base <BRANCH>' cannot be used with '--uncommitted'`). And the scope flags exclude a custom prompt, so the output contract cannot go in the instructions either (`error: the argument '--base <BRANCH>' cannot be used with '[PROMPT]'`). Do not switch to them as a simplification.
+- **`< /dev/null`.** `codex exec` appends a non-terminal stdin to the prompt. An agent harness's stdin is a pipe that never closes, so without the redirect the run prints `Reading additional input from stdin...` and waits forever. Measured against `codex-cli 0.155.1`, it hung until a timeout stopped it and never created its output file, so the aspect produced nothing at all.
 - **External `--cd` and `--skip-git-repo-check`.** The helper rejects repository-local `TMPDIR` to keep its working directory and prompt artifacts external. This excludes current checkout instructions from initial project-instruction discovery. Global instructions and user configuration remain active. The prompt supplies historical guidance and absolute reads with `git -C`; keep the session directory outside the checkout. `simplify` receives `--add-dir <repository root>` for authorized edits.
 - **`--sandbox read-only`** makes the read-only rule structural. `simplify` alone gets `workspace-write`, and the helper refuses to run it beside any other aspect, without passing the review gate, or when the scope changed after `--scope` was captured. The recheck runs immediately before launch but takes no lock, so a concurrent edit in that window is not prevented.
 - **`--ephemeral`** keeps each run from persisting a session.
 - **`--model` and `--config model_reasoning_effort`** apply to that run only, so the user's Codex defaults are untouched.
+- **`--output-schema` is checked before the review starts, and not every keyword survives.** Measured against `codex-cli 0.157.1`, `pattern` and `minimum` are honored, and a `pattern` with lookaround is rejected with `Invalid JSON schema: regex lookaround is not supported` and HTTP 400, which fails the aspect with no output file. After editing the schema, run it through one real invocation rather than trusting that a valid JSON Schema is an acceptable one.
 - **`--output-schema` and `--output-last-message` point outside the working tree.** A file written inside it would join the scope under review and move the snapshot. The helper refuses an `--out-dir` inside the repository.
 
 Stopping `codex-aspects run` records observed descendants, sends TERM to them and each run, then polls for stopped or terminated state before collecting the runs. Polling is bounded; unobserved descendants and processes created during shutdown remain a limitation. If inspection is unavailable or a process remains active, cleanup exits with status `4` and retains its temporary directory. Do not measure final state or simplify until launched workers are known to have stopped. Failed or cancelled runs are incomplete even with valid output.

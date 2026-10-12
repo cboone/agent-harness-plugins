@@ -25,7 +25,7 @@ Reviewers inspect staged and unstaged diffs separately, so index-only edits must
 
 ## Authorized coverage preparation
 
-The Claude backend may need intent-to-add entries to expose untracked files. Prepare them before snapshot capture and retain them through validity checks and consecutive confirming rounds. Restore only this run's entries afterward or on failure/cancellation. Preserve pre-existing entries and concurrently staged content. Report the reviewed snapshot separately from subsequent index restoration.
+A reviewer that reads only the diff needs intent-to-add entries to see untracked files. Prepare them before snapshot capture and retain them through validity checks and consecutive confirming rounds. Restore only this run's entries afterward or on failure/cancellation. Preserve pre-existing entries and concurrently staged content. Report the reviewed snapshot separately from subsequent index restoration.
 
 ## What moves it
 

@@ -14,26 +14,55 @@ That is not tidiness. The snapshot covers every non-ignored path in the tree, so
 
 The final location is `docs/reviews/<date>-<branch>-until-clean.md`, with the branch name sanitized the way `review-branch` sanitizes it: `/`, spaces, colons and backslashes become `-`, repeated hyphens collapse, leading and trailing hyphens are trimmed, an empty result becomes `branch`, and a detached head becomes `HEAD`.
 
+When that file already exists, from an earlier run on the same branch and day, add the first free numeric suffix instead, as in `<date>-<branch>-until-clean-2.md`, and name the earlier ledger in the new one's header. Never overwrite or append to it: each ledger records one run, and the earlier one may already be committed.
+
+Reserve the name before moving the ledger onto it, because checking for a free name and then moving is a race: two runs on the same branch and day can both see the same name free, and the second move overwrites the first ledger. Create the destination with `noclobber` set, which fails when the name already exists, take the next suffix on each failure, and only then move the ledger onto the name you reserved:
+
+```bash
+mkdir -p docs/reviews || exit 1
+n=1
+dest="docs/reviews/${stem}.md"
+until bash -c 'set -C && : > "$1"' reserve "${dest}"; do
+  [[ -e "${dest}" ]] || exit 1
+  n=$((n + 1))
+  dest="docs/reviews/${stem}-${n}.md"
+done
+mv -f "${ledger_tmp}" "${dest}"
+```
+
+`stem` is `<date>-<branch>-until-clean`, and `ledger_tmp` is the ledger's temporary path. Three details matter:
+
+- **A failed create counts as a taken name only when the name exists.** A missing or unwritable `docs/reviews/` fails every create, and reading each failure as a taken name would loop forever. So create the directory first, and on any other failure stop and report the ledger's temporary path instead of saving it.
+- **The create runs under `bash`.** Under zsh's `CLOBBER_EMPTY` option, `noclobber` still truncates an existing empty file, and an empty file is exactly what a reservation is, so a second run could take a name the first has just reserved.
+- **The `-f` is safe.** The file it replaces is the empty one this run just created.
+
 The `-until-clean` suffix keeps the file clear of `review-branch`, which writes `<date>-<branch>.md` and overwrites it. Two skills silently overwriting each other's reviews would lose work.
 
 Under `--no-save`, the ledger stays at its temporary path and that path is reported. It is still written either way, because `address-review` needs a file to read. Whether a saved ledger is committed follows the repository's own convention; this skill does not commit it and never pushes.
 
 ## Shape
 
-```markdown
+````markdown
 # Review until clean: <branch>
 
 Base: <base-ref> (<base-sha>)
-Reviewer: <backend>
+Reviewer: <the --reviewer value> (<from --reviewer | from agent config | chosen when asked>)
 Rounds: <n> of <max>
-Status: <clean|clean-with-declines|decisions-needed|stopped|failed>
+Status: <clean|clean-with-declines|decisions-needed|stopped|failed|no-op>
 Confirmation: <off | rounds <n> and <m> over snapshot <snapshot> | unconfirmed>
 
 ## Round 1
 
 Snapshot: <snapshot>
 Invocation: <the reviewer command that ran>
-Coverage: <full | partial, and what was excluded>
+Mode: <report | edit>
+Coverage: <full | partial, and what was excluded | unverified>
+
+Reviewer reply, verbatim:
+
+```text
+<the reply, exactly as it came back, fenced per ./reviewers.md>
+```
 
 - [ ] **F1** Important. `path/to/file.go:42`. Token refresh races with logout, leaving stale sessions active.
       Evidence: <the traced path, command output, or citation>
@@ -43,7 +72,26 @@ Coverage: <full | partial, and what was excluded>
 ## Round 2
 
 ...
+````
+
+An edit round records the paths whose content moved while the reviewer ran, and any findings it also reported, inside fenced `text` blocks, never as list items. Write each path as a JSON string, one per line, so a path holding a newline or a backtick stays on its line, and size each fence by the rule in `./reviewers.md`, one backtick longer than the longest run inside:
+
+````markdown
+Changed while the reviewer ran:
+
+```text
+"src/session.ts"
+"src/token.ts"
 ```
+
+Findings reported in the edit round, not queued:
+
+```text
+F4 important src/session.ts:142 token refresh races with logout
+```
+````
+
+`address-review` reads plain bullets and numbered lists as work items too, so a changed path or a stale finding written as one would enter its queue, and would shift the item numbers the loop passes to `--skip` onto the wrong items. Its changes are the round's result, not findings; its findings describe code the reviewer's own edits replaced, so they must not reach `address-review`. The next round raises again whatever still holds.
 
 Each round appends a section. Earlier rounds are never rewritten, because the point of the record is what was true when the review ran.
 
@@ -53,7 +101,7 @@ Each round appends a section. Earlier rounds are never rewritten, because the po
 
 Every finding carries a stable identifier, a mapped severity, a location, one sentence stating the defect, and the evidence for it. Identifiers are assigned in order across the whole run, not per round, so `F7` means one thing in the document.
 
-`address-review` reads unchecked list items as actionable and skips checked ones, block quotes and prose. The ledger uses that directly:
+`address-review` reads unchecked checkboxes, plain bullets, numbered list items and issue-like headings as actionable, and skips checked items, block quotes, fenced code blocks, prose paragraphs and metadata lines. The ledger uses that directly, and writes everything that is not meant for the fixer, such as notes and changed paths, in one of the skipped forms:
 
 - **Open findings** are unchecked items, so `address-review` picks them up.
 - **Fixed, declined and deferred findings** are checked items, so it leaves them alone.
@@ -66,8 +114,8 @@ Every finding carries a stable identifier, a mapped severity, a location, one se
 So neutralize every reviewer-controlled value on the way in:
 
 - **Keep each finding to one list item.** Strip newlines from `title`, and render `detail` and `evidence` as indented continuation lines of the same item rather than as new block-level content.
-- **Defuse a line that would start a block.** A line whose first non-space character begins a list marker, a heading, or a fence is prefixed so it cannot, or the whole value is placed in an inline code span. A backtick run inside the value needs a longer run around it, by the same rule `./references/backends.md` applies to the raw reply.
-- **Only the generated item is actionable.** After writing a round section, the unchecked items in it should be exactly the findings you intended to queue. If the count does not match, the text got out.
+- **Defuse a line that would start a block.** A line whose first non-space character begins a list marker, a heading, or a fence is prefixed so it cannot, or the whole value is placed in an inline code span. A backtick run inside the value needs a longer run around it, by the same rule `./reviewers.md` applies to the raw reply.
+- **Only the generated item is actionable.** After writing a round section, the actionable items in it, unchecked checkboxes, plain bullets and numbered items alike, should be exactly the findings you intended to queue. If the count does not match, the text got out.
 
 ### The location is reviewer-controlled too
 
@@ -75,7 +123,7 @@ So neutralize every reviewer-controlled value on the way in:
 
 Check every location before it enters the ledger, and treat a failure as a malformed finding rather than as something to repair:
 
-- **`file` is a repository-relative path with no `.` or `..` segment**, and does not begin with `/`, `~` or a backslash. `review-scope --schema` enforces this for a schema-constrained backend, and that is why it is enforced here as well: the Claude backend has no schema, so its transcription is the only gate its findings pass through.
+- **`file` is a repository-relative path with no `.` or `..` segment**, and does not begin with `/`, `~` or a backslash. `review-scope --schema` describes the rule, but nothing in the loop validates a reviewer's output against it, so this check is the only gate every finding passes through, whether the reviewer emitted structured output or its reply was transcribed.
 - **`file` names a path in the round's scope.** The four buckets are the whole scope, so a finding outside them is about code the round did not review. Record it, and do not queue it.
 - **`line` is absent or a positive integer.** Zero and negatives are schema-valid nowhere and anchor nothing.
 
@@ -97,11 +145,13 @@ A finding leaves the loop through one of these. There is no sixth state where it
 
 A declined finding is still a defect in the reviewer's eyes, so the next round raises it again. Without a rule, the loop then spends every remaining round on a question that was settled.
 
-At the start of each round, match the new findings against the declines already in the ledger, by location and substance rather than by wording, since the reviewer will phrase it differently. A match is recorded as declined, carrying the original reason and the round it was first declined in. It does not go to `address-review`, and it does not block a clean result.
+Once a round's findings are recorded, match them against the declines already in this run's ledger and in the earlier ledgers of the same branch in `docs/reviews/`, by location and substance rather than by wording, since the reviewer will phrase it differently. A match is recorded as declined, carrying the original reason and the round it was first declined in. It does not go to `address-review`, and it does not block a clean result.
 
 A round whose only findings at or above the threshold are carried declines is **clean-with-declines**. That is a real terminal state, not a failure: the reviewer has nothing new to say, and the open disagreements are written down.
 
-Do not carry a decline across a change to the code it was about. If the finding's location changed in the interim, raise it fresh; the reason it was declined may no longer hold.
+A decline from an earlier run carries the same way, naming the ledger and the finding it came from, so a settled question is not asked again in every run. The branch's ledgers are those named `<date>-<branch>-until-clean*.md` for this branch.
+
+Do not carry a decline across a change to the code it was about. If the code the finding is about has changed since it was declined, raise it fresh, because the reason it was declined may no longer hold. A line number that moved only because of edits elsewhere in the file is not such a change.
 
 ## What a clean ledger says
 
@@ -110,9 +160,9 @@ A clean run still writes its ledger, and the final section states the coverage r
 ```markdown
 ## Result
 
-No undeclined findings at or above <threshold> from <backend> over snapshot <snapshot>, covering <coverage>.
+No undeclined findings at or above <threshold> from <reviewer> over snapshot <snapshot>, covering <coverage>.
 ```
 
-Under `--confirm-clean`, the result names both rounds of the pair: "No undeclined findings at or above `<threshold>` from `<backend>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`." `<threshold>` is the `--severity` in effect, Important or Nit, and "undeclined" leaves room for the carried declines a `clean-with-declines` result still has.
+Under `--confirm-clean`, the result names both rounds of the pair: "No undeclined findings at or above `<threshold>` from `<reviewer>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`." `<threshold>` is the `--severity` in effect, Important or Nit, and "undeclined" leaves room for the carried declines a `clean-with-declines` result still has.
 
 One reviewer pass is a sample. The ledger records what was reviewed and by what, which is a claim that can be checked, unlike "the branch is clean".

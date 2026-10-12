@@ -52,9 +52,9 @@ function die() {
 
 # The reviewer's output contract. Every property is required and no extra ones
 # are allowed, because structured-output implementations reject the looser
-# forms. A backend that cannot take a schema has its reply transcribed into
-# this shape by the host; see references/backends.md for why that transcription
-# is never the evidence that the review actually ran.
+# forms. A reviewer that cannot take a schema has its reply transcribed into
+# this shape by the host, and that transcription is never the evidence that the
+# review actually ran.
 #
 # `file` is constrained rather than left as a bare string because it names a
 # path the fixer will edit. An absolute path, a `~` path or a `../` escape from
@@ -67,9 +67,10 @@ function die() {
 # Measured against `codex-cli 0.157.1`: `pattern` and `minimum` are both
 # honored, and a lookaround rejects the whole schema with
 # `Invalid JSON schema: regex lookaround is not supported`, which fails the
-# round before the review starts. The schema is only half the defense, since the
-# Claude backend has no schema at all; `references/ledger.md` carries the check
-# that covers every backend.
+# round before the review starts. The schema is only half the defense, since a
+# reviewer whose reply is transcribed has no schema at all;
+# review-until-clean's `references/ledger.md` carries the location check that
+# covers every reviewer.
 function print_schema() {
   cat << 'SCHEMA_TEXT'
 {
