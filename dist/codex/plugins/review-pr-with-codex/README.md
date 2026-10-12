@@ -83,12 +83,12 @@ This skill runs git, its bundled helpers, and Codex. To allow them automatically
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(bash \"*/codex-aspects\" *)", "Bash(test -x *)", "Bash(mktemp -d*)", "Bash(git diff *)", "Bash(git rev-parse *)", "Bash(command -v codex)", "Bash(codex --version)"]
+    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(bash \"*/codex-aspects\" *)", "Bash(test -x *)", "Bash(mktemp -d*)", "Bash(mkdir *)", "Bash(git diff *)", "Bash(git rev-parse *)", "Bash(command -v codex)", "Bash(codex --version)"]
   }
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences. `codex-aspects run` starts the `codex exec` processes itself, so allowing the helper covers them.
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences. `codex-aspects run` starts the `codex exec` processes itself, so allowing the helper covers them. Removing the temporary directory with `rm -rf` is left out on purpose: a rule broad enough to match it would also allow deleting anything, so approve that one command when it runs.
 
 ## Examples
 
