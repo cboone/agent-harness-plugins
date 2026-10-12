@@ -52,9 +52,9 @@ function die() {
 
 # The reviewer's output contract. Every property is required and no extra ones
 # are allowed, because structured-output implementations reject the looser
-# forms. A backend that cannot take a schema has its reply transcribed into
-# this shape by the host; see references/backends.md for why that transcription
-# is never the evidence that the review actually ran.
+# forms. A reviewer that cannot take a schema has its reply transcribed into
+# this shape by the host, and that transcription is never the evidence that the
+# review actually ran.
 #
 # `file` is constrained rather than left as a bare string because it names a
 # path the fixer will edit. An absolute path, a `~` path or a `../` escape from

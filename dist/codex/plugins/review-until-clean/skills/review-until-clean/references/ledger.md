@@ -20,11 +20,11 @@ Under `--no-save`, the ledger stays at its temporary path and that path is repor
 
 ## Shape
 
-```markdown
+````markdown
 # Review until clean: <branch>
 
 Base: <base-ref> (<base-sha>)
-Reviewer: <backend>
+Reviewer: <the --reviewer value> (<from --reviewer | from agent config | chosen when asked>)
 Rounds: <n> of <max>
 Status: <clean|clean-with-declines|decisions-needed|stopped|failed>
 Confirmation: <off | rounds <n> and <m> over snapshot <snapshot> | unconfirmed>
@@ -33,7 +33,14 @@ Confirmation: <off | rounds <n> and <m> over snapshot <snapshot> | unconfirmed>
 
 Snapshot: <snapshot>
 Invocation: <the reviewer command that ran>
-Coverage: <full | partial, and what was excluded>
+Mode: <report | edit>
+Coverage: <full | partial, and what was excluded | unverified>
+
+Reviewer reply, verbatim:
+
+```text
+<the reply, exactly as it came back, fenced per ./reviewers.md>
+```
 
 - [ ] **F1** Important. `path/to/file.go:42`. Token refresh races with logout, leaving stale sessions active.
       Evidence: <the traced path, command output, or citation>
@@ -43,7 +50,9 @@ Coverage: <full | partial, and what was excluded>
 ## Round 2
 
 ...
-```
+````
+
+An edit round adds a `Changed:` list of the paths whose content moved while the reviewer ran, and any findings it also reported. Its changes are the round's result; they are not findings, and they are not checked items.
 
 Each round appends a section. Earlier rounds are never rewritten, because the point of the record is what was true when the review ran.
 
@@ -66,7 +75,7 @@ Every finding carries a stable identifier, a mapped severity, a location, one se
 So neutralize every reviewer-controlled value on the way in:
 
 - **Keep each finding to one list item.** Strip newlines from `title`, and render `detail` and `evidence` as indented continuation lines of the same item rather than as new block-level content.
-- **Defuse a line that would start a block.** A line whose first non-space character begins a list marker, a heading, or a fence is prefixed so it cannot, or the whole value is placed in an inline code span. A backtick run inside the value needs a longer run around it, by the same rule `./references/backends.md` applies to the raw reply.
+- **Defuse a line that would start a block.** A line whose first non-space character begins a list marker, a heading, or a fence is prefixed so it cannot, or the whole value is placed in an inline code span. A backtick run inside the value needs a longer run around it, by the same rule `./reviewers.md` applies to the raw reply.
 - **Only the generated item is actionable.** After writing a round section, the unchecked items in it should be exactly the findings you intended to queue. If the count does not match, the text got out.
 
 ### The location is reviewer-controlled too
@@ -75,7 +84,7 @@ So neutralize every reviewer-controlled value on the way in:
 
 Check every location before it enters the ledger, and treat a failure as a malformed finding rather than as something to repair:
 
-- **`file` is a repository-relative path with no `.` or `..` segment**, and does not begin with `/`, `~` or a backslash. `review-scope --schema` enforces this for a schema-constrained backend, and that is why it is enforced here as well: the Claude backend has no schema, so its transcription is the only gate its findings pass through.
+- **`file` is a repository-relative path with no `.` or `..` segment**, and does not begin with `/`, `~` or a backslash. `review-scope --schema` enforces this for a reviewer that emits that schema, and that is why it is enforced here as well: for any reviewer whose findings are transcribed, the transcription is the only gate they pass through.
 - **`file` names a path in the round's scope.** The four buckets are the whole scope, so a finding outside them is about code the round did not review. Record it, and do not queue it.
 - **`line` is absent or a positive integer.** Zero and negatives are schema-valid nowhere and anchor nothing.
 
@@ -110,9 +119,9 @@ A clean run still writes its ledger, and the final section states the coverage r
 ```markdown
 ## Result
 
-No undeclined findings at or above <threshold> from <backend> over snapshot <snapshot>, covering <coverage>.
+No undeclined findings at or above <threshold> from <reviewer> over snapshot <snapshot>, covering <coverage>.
 ```
 
-Under `--confirm-clean`, the result names both rounds of the pair: "No undeclined findings at or above `<threshold>` from `<backend>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`." `<threshold>` is the `--severity` in effect, Important or Nit, and "undeclined" leaves room for the carried declines a `clean-with-declines` result still has.
+Under `--confirm-clean`, the result names both rounds of the pair: "No undeclined findings at or above `<threshold>` from `<reviewer>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`." `<threshold>` is the `--severity` in effect, Important or Nit, and "undeclined" leaves room for the carried declines a `clean-with-declines` result still has.
 
 One reviewer pass is a sample. The ledger records what was reviewed and by what, which is a claim that can be checked, unlike "the branch is clean".
