@@ -64,7 +64,7 @@ A reviewer: any skill, slash command or CLI that reviews code, installed and aut
 
 Also required:
 
-- `git`. The loop itself never pushes and never rewrites history, but it does commit: [Address Review](../address-review/README.md) does the fixing, and its default is to commit each round's changes locally. Your index is left alone apart from the optional `git add -N` described under [Usage](#usage). Computing the snapshot also writes unreferenced blob and tree objects into `.git/objects`, which `git gc` collects.
+- `git`. The loop itself never pushes and never rewrites history, but it does commit: [Address Review](../address-review/README.md) does the fixing, and its default is to commit each round's changes locally. Your index is left alone apart from the optional `git add -N` described under [Usage](#usage). The loop relies on your reviewer not to push or rewrite history either; it checks remote refs and `HEAD` ancestry around each review, which catches the common cases but not every one. Computing the snapshot also writes unreferenced blob and tree objects into `.git/objects`, which `git gc` collects.
 - [`jq`](https://jqlang.org/). The bundled scope helper emits JSON and will not run without it.
 
 ## Usage
@@ -99,7 +99,7 @@ This skill runs git commands, and your reviewer's own commands, that trigger per
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)", "Bash(git diff-tree *)"]
+    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)", "Bash(git diff-tree *)", "Bash(git for-each-ref *)"]
   }
 }
 ```

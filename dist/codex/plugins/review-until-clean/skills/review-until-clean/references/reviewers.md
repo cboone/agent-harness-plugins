@@ -59,7 +59,7 @@ A reviewer that echoes what it reviewed adds another: the echoed value must matc
 
 Invoke it in this session exactly as given, with nothing added to its arguments. Run it over the repository as it is; do not narrow its scope, and do not tell it which findings to look for.
 
-A skill or command runs with this session's own tools, so nothing structural stops it writing. That is allowed: see [Report rounds and edit rounds](#report-rounds-and-edit-rounds). What is not allowed is a reviewer pushing, posting to a pull request, or rewriting history. Do not run a reviewer with an option that does any of those. If its report shows it did, or the remote refs moved while it ran, stop the run as `failed` and say what it did. [Pushes and fetches](#pushes-and-fetches) applies to both kinds of reviewer.
+A skill or command runs with this session's own tools, so nothing structural stops it writing. That is allowed: see [Report rounds and edit rounds](#report-rounds-and-edit-rounds). What is not allowed is a reviewer pushing, posting to a pull request, or rewriting history. Do not run a reviewer with an option that does any of those. If its report shows it did, or a check in [Pushes, fetches and rewritten history](#pushes-fetches-and-rewritten-history) catches it, stop the run as `failed`. Those checks apply to both kinds of reviewer, and they catch the common cases only.
 
 ### Shell command
 
@@ -67,6 +67,7 @@ Run it from the repository root, in **one** tool call, as a script file under `b
 
 ```bash
 tmp="$(mktemp -d)"
+printf 'reviewer_tmp=%s\n' "${tmp}"
 cat > "${tmp}/reviewer.sh" << 'REVIEWER_VALUE'
 <the --reviewer value, exactly as given>
 REVIEWER_VALUE
@@ -75,7 +76,7 @@ if bash -e -o pipefail "${tmp}/reviewer.sh" < /dev/null > "${tmp}/stdout" 2> "${
 else
   reviewer_status=$?
 fi
-printf 'reviewer_tmp=%s reviewer_status=%s\n' "${tmp}" "${reviewer_status}"
+printf 'reviewer_status=%s\n' "${reviewer_status}"
 ```
 
 Each part is there for a reason:
@@ -86,22 +87,29 @@ Each part is there for a reason:
 - **A reviewer that exits 1 to report findings.** Many CLIs, linters among them, exit 0 when clean, 1 when they found something, and higher on error, and the loop reads every non-zero exit as a failed round. Declare the findings code inside the value, as in `ruff check . || test $? -eq 1`: the `||` keeps `-e` from ending the script on the 1, and `test` passes only that code, so a real error still fails the round.
 - **The `if` around it.** It records the status even when the caller runs under `set -e`, which would otherwise end the caller before the diagnostics were captured.
 - **`reviewer_status`, not `status`.** The surrounding lines run in the caller's shell, which is often zsh, and zsh reserves `status` as a read-only alias for `$?`. Assigning it fails with `read-only variable: status` whatever the reviewer returned, so the exit status is lost.
-- **The last line prints both.** An agent's shell does not keep variables from one tool call to the next, and the run itself prints nothing, since both streams go to files. Read `reviewer_tmp` and `reviewer_status` from that line, and record the status before anything else runs; never run the reviewer again to recover them, since that is a silent retry and repeats an editing reviewer's edits.
+- **The directory first, the status last.** An agent's shell does not keep variables from one tool call to the next, and the run itself prints nothing, since both streams go to files. The first line names the directory before the reviewer starts, so its output can still be found if the call is cut off; the last line gives the status. Read both from the output, and record the status before anything else runs; never run the reviewer again to recover them, since that is a silent retry and repeats an editing reviewer's edits.
+- **A timeout to match the reviewer.** A full review can take many minutes, longer than an agent shell tool's default timeout, which is two minutes in Claude Code. Give the call the longest timeout the tool allows, or run it in the background and wait for it to finish. A call cut off by the tool's timeout is a failed round: record what the directory holds and stop, rather than running the reviewer again.
 - **`< /dev/null`.** Many CLIs read stdin when it is not a terminal. An agent harness's stdin is a pipe that never reaches end of file, so without the redirect such a CLI waits forever and the round produces nothing at all.
 - **Files outside the working tree.** The snapshot covers every non-ignored path in the tree, so an output file written into the repository is itself a change. It would move the snapshot, turn every round into an edit round, and hand the next round the reviewer's own output as new code. `./ledger.md` gives the same rule for the ledger.
 - **The exit status, kept.** It is one of the two completion signals, so record it, from the printed line, before anything else runs.
 
 Remove the temporary directory when the round ends, including when it fails, and only after both streams are in the ledger in full, or saved beside it as [Recording the raw reply](#recording-the-raw-reply) allows.
 
-## Pushes and fetches
+## Pushes, fetches and rewritten history
 
-Record every remote-tracking ref and tag before the reviewer runs, and compare them as it returns, for both kinds of reviewer:
+**The loop relies on the reviewer not pushing, fetching or rewriting history, and cannot fully detect it.** A reviewer runs with this session's own tools or as an arbitrary command, so it can reach anything the session can. Choosing a reviewer is trusting it not to do those things. Two checks catch the common cases, and a clean report never claims more than they show:
 
-```bash
-git for-each-ref --format='%(refname) %(objectname)' refs/remotes refs/tags
-```
+- **Remote refs.** Record every remote-tracking ref and tag before the reviewer runs, and compare them as it returns:
 
-A push updates the remote-tracking ref of what it pushed, whichever ref or tag it was and whether or not the branch had an upstream before, as with `push.autoSetupRemote`. A fetch updates them too. A reviewer has no reason to do either, so any difference ends the run as `failed`, naming the refs that moved. Posting to a pull request leaves no local trace, so for that the reviewer's report is the only evidence.
+  ```bash
+  git for-each-ref --format='%(refname) %(objectname)' refs/remotes refs/tags
+  ```
+
+  A plain `git push` or `git fetch` updates a remote-tracking ref, including from a branch with no upstream yet under `push.autoSetupRemote`. It misses a push of a tag that already existed locally, a push to a URL or to a remote with no fetch refspec, and any write through an API, such as `gh`.
+
+- **Ancestry.** When `HEAD` moved, check `git merge-base --is-ancestor <step 1 head> <new head>`. A new commit passes it. An amend, a reset or a rebase fails it, and is a rewrite, not an edit round.
+
+A moved ref or a failed ancestry check ends the run as `failed`, naming the refs or commits involved. The ref check cannot tell who moved a ref: an editor's background fetch or another session moves it just the same, so say that the cause is unknown rather than that the reviewer fetched. Posting to a pull request leaves no local trace at all, so for that the reviewer's report is the only evidence.
 
 ## Report rounds and edit rounds
 
@@ -112,7 +120,7 @@ Compare the snapshot from step 1 with `review-scope`'s snapshot taken **immediat
 - **Unchanged:** a report round. The reviewer's findings go through steps 6 to 9 as usual.
 - **Moved:** an edit round. Whatever moved it happened while the reviewer ran, so it is that round's result. Record the paths that changed. Any findings the reviewer also reported are recorded but never queued for the fixer, since they name lines in code its edits replaced. An edit round is never clean, whatever it reported, because the code it reviewed is no longer the code on disk; the next round reviews the new snapshot.
 
-The snapshot binds `HEAD`, the resolved merge base, and the working tree's content as Git would store it. A reviewer that commits moves it even when no file content changed; record such a round's `HEAD` or base change in place of the changed paths, which can then be empty. Within the tree, it sees lasting changes to stored content and nothing else. An unchanged snapshot does not prove the reviewer wrote nothing: staging or unstaging a path that is already tracked, a write to an ignored untracked file, an edit reverted before the reviewer returned, and an edit Git normalizes away, such as a line-ending change under text normalization, all leave it where it was. Such a round is recorded as a report round. The index does count in one case: it decides which paths are tracked, so force-adding an ignored file with `git add -f`, or removing a tracked ignored file from the index, moves the snapshot without changing any file's bytes, and that round is an edit round. None of them changes the content the snapshot binds a clean result to, which is why the mode is decided from it; say what the snapshot covers rather than that nothing was written.
+The snapshot binds `HEAD`, the resolved merge base, and the working tree's content as Git would store it. A reviewer that commits moves it even when no file content changed; record such a round's `HEAD` or base change in place of the changed paths, which can then be empty. A `HEAD` that moved to a commit not descended from the old one is a rewrite, not an edit round, per the ancestry check above. Within the tree, it sees lasting changes to stored content and nothing else. An unchanged snapshot does not prove the reviewer wrote nothing: staging or unstaging a path that is already tracked, a write to an ignored untracked file, an edit reverted before the reviewer returned, and an edit Git normalizes away, such as a line-ending change under text normalization, all leave it where it was. Such a round is recorded as a report round. The index does count in one case: it decides which paths are tracked, so force-adding an ignored file with `git add -f`, or removing a tracked ignored file from the index, moves the snapshot without changing any file's bytes, and that round is an edit round. None of them changes the content the snapshot binds a clean result to, which is why the mode is decided from it; say what the snapshot covers rather than that nothing was written.
 
 A change made by something other than the reviewer during its run, such as a formatter on save or another session, is indistinguishable from the reviewer's own edit. It is recorded the same way, which costs at most one more round and never a wrong clean result.
 
@@ -126,7 +134,7 @@ The reviewer decides what it reads. The loop cannot make it read all four bucket
 
 ### Before the round: untracked files
 
-Many reviewers read only `git diff`, and an untracked file is in no diff, though untracked files are usually the newest and least reviewed code in the scope. When the scope has untracked files, ask once per run whether to make them visible with `git add -N`, which records an intent to add without staging content. Use the structured-question capability where the harness has one, and a numbered list with a wait for the reply where it does not. Restore the index with `git reset -- <paths>` when the round ends, touching only those paths, including when the round fails.
+Many reviewers read only `git diff`, and an untracked file is in no diff, though untracked files are usually the newest and least reviewed code in the scope. When the scope has untracked files, ask once per run whether to make them visible with `git add -N`, which records an intent to add without staging content. Use the structured-question capability where the harness has one, and a numbered list with a wait for the reply where it does not. Restore the index with `git reset -- <paths>` when the round ends, touching only those paths, including when the round fails. When no one can answer, as in a non-interactive run, do not touch the index: record the untracked bucket as not covered and go on.
 
 The snapshot is content-addressed and does not move either way. Declining is a valid choice; the untracked bucket is then recorded as not covered, unless the reviewer's report shows it read those files anyway.
 
