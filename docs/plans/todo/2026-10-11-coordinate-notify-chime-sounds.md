@@ -28,7 +28,7 @@ This plan is the integration record for work that spans this repository and a pr
 
 ## Sequencing
 
-1. #594 (fire-and-forget alerts, notify 3.0.0) rewrites the same `notify` script and OpenCode plugin. #595 starts from `main` after #594 merges, or from the #594 branch with a rebase once it lands.
+1. #606 removed OpenCode support and released notify 3.0.0, so #595 covers the `notify` script only. #594 (fire-and-forget alerts) rewrites the same script and takes the next major version. #595 starts from `main` after #594 merges, or from the #594 branch with a rebase once it lands.
 2. The catalog entry comes first on the generation side, because the experiment takes its ID.
 3. The generation work stops for a listening comparison (a grid of a few keys, timbres and decay lengths, plus an overlap render) before it commits to a timbre. Chris chooses.
 4. #595 does not depend on the real sounds: its tests use stub files. The two sides meet at the naming contract.
@@ -38,7 +38,7 @@ This plan is the integration record for work that spans this repository and a pr
 
 - [x] A custom sound in `~/Library/Sounds` plays through `alerter --sound` (2026-10-11).
 - [ ] With `NOTIFY_SOUND_SET` unset, alerts keep Glass, Funk and Tink.
-- [ ] Real alerts from two repositories with different slots play their own variants, from Claude Code and from at least one other harness.
+- [ ] Real alerts from two repositories with different slots play their own variants, from both Claude Code and Codex CLI.
 - [ ] Two worktrees of one repository play the same variant.
 - [ ] Several overlapping alerts sound consonant and do not clip, including alerts with different timbres.
 
@@ -48,3 +48,4 @@ This plan is the integration record for work that spans this repository and a pr
 - 2026-10-11: Started planning sessions for the catalog entry and the generation work. #595 waits for #594 to merge; the #594 session reports when its PR opens and merges.
 - 2026-10-11: Catalog entry merged. Generation experiment and installer built; listening grids rendered for a timbre, decay and key choice. A duplicate catalog PR from the generation session is open.
 - 2026-10-11: First listening round chose three timbres, each with its own decay, and asked for a fourth with a sonar-ping quality, all four in the hash. Duplicate catalog PR closed.
+- 2026-10-11: #606 removed OpenCode support (notify 3.0.0). #595 narrowed to the `notify` script; #594 needs a new major version.
