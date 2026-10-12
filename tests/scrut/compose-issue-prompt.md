@@ -53,7 +53,7 @@ compose-issue-prompt: invalid issue JSON: missing required numeric field 'number
 
 ## Chained command footer
 
-`address-issue-in-worktree` passes `--chain-command` so the injected prompt
+`workmux:start-issue` passes `--chain-command` so the injected prompt
 tells the new session which command to run first. The footer deliberately says
 nothing about stopping for approval: that is `address-issue`'s own default.
 
@@ -102,10 +102,10 @@ compose-issue-prompt: unexpected argument: --nope
 
 ## The create-worktree copy omits the footer by default
 
-`create-worktree` ships the same script but never passes `--chain-command`,
+`workmux:create-worktree` ships the same script but never passes `--chain-command`,
 because it creates the worktree and stops.
 
 ```scrut
-$ jq -n '{number: 42, title: "Fix login crash", state: "OPEN"}' | "${CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN}"
+$ jq -n '{number: 42, title: "Fix login crash", state: "OPEN"}' | "${COMPOSE_ISSUE_PROMPT_BIN}"
 Work on issue #42: Fix login crash
 ```

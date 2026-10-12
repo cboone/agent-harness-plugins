@@ -11,7 +11,7 @@ argument-hint: "<issue-number...|description> [--issue <n>...|--no-issue] [--bra
 
 Create a dedicated worktree + tmux window via `workmux add`, with a prompt injected into the new agent session.
 
-This skill creates the worktree and stops. It does not start the work. To have the new session also plan the issue, use `address-issue-in-worktree` instead.
+This skill creates the worktree and stops. It does not start the work. To have the new session also plan the issue, use `workmux:start-issue` instead.
 
 ## Options
 
@@ -28,7 +28,7 @@ The user may provide these options inline:
 
 ## Several Issues
 
-Several issue numbers, as in `/create-worktree 42 57`, have two readings, and each is a defined mode rather than a judgment call:
+Several issue numbers, as in `/workmux:create-worktree 42 57`, have two readings, and each is a defined mode rather than a judgment call:
 
 - **Combined (default).** One worktree, branch and tmux window for all the issues together, as one piece of work. Run the workflow below once, with the changes listed under "Combined mode".
 - **Fan-out (`--fan-out`, `--each`, `--separate`).** One worktree per issue. Follow "Fan-Out Workflow" instead of steps 3 to 7.
@@ -107,10 +107,10 @@ For the rest of the workflow, skip to the next step.
 
 Decide what the user gave you, in this order:
 
-1. **An issue number**: a bare integer or `#N` (e.g. `/create-worktree 42`, `/create-worktree #42`), or anything passed via `--issue N`
-2. **Several issue numbers**: two or more tokens separated by whitespace or commas, each a bare integer or `#N` (e.g. `/create-worktree 42 57`, `/create-worktree #42, #57`), or several numbers passed through repeated `--issue` options or one `--issue 42,57`. See "Several Issues" for the combined and fan-out modes
-3. **An explicit branch name**: anything passed via `--branch NAME`, or a string containing `/` that looks like `type/slug` (e.g. `/create-worktree feature/my-thing`) -- use as-is
-4. **A task description**: anything else (e.g. `/create-worktree Fix a bug`)
+1. **An issue number**: a bare integer or `#N` (e.g. `/workmux:create-worktree 42`, `/workmux:create-worktree #42`), or anything passed via `--issue N`
+2. **Several issue numbers**: two or more tokens separated by whitespace or commas, each a bare integer or `#N` (e.g. `/workmux:create-worktree 42 57`, `/workmux:create-worktree #42, #57`), or several numbers passed through repeated `--issue` options or one `--issue 42,57`. See "Several Issues" for the combined and fan-out modes
+3. **An explicit branch name**: anything passed via `--branch NAME`, or a string containing `/` that looks like `type/slug` (e.g. `/workmux:create-worktree feature/my-thing`) -- use as-is
+4. **A task description**: anything else (e.g. `/workmux:create-worktree Fix a bug`)
 
 `--no-issue` forces a bare integer, or a list of them, down the description path. That is how a task that happens to be a list of numbers gets through.
 
@@ -257,7 +257,7 @@ gh issue view NUMBER --json number,title,labels,body,state \
   | bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue NUMBER --base "BASE_BRANCH"
 ```
 
-Do not pass `--chain-command` here. This skill creates the worktree and stops; `address-issue-in-worktree` is the skill that chains into `address-issue`.
+Do not pass `--chain-command` here. This skill creates the worktree and stops; `workmux:start-issue` is the skill that chains into `address-issue`.
 
 When the user also gave `--branch NAME`, keep the issue prompt but pass the explicit branch positionally, without `--generated-name` or the launcher's `--issue` option:
 
@@ -267,7 +267,7 @@ gh issue view NUMBER --json number,title,labels,body,state \
   | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
 ```
 
-This skill also does not self-assign the issue or label it "in progress". Creating a worktree is not a commitment to do the work, and the user may be setting up several at once. `address-issue-in-worktree` does claim the issue, because it starts the work.
+This skill also does not self-assign the issue or label it "in progress". Creating a worktree is not a commitment to do the work, and the user may be setting up several at once. `workmux:start-issue` does claim the issue, because it starts the work.
 
 **From a task description**, feed the prompt in directly:
 

@@ -75,7 +75,7 @@ If the user specified `--include-prs`, the open pull request list above already 
 
 Also read the repo's README and any roadmap or project documentation to understand project goals.
 
-**Read the exclusive-resource claims.** Some work cannot run in parallel because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `create-worktree` and `address-issue-in-worktree` record those claims in the main worktree's `.claude/worktree-resources.local.json`. Resolve it from the first record of `git worktree list --porcelain -z`, whose `worktree` field is always the main worktree, and open the file with the Read tool:
+**Read the exclusive-resource claims.** Some work cannot run in parallel because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `workmux:create-worktree` and `workmux:start-issue` record those claims in the main worktree's `.claude/worktree-resources.local.json`. Resolve it from the first record of `git worktree list --porcelain -z`, whose `worktree` field is always the main worktree, and open the file with the Read tool:
 
 ```bash
 git worktree list --porcelain -z
@@ -184,7 +184,7 @@ Then, when any resource is claimed, list who holds what: the resource, the branc
 
 ### 6. Offer to Start Work
 
-End with an offer to create a worktree for the chosen issue via the `address-issue-in-worktree` skill. Example:
+End with an offer to create a worktree for the chosen issue via the `workmux:start-issue` skill. Example:
 
 ```text
 Ready to start on one of these? Just say "start issue #N" or pick a number from the list.
@@ -246,7 +246,7 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 **Exclusive resources held:**
 
 - `logic` -- feature/14-improve-notifications, claimed 2026-09-12T18:04:11Z
-- `simulator` -- fix/99-old-thing (stale: that claim no longer matches a live worktree, clear it with `/create-worktree --release-resource simulator`)
+- `simulator` -- fix/99-old-thing (stale: that claim no longer matches a live worktree, clear it with `/workmux:create-worktree --release-resource simulator`)
 
 #9 and #12 both need `logic` for verification, so they are better started once #14 is done.
 

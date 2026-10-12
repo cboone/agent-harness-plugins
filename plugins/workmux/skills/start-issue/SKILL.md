@@ -1,5 +1,5 @@
 ---
-name: address-issue-in-worktree
+name: start-issue
 description: >-
   Open a workmux worktree and tmux window where a new session plans a GitHub
   issue. Use for "start issue" or "work on #42 in a worktree"; for the current
@@ -13,7 +13,7 @@ Create a worktree, branch, and tmux window for a GitHub issue, then have the new
 
 The approval gate lives in `address-issue`, not here. This skill creates the worktree and injects a prompt telling the new session which command to run; the plan is produced and approved in that session, not in this one.
 
-To create the worktree without chaining into `address-issue`, use `create-worktree` instead.
+To create the worktree without chaining into `address-issue`, use `workmux:create-worktree` instead.
 
 ## Options
 
@@ -23,11 +23,11 @@ The user may provide these options inline:
 - **--resource `<name>`**: Claim a named exclusive resource for the new worktree, and report the holder first if one holds it already
 - **--fan-out**: With several issue numbers, open one worktree, branch, tmux window and session per issue instead of one for all of them. `--each` and `--separate` are aliases with identical behavior; treat all three as the same fan-out mode before checking how it combines with other options
 
-To list or release claims without creating a worktree, use `create-worktree`, which carries `--list-resources` and `--release-resource`.
+To list or release claims without creating a worktree, use `workmux:create-worktree`, which carries `--list-resources` and `--release-resource`.
 
 ## Several Issues
 
-Several issue numbers, as in `/address-issue-in-worktree 42 57`, have two readings, and each is a defined mode rather than a judgment call:
+Several issue numbers, as in `/workmux:start-issue 42 57`, have two readings, and each is a defined mode rather than a judgment call:
 
 - **Combined (default).** One worktree, branch, tmux window and session for all the issues together, as one piece of work. Run the workflow below once, with the changes listed under "Combined mode".
 - **Fan-out (`--fan-out`, `--each`, `--separate`).** One worktree per issue, each running `/address-issue N` for its own issue. Follow "Fan-Out Workflow" instead of the single-issue workflow.

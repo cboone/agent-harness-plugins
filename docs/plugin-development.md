@@ -32,10 +32,10 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, `publish-report-board`, `push-notification`, `resolve-copilot-pr-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
+A skill can ship executable helpers too. `workmux:start-issue`, `workmux:create-worktree`, `publish-report-board`, `push-notification`, `resolve-copilot-pr-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
 
 ```text
-plugins/create-worktree/
+plugins/workmux/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── README.md
@@ -48,13 +48,11 @@ plugins/create-worktree/
         └── SKILL.md
 ```
 
-`create-worktree` and `address-issue-in-worktree` ship byte-identical copies of all three scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference in a `SKILL.md` body to resolve inside its own plugin, so the scripts cannot be shared across plugins. Three testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
-
 `resolve-copilot-pr-feedback` and `monitor-pr` share `resolve-copilot-threads` the same way, guarded by a fourth testcase. `monitor-pr` calls only its read-only `fetch`, `fetch-reviews` and `audit` commands, to see whether Copilot reviewed the current head and what is left open before it decides whether to dispatch to the resolver. Sharing the file is the point: the watch and the resolver read the same review data, so they cannot disagree about what Copilot left.
 
 `review-until-clean` and `review-pr-with-codex` share `review-scope` the same way, guarded by a fifth testcase. `review-pr-with-codex` takes its scope buckets for the reviewers' prompts and compares its content trees to detect lasting changes the read-only aspects made to tracked files and to untracked files outside the ignore rules, so a fix to either behavior belongs in both copies.
 
-A skill refers to each script it ships by its plugin-root path, so `create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` and `monitor-pr` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their own copy. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
+A skill refers to each script it ships by its plugin-root path, so `workmux:create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` and `monitor-pr` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their own copy. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
 
 A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI, where the placeholder is not substituted in skills. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
 

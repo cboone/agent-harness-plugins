@@ -425,7 +425,7 @@ manage-resource-claims: cannot list worktrees; run prune inside a git repository
 
 ```scrut
 $ setup_claims \
->   && env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" WORKTREE_RESOURCES_FILE="${claim_file}" bash "${CREATE_WORKTREE_MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/wt-live --branch feature/live \
+>   && env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/wt-live --branch feature/live \
 >   && claims_list
 claimed "logic" for feature/live
 resource=logic state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live (glob)
