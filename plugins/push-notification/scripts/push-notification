@@ -4,8 +4,9 @@
 # Date: 2026-10-11
 #
 # Backend interface. send and check normalize their input first, then call
-# the selected backend's functions, so a new backend adds three functions and
-# a case in known_backend rather than a new script:
+# the selected backend's functions. A new backend adds the three functions
+# below and a case in known_backend, and adds its settings to CONFIG_KEYS and
+# resolve_settings. Update the tools command_send requires if it needs others:
 #
 #   backend_NAME_check    Validate the resolved settings. Print each problem
 #                         on stderr and return 1 when the backend cannot send.
@@ -37,6 +38,10 @@ readonly EXIT_NOT_CONFIGURED=3
 
 readonly DEFAULT_BACKEND="ntfy"
 readonly DEFAULT_NTFY_SERVER="https://ntfy.sh"
+
+# curl limits, in seconds, for connecting and for the whole publish request.
+readonly NTFY_CONNECT_TIMEOUT=10
+readonly NTFY_MAX_TIME=30
 
 # Every key the config file may set. Each one is also the name of the
 # environment variable that overrides it.
@@ -318,7 +323,10 @@ function backend_ntfy_send() {
     return 0
   fi
 
-  local -a curl_args=(-sS --fail-with-body -X POST -H 'Content-Type: application/json')
+  # The timeouts keep a server that stops answering from holding up the
+  # caller, which reports the send as unconfirmed and carries on.
+  local -a curl_args=(-sS --fail-with-body --connect-timeout "${NTFY_CONNECT_TIMEOUT}" --max-time "${NTFY_MAX_TIME}"
+    -X POST -H 'Content-Type: application/json')
   if [[ -n "${SETTING_NTFY_TOKEN}" ]]; then
     if ! TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/push-notification.XXXXXX")"; then
       echo "${SCRIPT_NAME}: could not create a temporary directory for the authorization header" >&2
@@ -340,23 +348,28 @@ function backend_ntfy_send() {
     return 1
   fi
 
-  # ntfy answers a publish with the message as JSON, topic included, so the
-  # response is checked for its id and never printed.
+  # ntfy confirms a publish by answering with the message: event "message",
+  # its id, and the topic. Anything else, such as a proxy page or an error
+  # object that carries an id of its own, leaves delivery unconfirmed. The
+  # answer is never printed, because it holds the topic.
   if ! jq -e . > /dev/null 2>&1 <<< "${response}"; then
     echo "${SCRIPT_NAME}: ${url} answered with something other than JSON, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
     return 1
   fi
   local id status=0
-  id="$(jq -r 'if type == "object" and (.id | type) == "string" then .id else empty end' <<< "${response}")" || status=$?
+  id="$(NTFY_EXPECTED_TOPIC="${SETTING_NTFY_TOPIC}" jq -r '
+    if type == "object" and .event == "message" and (.id | type) == "string" and .id != ""
+      and .topic == env.NTFY_EXPECTED_TOPIC and (has("error") | not)
+    then .id else empty end' <<< "${response}")" || status=$?
   if ((status != 0)); then
     echo "${SCRIPT_NAME}: could not read the ntfy answer (jq exited ${status}), so delivery is unconfirmed" >&2
     return 1
   fi
   if [[ -z "${id}" ]]; then
-    echo "${SCRIPT_NAME}: ${url} answered without an ntfy message id, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
+    echo "${SCRIPT_NAME}: ${url} answered, but not with an ntfy confirmation for this topic, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
     return 1
   fi
-  echo "Sent through ntfy to $(ntfy_server) (message ${id})"
+  echo "Sent through ntfy to $(ntfy_server) (message $(ntfy_redact "${id}"))"
 }
 
 # ---------------------------------------------------------------------------

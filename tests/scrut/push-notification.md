@@ -303,6 +303,10 @@ $ log="${work}/curl.log"
 Sent through ntfy to https://ntfy.sh (message stub123)
 arg: -sS
 arg: --fail-with-body
+arg: --connect-timeout
+arg: 10
+arg: --max-time
+arg: 30
 arg: -X
 arg: POST
 arg: -H
@@ -377,8 +381,22 @@ push-notification: https://ntfy.sh/ answered with something other than JSON, so 
 
 ```scrut
 $ pn STUB_CURL_RESPONSE='{"id":42}' send --title Done 2>&1
-push-notification: https://ntfy.sh/ answered without an ntfy message id, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
+push-notification: https://ntfy.sh/ answered, but not with an ntfy confirmation for this topic, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
 [1]
+```
+
+An answer only counts when it is an ntfy message event for this topic, so an
+error object that carries an id of its own, or a message for another topic, is
+not a confirmation.
+
+```scrut
+$ for answer in '{"id":"req-1","error":"upstream unavailable"}' '{"id":"m1","event":"message","topic":"other-topic"}' '{"id":"m1","event":"open","topic":"sample-topic"}' '{"id":"m1","event":"message","topic":"sample-topic","error":"x"}'; do
+>   pn STUB_CURL_RESPONSE="${answer}" send --title Done > /dev/null 2>&1; echo "exit $?"
+> done
+exit 1
+exit 1
+exit 1
+exit 1
 ```
 
 A real answer names the topic, and the confirmation leaves it out.
@@ -398,6 +416,26 @@ $ log="${work}/env-send.log"
 arg: https://ntfy.env.example/
 body: {"topic":"env-topic","title":"Done","priority":3}
 header matches: true, mode 600
+```
+
+## Neither the topic nor the token is ever a command-line argument
+
+A `jq` wrapper records its arguments before running the real one, and the curl
+stub records its own. A send and a dry run both leave the topic and token out
+of every argument list, where other users on the machine could read them.
+
+```scrut
+$ wrap_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+> printf '#!/usr/bin/env bash\nprintf "jq-arg: %%s\\n" "$@" >> "${JQ_ARG_LOG}"\nexec "%s" "$@"\n' "$(command -v jq)" > "${wrap_dir}/jq"
+> chmod +x "${wrap_dir}/jq"
+> args_log="${work}/args.log"
+> pn PATH="${wrap_dir}:${stub_dir}:${PATH}" JQ_ARG_LOG="${args_log}" STUB_CURL_LOG="${args_log}" STUB_CURL_TOKEN=tk_sample send --title Done > /dev/null
+> pn PATH="${wrap_dir}:${stub_dir}:${PATH}" JQ_ARG_LOG="${args_log}" send --title Done --dry-run > /dev/null
+> grep -c '^jq-arg:' "${args_log}" | sed 's/^[1-9][0-9]*$/jq ran/'
+> grep -e '^jq-arg:' -e '^arg:' "${args_log}" | grep -c -e sample-topic -e tk_sample
+jq ran
+0
+[1]
 ```
 
 ## A dry run never calls curl

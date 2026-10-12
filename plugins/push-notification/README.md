@@ -14,7 +14,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 Asks like "notify me when this finishes", "ping my phone when CI passes" or "send me the PR link when it's ready" become one push notification, sent once the outcome is known. Other skills can send one too, at completion or at a point that needs your decision, without each reimplementing the transport. Because it publishes over HTTP, it works from remote and cloud sessions, where the [`notify`](../notify/README.md) hook's macOS banners never arrive.
 
-The skill writes the notification for a lock screen: the outcome first, a short body, a click URL to the pull request, run or session, and a priority chosen by urgency (`default` for a completion, `high` when a session is waiting on you). It keeps secrets, client names and private repository details out of the message and its click URL unless you have said your server is private, because anyone who knows a topic name on ntfy.sh can read it.
+The skill writes the notification for a lock screen: the outcome first, a short body, a click URL to the pull request, run or session, and a priority chosen by urgency (`default` for a completion, `high` when a session is waiting on you). Secrets never appear in the message or its click URL. Client names and private repository details are left out too, unless you have said your server is private and those details are acceptable, because anyone who knows a topic name on ntfy.sh can read it.
 
 A bundled `push-notification` script does the sending. It posts an ntfy JSON publish request with `curl`, without the `ntfy` CLI. The access token goes to `curl` in a header file only you can read, never on a command line, and neither the token nor the topic is ever printed. The backend sits behind a small interface documented at the top of the script, so Pushover, Slack incoming webhooks and similar can be added later; ntfy is the only one that ships.
 
@@ -29,7 +29,7 @@ Settings live in `${XDG_CONFIG_HOME:-$HOME/.config}/push-notification/config` (o
 | `NTFY_TOKEN`                | Access token for a protected server | none              |
 | `PUSH_NOTIFICATION_BACKEND` | Backend to use; only `ntfy` ships   | `ntfy`            |
 
-A file that holds `NTFY_TOPIC` or `NTFY_TOKEN` must be mode `600`, or the script refuses to use it, because on ntfy.sh the topic name is all that guards a topic. With no topic configured, the skill reports what is missing and how to set it up rather than sending to a guessed topic. Choose a long random topic name on ntfy.sh, since the name is all that protects it.
+A file that holds `NTFY_TOPIC` or `NTFY_TOKEN` must give no permissions to group or others (mode `600` is the usual choice), or the script refuses to use it, because on ntfy.sh the topic name is all that guards a topic. With no topic configured, the skill reports what is missing and how to set it up rather than sending to a guessed topic. Choose a long random topic name on ntfy.sh, since the name is all that protects it.
 
 ## Usage
 
