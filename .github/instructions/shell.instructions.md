@@ -22,6 +22,8 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 
 - **`notify`'s `NOTIFY_WAIT_LIMIT` check rejects leading zeros before any arithmetic.** The `^[1-9][0-9]{0,8}$` match sends `09` or `010` to the 2-second default, so bash never parses them as octal. Do not ask for `10#` base prefixes or extra decimal parsing. Do not ask for scrut coverage of the 60-second cap either: a fixture can only show it by waiting more than 60 seconds per run, which the runtime budget in `tests/AGENTS.md` rules out.
 
+- **Brace expansion after a closing quote expands.** In `"${dir}/${name}".{json,log}`, the braces sit outside the quotes, so Bash produces `${dir}/${name}.json` and `${dir}/${name}.log` on 3.2 and 5 alike. Only braces inside the quotes stay literal. Confirm with `printf '%s\n' "/x/a".{b,c}`. Do not ask for the paths to be spelled out.
+
 - **A fixture may `cd` after reading a `*_BIN` variable.** Those variables are absolute wherever scrut runs: the Makefile builds them from `$(CURDIR)`, and in CI the reusable `run-scrut-tests.yml` rewrites every `./`-prefixed `scrut-env` value in `.github/workflows/ci.yml` into an absolute path before exporting it. A `./plugins/...` value there never reaches a fixture as a relative path.
 
 Two checks are disabled in `.shellcheckrc` by design and should not be raised in review: `check-extra-masked-returns` (SC2312) and `check-set-e-suppressed` (SC2310).

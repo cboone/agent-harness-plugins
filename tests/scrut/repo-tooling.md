@@ -207,6 +207,18 @@ $ cd "${REPO_ROOT}" && cmp plugins/resolve-copilot-pr-feedback/scripts/resolve-c
 identical
 ```
 
+## The duplicated review scope script stays byte-identical
+
+`review-until-clean` and `review-pr-with-codex` ship the same `review-scope`,
+for the same rule 18 reason. `review-pr-with-codex` uses its scope buckets for
+the reviewers' prompts and its content tree to detect lasting changes made by
+the read-only aspects, so a fix to either behavior belongs in both copies.
+
+```scrut
+$ cd "${REPO_ROOT}" && cmp plugins/review-until-clean/scripts/review-scope plugins/review-pr-with-codex/scripts/review-scope && echo identical
+identical
+```
+
 ## Every `$(< path)` read in the bundled scripts is guarded for the same path
 
 A `"$(< path)"` expansion that fails does so _during expansion_, not as a command, so neither a redirection on the assignment nor a trailing `||` catches it: Bash exits with its own unprefixed diagnostic and the script's error handling never runs. The path must therefore be tested before it is read, with `-f` as well as `-r`, because `-r` is true for a readable directory. The matcher allows the optional whitespace Bash permits after `<`, so a read written `$(<"${path}")` is counted rather than skipped.
