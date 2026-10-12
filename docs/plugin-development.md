@@ -335,7 +335,7 @@ The root `README.md` lists plugins in a compact 3-column table (Plugin, Trigger,
 
 A `## Contents` section sits between the intro paragraph and `## Install`. It is section-level navigation over the file's H2s: the `Install` and `Skills` bullets name their H3s inline, and the `Using with Codex CLI` guide has a bullet of its own. It never lists individual plugins, so adding a plugin does not touch it. Update it only when an H2 or a skills category is added, renamed, or removed, and keep every anchor resolvable, because markdownlint's MD051 checks them.
 
-Do not rename `## Install` or `### Codex CLI known limitations`, and do not add a second heading that slugifies to one of those. Every plugin README links to `../../README.md#install`, a plugin README may also link the other, and the `markdownlint-rule-relative-links` custom rule fails the build if a target fragment disappears.
+Do not rename `## Install` or `### Codex CLI known limitations`, and do not add a second heading that slugifies to one of those. Every plugin README links to `../../README.md#install` and may also link `#codex-cli-known-limitations`. The `markdownlint-rule-relative-links` custom rule fails the build if a target fragment disappears.
 
 Use the canonical `description` field from `marketplace.json` for the "What it does" column, verbatim, so the README stays a thin mirror of the catalog of record.
 
