@@ -47,7 +47,7 @@ The steps below abbreviate the paths to `review-scope` and `codex-aspects`.
 
 ### 1. Resolve the scope
 
-Make a temporary directory **outside the working tree** with `mktemp -d`. Every prompt, output, log and scope file goes there, because a file written into the repository would become part of the scope under review. Remove it when the review ends, including when it fails.
+Make a temporary directory **outside the working tree** with `mktemp -d`, then create `<tmp>/out` inside it with `mkdir`: `codex-aspects run` refuses an output directory that does not exist, and subagent replies are saved there too. Every prompt, output, log and scope file goes under `<tmp>`, because a file written into the repository would become part of the scope under review. Remove it when the review ends, including when it fails.
 
 Run `review-scope [--base <ref>] > <tmp>/scope.json`.
 
