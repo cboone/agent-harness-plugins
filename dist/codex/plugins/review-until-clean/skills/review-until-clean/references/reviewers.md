@@ -14,9 +14,9 @@ The loop has no adapter for any reviewer. Everything here applies to every revie
 | Kind          | Examples                                                              | How it runs                            |
 | ------------- | --------------------------------------------------------------------- | -------------------------------------- |
 | Skill/command | `/pr-review-toolkit:review-pr`, `/review-pr-with-codex --effort high` | In this session, as a skill or command |
-| Shell command | `coderabbit review --plain`                                           | As a process, from the repository root |
+| Shell command | `coderabbit review --agent --fresh`                                   | As a process, from the repository root |
 
-Classify by the first word. When it names a skill or command available in this session, such as `/simplify` or `/pr-review-toolkit:review-pr`, the value is a skill or command. Anything else is a shell command, including one given by absolute path, such as `/opt/homebrew/bin/coderabbit review --plain`. A leading `/` alone does not decide it. The reviewer's own options go inside the value, and the loop passes them through untouched. One run uses one reviewer. Combining reviewers means running the loop once for each.
+Classify by the first word. When it names a skill or command available in this session, such as `/simplify` or `/pr-review-toolkit:review-pr`, the value is a skill or command. Anything else is a shell command, including one given by absolute path, such as `/opt/homebrew/bin/coderabbit review --agent --fresh`. A leading `/` alone does not decide it. The reviewer's own options go inside the value, and the loop passes them through untouched. One run uses one reviewer. Combining reviewers means running the loop once for each.
 
 **Not a reviewer:** anything that needs a confirmation or a billing approval an agent cannot give. `/code-review ultra`, Claude Code's built-in cloud review, is one: its launch needs an interactive confirmation, and an agent cannot start it. Do not use it, and do not suggest it as a substitute when the requested reviewer is unavailable.
 
@@ -25,7 +25,7 @@ Classify by the first word. When it names a skill or command available in this s
 Check before the first round, by kind:
 
 - **Skill or command:** it appears in this session's list of available skills or commands. A name that does not resolve is a missing reviewer, not an empty review.
-- **Shell command:** `command -v` succeeds on its first word after any leading `NAME=value` assignments, so `LC_ALL=C coderabbit review --plain` checks `coderabbit`. When the value is too involved to read that way, skip the check and let the run decide: an exit status of 127, the shell's "command not found", is reported as a missing reviewer rather than as a failed review.
+- **Shell command:** `command -v` succeeds on its first word after any leading `NAME=value` assignments, so `LC_ALL=C coderabbit review --agent --fresh` checks `coderabbit`. When the value is too involved to read that way, skip the check and let the run decide: an exit status of 127, the shell's "command not found", is reported as a missing reviewer rather than as a failed review.
 
 A reviewer that is installed but not authenticated usually fails only when it runs. That is a failed round like any other: report that the reviewer is unauthenticated, rather than that it found nothing, and do not attempt to authenticate it.
 
@@ -42,12 +42,12 @@ They are separate on purpose. Transcription is allowed. Letting the transcriptio
 
 ### Completion signals
 
-| Kind          | A finished review                                                                                                   | A failed round                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Shell command | Exit status 0 **and** non-empty output                                                                              | A non-zero exit, a timeout, no output, output that is only an error, output that is cut off                |
-| Skill/command | A report that says the review completed, whether with findings or with none, recorded verbatim before transcription | No report, a report that is only an error, a report that ends partway, a report that says it could not run |
+| Kind          | A finished review                                                                                                   | A failed round                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Shell command | Exit status 0 **and** non-empty stdout                                                                              | A non-zero exit, a timeout, empty stdout even with stderr, output that is only an error, output that is cut off |
+| Skill/command | A report that says the review completed, whether with findings or with none, recorded verbatim before transcription | No report, a report that is only an error, a report that ends partway, a report that says it could not run      |
 
-Every signal, not any one. A process that exits 0 having printed nothing passes an exit-status check on its own, and that is exactly the case this loop must not read as clean.
+Every signal, not any one. A process that exits 0 having printed nothing passes an exit-status check on its own, and that is exactly the case this loop must not read as clean. The output that counts is stdout: many CLIs write progress lines to stderr, so a run that exits 0 with only stderr has reported nothing.
 
 A reviewer that emits structured output, such as JSON, adds a signal: the output must parse. Output that was supposed to be structured and does not parse is a failed round. Do not repair it by hand, and do not fall back to reading it as prose; the reviewer did not do what it does, and its content is unknown.
 
@@ -59,7 +59,7 @@ A reviewer that echoes what it reviewed adds another: the echoed value must matc
 
 Invoke it in this session exactly as given, with nothing added to its arguments. Run it over the repository as it is; do not narrow its scope, and do not tell it which findings to look for.
 
-A skill or command runs with this session's own tools, so nothing structural stops it writing. That is allowed: see [Report rounds and edit rounds](#report-rounds-and-edit-rounds). What is not allowed is a reviewer pushing, posting to a pull request, or rewriting history. Do not run a reviewer with an option that does any of those, and if its report shows it did, stop the run as `failed` and say what it did.
+A skill or command runs with this session's own tools, so nothing structural stops it writing. That is allowed: see [Report rounds and edit rounds](#report-rounds-and-edit-rounds). What is not allowed is a reviewer pushing, posting to a pull request, or rewriting history. Do not run a reviewer with an option that does any of those. If its report shows it did, or the branch's upstream ref moved while it ran, stop the run as `failed` and say what it did.
 
 ### Shell command
 
@@ -67,7 +67,11 @@ Run it from the repository root as one script under `bash -e -o pipefail`, with 
 
 ```bash
 tmp="$(mktemp -d)"
-reviewer='<the --reviewer value, exactly as given>'
+reviewer="$(
+  cat << 'REVIEWER_VALUE'
+<the --reviewer value, exactly as given, on its own line>
+REVIEWER_VALUE
+)"
 if bash -e -o pipefail -c "${reviewer}" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"; then
   reviewer_status=0
 else
@@ -77,6 +81,7 @@ fi
 
 Each part is there for a reason:
 
+- **The value through a quoted heredoc.** The value usually contains quotes of its own, such as `jq -s '…'`. Inside single quotes, its first `'` would end the string, and the rest would run in the caller's shell, outside every redirect, leaving `reviewer` empty and the round looking like an empty review. A heredoc whose delimiter is quoted takes every character literally, so nothing in the value is interpreted until `bash -c` runs it. Pick a delimiter that does not appear as a line of its own in the value.
 - **One `bash -c`, with `pipefail`.** The value may be a pipeline, such as `tool --json | jq -s '…'`. Written out bare, the redirects attach only to its last command: the first one keeps the harness's stdin, its stderr escapes the capture, and the status is the last command's. A reviewer that exits non-zero having printed a finding then comes back as status 0 with `jq`'s empty result, which is a failed review recorded as a clean one. Running the whole value as one script puts every command under the redirects, and `pipefail` makes a failure in any stage the script's status. Pass the value as a single argument, as above, rather than splicing it into the command line.
 - **`-e`.** `pipefail` covers one pipeline at a time, so in `tool | cat; echo done` a later command that succeeds would still set the status to 0. `-e` ends the script at the first command that fails, so that failure is the script's status. It has exceptions, such as a command tested by `if` or joined by `&&` or `||`, so a reviewer value should be the reviewer command itself, optionally piped into its output processing, and not a script that wraps it in further logic.
 - **The `if` around it.** It records the status even when the caller runs under `set -e`, which would otherwise end the caller before the diagnostics were captured.

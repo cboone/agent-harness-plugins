@@ -54,7 +54,24 @@ Reviewer reply, verbatim:
 ...
 ````
 
-An edit round adds a `Changed:` list of the paths whose content moved while the reviewer ran. Its changes are the round's result; they are not findings, and they are not checked items. Any findings it also reported are recorded as notes under the round's raw reply, never as unchecked items: they describe code the reviewer's own edits replaced, so they must not reach `address-review`. The next round raises again whatever still holds.
+An edit round records the paths whose content moved while the reviewer ran, and any findings it also reported, inside fenced `text` blocks, never as list items:
+
+````markdown
+Changed while the reviewer ran:
+
+```text
+src/session.ts
+src/token.ts
+```
+
+Findings reported in the edit round, not queued:
+
+```text
+F4 important src/session.ts:142 token refresh races with logout
+```
+````
+
+`address-review` reads plain bullets and numbered lists as work items too, so a changed path or a stale finding written as one would enter its queue, and would shift the item numbers the loop passes to `--skip` onto the wrong items. Its changes are the round's result, not findings; its findings describe code the reviewer's own edits replaced, so they must not reach `address-review`. The next round raises again whatever still holds.
 
 Each round appends a section. Earlier rounds are never rewritten, because the point of the record is what was true when the review ran.
 
@@ -64,7 +81,7 @@ Each round appends a section. Earlier rounds are never rewritten, because the po
 
 Every finding carries a stable identifier, a mapped severity, a location, one sentence stating the defect, and the evidence for it. Identifiers are assigned in order across the whole run, not per round, so `F7` means one thing in the document.
 
-`address-review` reads unchecked list items as actionable and skips checked ones, block quotes and prose. The ledger uses that directly:
+`address-review` reads unchecked checkboxes, plain bullets, numbered list items and issue-like headings as actionable, and skips checked items, block quotes, fenced code blocks, prose paragraphs and metadata lines. The ledger uses that directly, and writes everything that is not meant for the fixer, such as notes and changed paths, in one of the skipped forms:
 
 - **Open findings** are unchecked items, so `address-review` picks them up.
 - **Fixed, declined and deferred findings** are checked items, so it leaves them alone.
@@ -78,7 +95,7 @@ So neutralize every reviewer-controlled value on the way in:
 
 - **Keep each finding to one list item.** Strip newlines from `title`, and render `detail` and `evidence` as indented continuation lines of the same item rather than as new block-level content.
 - **Defuse a line that would start a block.** A line whose first non-space character begins a list marker, a heading, or a fence is prefixed so it cannot, or the whole value is placed in an inline code span. A backtick run inside the value needs a longer run around it, by the same rule `./reviewers.md` applies to the raw reply.
-- **Only the generated item is actionable.** After writing a round section, the unchecked items in it should be exactly the findings you intended to queue. If the count does not match, the text got out.
+- **Only the generated item is actionable.** After writing a round section, the actionable items in it, unchecked checkboxes, plain bullets and numbered items alike, should be exactly the findings you intended to queue. If the count does not match, the text got out.
 
 ### The location is reviewer-controlled too
 
@@ -86,7 +103,7 @@ So neutralize every reviewer-controlled value on the way in:
 
 Check every location before it enters the ledger, and treat a failure as a malformed finding rather than as something to repair:
 
-- **`file` is a repository-relative path with no `.` or `..` segment**, and does not begin with `/`, `~` or a backslash. `review-scope --schema` enforces this for a reviewer that emits that schema, and that is why it is enforced here as well: for any reviewer whose findings are transcribed, the transcription is the only gate they pass through.
+- **`file` is a repository-relative path with no `.` or `..` segment**, and does not begin with `/`, `~` or a backslash. `review-scope --schema` describes the rule, but nothing in the loop validates a reviewer's output against it, so this check is the only gate every finding passes through, whether the reviewer emitted structured output or its reply was transcribed.
 - **`file` names a path in the round's scope.** The four buckets are the whole scope, so a finding outside them is about code the round did not review. Record it, and do not queue it.
 - **`line` is absent or a positive integer.** Zero and negatives are schema-valid nowhere and anchor nothing.
 
@@ -108,9 +125,11 @@ A finding leaves the loop through one of these. There is no sixth state where it
 
 A declined finding is still a defect in the reviewer's eyes, so the next round raises it again. Without a rule, the loop then spends every remaining round on a question that was settled.
 
-At the start of each round, match the new findings against the declines already in the ledger, by location and substance rather than by wording, since the reviewer will phrase it differently. A match is recorded as declined, carrying the original reason and the round it was first declined in. It does not go to `address-review`, and it does not block a clean result.
+Once a round's findings are recorded, match them against the declines already in this run's ledger, by location and substance rather than by wording, since the reviewer will phrase it differently. A match is recorded as declined, carrying the original reason and the round it was first declined in. It does not go to `address-review`, and it does not block a clean result.
 
 A round whose only findings at or above the threshold are carried declines is **clean-with-declines**. That is a real terminal state, not a failure: the reviewer has nothing new to say, and the open disagreements are written down.
+
+Declines carry within one run. A decline recorded in an earlier run's ledger is not carried into a new run; raise the finding fresh, and decline it again if the reason still holds.
 
 Do not carry a decline across a change to the code it was about. If the finding's location changed in the interim, raise it fresh; the reason it was declined may no longer hold.
 
