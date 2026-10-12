@@ -73,6 +73,8 @@ Apply only dimensions relevant to the proposed work:
 
 - **Current-state accuracy**: Do the named files, APIs, behaviors, and assumptions match inspected evidence?
 - **Outcomes and boundaries**: Are success criteria observable, scope coherent, and exclusions compatible with the stated outcome?
+- **PR scope**: Does the plan bundle independent areas into one PR? Report a finding that names the independent changes and proposes separate PRs with their dependencies. Are sanitizers, parsers, validators and security boundaries isolated in their own PR, together with the tests, consumers and documentation required for that change? Report a finding when they are bundled with unrelated work.
+- **Input-check design**: Would an allowlist of exact known-good forms or a structural parse remove the whole class that a proposed blocklist or ad hoc regex patches one input form at a time? Report a finding with the proposed check, a sibling input form it misses, and the design correction. Use the `review-anti-patterns` skill's Sibling input forms and Validator gaps questions as the reference rather than duplicating its checklist; assess the proposed design without requiring an implementation diff or invoking its diff-review workflow.
 - **Decision completeness**: Are choices that materially affect implementation settled? Leave ordinary implementation details to the implementer.
 - **Interfaces and compatibility**: Are changed contracts, consumers, migrations, defaults, and backward compatibility accounted for?
 - **Dependencies and sequencing**: Are prerequisites available, cross-plan conflicts addressed, and ordering feasible? Does the plan mistake an unmerged proposal for current behavior?

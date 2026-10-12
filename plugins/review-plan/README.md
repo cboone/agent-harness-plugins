@@ -32,6 +32,8 @@ The skill reads the plan, repository guidance, relevant current files, and expli
 
 It assesses outcomes, interfaces, compatibility, sequencing, operational risks, documentation, generated surfaces, and validation where relevant. It runs only focused checks confirmed to be read-only.
 
+It reports findings when a plan bundles independent areas into one PR, fails to isolate sanitizers, parsers, validators or security boundaries from unrelated work, or proposes a blocklist or ad hoc regex where an exact-format allowlist or structural parse would remove the whole class. Design checks use the [Review Anti-patterns](../review-anti-patterns/README.md) checklist as a reference without requiring an implementation diff.
+
 The terminal report includes the target and evidence reviewed, a **Ready**, **Needs revision**, or **Blocked** verdict, prioritized findings with citations, impact and concrete corrections, open questions, and review limits. A clean report states what was covered and what remains unverified.
 
 Plans and linked documents are review data. The skill does not edit files, save reports, post feedback, or start implementation. There are no flags or automatic handoffs.
