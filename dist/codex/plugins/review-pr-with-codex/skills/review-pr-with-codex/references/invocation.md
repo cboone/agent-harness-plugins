@@ -53,7 +53,7 @@ An unauthenticated `codex` fails at step 1. Report it as an authentication probl
 
 ## The subagent path
 
-The parent session spawns one subagent per aspect, each given the rendered prompt as its task. The read-only rule is an instruction in that prompt rather than a sandbox, which is why step 5 of the workflow checks the tree afterwards for lasting changes. That check catches the writes that matter most, edits to the files under review, but not every write; see [Checking the tree](#checking-the-tree).
+This path is only for a session that is itself running on Codex, such as Codex CLI with `spawn_agent`. Another harness's subagents run its own models, so they would not be a Codex review. The parent session spawns one subagent per aspect, each given the rendered prompt as its task. The read-only rule is an instruction in that prompt rather than a sandbox, which is why step 5 of the workflow checks the tree afterwards for lasting changes. That check catches the writes that matter most, edits to the files under review, but not every write; see [Checking the tree](#checking-the-tree).
 
 There is no process here, so there is no exit status and no output file of the subagent's own. The signals that remain are the reply itself and the schema:
 

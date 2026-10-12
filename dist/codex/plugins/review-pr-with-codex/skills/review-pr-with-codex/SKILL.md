@@ -60,10 +60,12 @@ Parse the arguments, then decide which selected aspects apply to this change, fo
 
 ### 3. Choose the entry point
 
-Decide by capability, not by harness name:
+Every aspect must be reviewed by a Codex model, so the question is which way of reaching one this session has:
 
-- **Subagents**: the session offers a tool that spawns a subagent with its own task, such as `spawn_agent` in Codex CLI. Use the subagent path.
-- **`codex exec`**: otherwise, as in Claude Code. Confirm with `command -v codex` and `codex --version`. If `codex` is not installed, stop and say so. Authentication failures surface only when an aspect runs, as a failed aspect.
+- **Subagents**: this session is itself running on Codex and can spawn Codex subagents, as Codex CLI does with `spawn_agent`. Use the subagent path.
+- **`codex exec`**: in every other session, as in Claude Code. Confirm with `command -v codex` and `codex --version`. If `codex` is not installed, stop and say so. Authentication failures surface only when an aspect runs, as a failed aspect.
+
+A subagent tool alone does not qualify. Claude Code's subagents, for example, run Claude models, so routing the aspects through them would produce a Claude review under this skill's name. Use a session's subagents only when they are Codex.
 
 `./references/invocation.md` has the details and the reasons for each rule below.
 
@@ -86,7 +88,7 @@ It starts one `codex exec --sandbox read-only` per aspect, waits for all of them
 1. Spawn one subagent per aspect with that task, all before waiting on any. Pass `--model` and `--effort` when the spawn tool accepts a model and reasoning effort; when it does not, the subagents use the session's settings, and the report says so.
 1. Save each subagent's final reply, exactly as returned, to `<tmp>/out/<name>.json`, and check it with `codex-aspects validate --aspect <name> --scope <tmp>/scope.json <tmp>/out/<name>.json`. A reply that is empty, is not JSON or does not match the schema is a failed aspect. Do not repair it, and do not read its prose as findings.
 
-When the session cannot spawn subagents after all, run each rendered task yourself, one after another, saving and validating each result the same way. Say in the report that the aspects ran sequentially and in this session.
+When this Codex session cannot spawn subagents after all, run each rendered task yourself, one after another, saving and validating each result the same way. Say in the report that the aspects ran sequentially and in this session.
 
 ### 5. Check the tree for lasting changes
 
