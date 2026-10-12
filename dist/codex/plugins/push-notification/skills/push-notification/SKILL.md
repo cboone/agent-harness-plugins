@@ -33,7 +33,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/push-notification" check
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/push-notification" send --title TITLE --message BODY [--priority LEVEL] [--tag TAG]... [--click URL] [--dry-run]
 ```
 
-Claude Code replaces the plugin-root placeholder with the installed plugin's directory before this file reaches you. Where the placeholder arrives unsubstituted, as in Codex CLI and OpenCode, the script is `../../scripts/push-notification` relative to the directory that holds this `SKILL.md`; resolve that path once and use it in every command.
+Claude Code replaces the plugin-root placeholder with the installed plugin's directory before this file reaches you. Where the placeholder arrives unsubstituted, as in Codex CLI, the script is `../../scripts/push-notification` relative to the directory that holds this `SKILL.md`; resolve that path once and use it in every command.
 
 For a body with quotes, newlines or shell metacharacters, pass `--message -` and send the body on stdin through a quoted heredoc, so the shell does not expand it.
 
