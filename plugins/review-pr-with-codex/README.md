@@ -11,7 +11,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-A single general review spreads its attention across everything at once. This skill splits the review into focused aspects, each with its own instructions, runs them side by side with Codex as the reviewer, and merges what they find into one report. It is a counterpart to the `review-pr` command of Anthropic's `pr-review-toolkit`, whose six agents its aspects are adapted from, with Codex doing the reviewing.
+This skill splits a review into focused aspects, each with its own instructions, runs them side by side with Codex as the reviewer, and merges what they find into one report. It is a Codex counterpart to the `review-pr` command of Anthropic's `pr-review-toolkit`, whose six agents its aspects are adapted from.
 
 | Aspect     | Looks at                                                           | Runs when                            |
 | ---------- | ------------------------------------------------------------------ | ------------------------------------ |
@@ -33,7 +33,7 @@ The review covers committed changes since the merge base with the default branch
 
 Every review aspect is read-only: in a `--sandbox read-only` Codex run, or under read-only instructions in a subagent. Either way, the skill compares the working tree before and after the review and reports any path whose content changed. That comparison catches lasting edits, not every write: a change only to the index, a write to an ignored, untracked file, an edit reverted before the second scan, or an edit that Git normalization maps back to the same content leaves no trace.
 
-An aspect whose run failed, timed out, or returned nothing or something unparseable is reported as **failed**, never as clean. A reviewer that crashed and a reviewer that found nothing produce the same empty list unless something checks, and the bundled helper checks every signal: the exit status, the output file, its size, its schema, and that it names the right aspect and snapshot.
+An aspect whose run failed, timed out, or returned nothing or something unparseable is reported as **failed**, never as clean. A reviewer that crashed and one that found nothing produce the same empty list unless something checks. The bundled helper checks every signal: the exit status, the output file, its size, its schema, and that it names the right aspect and snapshot.
 
 ### Simplify
 

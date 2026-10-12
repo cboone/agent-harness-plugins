@@ -14,7 +14,7 @@ Each aspect is one focused review, adapted from an agent in `pr-review-toolkit` 
 ## Arguments
 
 - No aspect arguments, or `all`, selects every aspect, and step 2 then drops the ones that do not apply.
-- Named aspects select exactly those, in any order, and each runs even when the criteria below would skip it. The user asked for it.
+- Named aspects select exactly those, in any order, and each runs even when the criteria below would skip it.
 - `all` together with names is the same as `all`.
 - An unknown name stops the skill before any review runs: report it and list the valid names. Do not guess what was meant.
 
