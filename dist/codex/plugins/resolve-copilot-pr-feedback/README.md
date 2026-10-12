@@ -20,7 +20,7 @@ An audit counts every Copilot review, review comment and pull request comment, a
 
 Valid findings are fixed as a class rather than one line at a time: the skill names the general problem behind the finding, searches the branch, its parallel paths, mirror copies and callers for every instance, and fixes them together, so the next Copilot round does not find the sibling. A finding that is a sibling of one already fixed on the pull request is not patched again. The skill leaves it open, names the chain in its summary with a design option that would close the class, such as an allowlist, a structural parser or an explicit threat model, and ends `Partial` so the choice reaches you.
 
-Before pushing, two more passes run over what the fixes changed. A consistency sweep finds every document, comment, help text and the pull request body that describes a changed name, option, default or behavior, and corrects what now disagrees. Then the fixes are reviewed with the [Review Anti-Patterns](../review-anti-patterns/README.md) skill, in a read-only subagent where the session has one: Important findings are fixed, the second fix is reviewed once more, and anything still standing is reported rather than pushed.
+Before pushing, two more passes run over what the fixes changed. A consistency sweep finds every document, comment, help text and the pull request body that describes a changed name, option, default or behavior, and corrects what now disagrees; the pull request body is updated only after the fixes are pushed. Then the fixes are reviewed with the [Review Anti-Patterns](../review-anti-patterns/README.md) skill, in a read-only subagent where the session has one: Important findings are fixed, the second fix is reviewed once more, and anything still standing is reported rather than pushed.
 
 After reaching a terminal workflow state, posts a required final summary comment to the PR for every outcome, including no unresolved feedback, non-code-change resolutions, code-change resolutions, partial processing, and failures when PR context and GitHub authentication are available. If the summary cannot be posted, the workflow reports that incomplete state and preserves the intended summary for retry instead of claiming success. No-op runs reuse an existing same-head no-op summary instead of adding duplicate comments. Helps you quickly triage automated suggestions after opening a PR.
 
@@ -37,7 +37,7 @@ This skill runs custom scripts and git commands that trigger permission prompts.
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/resolve-copilot-threads\" *)", "Bash(git push*)", "Bash(gh api --paginate repos/*/issues/*/comments*)", "Bash(mktemp -u \"${TMPDIR:-/tmp}/copilot-reply-*\")", "Bash(rm -f *copilot-reply-*)", "Bash(gh pr comment *)", "Bash(gh pr view *)", "Bash(gh pr edit *)", "Bash(git rev-parse HEAD)", "Bash(mktemp -u \"${TMPDIR:-/tmp}/copilot-summary-*\")", "Bash(rm -f *copilot-summary-*)"]
+    "allow": ["Bash(bash \"*/resolve-copilot-threads\" *)", "Bash(git push*)", "Bash(gh api --paginate repos/*/issues/*/comments*)", "Bash(mktemp -u \"${TMPDIR:-/tmp}/copilot-reply-*\")", "Bash(rm -f *copilot-reply-*)", "Bash(gh pr comment *)", "Bash(gh pr view *)", "Bash(gh pr edit *)", "Bash(mktemp -u \"${TMPDIR:-/tmp}/copilot-body-*\")", "Bash(rm -f *copilot-body-*)", "Bash(git rev-parse HEAD)", "Bash(mktemp -u \"${TMPDIR:-/tmp}/copilot-summary-*\")", "Bash(rm -f *copilot-summary-*)"]
   }
 }
 ```
