@@ -62,7 +62,9 @@ $ "${CODEX_ASPECTS_BIN}" > /dev/null 2>&1
 ## Unknown command
 
 ```scrut
-$ "${CODEX_ASPECTS_BIN}" review 2>&1 | tail -1
+$ "${CODEX_ASPECTS_BIN}" review > "${FIXTURE}/unknown.err" 2>&1; echo "exit=$?" \
+>   && tail -1 "${FIXTURE}/unknown.err"
+exit=1
 codex-aspects: unknown command: review
 ```
 
@@ -92,8 +94,44 @@ codex-aspects: unknown aspect 'style'; expected one of: code errors tests commen
 ## A scope file that is not review-scope output
 
 ```scrut
-$ printf '{}' > "${FIXTURE}/bad-scope.json" && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/bad-scope.json" 2>&1 | sed "s|${FIXTURE}|FIXTURE|"
+$ printf '{}' > "${FIXTURE}/bad-scope.json" \
+>   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/bad-scope.json" > "${FIXTURE}/bad-scope.err" 2>&1; echo "exit=$?"; } \
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/bad-scope.err"
+exit=1
 codex-aspects: scope file 'FIXTURE/bad-scope.json' is not review-scope output
+```
+
+## A scope file missing a bucket
+
+Without this check the untracked files would drop out of the prompt with no
+error, and the review would cover less than it claimed.
+
+```scrut
+$ jq 'del(.untracked)' "${FIXTURE}/scope.json" > "${FIXTURE}/no-untracked.json" \
+>   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/no-untracked.json" > "${FIXTURE}/no-untracked.err" 2>&1; echo "exit=$?"; } \
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/no-untracked.err"
+exit=1
+codex-aspects: scope file 'FIXTURE/no-untracked.json' is not review-scope output
+```
+
+## An aspect file that cannot be read stops the run before Codex starts
+
+macOS ships Bash 3.2, where `set -e` does not reach into the command
+substitution that renders each prompt, so the read is checked explicitly.
+Without that, the run would go ahead with a prompt that has no instructions.
+
+```scrut
+$ mkdir "${FIXTURE}/aspects" "${FIXTURE}/unreadable-out" \
+>   && cp "$(dirname "${CODEX_ASPECTS_BIN}")/../skills/review-pr-with-codex/references/aspects/"*.md "${FIXTURE}/aspects/" \
+>   && chmod 000 "${FIXTURE}/aspects/code.md" \
+>   && { CODEX_ASPECTS_DIR="${FIXTURE}/aspects" "${CODEX_ASPECTS_BIN}" run --aspect code \
+>        --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/unreadable-out" > "${FIXTURE}/unreadable.err" 2>&1; echo "exit=$?"; } \
+>   && chmod 644 "${FIXTURE}/aspects/code.md" \
+>   && tail -1 "${FIXTURE}/unreadable.err" | sed "s|${FIXTURE}|FIXTURE|" \
+>   && ls "${FIXTURE}/unreadable-out"
+exit=1
+codex-aspects: could not read the aspect instructions at FIXTURE/aspects/code.md
+schema.json
 ```
 
 ## A review prompt is read-only and carries the aspect and snapshot
@@ -169,10 +207,42 @@ types | failed | the output is not JSON | 0
 ```scrut
 $ CODEX_STUB_MODES="code=schema errors=wrong-aspect tests=wrong-snapshot" \
 >   "${CODEX_ASPECTS_BIN}" run --aspect code --aspect errors --aspect tests \
->   --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" | jq -r '.[] | "\(.aspect): \(.reason)"'
+>   --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/mismatch.json"; echo "exit=$?" \
+>   && jq -r '.[] | "\(.aspect): \(.reason)"' "${FIXTURE}/mismatch.json"
+exit=3
 code: the output does not match the schema
 errors: the output names a different aspect
 tests: the output reviewed a different snapshot
+```
+
+## Output holding an invalid object before a valid one fails
+
+jq reads a file as a stream of values and `jq -e` reports on the last one, so
+without a count every later check would see only the valid object.
+
+```scrut
+$ CODEX_STUB_MODES="code=multiple" \
+>   "${CODEX_ASPECTS_BIN}" run --aspect code \
+>   --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/multiple.json"; echo "exit=$?" \
+>   && jq -r '.[] | "\(.aspect): \(.reason)"' "${FIXTURE}/multiple.json"
+exit=3
+code: the output holds 2 JSON values, not one
+```
+
+## A rerun never reports an earlier run's output
+
+The first run leaves a valid output file behind; the second writes none. If
+the helper did not remove the old file before starting, the second run would
+read it and report success for a review that never happened.
+
+```scrut
+$ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" | jq -r '.[0].status' \
+>   && { CODEX_STUB_MODES="code=none" "${CODEX_ASPECTS_BIN}" run --aspect code \
+>        --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/rerun.json"; echo "exit=$?"; } \
+>   && jq -r '.[] | "\(.aspect): \(.reason)"' "${FIXTURE}/rerun.json"
+ok
+exit=3
+code: no output file was written
 ```
 
 ## A clean run exits zero, and a critical finding is still a successful run
@@ -180,10 +250,36 @@ tests: the output reviewed a different snapshot
 ```scrut
 $ CODEX_STUB_MODES="types=critical" \
 >   "${CODEX_ASPECTS_BIN}" run --aspect code --aspect types \
->   --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" | jq -c 'map(.status)' \
+>   --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/clean.json"; echo "exit=$?" \
+>   && jq -c 'map(.status)' "${FIXTURE}/clean.json" \
 >   && jq -r '.findings[0].severity' "${FIXTURE}/out/types.json"
+exit=0
 ["ok","ok"]
 critical
+```
+
+## Aspects run concurrently, and each result stays with its aspect
+
+In barrier mode no stub run writes its output until all three have started,
+so a runner that waited for one before starting the next would fail here. The
+first aspect also finishes last, which checks that a late result is still
+matched to the aspect that produced it.
+
+```scrut
+$ mkdir "${FIXTURE}/barrier" \
+>   && CODEX_STUB_MODES="code=barrier-slow errors=barrier tests=barrier" \
+>      CODEX_STUB_BARRIER_DIR="${FIXTURE}/barrier" CODEX_STUB_BARRIER_COUNT=3 \
+>      "${CODEX_ASPECTS_BIN}" run --aspect code --aspect errors --aspect tests \
+>      --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/barrier.json"; echo "exit=$?" \
+>   && jq -r '.[] | "\(.aspect): \(.status)"' "${FIXTURE}/barrier.json" \
+>   && for aspect in code errors tests; do jq -r .aspect "${FIXTURE}/out/${aspect}.json"; done
+exit=0
+code: ok
+errors: ok
+tests: ok
+code
+errors
+tests
 ```
 
 ## Review aspects run read-only, with the model, effort and stdin set per run
@@ -240,14 +336,17 @@ codex-aspects: aspect 'code' is listed twice
 ## The output directory must be outside the working tree
 
 ```scrut
-$ mkdir -p inside && "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir inside 2>&1; rmdir inside
+$ mkdir -p inside && "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir inside 2>&1; echo "exit=$?"; rmdir inside
 codex-aspects: --out-dir must be outside the working tree
+exit=1
 ```
 
 ## The output directory must exist
 
 ```scrut
-$ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/missing" 2>&1 | sed "s|${FIXTURE}|FIXTURE|"
+$ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/missing" > "${FIXTURE}/missing.err" 2>&1; echo "exit=$?" \
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/missing.err"
+exit=1
 codex-aspects: --out-dir 'FIXTURE/missing' is not an existing directory
 ```
 

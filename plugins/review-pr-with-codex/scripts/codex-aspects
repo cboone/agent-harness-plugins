@@ -108,8 +108,22 @@ function require_scope_file() {
 
   [[ -n "${scope}" ]] || die "--scope is required"
   [[ -f "${scope}" ]] || die "scope file '${scope}' does not exist"
-  jq -e 'type == "object" and (.snapshot | type == "string") and (.tree | type == "string")' \
-    "${scope}" > /dev/null 2>&1 \
+
+  # Every field the prompt and the change report read is checked here, so a
+  # truncated or hand-edited scope stops the command instead of rendering a
+  # prompt with a bucket silently left out.
+  jq -e '
+    def paths: type == "array" and all(type == "string");
+    type == "object"
+    and (.head | type == "string")
+    and (.base == null or (.base | type == "string"))
+    and (.snapshot | type == "string")
+    and (.tree | type == "string")
+    and (.committed | paths)
+    and (.staged | paths)
+    and (.unstaged | paths)
+    and (.untracked | paths)
+  ' "${scope}" > /dev/null 2>&1 \
     || die "scope file '${scope}' is not review-scope output"
 }
 
@@ -235,7 +249,15 @@ readonly VALIDATE_FILTER
 # process status of its own; the remaining checks then carry the weight.
 function aspect_status() {
   local aspect="${1}" output="${2}" snapshot="${3}" exit_code="${4}" log="${5}"
-  local reason=""
+  local reason="" value_count=""
+
+  # jq reads a file as a stream of values, and `jq -e` reports on the last one,
+  # so every check after this one would pass a file holding an invalid object
+  # followed by a valid one. Counting the values first means those checks only
+  # ever see a file with exactly one.
+  if [[ -s "${output}" ]]; then
+    value_count="$(jq -n '[inputs] | length' "${output}" 2> /dev/null)" || value_count=""
+  fi
 
   if [[ -n "${exit_code}" && "${exit_code}" != "0" ]]; then
     reason="codex exited with status ${exit_code}"
@@ -243,8 +265,10 @@ function aspect_status() {
     reason="no output file was written"
   elif [[ ! -s "${output}" ]]; then
     reason="the output file is empty"
-  elif ! jq -e . "${output}" > /dev/null 2>&1; then
+  elif [[ -z "${value_count}" || "${value_count}" == "0" ]]; then
     reason="the output is not JSON"
+  elif [[ "${value_count}" != "1" ]]; then
+    reason="the output holds ${value_count} JSON values, not one"
   elif ! jq -e "${VALIDATE_FILTER}" "${output}" > /dev/null 2>&1; then
     reason="the output does not match the schema"
   elif ! jq -e --arg aspect "${aspect}" '.aspect == $aspect' "${output}" > /dev/null; then
@@ -266,26 +290,37 @@ function aspect_status() {
       exit_code: (if $exit_code == "" then null else ($exit_code | tonumber) end),
       output: $output,
       log: (if $log == "" then null else $log end)
-    }'
+    }' \
+    || die "could not build the status for the ${aspect} aspect"
 }
 
-# Prints one bucket of the scope as prompt lines, or nothing when it is empty.
-# An empty bucket is left out rather than listed, because naming a command that
-# returns nothing invites the reviewer to conclude the scope is smaller than it
-# is.
+# Every function from here to render_prompt checks each command it runs with
+# `|| die` instead of relying on `set -e`. `cmd_run` calls render_prompt inside
+# a command substitution, and macOS ships Bash 3.2, which has no
+# inherit_errexit: there, `set -e` is off inside `$(...)`, so an unreadable
+# aspect file or a failed jq query would otherwise leave a prompt with a part
+# missing and a zero exit status, and Codex would review against it.
+
+# Prints the scope as prompt lines. An empty bucket is left out rather than
+# listed, because naming a command that returns nothing invites the reviewer to
+# conclude the scope is smaller than it is.
 function render_scope() {
   local scope="${1}" top_level="${2}"
-  local base committed_count staged_count unstaged_count
+  local base head committed_count staged_count unstaged_count
 
-  base="$(jq -r '.base // ""' "${scope}")"
-  committed_count="$(jq -r '.committed | length' "${scope}")"
-  staged_count="$(jq -r '.staged | length' "${scope}")"
-  unstaged_count="$(jq -r '.unstaged | length' "${scope}")"
+  base="$(jq -r '.base // ""' "${scope}")" || die "could not read the base from ${scope}"
+  head="$(jq -r '.head' "${scope}")" || die "could not read the head from ${scope}"
+  committed_count="$(jq -r '.committed | length' "${scope}")" \
+    || die "could not read the committed bucket from ${scope}"
+  staged_count="$(jq -r '.staged | length' "${scope}")" \
+    || die "could not read the staged bucket from ${scope}"
+  unstaged_count="$(jq -r '.unstaged | length' "${scope}")" \
+    || die "could not read the unstaged bucket from ${scope}"
 
   echo "The scope is all of the following, and you must read all of it:"
   echo
   if [[ -n "${base}" && "${committed_count}" != "0" ]]; then
-    echo "- Committed changes: git diff $(jq -r '.base' "${scope}") $(jq -r '.head' "${scope}")"
+    echo "- Committed changes: git diff ${base} ${head}"
   fi
   if [[ "${staged_count}" != "0" ]]; then
     echo "- Staged changes: git diff --cached"
@@ -294,22 +329,41 @@ function render_scope() {
     echo "- Unstaged changes: git diff"
   fi
 
+  # The untracked paths go through a file rather than a process substitution,
+  # whose exit status Bash never reports: a failed extraction would read as no
+  # untracked files at all. NUL separators keep a file name holding a newline
+  # intact, which is also why they cannot pass through a shell variable.
+  local untracked_list
+  untracked_list="$(mktemp "${TMPDIR:-/tmp}/codex-aspects.XXXXXX")" \
+    || die "could not create a temporary file for the untracked paths"
+  if ! jq -j '.untracked[] | ., "\u0000"' "${scope}" > "${untracked_list}"; then
+    rm -f "${untracked_list}"
+    die "could not read the untracked paths from ${scope}"
+  fi
+
   # Untracked files are in no diff, so they are listed by name. A symlink is
   # given as its link text and never as a path to open: following it would put
   # whatever it points at, possibly outside the repository, into the review.
-  local path has_untracked="false"
+  local path target has_untracked="false" unreadable_link=""
   while IFS= read -r -d '' path; do
     if [[ "${has_untracked}" == "false" ]]; then
       echo "- Untracked files, which are in no diff; read each one:"
       has_untracked="true"
     fi
     if [[ -L "${top_level}/${path}" ]]; then
+      if ! target="$(readlink "${top_level}/${path}")"; then
+        unreadable_link="${path}"
+        break
+      fi
       printf '  - %s -> %s (a symlink; review the link text only and do not open its target)\n' \
-        "${path}" "$(readlink "${top_level}/${path}")"
+        "${path}" "${target}"
     else
       printf '  - %s\n' "${path}"
     fi
-  done < <(jq -j '.untracked[] | ., "\u0000"' "${scope}")
+  done < "${untracked_list}"
+  rm -f "${untracked_list}"
+
+  [[ -z "${unreadable_link}" ]] || die "could not read the symlink ${unreadable_link}"
 }
 
 # Drops the single-line HTML comments an aspect file carries for attribution,
@@ -320,14 +374,15 @@ function aspect_body() {
   local file="${ASPECTS_DIR}/${aspect}.md"
 
   [[ -f "${file}" ]] || die "aspect instructions not found at ${file}"
-  awk '/^<!--.*-->$/ { next } !started && /^$/ { next } { started = 1; print }' "${file}"
+  awk '/^<!--.*-->$/ { next } !started && /^$/ { next } { started = 1; print }' "${file}" \
+    || die "could not read the aspect instructions at ${file}"
 }
 
 function render_prompt() {
   local aspect="${1}" scope="${2}" top_level="${3}"
   local snapshot
 
-  snapshot="$(jq -r '.snapshot' "${scope}")"
+  snapshot="$(jq -r '.snapshot' "${scope}")" || die "could not read the snapshot from ${scope}"
 
   if [[ "${aspect}" == "simplify" ]]; then
     cat << 'WRITE_RULES'
@@ -346,11 +401,11 @@ READ_RULES
   fi
 
   echo
-  aspect_body "${aspect}"
+  aspect_body "${aspect}" || die "could not render the ${aspect} instructions"
   echo
   echo "## Scope"
   echo
-  render_scope "${scope}" "${top_level}"
+  render_scope "${scope}" "${top_level}" || die "could not render the scope from ${scope}"
   cat << 'GUIDE_TEXT'
 
 Read the surrounding code, not only the diff. Before reviewing, read the

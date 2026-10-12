@@ -15,6 +15,14 @@
 #   wrong-aspect    valid output naming another aspect
 #   wrong-snapshot  valid output naming another snapshot
 #   write           valid output, after appending a line to CODEX_STUB_WRITE
+#   multiple        an invalid object followed by a valid output, in one file
+#   barrier         valid output, written only once every run has started
+#   barrier-slow    as barrier, then a further second before writing
+#
+# The barrier modes prove the runs are concurrent. Each run marks itself
+# started in CODEX_STUB_BARRIER_DIR and waits, for at most ten seconds, until
+# CODEX_STUB_BARRIER_COUNT runs have done the same. Runs started one after
+# another never reach the count, so the first one gives up and exits 1.
 #
 # When CODEX_STUB_LOG_DIR is set, each run records its arguments, minus the
 # prompt, and the kind of stdin it was given in <dir>/<aspect>.args.
@@ -59,6 +67,27 @@ function write_output() {
     strengths: ["Stub strength."],
     summary: "Stub summary."
   }' > "${file}"
+}
+
+function wait_for_barrier() {
+  local aspect="${1}"
+  local dir="${CODEX_STUB_BARRIER_DIR:?CODEX_STUB_BARRIER_DIR is required for barrier mode}"
+  local count="${CODEX_STUB_BARRIER_COUNT:?CODEX_STUB_BARRIER_COUNT is required for barrier mode}"
+  local tries=0 started
+
+  : > "${dir}/${aspect}"
+  while true; do
+    started="$(find "${dir}" -type f | wc -l | tr -d ' ')"
+    if [[ "${started}" -ge "${count}" ]]; then
+      return 0
+    fi
+    tries=$((tries + 1))
+    if [[ "${tries}" -ge 100 ]]; then
+      echo "stub: only ${started} of ${count} runs started" >&2
+      exit 1
+    fi
+    sleep 0.1
+  done
 }
 
 function main() {
@@ -127,6 +156,21 @@ function main() {
     wrong-snapshot) write_output "${output}" "${aspect}" "0000000" "" ;;
     write)
       echo "# simplified" >> "${CODEX_STUB_WRITE:?CODEX_STUB_WRITE is required for write mode}"
+      write_output "${output}" "${aspect}" "${snapshot}" ""
+      ;;
+    multiple)
+      write_output "${output}.valid" "${aspect}" "${snapshot}" ""
+      {
+        echo '{"aspect": "types"}'
+        cat "${output}.valid"
+      } > "${output}"
+      rm -f "${output}.valid"
+      ;;
+    barrier | barrier-slow)
+      wait_for_barrier "${aspect}"
+      if [[ "$(mode_for "${aspect}")" == "barrier-slow" ]]; then
+        sleep 1
+      fi
       write_output "${output}" "${aspect}" "${snapshot}" ""
       ;;
     *) die "unknown mode for ${aspect}" ;;

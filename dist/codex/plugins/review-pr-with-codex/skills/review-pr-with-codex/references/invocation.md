@@ -43,7 +43,7 @@ The prompt goes in as one argument because stdin must stay `/dev/null`. The help
 1. `codex` exited zero.
 1. The output file exists. A run that failed or was stopped never creates it.
 1. The file is not empty. `jq .` exits 0 on an empty file, so emptiness is checked by size.
-1. The file parses as JSON.
+1. The file parses as JSON and holds exactly one value. jq reads a file as a stream and `jq -e` reports on the last value, so without this an invalid object followed by a valid one would pass every check after it.
 1. It matches the schema.
 1. Its `aspect` is the one requested, and its `reviewed` is the snapshot in the scope file.
 
@@ -51,7 +51,7 @@ An unauthenticated `codex` fails at step 1. Report it as an authentication probl
 
 ## The subagent path
 
-The parent session spawns one subagent per aspect, each given the rendered prompt as its task. The read-only rule is an instruction in that prompt rather than a sandbox, which is why step 5 of the workflow measures the tree afterwards instead of trusting it.
+The parent session spawns one subagent per aspect, each given the rendered prompt as its task. The read-only rule is an instruction in that prompt rather than a sandbox, which is why step 5 of the workflow checks the tree afterwards for lasting changes. That check catches the writes that matter most, edits to the files under review, but not every write; see [Checking the tree](#checking-the-tree).
 
 There is no process here, so there is no exit status and no output file of the subagent's own. The signals that remain are the reply itself and the schema:
 
@@ -62,6 +62,14 @@ Never transcribe a reply into the schema by hand. The subagent was asked for the
 
 Each subagent's task is complete on its own, so the skill needs no `[agents.<role>]` entries in the user's `~/.codex/config.toml`.
 
-## Verifying the tree
+## Checking the tree
 
 `review-scope` records `tree`, a content digest of every path git tracks or would track. `codex-aspects changes` diffs two of those trees, so it lists every path whose content changed between two scope reads, whichever bucket the path sits in, and marks those outside the first read's scope. Ignored files are outside the digest, which matches the scope rule.
+
+The comparison detects lasting content changes between two scans, and nothing more. It cannot see:
+
+- a change only to the index, such as staging a file without editing it, because the tree is built from the content on disk;
+- a write to an ignored file, because ignored paths are outside the digest;
+- an edit reverted before the second scan, because only the two end states are compared.
+
+So an empty result means no lasting changes were found, not that nothing was written. On the `codex exec` path the read-only sandbox is what prevents writes, and the comparison is a second check. On the subagent path the comparison is the only check, with those blind spots.
