@@ -31,8 +31,10 @@ bound to their content: committed branch changes, staged changes, unstaged
 changes, and untracked files.
 
 The snapshot is content-addressed, so it does not move when a file changes
-which bucket it is in: staging a file, unstaging it, or recording an intent to
-add it with `git add -N` all leave it alone, while changing a byte moves it.
+which bucket it is in: staging a tracked file, unstaging it, or recording an
+intent to add a new one with `git add -N` all leave it alone, while changing a
+byte moves it. Force-adding an ignored file changes which paths are tracked,
+and moves it.
 
 Options:
   --base <ref>  Take the merge base with this ref instead of with the default
