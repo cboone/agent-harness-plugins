@@ -127,7 +127,7 @@ Offer the fixes in two groups, because they carry different consequences:
 - **Local edits** to `CONFIG_PATH`, and to `CODEOWNERS` when replacing `reviewers`: offer "all Errors and Warnings", "selected numbers", or "none".
 - **Outward-facing changes**, each confirmed on its own: creating a missing label, enabling alerts or security updates, adding a Dependabot secret (which the user runs), editing a workflow to skip a secret-dependent job on Dependabot runs.
 
-Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print the options as a numbered list and wait for the answer.
+Use `AskUserQuestion` where it exists. Without it (Codex CLI), print the options as a numbered list and wait for the answer.
 
 ### 7. Apply
 

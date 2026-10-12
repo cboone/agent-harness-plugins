@@ -48,7 +48,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/dependabot-prs" fetch --repo OWNER/REPO
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
-**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the script with `**/triage-dependabot-prs/**/scripts/dependabot-prs`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
+**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/triage-dependabot-prs/**/scripts/dependabot-prs`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
 
 The examples below abbreviate the path to `dependabot-prs`. Expand it when you run a command.
 
@@ -198,7 +198,7 @@ Offer batch choices built from the non-empty categories, with the recommended on
 - "Request rebases on the 2 needs-refresh PRs"
 - "Leave everything as is"
 
-Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print the options as a numbered list and wait for the answer. The user may also answer with PR numbers and per-PR dispositions.
+Use `AskUserQuestion` where it exists. Without it (Codex CLI), print the options as a numbered list and wait for the answer. The user may also answer with PR numbers and per-PR dispositions.
 
 Ask separately, and only when the user's answer calls for them:
 
@@ -213,7 +213,7 @@ Carry out the selected actions per `./references/actions.md`:
 
 - One write at a time, re-checking the PR's state immediately before each one.
 - On the first failure, stop, report what happened and what remains, and ask whether to continue.
-- After requesting rebases, wait for Dependabot to push. Prefer `ScheduleWakeup`, falling back to a blocking `sleep` between polls where it is unavailable (the Codex CLI and OpenCode path). Once the head SHA has moved and checks have concluded, return to step 3 for those PRs only.
+- After requesting rebases, wait for Dependabot to push. Prefer `ScheduleWakeup`, falling back to a blocking `sleep` between polls where it is unavailable (the Codex CLI path). Once the head SHA has moved and checks have concluded, return to step 3 for those PRs only.
 - For a single PR the user wants watched until it is ready to merge, invoke the `monitor-pr` skill. If it is not installed, report the watch as skipped with its installation command, and continue with the next selected action:
 
   ```text

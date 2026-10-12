@@ -3,7 +3,7 @@
 Read [plugin development](../docs/plugin-development.md) for the schemas and path rules these tools enforce.
 
 - `validate-json` and `validate-plugins` are merge gates. Keep cross-reference rule 19 delegated to `check-cross-references`, executable helper checks in rule 18, and review checklist freshness in rule 20, which regenerates through `build-review-checklists`.
-- Generators own `../dist/`, `../.agents/` and the review checklist copies in `set-up-review-config`'s `references/checklists/`; changes must keep their output deterministic and freshness checks effective. `make build` runs `build-review-checklists` before the mirror builders, which copy `../plugins/`.
+- Generators own `../dist/`, `../.agents/` and the review checklist copies in `set-up-review-config`'s `references/checklists/`; changes must keep their output deterministic and freshness checks effective. `make build` runs `build-review-checklists` before `build-codex-marketplace`, which copies `../plugins/`.
 - `build-codex-marketplace` makes one sanctioned change to a `SKILL.md`: `disable-model-invocation` becomes an `agents/openai.yaml` invocation policy, because Codex ignores the frontmatter field. Rule 16b reproduces that edit independently and rejects every other difference, and rule 21 holds frontmatter to the allowlist in `../docs/plugin-development.md`. Any further transformation changes both rules on purpose.
 - `list-shell-scripts` defines local and CI shell-lint selection. Ensure new executable helpers are included.
 - `make test-scrut` runs scrut documents through `run-scrut-documents`, one scrut process per document in parallel, and its `--list` builds the CI scrut matrix, so local runs and CI cover the same documents.

@@ -8,8 +8,8 @@ yarn.lock
 # Reformatting them rewrites history and can mangle template syntax in fences.
 docs/plans/done/
 
-# Generated mirrors: rebuilt by bin/build-codex-marketplace and
-# bin/build-opencode-mirror, and CI fails if they drift from source.
+# Generated mirrors: rebuilt by bin/build-codex-marketplace, and CI fails if
+# they drift from source.
 dist/
 .agents/
 
