@@ -80,7 +80,7 @@ Run with Homebrew's unpatched `alerter` 26.5 first on `PATH`, ahead of the local
 
 ### Merge with #606
 
-#606 removed the OpenCode adapter and released notify `3.0.0`. Merging `main` dropped this branch's OpenCode changes (section 3) and the OpenCode caller of `scripts/fire-alerter`, which now serves the Claude Code and Codex hooks only.
+PR #606 removed the OpenCode adapter and released notify `3.0.0`. Merging `main` dropped this branch's OpenCode changes (section 3) and the OpenCode caller of `scripts/fire-alerter`, which now serves the Claude Code and Codex hooks only.
 
 ## Follow-up
 
