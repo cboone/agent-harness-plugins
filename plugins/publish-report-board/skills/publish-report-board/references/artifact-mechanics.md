@@ -48,7 +48,7 @@ Never declare `capabilities` on a board, and omit the field on every republish s
 
 ## Without the Artifact Tool
 
-Codex CLI and OpenCode have no Artifact tool. There the board is the standalone HTML file at `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/REPO-PATH/REPO-BOARD.html`, where `REPO-PATH` is the host and path of `repoUrl` together, or `github.com/OWNER/REPO` when the board carries none. That name belongs to the published board alone; the page rendered before the checks is a separate file beside it:
+Codex CLI has no Artifact tool. There the board is the standalone HTML file at `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/REPO-PATH/REPO-BOARD.html`, where `REPO-PATH` is the host and path of `repoUrl` together, or `github.com/OWNER/REPO` when the board carries none. That name belongs to the published board alone; the page rendered before the checks is a separate file beside it:
 
 1. Render with `--standalone` to a working page beside the board, `REPO-BOARD.next.html`, rather than onto the board itself, creating the board directory if it does not exist.
 2. On a re-sync, look for the previous board at that exact path and run `report-board compare` against it before publishing anything. Stop here if the report names a changed `title`, `repo`, or `repoUrl`: the board has moved, and publishing would strand it. This reaches a changed title, whose board sits at the same path, but not a changed `repo` or `repoUrl`: those move the path itself, so the lookup misses, the sync reads as a first publish, and step 8 never runs. Tell the user where the old board was left.
