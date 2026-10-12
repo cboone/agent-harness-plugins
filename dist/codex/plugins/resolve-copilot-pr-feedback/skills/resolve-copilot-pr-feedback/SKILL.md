@@ -488,7 +488,20 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 
    This runs all detected project linters and formatters, fixes issues, and commits the fixes without pushing.
 
-1. If `lint-and-fix` reports `Lint status: success` or `Lint status: no-tools`, read what it committed with `git diff --no-ext-diff --no-textconv LINT_BASE`. Formatting and whitespace need nothing more. When its commits change anything else, such as a name, a behavior or a documented value, sweep `LINT_BASE..HEAD` as step 5 does, updating the prepared pull request body correction, and review it once with the `review-anti-patterns` skill using step 6's second continuation block with `--range LINT_BASE..HEAD`. Record that review in step 9's `### Fix review` section; an Important finding still standing stops the push exactly as it does in step 6. Otherwise proceed to step 8, whose push includes the lint commits.
+1. If `lint-and-fix` reports `Lint status: success` or `Lint status: no-tools`, read what it committed with `git diff --no-ext-diff --no-textconv LINT_BASE`. Formatting and whitespace need nothing more. When its commits change anything else, such as a name, a behavior or a documented value, sweep `LINT_BASE..HEAD` as step 5 does, updating the prepared pull request body correction, and review it once with the `review-anti-patterns` skill, passing this continuation block:
+
+   ```text
+   review-anti-patterns --range LINT_BASE..HEAD
+
+   Parent continuation:
+   - Caller: resolve-copilot-pr-feedback
+   - Resume target: Step 7, record the review, then Step 8 unless a standing Important finding stops the push.
+   - On success or no-op: Return the JSON findings; record them without fixing them.
+   - On failure or unavailable: Record a workflow-level failure quoting the reason, skip Step 8's push, and go to Step 9.
+   ```
+
+   Record that review in step 9's `### Fix review` section, and fix nothing it reports. An Important finding still standing stops the push: record it under `Remaining Required Action`, skip step 8's push and go to step 9. Otherwise proceed to step 8, whose push includes the lint commits.
+
 1. If `lint-and-fix` reports unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, record a workflow-level failure. Do not claim lint success, do not push potentially non-compliant changes, skip step 8, and post the required partial or failed summary in step 9 because PR context exists.
 
 ### 8. Verify Completion
