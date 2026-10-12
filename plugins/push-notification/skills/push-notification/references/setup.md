@@ -16,6 +16,8 @@ A self-hosted ntfy server with access control can use any name, protected by an 
 
 Install the ntfy app (Android or iOS), add a subscription to that topic, and for a self-hosted server, add the server URL in the app first.
 
+On iOS with a self-hosted server, instant background delivery needs the server to forward polls upstream, normally `upstream-base-url: "https://ntfy.sh"` in its configuration; see [iOS instant notifications](https://docs.ntfy.sh/config/#ios-instant-notifications). Without it, notifications can arrive late. A successful send confirms that the server published the message, not that the phone showed it.
+
 ## 3. Write the config file
 
 The helper reads `${XDG_CONFIG_HOME:-$HOME/.config}/push-notification/config`, or the file named by `PUSH_NOTIFICATION_CONFIG`. It holds `KEY=value` lines; blank lines and lines starting with `#` are ignored, and the file is parsed, never run as shell.

@@ -281,9 +281,16 @@ function backend_ntfy_status() {
 # Prints its argument with the topic and token replaced, for server text that
 # may echo them back, such as a partial publish answer or a proxy error.
 function ntfy_redact() {
-  local text="${1}"
-  [[ -z "${SETTING_NTFY_TOPIC}" ]] || text="${text//"${SETTING_NTFY_TOPIC}"/(topic hidden)}"
-  [[ -z "${SETTING_NTFY_TOKEN}" ]] || text="${text//"${SETTING_NTFY_TOKEN}"/(token hidden)}"
+  local text="${1}" topic="${SETTING_NTFY_TOPIC}" token="${SETTING_NTFY_TOKEN}"
+  # The longer value goes first, so a topic that occurs inside the token, or
+  # the other way round, cannot leave part of the longer one behind.
+  if ((${#topic} > ${#token})); then
+    [[ -z "${topic}" ]] || text="${text//"${topic}"/(topic hidden)}"
+    [[ -z "${token}" ]] || text="${text//"${token}"/(token hidden)}"
+  else
+    [[ -z "${token}" ]] || text="${text//"${token}"/(token hidden)}"
+    [[ -z "${topic}" ]] || text="${text//"${topic}"/(topic hidden)}"
+  fi
   printf '%s' "${text}"
 }
 
@@ -352,11 +359,16 @@ function backend_ntfy_send() {
   # its id, and the topic. Anything else, such as a proxy page or an error
   # object that carries an id of its own, leaves delivery unconfirmed. The
   # answer is never printed, because it holds the topic.
-  if ! jq -e . > /dev/null 2>&1 <<< "${response}"; then
-    echo "${SCRIPT_NAME}: ${url} answered with something other than JSON, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
+  # jq's own message tells a response that is not JSON from a jq that could
+  # not run, so it is relayed rather than replaced.
+  local parse_error status=0
+  parse_error="$(jq empty 2>&1 <<< "${response}")" || status=$?
+  if ((status != 0)); then
+    echo "${SCRIPT_NAME}: could not read the answer from ${url} as JSON (jq exited ${status}: $(ntfy_redact "${parse_error%%$'\n'*}")), so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
     return 1
   fi
-  local id status=0
+  local id
+  status=0
   id="$(NTFY_EXPECTED_TOPIC="${SETTING_NTFY_TOPIC}" jq -r '
     if type == "object" and .event == "message" and (.id | type) == "string" and .id != ""
       and .topic == env.NTFY_EXPECTED_TOPIC and (has("error") | not)
@@ -366,6 +378,12 @@ function backend_ntfy_send() {
     return 1
   fi
   if [[ -z "${id}" ]]; then
+    local server_error
+    server_error="$(jq -r 'if type == "object" and has("error") then "\(.error)\(if has("code") then " (code \(.code))" else "" end)" else empty end' <<< "${response}" 2> /dev/null)" || server_error=""
+    if [[ -n "${server_error}" ]]; then
+      echo "${SCRIPT_NAME}: ${url} answered with an error, so delivery is unconfirmed: $(ntfy_redact "${server_error}")" >&2
+      return 1
+    fi
     echo "${SCRIPT_NAME}: ${url} answered, but not with an ntfy confirmation for this topic, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
     return 1
   fi

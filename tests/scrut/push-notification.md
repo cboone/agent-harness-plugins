@@ -362,6 +362,21 @@ curl: (22) The requested URL returned error: 401
 [1]
 ```
 
+When the topic occurs inside the token, or the token inside the topic, the
+longer value is replaced first, so no part of either is left behind.
+
+```scrut
+$ pn NTFY_TOPIC=tk_sample NTFY_TOKEN=tk_sample_private STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='Bearer tk_sample_private for tk_sample' send --title Done 2>&1 | head -n 1
+push-notification: ntfy did not confirm the notification: Bearer (token hidden) for (topic hidden)
+[1]
+```
+
+```scrut
+$ pn NTFY_TOPIC=agent-tk_x-feed NTFY_TOKEN=tk_x STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='topic agent-tk_x-feed, Bearer tk_x' send --title Done 2>&1 | head -n 1
+push-notification: ntfy did not confirm the notification: topic (topic hidden), Bearer (token hidden)
+[1]
+```
+
 ```scrut
 $ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
 0
@@ -375,13 +390,21 @@ carries the topic.
 
 ```scrut
 $ pn STUB_CURL_RESPONSE='<html><body>Sign in</body></html>' send --title Done 2>&1
-push-notification: https://ntfy.sh/ answered with something other than JSON, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
+push-notification: could not read the answer from https://ntfy.sh/ as JSON (jq exited *: jq: parse error: *), so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between. (glob)
 [1]
 ```
 
 ```scrut
 $ pn STUB_CURL_RESPONSE='{"id":42}' send --title Done 2>&1
 push-notification: https://ntfy.sh/ answered, but not with an ntfy confirmation for this topic, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
+[1]
+```
+
+An error object in an answer is relayed, so the cause is not lost.
+
+```scrut
+$ pn STUB_CURL_RESPONSE='{"error":"upstream unavailable","code":50301}' send --title Done 2>&1
+push-notification: https://ntfy.sh/ answered with an error, so delivery is unconfirmed: upstream unavailable (code 50301)
 [1]
 ```
 
