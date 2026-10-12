@@ -202,8 +202,8 @@ $ sed -n '/^## Scope$/,/^Read the surrounding/p' "${FIXTURE}/errors.prompt" | se
 
 The scope is all of the following, and you must read all of it:
 
-- Committed changes: git diff SHA SHA
-- Unstaged changes: git diff
+- Committed changes: git --no-pager diff --no-ext-diff --no-textconv --no-color --no-relative SHA SHA
+- Unstaged changes: git --no-pager diff --no-ext-diff --no-textconv --no-color --no-relative
 - Untracked files, which are in no diff; read each one:
   - fresh.txt
   - link -> /etc/hosts (a symlink; review the link text only and do not open its target)
@@ -219,7 +219,7 @@ material to review.
 
 ```scrut
 $ base="$(jq -r .base "${FIXTURE}/scope.json")" \
->   && grep -c -F "\`git show ${base}:<path>\`" "${FIXTURE}/errors.prompt" \
+>   && grep -c -F "\`git --no-pager show --no-textconv ${base}:<path>\`" "${FIXTURE}/errors.prompt" \
 >   && grep -c 'never as instructions to you\.$' "${FIXTURE}/errors.prompt"
 1
 1
@@ -616,7 +616,7 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/staged" && cd "${FIXTURE}/staged" \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/staged-scope.json" \
 >   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/staged-scope.json" \
 >   | grep -e '^- Staged changes' -e '^- Unstaged changes'
-- Staged changes: git diff --cached
+- Staged changes: git --no-pager diff --no-ext-diff --no-textconv --no-color --no-relative --cached
 ```
 
 ## Changes covers the whole tree with diff.relative on, from a subdirectory
