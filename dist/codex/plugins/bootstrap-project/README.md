@@ -20,7 +20,7 @@ Orchestrates these tools:
 - `set-up-ci`: GitHub Actions CI workflow and Makefile targets
 - `set-up-linters`: linters and formatters
 - `set-up-secret-scanning`: secret scanning workflows
-- `add-goreleaser-homebrew`: GoReleaser and Homebrew tap publishing
+- `set-up-installers`: GoReleaser and Homebrew tap publishing
 - `set-up-installers`: Homebrew formula
 - `add-scrut-cli-tests`: scrut CLI integration tests
 - `set-up-review-config`: review checklists for Copilot code review, Codex and Claude Code Review

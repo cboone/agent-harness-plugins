@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.",
+  "description": "Create GitHub Actions CI and matching Makefile targets, or optimize existing workflows with path filters, concurrency groups and job timeouts.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["ci", "github-actions", "makefile", "setup", "testing", "workflow", "zig", "zsh"],
   "license": "MIT",
   "name": "set-up-ci",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "2.1.2"
+  "version": "2.2.0"
 }

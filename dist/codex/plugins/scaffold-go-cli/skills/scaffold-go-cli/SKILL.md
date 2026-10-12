@@ -2,7 +2,8 @@
 name: scaffold-go-cli
 description: >-
   Scaffold a Go CLI with Cobra, GoReleaser, CI, and Homebrew publishing. Use for
-  "scaffold a Go CLI"; for a library, use scaffold-go-library.
+  "scaffold a Go CLI", "add a version command", or "add build metadata". For a
+  library, use scaffold-go-library.
 ---
 
 # Scaffold Go CLI
@@ -10,6 +11,8 @@ description: >-
 Generate the full boilerplate for a new Go CLI project.
 
 ## Workflow
+
+For an existing Cobra CLI whose request is to add or repair a version command or build metadata, read `./references/existing-cli-version/workflow.md` and run only that workflow. Preserve the existing project; skip the new-project scaffolding below.
 
 ### 1. Gather Project Information
 
@@ -232,7 +235,7 @@ Print a summary of what was created:
 - Remind the user to:
   - Add subcommands under `cmd/` as the CLI grows
   - Run `make help` to see available Makefile targets
-  - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
+  - Use the `scaffold-new-repo` skill in community-files mode to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
 - If `HOMEBREW_TAP_TOKEN` setup was deferred in step 20: check whether a GitHub remote exists and is accessible before creating a follow-up issue:
 
   ```bash

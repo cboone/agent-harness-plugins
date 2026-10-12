@@ -234,7 +234,7 @@ Print a summary of what was created:
   - Tag releases with `git tag v0.1.0 && git push --tags` to trigger GoReleaser
   - Write tests alongside source files (e.g., `PACKAGE-NAME_test.go`)
   - Use `make coverage` to generate an HTML coverage report
-  - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
+  - Use the `scaffold-new-repo` skill in community-files mode to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
 
 ## Error Handling
 

@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.",
+  "description": "Set up installer and distribution methods for Go, Swift, Rust and Zig projects, configure GoReleaser publishing, and write or update Homebrew formulae.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["cargo", "distribution", "github-actions", "go", "golang", "homebrew", "install", "release", "rust", "setup", "swift", "zig"],
   "license": "MIT",
   "name": "set-up-installers",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "3.1.4"
+  "version": "3.2.0"
 }

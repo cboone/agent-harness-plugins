@@ -42,6 +42,6 @@ The `{{` and `}}` delimiters are Go template syntax; do not quote the entries. Y
 
 ## Notes
 
-- If the project does not yet have a `.goreleaser.yml` or `.goreleaser.yaml`, this step is skipped. Suggest `/add-goreleaser-homebrew` to add one.
+- If the project does not yet have a `.goreleaser.yml` or `.goreleaser.yaml`, this step is skipped. Suggest `/set-up-installers` to add one.
 - Some projects use `id:` or multiple build entries to produce variant binaries. Apply the ldflags update to every build entry that maps to the main binary.
 - Snapshot builds (`goreleaser release --snapshot`) substitute the same templates and produce a working `version` like `0.0.0-next-SNAPSHOT-abc1234`. The metadata in the binary will reflect the snapshot values, which is the expected behavior for local validation.

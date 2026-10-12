@@ -1,10 +1,3 @@
----
-name: add-cobra-version
-description: >-
-  Add a version subcommand with commit and build-date ldflags to an existing
-  Cobra Go CLI. Use for "add a version command" or "add build metadata".
----
-
 # Add Cobra Version
 
 Add a `version` subcommand with version, commit hash, build date, and Go runtime version to an existing Cobra-based Go CLI, and coordinate the matching ldflags wiring across `main.go`, `cmd/root.go`, `.goreleaser.yml`, and the `Makefile`.
@@ -82,7 +75,7 @@ Use the result wherever templates reference `PROJECT-NAME`.
 
 ### 5. Generate `cmd/version.go`
 
-Read `./references/version-go.md` for the `cmd/version.go` template and create the file from it.
+Read `./references/existing-cli-version/version-go.md` for the `cmd/version.go` template and create the file from it.
 
 - Replace `PROJECT-NAME` with the binary name from step 4.
 - Replace `ROOT-COMMAND-VAR` with the root command variable identifier detected in step 1.
@@ -96,7 +89,7 @@ The generated subcommand:
 
 ### 6. Update `cmd/root.go`
 
-Read `./references/root-go-update.md` for the modifications to apply.
+Read `./references/existing-cli-version/root-go-update.md` for the modifications to apply.
 
 If the file already declares the package-level variables (`version`, `commit`, `date`) and exposes a `SetVersionInfo(v, c, d string)` function, leave it alone.
 
@@ -108,7 +101,7 @@ Otherwise:
 
 ### 7. Update `main.go`
 
-Read `./references/main-go-update.md` for the modifications to apply.
+Read `./references/existing-cli-version/main-go-update.md` for the modifications to apply.
 
 If `main.go` already declares all three `version`, `commit`, `date` package-level variables and calls `cmd.SetVersionInfo(version, commit, date)` before `cmd.Execute()`, leave the file alone.
 
@@ -120,9 +113,9 @@ Otherwise:
 
 ### 8. Update `.goreleaser.yml`
 
-Read `./references/goreleaser-update.md` for the modifications to apply.
+Read `./references/existing-cli-version/goreleaser-update.md` for the modifications to apply.
 
-GoReleaser may use `.goreleaser.yml` or `.goreleaser.yaml`. Check both. If neither exists, skip this step and note in the summary that GoReleaser is not configured (the user can run `/add-goreleaser-homebrew` to add it).
+GoReleaser may use `.goreleaser.yml` or `.goreleaser.yaml`. Check both. If neither exists, skip this step and note in the summary that GoReleaser is not configured (the user can run `/set-up-installers` to add it).
 
 In the existing config, find the `builds[].ldflags` list. Ensure all three `-X` entries are present:
 
@@ -136,7 +129,7 @@ If `-X main.version=...` is already present, keep it. Add only the `-X` entries 
 
 ### 9. Update the Makefile
 
-Read `./references/makefile-update.md` for the modifications to apply.
+Read `./references/existing-cli-version/makefile-update.md` for the modifications to apply.
 
 If no `Makefile` exists in the project root, skip this step and note in the summary.
 
@@ -187,7 +180,7 @@ Print a summary covering:
 
 - Files created (`cmd/version.go`).
 - Files modified (`main.go`, `cmd/root.go`, `.goreleaser.yml`, `Makefile`), one bullet each, noting whether the change was a clean add or a replacement of an existing `SetVersion`/`-X main.version` site.
-- Skipped steps and why (for example "no GoReleaser config detected; run `/add-goreleaser-homebrew` to set one up").
+- Skipped steps and why (for example "no GoReleaser config detected; run `/set-up-installers` to set one up").
 - The three commands the user can now run: `<binary> version`, `<binary> version --json`, and `<binary> --version`.
 - A reminder that local builds without ldflags will display `dev` / `none` / `unknown`, and that a tagged GoReleaser release is what fills in real values.
 
@@ -202,8 +195,8 @@ Print a summary covering:
 
 ## Reference Templates
 
-- `./references/version-go.md` -- the `cmd/version.go` template.
-- `./references/root-go-update.md` -- modifications to `cmd/root.go`.
-- `./references/main-go-update.md` -- modifications to `main.go`.
-- `./references/goreleaser-update.md` -- ldflags additions for `.goreleaser.yml`/`.goreleaser.yaml`.
-- `./references/makefile-update.md` -- `VERSION`/`COMMIT`/`DATE` and `LDFLAGS` additions for the Makefile.
+- `./references/existing-cli-version/version-go.md` -- the `cmd/version.go` template.
+- `./references/existing-cli-version/root-go-update.md` -- modifications to `cmd/root.go`.
+- `./references/existing-cli-version/main-go-update.md` -- modifications to `main.go`.
+- `./references/existing-cli-version/goreleaser-update.md` -- ldflags additions for `.goreleaser.yml`/`.goreleaser.yaml`.
+- `./references/existing-cli-version/makefile-update.md` -- `VERSION`/`COMMIT`/`DATE` and `LDFLAGS` additions for the Makefile.

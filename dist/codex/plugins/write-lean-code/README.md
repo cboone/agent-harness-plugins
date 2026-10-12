@@ -1,6 +1,6 @@
 # Write Lean Code
 
-Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming.
+Lean 4 and Mathlib conventions for code, proofs, naming, documentation and compile-time tests that mirror the public library API.
 
 **Type:** Skill
 **Trigger:** `/write-lean-code` (also activates automatically)
@@ -32,7 +32,11 @@ The skill also activates automatically when Claude Code touches Lean source.
 
 ## See Also
 
-- [Write Lean Tests](../write-lean-tests/README.md): the sibling test-side conventions for compile-time API regression tests
+- [Write Lean Tests](../write-lean-code/README.md): the sibling test-side conventions for compile-time API regression tests
 - [Write Math](../write-math/README.md): mathematical exposition for Lean docstrings and informal proof prose
 - [Write Formalization Roadmap](../write-formalization-roadmap/README.md): structuring multi-milestone proof projects
 - [All plugins](../../../../README.md)
+
+## Additional workflows
+
+Compile-time test conventions are in `skills/write-lean-code/references/tests/workflow.md`. The single Lean review checklist includes mirrored test coverage where the project uses that convention.

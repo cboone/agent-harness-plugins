@@ -14,9 +14,11 @@ Works for both brand-new and existing repositories.
 ## Skill dependencies
 
 - **Required:** None
-- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `pin-everything`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-lean-library`, `scaffold-new-repo`, `scaffold-rust-cli`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
+- **Optional:** `scaffold-new-repo`, `set-up-installers`, `add-scrut-cli-tests`, `pin-everything`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-lean-library`, `scaffold-rust-cli`, `set-up-ci`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
 
 ## Workflow
+
+When selecting folded workflows, pass the intended mode: `scaffold-new-repo` community-files for community documents, `set-up-installers` goreleaser for release configuration, and `set-up-ci` runner-usage for CI optimization. Keep foundation scaffolding and installer distribution as separate selections with their own scope. A mode selection runs only that mode, preserving existing project files.
 
 ### 1. Detect Project Type
 
@@ -47,32 +49,32 @@ If multiple types are detected (monorepo), note all of them.
 
 Check for files and directories that indicate what is already set up:
 
-| Check                                                                                                     | Indicates                | Typically provided by                         |
-| --------------------------------------------------------------------------------------------------------- | ------------------------ | --------------------------------------------- |
-| `LICENSE`                                                                                                 | License exists           | `scaffold-new-repo`                           |
-| `README.md`                                                                                               | README exists            | `scaffold-new-repo`                           |
-| `CHANGELOG.md`                                                                                            | Changelog exists         | `scaffold-new-repo`                           |
-| `AGENTS.md` or `CLAUDE.md`                                                                                | Agent config exists      | `scaffold-new-repo`                           |
-| `.github/workflows/ci.yml`                                                                                | CI exists                | `set-up-ci` / `scaffold-go-*`                 |
-| `.github/workflows/text-lint.yml`                                                                         | Text lint CI exists      | `scaffold-lean-library` / `set-up-linters`    |
-| `.github/workflows/release.yml`                                                                           | Release workflow exists  | `scaffold-go-*` / `add-goreleaser-homebrew`   |
-| `.github/workflows/gitleaks.yml`                                                                          | Gitleaks exists          | `set-up-secret-scanning`                      |
-| `.github/workflows/trufflehog.yml`                                                                        | TruffleHog exists        | `set-up-secret-scanning`                      |
-| `lean-toolchain`                                                                                          | Lean toolchain exists    | `scaffold-lean-library`                       |
-| `lakefile.toml` or `lakefile.lean`                                                                        | Lake package exists      | `scaffold-lean-library`                       |
-| `bin/bootstrap-worktree`                                                                                  | Lean bootstrap exists    | `scaffold-lean-library`                       |
-| `.goreleaser.yml`                                                                                         | GoReleaser exists        | `scaffold-go-cli` / `add-goreleaser-homebrew` |
-| `rustfmt.toml`                                                                                            | Rust formatter config    | `scaffold-rust-cli` / `set-up-linters`        |
-| `deny.toml`                                                                                               | cargo-deny config        | `scaffold-rust-cli` / `set-up-linters`        |
-| `typos.toml`                                                                                              | typos config             | `scaffold-rust-cli` / `set-up-linters`        |
-| `cliff.toml`                                                                                              | git-cliff config         | `scaffold-rust-cli`                           |
-| `Makefile`                                                                                                | Build targets exist      | `scaffold-go-*` / `set-up-ci`                 |
-| Linter config files                                                                                       | Linters exist            | `set-up-linters` / `scaffold-go-*`            |
-| `tests/scrut/`                                                                                            | Scrut tests exist        | `add-scrut-cli-tests`                         |
-| `Formula/`                                                                                                | Installers exist         | `set-up-installers`                           |
-| `CONTRIBUTING.md`                                                                                         | Community files exist    | `add-community-files`                         |
-| `.github/skills/code-review/SKILL.md` and `REVIEW.md` both holding a `set-up-review-config` managed block | Review config exists     | `set-up-review-config`                        |
-| `.github/dependabot.yml` or `.yaml`                                                                       | Dependabot config exists | `pin-everything`                              |
+| Check                                                                                                     | Indicates                | Typically provided by                      |
+| --------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------ |
+| `LICENSE`                                                                                                 | License exists           | `scaffold-new-repo`                        |
+| `README.md`                                                                                               | README exists            | `scaffold-new-repo`                        |
+| `CHANGELOG.md`                                                                                            | Changelog exists         | `scaffold-new-repo`                        |
+| `AGENTS.md` or `CLAUDE.md`                                                                                | Agent config exists      | `scaffold-new-repo`                        |
+| `.github/workflows/ci.yml`                                                                                | CI exists                | `set-up-ci` / `scaffold-go-*`              |
+| `.github/workflows/text-lint.yml`                                                                         | Text lint CI exists      | `scaffold-lean-library` / `set-up-linters` |
+| `.github/workflows/release.yml`                                                                           | Release workflow exists  | `scaffold-go-*` / `set-up-installers`      |
+| `.github/workflows/gitleaks.yml`                                                                          | Gitleaks exists          | `set-up-secret-scanning`                   |
+| `.github/workflows/trufflehog.yml`                                                                        | TruffleHog exists        | `set-up-secret-scanning`                   |
+| `lean-toolchain`                                                                                          | Lean toolchain exists    | `scaffold-lean-library`                    |
+| `lakefile.toml` or `lakefile.lean`                                                                        | Lake package exists      | `scaffold-lean-library`                    |
+| `bin/bootstrap-worktree`                                                                                  | Lean bootstrap exists    | `scaffold-lean-library`                    |
+| `.goreleaser.yml`                                                                                         | GoReleaser exists        | `scaffold-go-cli` / `set-up-installers`    |
+| `rustfmt.toml`                                                                                            | Rust formatter config    | `scaffold-rust-cli` / `set-up-linters`     |
+| `deny.toml`                                                                                               | cargo-deny config        | `scaffold-rust-cli` / `set-up-linters`     |
+| `typos.toml`                                                                                              | typos config             | `scaffold-rust-cli` / `set-up-linters`     |
+| `cliff.toml`                                                                                              | git-cliff config         | `scaffold-rust-cli`                        |
+| `Makefile`                                                                                                | Build targets exist      | `scaffold-go-*` / `set-up-ci`              |
+| Linter config files                                                                                       | Linters exist            | `set-up-linters` / `scaffold-go-*`         |
+| `tests/scrut/`                                                                                            | Scrut tests exist        | `add-scrut-cli-tests`                      |
+| `Formula/`                                                                                                | Installers exist         | `set-up-installers`                        |
+| `CONTRIBUTING.md`                                                                                         | Community files exist    | `scaffold-new-repo`                        |
+| `.github/skills/code-review/SKILL.md` and `REVIEW.md` both holding a `set-up-review-config` managed block | Review config exists     | `set-up-review-config`                     |
+| `.github/dependabot.yml` or `.yaml`                                                                       | Dependabot config exists | `pin-everything`                           |
 
 ### 3. Build the Plan
 
@@ -80,13 +82,13 @@ Determine which tools to run based on the project type, existing infrastructure,
 
 Key overlap rules:
 
-- If `scaffold-go-cli` will run: skip `set-up-ci`, skip `add-goreleaser-homebrew` (both are included). Scope down `scaffold-new-repo` to only generate agent config files (AGENTS.md, CLAUDE.md, .claude/settings.json, .github/copilot-instructions.md).
-- If `scaffold-go-library` will run: skip `set-up-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. `add-goreleaser-homebrew` and `set-up-installers` are not applicable for libraries.
+- If `scaffold-go-cli` will run: skip `set-up-ci`, skip `set-up-installers` (both are included). Scope down `scaffold-new-repo` to only generate agent config files (AGENTS.md, CLAUDE.md, .claude/settings.json, .github/copilot-instructions.md).
+- If `scaffold-go-library` will run: skip `set-up-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. `set-up-installers` and `set-up-installers` are not applicable for libraries.
 - If `scaffold-go-library` will run: still run `set-up-linters` but only for cross-language tools (Prettier, EditorConfig, markdownlint) since `.golangci.yml` is already configured.
 - If `scaffold-go-cli` will run: still run `set-up-linters` for `.golangci.yml` configuration and cross-language tools (the Makefile lint target exists but no golangci config).
 - If `scaffold-rust-cli` will run: skip `set-up-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. Still run `set-up-linters` but only for cross-language tools since Rust linting is already configured.
 - If `scaffold-lean-library` will run: skip `set-up-ci` (included). Scope down `scaffold-new-repo` to only generate missing agent/config extras not produced by the Lean scaffolder. Scope down `set-up-linters` to extra cross-language or Pandoc-academic refinements only, since the Lean scaffolder generates `lintDriver`, `lean-lint`, Markdown and cspell configs, and split CI workflows.
-- If `scaffold-lean-library` will run: mark `add-goreleaser-homebrew`, `set-up-installers`, and `add-scrut-cli-tests` as not applicable because Lean libraries do not produce distributable binaries.
+- If `scaffold-lean-library` will run: mark `set-up-installers`, `set-up-installers`, and `add-scrut-cli-tests` as not applicable because Lean libraries do not produce distributable binaries.
 - `set-up-secret-scanning` is always independent (no overlap with other tools).
 - `add-scrut-cli-tests` is applicable only if the project produces a CLI binary.
 - `set-up-review-config` runs after the scaffolders, CI, linters and scrut tests, so it sees the final file types and the checks CI runs, and it adds its review rules to the `AGENTS.md` that `scaffold-new-repo` or a scaffolder wrote. It is applicable when the project has, or will have once the plan runs, a file type with a review checklist (Go, Lean, Bash, Zsh, Markdown or scrut tests). Managed blocks in both `.github/skills/code-review/SKILL.md` and `REVIEW.md` at plan time make it `Already set up`. One without the other leaves a reviewer unconfigured, so the skill runs and fills the gap. `AGENTS.md` is not part of this test, because a repository may have declined it.
@@ -99,8 +101,8 @@ Execution order (dependencies flow downward):
 1. `set-up-ci` (if not already covered by step 2)
 1. `set-up-linters` (cross-language tools, or full setup if no language scaffolder already covered lint wiring)
 1. `set-up-secret-scanning` (secret scanning)
-1. `add-goreleaser-homebrew` (if Go CLI and not already covered by step 2)
-1. `add-community-files` (community files: CONTRIBUTING, CoC, SECURITY, PR template)
+1. `set-up-installers` (if Go CLI and not already covered by step 2)
+1. `scaffold-new-repo` community-files mode (community files: CONTRIBUTING, CoC, SECURITY, PR template)
 1. `set-up-installers` (if CLI project)
 1. `add-scrut-cli-tests` (if CLI project)
 1. `set-up-review-config` (review checklists for Copilot, Codex and Claude Code Review; after the tools above, so it sees their file types and CI checks)
@@ -128,8 +130,8 @@ Example output:
 | 3   | set-up-ci                | Skipped        | Covered by scaffold-go-cli                  |
 | 4   | set-up-linters           | Scoped down    | Cross-language tools only (Prettier, etc.)  |
 | 5   | set-up-secret-scanning   | Will run       | Gitleaks + TruffleHog secret scanning       |
-| 6   | add-goreleaser-homebrew  | Skipped        | Covered by scaffold-go-cli                  |
-| 7   | add-community-files      | Will run       | CONTRIBUTING, CoC, SECURITY, PR template    |
+| 6   | set-up-installers  | Skipped        | Covered by scaffold-go-cli                  |
+| 7   | scaffold-new-repo      | Will run       | CONTRIBUTING, CoC, SECURITY, PR template    |
 | 8   | set-up-installers        | Will run       | Homebrew formula                            |
 | 9   | add-scrut-cli-tests      | Will run       | Scrut CLI integration tests                 |
 | 10  | set-up-review-config     | Will run       | Review checklists for automated reviewers   |
@@ -147,7 +149,7 @@ Wait for explicit approval before proceeding.
 
 The tools referenced in this plan are skills. Invoke the skill for each selected item:
 
-- `add-community-files`
+- `scaffold-new-repo`
 - `scaffold-new-repo`
 - `scaffold-go-cli`
 - `scaffold-go-library`
@@ -156,7 +158,7 @@ The tools referenced in this plan are skills. Invoke the skill for each selected
 - `set-up-ci`
 - `set-up-linters`
 - `set-up-secret-scanning`
-- `add-goreleaser-homebrew`
+- `set-up-installers`
 - `set-up-installers`
 - `add-scrut-cli-tests`
 - `set-up-review-config`

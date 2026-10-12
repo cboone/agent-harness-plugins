@@ -39,7 +39,7 @@ One companion skill is now available: [Write Real-Time Audio Code](../write-real
 
 ## See Also
 
-- [Write Lean Tests](../write-lean-tests/README.md): the compile-time case, where piecewise tests all pass while the API fails to compose
+- [Write Lean Tests](../write-lean-code/README.md): the compile-time case, where piecewise tests all pass while the API fails to compose
 - [Write Scrut Tests](../write-scrut-tests/README.md): snapshot assertions that widen until they can no longer discriminate
 - [Set-Up CI](../set-up-ci/README.md): the CI gates these controls attach to
 - [Review Branch](../review-branch/README.md): where a reviewer should be looking for a plant table

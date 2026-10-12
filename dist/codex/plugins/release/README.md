@@ -57,5 +57,5 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 - [Commit](../commit/README.md): commit without creating a release
 - [PR](../pr/README.md): commit, push, and open a pull request
-- [Add GoReleaser Homebrew](../add-goreleaser-homebrew/README.md): set up the release pipeline that runs after tagging
+- [Add GoReleaser Homebrew](../set-up-installers/README.md): set up the release pipeline that runs after tagging
 - [All plugins](../../../../README.md)

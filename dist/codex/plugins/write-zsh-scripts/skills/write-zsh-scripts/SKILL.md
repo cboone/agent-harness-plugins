@@ -2,8 +2,8 @@
 name: write-zsh-scripts
 description: >-
   Apply zsh style conventions when creating, editing, or reviewing zsh scripts,
-  .zshrc and other startup files, plugins, and completions. To lint them, use
-  check-zsh-scripts.
+  .zshrc and other startup files, plugins, and completions, and check them with
+  syntax, compilation, lint and formatting tools. Use for "check zsh" or "lint zsh".
 ---
 
 # Zsh Style Guide
@@ -74,6 +74,8 @@ For zsh completion function conventions, read `./references/completions.md`. Key
 When reviewing a pull request, apply `./references/review-checklist.md`: the rules of this guide that a reviewer can check in a diff, ranked as Important, Nits and Do not flag. The same checklist is installed into repositories for automated reviewers, so update it whenever a rule here changes.
 
 ## Validation
+
+For a lint or validation request, read `./references/lint/workflow.md` and follow its file selection, tool checks, scoping rules and result reporting. That workflow also covers startup files such as `.zshrc`.
 
 Whenever possible, validate the script before finishing. Prefer using a project-specific validation script, if available. Common locations include declarations in `package.json`, `Makefile` targets, and scripts stored in `bin/`.
 
