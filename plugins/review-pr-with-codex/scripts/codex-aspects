@@ -35,9 +35,9 @@ readonly EXIT_ASPECT_FAILED
 EXIT_CANCELLATION_INCOMPLETE=4
 readonly EXIT_CANCELLATION_INCOMPLETE
 
-# The diff command the prompt tells reviewers to run. See render_scope.
-PROMPT_GIT_DIFF="git --no-pager diff --no-ext-diff --no-textconv --no-color --no-relative"
-readonly PROMPT_GIT_DIFF
+# The diff arguments the prompt tells reviewers to run. See render_scope.
+PROMPT_GIT_DIFF_ARGS="diff --no-ext-diff --no-textconv --no-color --no-relative"
+readonly PROMPT_GIT_DIFF_ARGS
 
 # The `codex exec` processes `run` has started and not yet waited for. Global,
 # because the EXIT trap runs after cmd_run's locals are gone.
@@ -140,7 +140,8 @@ Usage: codex-aspects schema
        codex-aspects finish --validation passed|failed|unverified <gate-options>
        codex-aspects prompt --aspect <name> --scope <file> [--guide-name <name>]
        codex-aspects run --aspect <name> [--aspect <name>...] --scope <file>
-                         --out-dir <dir> [--model <model>] [--effort <level>]
+                         --out-dir <dir> [--guide-name <name>...]
+                         [--model <model>] [--effort <level>]
        codex-aspects validate --aspect <name> --scope <file> <output-file>
        codex-aspects changes --before <file> --after <file>
 
@@ -437,7 +438,9 @@ function render_scope() {
   # otherwise run a helper or show the reviewer something other than the change.
   local quoted_root diff
   quoted_root="$(jq -nr --arg root "${top_level}" '$root | @sh')" || die "could not quote the repository root"
-  diff="${PROMPT_GIT_DIFF/git --no-pager/git --no-pager -C ${quoted_root}}"
+  # Concatenated, not substituted: a replacement value expands `&` on some Bash
+  # versions, which would corrupt a root containing an ampersand.
+  diff="git --no-pager -C ${quoted_root} ${PROMPT_GIT_DIFF_ARGS}"
   diff_lines="$(jq -r --arg diff "${diff}" '
     (if (.committed | length) > 0 then "- Committed changes: \($diff) \(.base) \(.head)" else empty end),
     (if (.staged | length) > 0 then "- Staged changes: \($diff) --cached" else empty end),
