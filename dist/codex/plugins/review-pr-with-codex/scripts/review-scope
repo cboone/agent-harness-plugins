@@ -67,9 +67,9 @@ function die() {
 # Measured against `codex-cli 0.157.1`: `pattern` and `minimum` are both
 # honored, and a lookaround rejects the whole schema with
 # `Invalid JSON schema: regex lookaround is not supported`, which fails the
-# round before the review starts. The schema is only half the defense, since the
-# Claude backend has no schema at all; `references/ledger.md` carries the check
-# that covers every backend.
+# round before the review starts. The schema is only half the defense, since a
+# reviewer whose reply is transcribed has no schema at all;
+# `references/ledger.md` carries the location check that covers every reviewer.
 function print_schema() {
   cat << 'SCHEMA_TEXT'
 {
