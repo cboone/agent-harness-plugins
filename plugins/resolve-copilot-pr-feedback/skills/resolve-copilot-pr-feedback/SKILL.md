@@ -375,8 +375,8 @@ Copilot names one instance of a problem; fix its whole class:
 1. **Check for a sibling chain first**, per [Sibling Chains](#sibling-chains). If this finding is a sibling of one fixed in an earlier run on this PR, stop here and follow that section instead of patching. Findings of one class that arrive in the same run are not a chain: fix them together below.
 1. **Name the class** in one sentence: the general problem behind the finding, not the one line. "The redactor misses `password=` with spaces around `=`" is an instance; "key and value redaction handles only some separator and quoting forms" is the class.
 1. **Find every instance of the class.** Search the branch's changes and the files they touch for the same shape elsewhere, parallel branches of the same logic, mirror or generated copies, and callers or consumers that rely on the behavior. Read each hit; keep only real instances.
-1. **Fix them together**, in one commit, so the class is closed at once. When a structural change would remove the class (an allowlist instead of a blocklist, a real parser instead of pattern matching, one shared helper instead of copies), prefer it, and say so in the commit message.
-1. Commit the fix as a new commit (do NOT push yet; steps 5 to 7 run first).
+1. **Fix them together** in one commit. When a structural change would remove the class (an allowlist instead of a blocklist, a real parser instead of pattern matching, one shared helper instead of copies), prefer it, and say so in the commit message.
+1. Commit the fix as a new commit. Do not push yet: steps 5 to 7 run first.
 1. Leave the thread open: step 8 resolves it after the push.
 
 #### Sibling Chains
@@ -422,7 +422,7 @@ Every review-body finding gets a row in the step 9 summary and in the local audi
 
 ### 5. Review the Fixes
 
-Review the fixes once, act on what the review finds, and leave the rest to step 8's closing review. Invoke `review-anti-patterns` for both reviews the same way: in a read-only subagent where the session has one, otherwise in this session, without `--run-checks`, since the checkout holds the whole pull request, and with this continuation block, where `RANGE` names the commits to review and `STEP` is the step invoking it:
+Invoke `review-anti-patterns` the same way for this review and step 8's closing review: in a read-only subagent where the session has one, otherwise in this session. Omit `--run-checks`, since the checkout holds the whole pull request. Pass this continuation block, where `RANGE` names the commits to review and `STEP` is the step invoking it:
 
 ```text
 review-anti-patterns --range RANGE
@@ -458,11 +458,9 @@ Parent continuation:
 - On lint failure or skipped required lint work: Record a workflow-level failure with the unresolved lint state, and continue to Step 8.
 ```
 
-It runs the project's linters and formatters, fixes what it can, and commits the fixes without pushing.
-
 ### 8. Close, Push and Verify
 
-1. **Closing review.** When `git diff --no-ext-diff --no-textconv REVIEWED_HEAD` shows anything beyond formatting and whitespace, which covers step 5's fixes, step 6's corrections and any lint change of substance, invoke the `review-anti-patterns` skill once more with `RANGE` set to `REVIEWED_HEAD..HEAD`. Record it in `### Fix review`, and fix nothing it reports. Do not review a third time.
+1. **Closing review.** When `git diff --no-ext-diff --no-textconv REVIEWED_HEAD` shows anything beyond formatting and whitespace, invoke the `review-anti-patterns` skill once more with `RANGE` set to `REVIEWED_HEAD..HEAD`. That range holds step 5's fixes, step 6's corrections and lint's commits. Record the review in `### Fix review`, and fix nothing it reports. Do not review a third time.
 1. **Push gate.** Push only when no workflow-level failure is recorded and the closing review left no Important finding standing. Otherwise record each standing finding under `Remaining Required Action` and go to step 9: Valid and Incorrect threads stay open, and the pull request body stays unchanged.
 1. **Push:** `git push`
 1. **Resolve each Valid or Incorrect thread** whose commit this push carried, using the script.
@@ -658,7 +656,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **`fetch`, `fetch-reviews` and `audit` were all run** (a thread fetch alone cannot see review-body findings, and neither fetch sees a Copilot comment outside a Copilot thread)
 1. **EVERY addressed thread resolved via the script** (not just code fixed!), a Valid or Incorrect thread only after its commit is pushed, and never a sibling left `Pending`
 1. **Every Valid fix closes its class**: the summary names the class and the extra sites fixed, and a sibling of an earlier fix is escalated per Sibling Chains rather than patched
-1. **When files changed: the consistency sweep ran and the fix review ran**, each Important finding of the fix review fixed or declined with a rationale, and step 9's `### Fix review` section records it
+1. **When files changed: the fix review, the consistency sweep and, when step 8 needed it, the closing review ran**, each Important finding of the fix review fixed or declined with a rationale, and step 9's `### Fix review` section records them
 1. **EVERY review step 1b chose read in full, and every concern it states and every uncovered item handled and recorded** in the step 9 summary, since there is no thread to resolve and the summary row is the only record
 1. **EVERY review read listed under `Reviews read`**, so the next run's step 1b can skip it, and every row a prior summary left `Pending` or `Failed` carried forward
 1. **EVERY Advisory request quoted** under `Requests for human review`
