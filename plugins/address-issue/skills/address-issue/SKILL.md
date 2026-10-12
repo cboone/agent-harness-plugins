@@ -24,7 +24,7 @@ The user may provide these options inline:
 
 ## Several Issues
 
-Several issue numbers, as in `/address-issue 42 57`, are one combined piece of work: one plan, one approval gate, and one set of changes on the current branch. `workmux:start-issue` chains into this form when it opens one worktree for several issues. Every step below applies to each issue, as follows:
+Several issue numbers, as in `/address-issue 42 57`, share one plan and one approval gate. Step 6 may propose separate PRs and must identify which changes belong on the current branch. `workmux:start-issue` chains into this form when it opens one worktree for several issues. Every step below applies to each issue, as follows:
 
 - **Step 1:** fetch every issue by number. Several issues are always given as numbers; descriptive text names one issue and follows the single-issue workflow.
 - **Step 2:** check each issue's state. Ask about every closed issue at once, and drop any the user declines.
@@ -32,7 +32,7 @@ Several issue numbers, as in `/address-issue 42 57`, are one combined piece of w
 - **Step 4:** show every issue's context, one block per issue.
 - **Step 5:** classify each issue and extract its sub-tasks, keeping track of which issue each sub-task came from.
 - **Step 6:** collect every issue's requirements into one plan, headed `## Plan for Issues #42, #57`, that says which change serves which issue. There is one approval gate for the whole plan, not one per issue.
-- **Step 8:** each commit references every issue its change addresses, as in `feat: add dark mode toggle (#42, #57)`, and together the commits reference every issue in the combined work. The commit prefix follows the classification of the issue or issues the commit addresses.
+- **Step 8:** each commit references every issue its change addresses, as in `feat: add dark mode toggle (#42, #57)`, and together the commits reference every issue addressed on the current branch. The commit prefix follows the classification of the issue or issues the commit addresses.
 - **Steps 9 to 11:** report the status of every issue, including which are marked in progress and which sub-tasks remain for each.
 
 `--dry-run`, `--no-approval`, `--no-commit` and `--commit-per-change` apply to the one combined plan, exactly as they do for one issue.
@@ -145,6 +145,8 @@ Enter plan mode here rather than at step 1. Steps 1 and 4 are read-only, but ste
 
 1. Explore the codebase to understand the relevant areas
 1. Identify the files that need to be created, modified, or deleted
+1. When the plan changes independent areas, propose separate PRs, naming each PR's scope and dependencies. Put sanitizers, parsers, validators and security boundaries in their own PR, together with the tests, consumers and documentation required for that change. Identify the changes to execute on the current branch and leave the other PRs as planned follow-ups; one approval gate still covers the plan.
+1. For input checks, prefer an allowlist of exact known-good forms or a structural parse that removes the whole class over a blocklist or an ad hoc regex patched one input form at a time. Use the `review-anti-patterns` skill's Sibling input forms and Validator gaps questions to assess the design; reference its checklist rather than copying it into the plan.
 1. Present a plan to the user:
 
 ```text
@@ -168,13 +170,13 @@ Enter plan mode here rather than at step 1. Steps 1 and 4 are read-only, but ste
 
 ### 7. Execute the Changes
 
-Work through each planned change, announcing progress:
+Work through each planned change assigned to the current branch, announcing progress. Keep changes assigned to separate PRs as follow-ups:
 
 ```text
 ### Change 1 of N: Modify src/auth.go
 ```
 
-If sub-tasks were extracted from the issue body, work through each sub-task in order.
+If sub-tasks were extracted from the issue body, work through those assigned to the current branch in order.
 
 ### 8. Commit the Changes
 

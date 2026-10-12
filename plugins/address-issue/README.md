@@ -16,6 +16,8 @@ Fetches a GitHub issue by number or search text, classifies it (bug fix, feature
 
 ## Usage
 
+Plans propose separate PRs for independent areas and isolate sanitizers, parsers, validators and security boundaries with their required tests, consumers and documentation. Input-check designs prefer exact-format allowlists or structural parsing over blocklists or regexes patched one input form at a time, using the [Review Anti-patterns](../review-anti-patterns/README.md) checklist as a reference.
+
 ```text
 /address-issue #42
 /address-issue the dark mode issue
@@ -26,7 +28,7 @@ Fetches a GitHub issue by number or search text, classifies it (bug fix, feature
 /address-issue 42 57
 ```
 
-Several issue numbers are addressed as one combined piece of work. Every issue is fetched and checked, you choose whether to keep each closed one, and every open issue that remains is marked in progress. Their requirements go into one plan with one approval stop, and commits reference every issue they address. The options apply to that one plan.
+Several issue numbers share one plan with one approval stop. Every issue is fetched and checked, you choose whether to keep each closed one, and every open issue that remains is marked in progress. The plan may propose separate PRs and identifies the changes for the current branch; other PRs remain planned follow-ups. Commits reference every issue they address. The options apply to that one plan.
 
 | Option                | Description                                          |
 | --------------------- | ---------------------------------------------------- |
