@@ -102,7 +102,8 @@ All in `plugins/resolve-copilot-pr-feedback/skills/resolve-copilot-pr-feedback/S
 1. Step 7b: treat the resolver's sibling-chain `Partial` as a judgment escalation in step 9, quoting the chain and the proposed design option.
 1. Add `--triage-after <n|never>` to Options, Ready Criteria and step 7c, with the blocking rules from Design decisions. Deferred findings are filed in one approved batch through `create-deferred-issues` and listed in the terminal report.
 1. README: options table, the new escalation and the triage policy.
-1. Version: minor bump.
+1. Resolver: an optional `DEFER_SEVERITIES` input. Findings at those Copilot severities are not fixed or filed; their threads are resolved with a deferral reply, and the summary lists them under `### Deferred to follow-up` for the caller to file. Only the resolver judges findings, so the deferral has to happen there.
+1. Version: a minor bump for `monitor-pr`, whose skills include the resolver after the catalog consolidation.
 
 ### Phase 5: smaller, safer PRs
 

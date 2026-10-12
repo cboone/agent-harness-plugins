@@ -15,8 +15,8 @@ Include documentation files in scope, such as READMEs, as well as code comments.
 
 ## Severity
 
-- `critical`: a comment or document that is factually wrong or seriously misleading
-- `important`: a comment that is incomplete in a way that will mislead, or that will clearly go stale
+- `critical`: misleading documentation that causes a concrete merge-blocking consequence, such as data loss, unsafe operation or a security failure
+- `important`: an inaccurate or incomplete comment that causes a supported maintenance or usage error with limited impact
 - `suggestion`: a comment that could be improved, or one that adds nothing and should be removed
 
 In `fix`, give the rewritten text or say why to remove the comment. Record well-written comments under `strengths`.

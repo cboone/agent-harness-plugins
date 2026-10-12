@@ -50,7 +50,7 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's abs
 
 The steps below abbreviate that path to `review-scope`. Expand the abbreviation when you run one.
 
-Do not recompute the snapshot by hand. It is content-addressed on purpose, so that staging a tracked file, unstaging it, or recording an intent to add a new one does not move it, while changing a byte does. Force-adding an ignored file, or removing one from the index, does move it, since the index decides which paths are tracked. A digest over `git status` or `git diff HEAD` moves when a path only changed buckets, and would throw away clean results that are still good. `./references/scope-and-snapshot.md` has the details.
+Do not recompute the snapshot by hand. It binds review to HEAD, the base tip and merge base, disk and index content, and bucket membership. Staging, unstaging and intent-to-add move it because reviewers read those diffs. `tree` identifies disk content only. See `./references/scope-and-snapshot.md`.
 
 ## Workflow
 
@@ -79,7 +79,9 @@ Do not choose a reviewer yourself, and do not fall back to one the user did not 
 
 ### 3. Prepare coverage
 
-When the scope has untracked files, ask once per run, when someone can answer, whether to make them visible with `git add -N`, which records an intent to add without staging content, and restore the index with `git reset -- <paths>` when the round ends. Find any untracked symlinks first: a symlink is in scope as its link text only, never as a file to open. `./references/reviewers.md` covers both.
+When the scope has untracked files, ask once per run, when someone can answer, whether to make them visible with `git add -N`, which records an intent to add without staging content. Record only the paths this run adds, which were untracked when it added them, and never reset an index entry that was there before. Find any untracked symlinks first: a symlink is in scope as its link text only, never as a file to open. `./references/reviewers.md` covers both.
+
+The index is review input, so `git add -N` moves the snapshot. After preparing, run `review-scope` again and replace step 1's snapshot and buckets with its result before running the reviewer; otherwise step 5 would read the preparation as the reviewer's edit. Keep the preparation through step 8 and any confirming round, so the validity check compares like with like. Before a later round, prepare any newly untracked paths and capture a fresh snapshot the same way. Step 11 restores the entries, and so does a run that fails or is cancelled.
 
 Excluding the untracked files is a valid choice and is not a failure, but it does change what a clean result is allowed to claim.
 
@@ -91,7 +93,7 @@ Never pass the reviewer an option that pushes, posts to a pull request, or rewri
 
 ### 5. Check completion and mode
 
-Run `review-scope` again **as soon as the reviewer returns**, before reading its output, and compare the snapshot with step 1's:
+Run `review-scope` again **as soon as the reviewer returns**, before reading its output, and compare the snapshot with the one the round started from, step 1's or the one captured after step 3's preparation:
 
 - **Unchanged**: a **report round**.
 - **Moved**: an **edit round**. Whatever changed the tree did so while the reviewer ran, so the change is this round's result. Record the changed paths.
@@ -169,6 +171,8 @@ Recompute the snapshot. If this was a report round, the fix pass ran, the snapsh
 When the round limit is reached after an edit round, stop with `stopped` and say that the reviewer's last changes have not been reviewed.
 
 ### 11. Report
+
+After the final validity check, restore only this run's intent-to-add entries. Before resetting a path, verify its entry is unchanged and no other session staged its content. Leave changed entries alone and report incomplete cleanup. Label the ledger with the reviewed snapshot and report restoration as a subsequent index change. Apply the same guarded cleanup on failure or cancellation.
 
 Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, reserving the name with an exclusive create before the move, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Move any reply or stderr file stored beside it along with it, named after the ledger, as in `<ledger name>-round-2-reply.txt`, and update the names in the ledger. Use `.txt`: a reply kept verbatim is not formatted, and Markdown linting and formatting would fail on it or change it. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
 

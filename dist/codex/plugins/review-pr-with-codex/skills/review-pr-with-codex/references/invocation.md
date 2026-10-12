@@ -4,7 +4,7 @@ How each entry point runs an aspect, and how a finished aspect is told apart fro
 
 ## Every aspect meets the same contract
 
-1. A review aspect runs without write access to the working tree.
+1. Review aspects must not write. Standalone runs use a read-only sandbox; native subagents rely on instructions and the documented end-state checks.
 1. It covers the whole scope that `review-scope` reported.
 1. Its result is one JSON object matching `codex-aspects schema`, naming its aspect and the snapshot it reviewed.
 1. **A completed aspect is distinguishable from one that did not finish**, by every signal the entry point offers. A missing, empty, unparseable or non-matching result is a failed aspect, never an empty findings list.
@@ -15,7 +15,8 @@ How each entry point runs an aspect, and how a finished aspect is told apart fro
 
 ```bash
 codex exec \
-  --cd <repository root> \
+  --cd <external temporary working directory> \
+  --skip-git-repo-check \
   --sandbox read-only \
   --ephemeral \
   --model <model> \
@@ -29,13 +30,14 @@ Each part is there for a reason:
 
 - **Plain `codex exec`, never `codex exec review` or `codex review`.** Measured against `codex-cli 0.155.1`, the review subcommands fail three ways at once. They accept `--output-schema` and ignore it, returning prose, so their output cannot be validated and a crash looks like a clean review. Their scope flags `--base`, `--uncommitted` and `--commit` exclude each other, so no single run covers committed and uncommitted work (`error: the argument '--base <BRANCH>' cannot be used with '--uncommitted'`). And the scope flags exclude a custom prompt, so the output contract cannot go in the instructions either (`error: the argument '--base <BRANCH>' cannot be used with '[PROMPT]'`). Do not switch to them as a simplification.
 - **`< /dev/null`.** `codex exec` appends a non-terminal stdin to the prompt. An agent harness's stdin is a pipe that never closes, so without the redirect the run prints `Reading additional input from stdin...` and waits forever. Measured against `codex-cli 0.155.1`, it hung until a timeout stopped it and never created its output file, so the aspect produced nothing at all.
-- **`--sandbox read-only`** makes the read-only rule structural. `simplify` alone gets `workspace-write`, and the helper refuses to run it beside any other aspect.
+- **External `--cd` and `--skip-git-repo-check`.** The helper rejects repository-local `TMPDIR` to keep its working directory and prompt artifacts external. This excludes current checkout instructions from initial project-instruction discovery. Global instructions and user configuration remain active. The prompt supplies historical guidance and absolute reads with `git -C`; keep the session directory outside the checkout. `simplify` receives `--add-dir <repository root>` for authorized edits.
+- **`--sandbox read-only`** makes the read-only rule structural. `simplify` alone gets `workspace-write`, and the helper refuses to run it beside any other aspect, without passing the review gate, or when the scope changed after `--scope` was captured. The recheck runs immediately before launch but takes no lock, so a concurrent edit in that window is not prevented.
 - **`--ephemeral`** keeps each run from persisting a session.
 - **`--model` and `--config model_reasoning_effort`** apply to that run only, so the user's Codex defaults are untouched.
 - **`--output-schema` is checked before the review starts, and not every keyword survives.** Measured against `codex-cli 0.157.1`, `pattern` and `minimum` are honored, and a `pattern` with lookaround is rejected with `Invalid JSON schema: regex lookaround is not supported` and HTTP 400, which fails the aspect with no output file. After editing the schema, run it through one real invocation rather than trusting that a valid JSON Schema is an acceptable one.
 - **`--output-schema` and `--output-last-message` point outside the working tree.** A file written inside it would join the scope under review and move the snapshot. The helper refuses an `--out-dir` inside the repository.
 
-Stopping `codex-aspects run`, with TERM or by a failure partway through, stops every Codex run it started, so a `simplify` run cannot go on editing after the caller has measured its changes.
+Stopping `codex-aspects run` records observed descendants, sends TERM to them and each run, then polls for stopped or terminated state before collecting the runs. Polling is bounded; unobserved descendants and processes created during shutdown remain a limitation. If inspection is unavailable or a process remains active, cleanup exits with status `4` and retains its temporary directory. Do not measure final state or simplify until launched workers are known to have stopped. Failed or cancelled runs are incomplete even with valid output.
 
 `codex-aspects` refuses to run from inside the repository under review, because the change could then rewrite the aspect instructions its own review runs with. Run the installed copy of the plugin. Untracked file names and symlink targets go into the prompt as JSON strings, so a crafted name cannot start a line of its own.
 
@@ -56,7 +58,7 @@ An unauthenticated `codex` fails at step 1. Report it as an authentication probl
 
 ## The subagent path
 
-Use this path only in a session that is itself running on Codex, such as Codex CLI with `spawn_agent`. Another harness's subagents run its own models, so they would not be a Codex review. The parent session spawns one subagent per aspect, with the rendered prompt as its task. The read-only rule is an instruction in that prompt, not a sandbox, so step 5 of the workflow checks the tree afterwards for lasting changes. That check catches edits to the files under review, but not every write; see [Checking the tree](#checking-the-tree).
+Use subagents only in a Codex session, such as Codex CLI with `spawn_agent`; other harnesses' subagents use their own models. Schedule within available slots and preserve completed results. When slots cannot be released, run queued aspects sequentially or standalone. Supply each task's full rendered prompt and use fresh context when supported, particularly for model and reasoning-effort overrides. Fresh context does not guarantee isolation from project instructions or permissions; disclose those limits and prefer standalone runs when changed instructions require isolation. Native read-only access relies on instructions, not a sandbox. Step 5 checks for lasting edits, with the limits in [Checking the tree](#checking-the-tree).
 
 There is no process here, so there is no exit status and no output file of the subagent's own. The signals that remain are the reply itself and the schema:
 
@@ -65,17 +67,22 @@ There is no process here, so there is no exit status and no output file of the s
 
 Never transcribe a reply into the schema by hand. A subagent that did not return the JSON object it was asked for did not do what it was told, and its content is unknown.
 
-Each subagent's task is complete on its own, so the skill needs no `[agents.<role>]` entries in the user's `~/.codex/config.toml`.
+On cancellation, stop and observe launched workers before measuring scope. If completion cannot be confirmed, report incomplete cancellation and skip simplification. Tasks are self-contained and need no `[agents.<role>]` entries in the user's `~/.codex/config.toml`.
 
 ## Checking the tree
 
-`review-scope` records `tree`, a content digest of every path git tracks or would track. `codex-aspects changes` diffs two of those trees. It lists every path whose content, as Git would store it, changed between the two scope reads, in any bucket, and marks the ones outside the first read's scope. Untracked files excluded by ignore rules are outside the digest, which matches the scope rule. A tracked file stays covered even when its path matches an ignore rule.
+`review-scope` records a full review-input `snapshot` and a separate `tree`, a content digest of every path git tracks or would track. `codex-aspects changes` diffs two of those trees. It lists every path whose content, as Git would store it, changed between the two scope reads, in any bucket, and marks the ones outside the first read's scope. Untracked files excluded by ignore rules are outside the digest, which matches the scope rule. A tracked file stays covered even when its path matches an ignore rule.
 
 The comparison detects lasting changes to that stored content between two scans, and nothing more. It cannot see:
 
-- a change only to the index, such as staging a file without editing it, because the tree is built from the content on disk;
 - a write to an ignored, untracked file, because those are outside the digest;
 - an edit reverted before the second scan, because only the two end states are compared;
 - an edit that Git normalizes away, such as a line-ending change under text normalization or one a clean filter undoes, because the digest is built from the content Git would store, not the bytes on disk.
 
-So an empty result means no lasting changes were found, not that nothing was written. On the `codex exec` path the read-only sandbox is what prevents writes, and the comparison is a second check. On the subagent path the comparison is the only check, with those blind spots.
+Index content, HEAD, base-tip and bucket changes are detected separately by `scope_changed`, even when `changed` is empty. A changed snapshot invalidates findings and blocks edits. So an empty disk-change result means no lasting content changes were found, not that nothing was written. On the `codex exec` path the read-only sandbox is what prevents writes, and the comparison is a second check. On the subagent path the comparison is the only check, with those blind spots.
+
+## Historical instruction discovery
+
+The helper supplies one non-empty guide per relevant directory from the merge base, or HEAD when no base exists. Precedence is `AGENTS.override.md`, `AGENTS.md`, explicit `--guide-name` fallbacks, then `CLAUDE.md` for compatibility. Pass configured fallback basenames in their configured order; the helper does not inspect user configuration or credentials. It resolves historical relative symlinks, rejects cycles and links outside that tree, and never follows checkout symlinks. Treat changed instructions as review material.
+
+External startup isolates initial checkout instruction discovery, not global policy, user configuration, plugins or tools that discover guidance independently. Native subagents inherit the host environment and cannot claim standalone isolation. Report these limits and verify stronger claims against the installed CLI and its rendered prompt.

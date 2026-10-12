@@ -186,6 +186,45 @@ function repo_name() {
   printf '%s' "${name}"
 }
 
+# POSIX cksum hashes the repository name's bytes without a trailing newline.
+# Equal role counts select equal indices; missing roles retain built-in sounds.
+function resolve_sound() {
+  local builtin="${1}" prefix="${NOTIFY_SOUND_SET:-}" role
+  if [[ ! "${prefix}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    printf '%s' "${builtin}"
+    return
+  fi
+  case "${builtin}" in
+    Glass) role=stop ;;
+    Funk) role=permission ;;
+    Tink) role=attention ;;
+    *)
+      printf '%s' "${builtin}"
+      return
+      ;;
+  esac
+
+  local count=0 base
+  while :; do
+    base="${HOME}/Library/Sounds/${prefix}-${role}-${count}"
+    if [[ -f "${base}.aiff" || -f "${base}.wav" || -f "${base}.caf" ]]; then
+      count=$((count + 1))
+    else
+      break
+    fi
+  done
+  if [[ "${count}" -eq 0 ]]; then
+    printf '%s' "${builtin}"
+    return
+  fi
+
+  local repo checksum
+  repo="$(repo_name)"
+  checksum="$(printf '%s' "${repo}" | cksum)"
+  checksum="${checksum%% *}"
+  printf '%s' "${prefix}-${role}-$((checksum % count))"
+}
+
 function compute_branch_suffix() {
   local branch
   branch="$(git branch --show-current 2> /dev/null)" || branch=""
@@ -511,7 +550,7 @@ function do_cc_elicit() {
     "Question" \
     "$(compute_subtitle)" \
     "${body:-Needs input}" \
-    "Tink" \
+    "$(resolve_sound Tink)" \
     "claude-elicit" \
     "${ASSETS_DIR}/claude-code.png"
 }
@@ -556,7 +595,7 @@ function do_cc_permission() {
         "Plan ready for review" \
         "$(compute_subtitle)" \
         "$(truncate_with_ellipsis "${body:-Review the proposed plan}" "${BODY_LIMIT}")" \
-        "Tink" \
+        "$(resolve_sound Tink)" \
         "claude-plan" \
         "${ASSETS_DIR}/claude-code.png"
       return 0
@@ -583,7 +622,7 @@ function do_cc_permission() {
     "${title}" \
     "$(compute_subtitle)" \
     "${body:-Needs permission}" \
-    "Funk" \
+    "$(resolve_sound Funk)" \
     "claude-permission" \
     "${ASSETS_DIR}/claude-code.png"
 }
@@ -613,7 +652,7 @@ function do_stop() {
     "Done" \
     "$(compute_subtitle)" \
     "${body:-Task completed}" \
-    "Glass" \
+    "$(resolve_sound Glass)" \
     "${HARNESS}-stop" \
     "${ASSETS_DIR}/${icon}.png"
 }
@@ -668,7 +707,7 @@ function do_question() {
   body="$(truncate_with_ellipsis "${first:-Needs input}" "$((BODY_LIMIT - ${#suffix}))")${suffix}"
 
   fire_alerter_detached "${title}" "$(compute_subtitle)" "${body}" \
-    "Tink" "${HARNESS}-question" "${ASSETS_DIR}/${icon}.png"
+    "$(resolve_sound Tink)" "${HARNESS}-question" "${ASSETS_DIR}/${icon}.png"
 }
 
 # -----------------------------------------------------------------------------

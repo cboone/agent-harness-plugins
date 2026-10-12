@@ -137,9 +137,13 @@ The reviewer decides what it reads. The loop cannot make it read all four bucket
 
 ### Before the round: untracked files
 
-Many reviewers read only `git diff`, and an untracked file is in no diff, though untracked files are usually the newest and least reviewed code in the scope. When the scope has untracked files, ask once per run whether to make them visible with `git add -N`, which records an intent to add without staging content. Use the structured-question capability where the harness has one, and a numbered list with a wait for the reply where it does not. Restore the index with `git reset -- <paths>` when the round ends, touching only those paths, including when the round fails. When no one can answer, as in a non-interactive run, do not touch the index: record the untracked bucket as not covered and go on.
+Many reviewers read only `git diff`, and an untracked file is in no diff, though untracked files are usually the newest and least reviewed code in the scope. When the scope has untracked files, ask once per run whether to make them visible with `git add -N`, which records an intent to add without staging content. Use the structured-question capability where the harness has one, and a numbered list with a wait for the reply where it does not. Record only the paths this run adds, and never reset an entry that was in the index before. When no one can answer, as in a non-interactive run, do not touch the index: record the untracked bucket as not covered and go on.
 
-The snapshot is content-addressed and does not move either way. Declining is a valid choice; the untracked bucket is then recorded as not covered, unless the reviewer's report shows it read those files anyway.
+The index is review input, so `git add -N` moves the snapshot. Prepare before the round's snapshot is captured, then run `review-scope` again and take its snapshot and buckets as the round's, so the preparation is not mistaken for the reviewer's edit. Keep the entries through the validity check and any confirming round, and prepare newly untracked paths before a later round the same way.
+
+Restore the index once, after the final validity check, and also when the run fails or is cancelled. Reset only this run's entries, and before resetting a path check that its entry is still the intent-to-add one this run created and that no other session staged content for it since. Leave an entry that changed alone, and report the cleanup as incomplete. The ledger names the snapshot that was reviewed; the restoration is a later index change, reported separately.
+
+Declining is a valid choice; the untracked bucket is then recorded as not covered, unless the reviewer's report shows it read those files anyway.
 
 ### After the round: what the reviewer says it read
 
