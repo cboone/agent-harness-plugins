@@ -304,11 +304,78 @@ $ log="${work}/no-token.log"
 [1]
 ```
 
-## A rejected send exits 1 and relays the server's answer
+## A rejected send exits 1, relays the server's answer, and removes the token file
 
 ```scrut
 $ pn STUB_CURL_FAIL=1 send --title Done 2>&1
-push-notification: ntfy did not accept the notification: {"code":40101,"http":401,"error":"unauthorized"}
+push-notification: ntfy did not confirm the notification: {"code":40101,"http":401,"error":"unauthorized"}
 curl: (22) The requested URL returned error: 401
 [1]
+```
+
+```scrut
+$ find "${work}/tmp" -mindepth 1 | wc -l | tr -d ' '
+0
+```
+
+## An answer without an ntfy message id is not a confirmed send
+
+A proxy or a misconfigured `NTFY_SERVER` can answer with HTTP success and a
+page of its own. The answer is never printed, because a real ntfy answer
+carries the topic.
+
+```scrut
+$ pn STUB_CURL_RESPONSE='<html><body>Sign in</body></html>' send --title Done 2>&1
+push-notification: https://ntfy.sh/ answered without an ntfy message id, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
+[1]
+```
+
+```scrut
+$ pn STUB_CURL_RESPONSE='{"id":42}' send --title Done 2>&1
+push-notification: https://ntfy.sh/ answered without an ntfy message id, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between.
+[1]
+```
+
+A real answer names the topic, and the confirmation leaves it out.
+
+```scrut
+$ pn send --title Done | grep -c sample-topic
+0
+[1]
+```
+
+## A dry run never calls curl
+
+```scrut
+$ log="${work}/dry-run.log"
+> pn STUB_CURL_LOG="${log}" send --title Done --dry-run > /dev/null
+> test -e "${log}" || echo "curl not called"
+curl not called
+```
+
+## A request that cannot be built is not sent
+
+A `jq` that fails stands in for any failure while the request is prepared.
+The send stops with exit 1, a dry run does not report success, and curl is
+never called.
+
+```scrut
+$ jq_fail_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+> printf '#!/usr/bin/env bash\nexit 1\n' > "${jq_fail_dir}/jq"
+> chmod +x "${jq_fail_dir}/jq"
+> log="${work}/broken-jq.log"
+> pn PATH="${jq_fail_dir}:${stub_dir}:${PATH}" STUB_CURL_LOG="${log}" send --title Done 2>&1
+push-notification: could not build the ntfy request
+[1]
+```
+
+```scrut
+$ pn PATH="${jq_fail_dir}:${stub_dir}:${PATH}" send --title Done --dry-run 2>&1
+push-notification: could not build the ntfy request
+[1]
+```
+
+```scrut
+$ test -e "${work}/broken-jq.log" || echo "curl not called"
+curl not called
 ```

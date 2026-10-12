@@ -13,7 +13,9 @@
 #                         Secret values are printed only as "set" or "unset".
 #   backend_NAME_send     Send the message held in the MESSAGE_* globals, or
 #                         print the request instead when DRY_RUN is true.
-#                         Return 1 when the send fails.
+#                         Return 1 when the send fails or cannot be
+#                         confirmed. It runs with errexit off, so it checks
+#                         every step itself.
 #
 # Message fields, already validated when a backend sees them:
 #   MESSAGE_TITLE      title, possibly empty
@@ -263,7 +265,7 @@ function backend_ntfy_status() {
 # Prints the JSON publish request, with the topic taken from the environment.
 function ntfy_payload() {
   local tags_json
-  tags_json="$(printf '%s\n' ${MESSAGE_TAGS[@]+"${MESSAGE_TAGS[@]}"} | jq -R . | jq -s -c 'map(select(length > 0))')"
+  tags_json="$(printf '%s\n' ${MESSAGE_TAGS[@]+"${MESSAGE_TAGS[@]}"} | jq -R . | jq -s -c 'map(select(length > 0))')" || return 1
   NTFY_PAYLOAD_TOPIC="${SETTING_NTFY_TOPIC}" jq -n -c \
     --arg title "${MESSAGE_TITLE}" \
     --arg message "${MESSAGE_BODY}" \
@@ -274,40 +276,59 @@ function ntfy_payload() {
       | with_entries(select(.value != "" and .value != []))'
 }
 
+# Every step is checked explicitly, because a caller that tests this
+# function's status turns off errexit inside it.
 function backend_ntfy_send() {
   local url payload
   url="$(ntfy_server)/"
-  payload="$(ntfy_payload)"
+  if ! payload="$(ntfy_payload)" || [[ -z "${payload}" ]]; then
+    echo "${SCRIPT_NAME}: could not build the ntfy request" >&2
+    return 1
+  fi
 
   if [[ "${DRY_RUN}" == true ]]; then
     local authorization="none"
     [[ -z "${SETTING_NTFY_TOKEN}" ]] || authorization="bearer token (hidden)"
-    jq -n -c --arg url "${url}" --arg authorization "${authorization}" --argjson payload "${payload}" \
-      '{backend: "ntfy", url: $url, authorization: $authorization, payload: ($payload | .topic = "(hidden)")}'
+    # The payload holds the topic, so it reaches jq on stdin, not as an argument.
+    if ! printf '%s' "${payload}" | jq -c --arg url "${url}" --arg authorization "${authorization}" \
+      '{backend: "ntfy", url: $url, authorization: $authorization, payload: (.topic = "(hidden)")}'; then
+      echo "${SCRIPT_NAME}: could not render the dry-run request" >&2
+      return 1
+    fi
     return 0
   fi
 
   local -a curl_args=(-sS --fail-with-body -X POST -H 'Content-Type: application/json')
   if [[ -n "${SETTING_NTFY_TOKEN}" ]]; then
-    TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/push-notification.XXXXXX")"
+    if ! TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/push-notification.XXXXXX")"; then
+      echo "${SCRIPT_NAME}: could not create a temporary directory for the authorization header" >&2
+      return 1
+    fi
     local header_file="${TEMP_DIR}/authorization"
-    (umask 077 && printf 'Authorization: Bearer %s\n' "${SETTING_NTFY_TOKEN}" > "${header_file}")
+    if ! (umask 077 && printf 'Authorization: Bearer %s\n' "${SETTING_NTFY_TOKEN}" > "${header_file}"); then
+      echo "${SCRIPT_NAME}: could not write the authorization header file" >&2
+      return 1
+    fi
     curl_args+=(-H "@${header_file}")
   fi
 
+  # After a transport failure the server may still have published the
+  # message, so a failure here means unconfirmed, not undelivered.
   local response
   if ! response="$(printf '%s' "${payload}" | curl "${curl_args[@]}" --data-binary @- "${url}" 2>&1)"; then
-    echo "${SCRIPT_NAME}: ntfy did not accept the notification: ${response}" >&2
+    echo "${SCRIPT_NAME}: ntfy did not confirm the notification: ${response}" >&2
     return 1
   fi
 
-  local id
-  id="$(jq -r '.id // empty' <<< "${response}" 2> /dev/null || true)"
-  if [[ -n "${id}" ]]; then
-    echo "Sent through ntfy to $(ntfy_server) (message ${id})"
-  else
-    echo "Sent through ntfy to $(ntfy_server)"
+  # ntfy answers a publish with the message as JSON, topic included, so the
+  # response is checked for its id and never printed.
+  local id=""
+  id="$(jq -r 'if type == "object" and (.id | type) == "string" then .id else empty end' <<< "${response}" 2> /dev/null)" || id=""
+  if [[ -z "${id}" ]]; then
+    echo "${SCRIPT_NAME}: ${url} answered without an ntfy message id, so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
+    return 1
   fi
+  echo "Sent through ntfy to $(ntfy_server) (message ${id})"
 }
 
 # ---------------------------------------------------------------------------
