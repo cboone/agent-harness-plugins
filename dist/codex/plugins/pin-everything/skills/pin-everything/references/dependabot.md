@@ -118,7 +118,7 @@ If `.github/dependabot.yml` (or `.github/dependabot.yaml`) already exists, do no
 3. For each ecosystem present in the repo but missing from the config: add a new block from the template.
 4. Show the diff before writing. Let the user accept, modify, or skip.
 
-To audit an existing config in depth instead (coverage of every directory, validity against current Dependabot options, labels, commit messages, and the repository settings and secrets Dependabot depends on), use the `review-dependabot-config` skill.
+To audit an existing config in depth instead (coverage of every directory, validity against current Dependabot options, labels, commit messages, and the repository settings and secrets Dependabot depends on), use the `dependabot:review-config` skill.
 
 ## Auto-Merge Wiring (Optional, Out of Scope for This Skill)
 

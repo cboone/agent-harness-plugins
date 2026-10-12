@@ -1,6 +1,6 @@
 # Write Zsh Scripts
 
-Applies zsh style conventions when creating or editing zsh scripts, configurations, and completions.
+Zsh scripting conventions for syntax, types, expansion, scope and completions, with a workflow for syntax checks, compilation, linting and formatting.
 
 **Type:** Skill
 **Trigger:** `/write-zsh-scripts` (also activates automatically)
@@ -38,3 +38,7 @@ The skill also activates automatically when Claude Code detects zsh script work.
 - [Write Bash Scripts](../write-bash-scripts/README.md): Bash style conventions
 - [Lint and Fix](../lint-and-fix/README.md): run linters and formatters across the project
 - [All plugins](../../../../README.md)
+
+## Additional workflows
+
+For "check zsh", "lint zsh" or "validate zsh", follow `skills/write-zsh-scripts/references/lint/workflow.md`. It uses zsh syntax and compilation checks, ShellCheck, shfmt and optional checkbashisms and shellharden, reporting unsupported or unavailable checks.

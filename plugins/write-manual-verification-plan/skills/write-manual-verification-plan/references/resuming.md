@@ -161,7 +161,7 @@ The `### Exclusive resources` heading is what lets a checklist split without inv
 
 - **Split by resource.** One session takes all the steps for one resource. Steps that need no exclusive resource can run in any session, including while another worktree holds the resource.
 - **Run step 0 in every session.** Each session's results carry its own build.
-- **Claim the resource where the project records claims.** When worktrees claim resources, as the `create-worktree` skill's `--resource` option does, the session that holds the claim is the one that runs that resource's steps.
+- **Claim the resource where the project records claims.** When worktrees claim resources, as the `workmux:create-worktree` skill's `--resource` option does, the session that holds the claim is the one that runs that resource's steps.
 - **Write results before a session ends.** The status table is the handoff, and a session that ends with results only in its scrollback has handed off nothing.
 
 ## Closing

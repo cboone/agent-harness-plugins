@@ -1,6 +1,6 @@
 # Scaffold New Repo
 
-Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.
+Scaffold language-agnostic repository files: LICENSE, README, CHANGELOG, .gitignore, agent config and plans, with optional community files.
 
 **Type:** Skill
 **Trigger:** `/scaffold-new-repo`
@@ -44,3 +44,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): Go CLI-specific scaffolding (includes this boilerplate)
 - [Set-Up Secret Scanning](../set-up-secret-scanning/README.md): add secret scanning after scaffolding
 - [All plugins](../../README.md)
+
+## Additional workflows
+
+For "add community files" or a community-files mode selection, follow `skills/scaffold-new-repo/references/community-files/workflow.md` without regenerating foundation files. Full scaffolding offers this step optionally; it detects actual project tooling and preserves overwrite approval.

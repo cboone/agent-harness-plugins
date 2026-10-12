@@ -2,6 +2,8 @@
 
 A backlog triage board answers three questions about a repository's open issues: what to start now, what can run in parallel, and what is blocked and by what. It suits a backlog worked by several branches or sessions at once, where the binding constraint is less what matters most than what can proceed without colliding.
 
+This board provides the full backlog picture in a persistent view. For a focused terminal answer to "what should I work on next", use the `suggest-next-issue` skill. Both use the shared progress model; the board applies the same recommendation signals while organizing issues into lanes and dependencies.
+
 | Setting     | Value                                                                                    |
 | ----------- | ---------------------------------------------------------------------------------------- |
 | Board type  | `backlog-triage`                                                                         |

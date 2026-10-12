@@ -18,9 +18,11 @@ This is the maintenance companion to `bootstrap-project`: bootstrap sets things 
 ## Skill dependencies
 
 - **Required:** None
-- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `clean-up-agent-config`, `optimize-runner-usage`, `pin-everything`, `review-dependabot-config`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
+- **Optional:** `scaffold-new-repo`, `set-up-installers`, `add-scrut-cli-tests`, `clean-up-agent-config`, `set-up-ci`, `pin-everything`, `dependabot:review-config`, `scaffold-go-cli`, `scaffold-go-library`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
 
 ## Workflow
+
+Select `scaffold-new-repo` community-files mode for community documents, `set-up-installers` goreleaser mode for release configuration, and `set-up-ci` runner-usage mode for CI optimization. Run only the selected mode, preserving existing project files. Select and scope foundation scaffolding and installer distribution separately.
 
 ### 1. Detect Project Type
 
@@ -43,22 +45,22 @@ If multiple types are detected (monorepo), note all of them.
 
 For each tool in the ecosystem, check for its signature artifacts. Only tools whose artifacts are found will be audited.
 
-| Tool                      | Signature artifacts                                                                                               |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `scaffold-new-repo`       | `LICENSE` + `README.md` + `.gitignore`                                                                            |
-| `scaffold-go-cli`         | `go.mod` + `cmd/` + `.goreleaser.yml` + `.github/workflows/release.yml`                                           |
-| `scaffold-go-library`     | `go.mod` (no `cmd/`) + `.golangci.yml` + `.github/workflows/ci.yml`                                               |
-| `set-up-ci`               | `.github/workflows/ci.yml`                                                                                        |
-| `set-up-linters`          | `.editorconfig` or `.prettierrc.json` or `.golangci.yml`                                                          |
-| `set-up-secret-scanning`  | `.github/workflows/gitleaks.yml` or `.github/workflows/trufflehog.yml`                                            |
-| `add-goreleaser-homebrew` | `.goreleaser.yml` with `brews:` section + `.github/workflows/release.yml`                                         |
-| `add-community-files`     | `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`                                                                          |
-| `add-scrut-cli-tests`     | `tests/scrut/` directory                                                                                          |
-| `set-up-installers`       | `Formula/`                                                                                                        |
-| `optimize-runner-usage`   | `concurrency:` key in any `.github/workflows/*.yml`                                                               |
-| `clean-up-agent-config`   | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                                                            |
-| `pin-everything`          | `.github/dependabot.yml` or `.github/dependabot.yaml`                                                             |
-| `set-up-review-config`    | A `<!-- BEGIN set-up-review-config -->` line in `.github/skills/code-review/SKILL.md`, `AGENTS.md` or `REVIEW.md` |
+| Tool                     | Signature artifacts                                                                                               |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `scaffold-new-repo`      | `LICENSE` + `README.md` + `.gitignore`                                                                            |
+| `scaffold-go-cli`        | `go.mod` + `cmd/` + `.goreleaser.yml` + `.github/workflows/release.yml`                                           |
+| `scaffold-go-library`    | `go.mod` (no `cmd/`) + `.golangci.yml` + `.github/workflows/ci.yml`                                               |
+| `set-up-ci`              | `.github/workflows/ci.yml`                                                                                        |
+| `set-up-linters`         | `.editorconfig` or `.prettierrc.json` or `.golangci.yml`                                                          |
+| `set-up-secret-scanning` | `.github/workflows/gitleaks.yml` or `.github/workflows/trufflehog.yml`                                            |
+| `set-up-installers`      | `.goreleaser.yml` with `brews:` section + `.github/workflows/release.yml`                                         |
+| `scaffold-new-repo`      | `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`                                                                          |
+| `add-scrut-cli-tests`    | `tests/scrut/` directory                                                                                          |
+| `set-up-installers`      | `Formula/`                                                                                                        |
+| `set-up-ci`              | `concurrency:` key in any `.github/workflows/*.yml`                                                               |
+| `clean-up-agent-config`  | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                                                            |
+| `pin-everything`         | `.github/dependabot.yml` or `.github/dependabot.yaml`                                                             |
+| `set-up-review-config`   | A `<!-- BEGIN set-up-review-config -->` line in `.github/skills/code-review/SKILL.md`, `AGENTS.md` or `REVIEW.md` |
 
 For each detected tool, record which artifacts were found and which expected artifacts are missing (for "Partially set up" status).
 
@@ -88,11 +90,11 @@ Present a table with all detected tools and their status:
 | 1 | set-up-ci               | Needs update   | actions/checkout@v4 (target: v6), no timeout    | Update workflow |
 | 2 | set-up-linters          | Up to date     |                                                 | None            |
 | 3 | set-up-secret-scanning  | Partially set  | TruffleHog workflow missing                     | Add workflow    |
-| 4 | add-community-files     | Needs update   | CoC is v2.1 (current: v3.0)                     | Update CoC      |
+| 4 | scaffold-new-repo     | Needs update   | CoC is v2.1 (current: v3.0)                     | Update CoC      |
 | 5 | clean-up-agent-config   | Needs update   | CLAUDE.md is regular file, not symlink           | Convert to symlink |
-| 6 | optimize-runner-usage   | Up to date     |                                                 | None            |
+| 6 | set-up-ci   | Up to date     |                                                 | None            |
 | 7 | scaffold-new-repo       | Needs update   | .gitignore missing .claude/settings.local.json   | Update file     |
-| 8 | add-goreleaser-homebrew | Up to date     |                                                 | None            |
+| 8 | set-up-installers | Up to date     |                                                 | None            |
 ```
 
 Status values:
@@ -129,13 +131,13 @@ For each confirmed update item, choose a strategy based on scope:
 | Missing `concurrency:` group                                                                                    | **Targeted**: add the concurrency block below the `on:` trigger block                                    |
 | Missing `permissions:` block                                                                                    | **Targeted**: add the permissions block at the workflow level                                            |
 | CLAUDE.md is regular file, not symlink                                                                          | **Full re-run**: invoke the `clean-up-agent-config` skill to reconcile CLAUDE.md and AGENTS.md           |
-| Community file outdated (e.g., CoC version)                                                                     | **Full re-run**: invoke the `add-community-files` skill                                                  |
+| Community file outdated (e.g., CoC version)                                                                     | **Full re-run**: invoke the `scaffold-new-repo` skill in community-files mode                            |
 | Missing file from a detected tool                                                                               | **Full re-run**: invoke the original skill                                                               |
 | No Dependabot config                                                                                            | **Full re-run**: invoke the `pin-everything` skill with `--scope dependabot`                             |
-| Dependabot config fails a check (a missing ecosystem or directory, no `version: 2`, or both file names present) | **Delegate**: invoke the `review-dependabot-config` skill, which merges the fix into the existing config |
+| Dependabot config fails a check (a missing ecosystem or directory, no `version: 2`, or both file names present) | **Delegate**: invoke the `dependabot:review-config` skill, which merges the fix into the existing config |
 | Review config drift (a changed checklist, a new file type, a missing managed file, or an unpinned link)         | **Full re-run**: invoke the `set-up-review-config` skill, which replaces only its managed content        |
 
-For full tool re-runs, all detected tools are skills. Invoke those skills. If one is not installed, record that update as "skipped: not installed" with the skill's installation command, report it apart from the applied updates, and continue with the rest. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `set-up-review-config`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `review-dependabot-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
+For full tool re-runs, all detected tools are skills. Invoke those skills. If one is not installed, record that update as "skipped: not installed" with the skill's installation command, report it apart from the applied updates, and continue with the rest. Relevant skills include `scaffold-new-repo`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `set-up-installers`, `set-up-installers`, `add-scrut-cli-tests`, `set-up-review-config`, `scaffold-new-repo`, `pin-everything`, and `set-up-ci`. Dependabot coverage gaps go to `dependabot:review-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
 
 Process updates in this order (matching the bootstrap-project execution order):
 
@@ -144,13 +146,13 @@ Process updates in this order (matching the bootstrap-project execution order):
 1. `set-up-ci` (CI workflow)
 1. `set-up-linters` (linter configs)
 1. `set-up-secret-scanning` (secret scanning)
-1. `add-goreleaser-homebrew` (release config)
-1. `add-community-files` (community files)
+1. `set-up-installers` goreleaser mode (release config)
+1. `scaffold-new-repo` community-files mode (community files)
 1. `set-up-installers` (distribution)
 1. `add-scrut-cli-tests` (testing)
 1. `set-up-review-config` (review checklists, once the file types and CI checks above are final)
-1. `pin-everything` or `review-dependabot-config` (Dependabot config, once every workflow and manifest above is in place)
-1. `optimize-runner-usage` (CI optimization)
+1. `pin-everything` or `dependabot:review-config` (Dependabot config, once every workflow and manifest above is in place)
+1. `set-up-ci` runner-usage mode (CI optimization)
 1. `clean-up-agent-config` (agent config)
 
 After each update, verify the change was applied correctly. If an update fails, report the error and ask whether to continue with remaining items or stop.
@@ -356,7 +358,7 @@ Must include language-specific entries appropriate for the detected project type
 - Ignores list includes `CHANGELOG.md`
 - Scrut projects: `MD014` is set to `false` (allow dollar signs before commands)
 
-## Reference: Community File Checks (add-community-files)
+## Reference: Community File Checks (scaffold-new-repo)
 
 ### Files
 
@@ -389,7 +391,7 @@ Must include language-specific entries appropriate for the detected project type
 - Exists
 - Has a checklist with at least: tests pass, style followed, documentation updated
 
-## Reference: GoReleaser Checks (add-goreleaser-homebrew)
+## Reference: GoReleaser Checks (set-up-installers)
 
 ### Files
 
@@ -410,7 +412,7 @@ Must include language-specific entries appropriate for the detected project type
 - Has `version: 2` (GoReleaser v2 config format)
 - Has `changelog:` section with `use: github` or grouped categories
 
-## Reference: Runner Optimization Checks (optimize-runner-usage)
+## Reference: Runner Optimization Checks (set-up-ci)
 
 ### Files
 
@@ -461,7 +463,7 @@ Must include language-specific entries appropriate for the detected project type
 - A config exists whenever the repository has `.github/workflows/*.yml` or `*.yaml` files, a manifest from the table below, or a manifest of another ecosystem Dependabot supports, such as `deno.json`, `pom.xml`, `build.gradle`, `*.csproj`, `pubspec.yaml`, `Chart.yaml`, `*.tf`, or `.pre-commit-config.yaml` (the [supported ecosystems page](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) has the full list). Absent: `Needs update`, fixed by `pin-everything --scope dependabot`, which writes a block for every supported ecosystem the repository uses
 - Only one of the two file names exists
 - `version: 2` is set
-- Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `review-dependabot-config` skill checks the full set:
+- Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `dependabot:review-config` skill checks the full set:
 
 | Found                                                                                     | Expected `package-ecosystem`         |
 | ----------------------------------------------------------------------------------------- | ------------------------------------ |
@@ -482,7 +484,7 @@ Must include language-specific entries appropriate for the detected project type
 
 - A composite action outside `.github/workflows/` whose `action.yml` references other actions has its directory in the `github-actions` entry
 
-These checks only establish that the config exists and covers what is present. For anything deeper (validity, groups, labels, commit messages, and the repository settings Dependabot depends on), and for the fix itself when coverage is incomplete, invoke the `review-dependabot-config` skill.
+These checks only establish that the config exists and covers what is present. For anything deeper (validity, groups, labels, commit messages, and the repository settings Dependabot depends on), and for the fix itself when coverage is incomplete, invoke the `dependabot:review-config` skill.
 
 ## Reference: Agent Config Checks (clean-up-agent-config)
 

@@ -2,8 +2,8 @@
 name: set-up-installers
 description: >-
   Set up Homebrew tap formulas and go or cargo install support for Go, Swift,
-  Rust, and Zig projects. Use for "set up installers" or "support brew install";
-  for GoReleaser, use add-goreleaser-homebrew.
+  Rust, and Zig projects. Use for "set up installers", "support brew install",
+  "add goreleaser", "write a Homebrew formula", or "update a formula".
 ---
 
 # Set-Up Installers
@@ -17,6 +17,8 @@ Installer types:
 - **cargo install**: compatibility and README instructions for `cargo install` (Rust only)
 
 ## Workflow
+
+To add or configure GoReleaser publishing for an existing Go CLI, run `./references/goreleaser/workflow.md`. To write, update or review a formula in an existing tap, run only `./references/homebrew-formula/workflow.md`. Preserve existing project files in both modes; neither requires the full installer setup below.
 
 ### 1. Detect Project Type
 
@@ -97,11 +99,13 @@ Skip this section if the user did not select Homebrew.
 gh secret list | grep HOMEBREW_TAP_TOKEN || true
 ```
 
-If the secret is missing, warn the user that releases will fail without it. Suggest invoking the add-goreleaser-homebrew skill for a guided setup that includes interactive token configuration, or manually adding the secret (see the HOMEBREW_TAP_TOKEN Setup reference in the add-goreleaser-homebrew skill).
+If the secret is missing, report that releases require it and follow `./references/goreleaser/homebrew-tap-token.md` for guided setup if authorized, or report setup as deferred.
 
-**If GoReleaser exists without a `homebrew_casks:` or `brews:` section**: suggest invoking the add-goreleaser-homebrew skill to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. That skill includes interactive `HOMEBREW_TAP_TOKEN` setup. Skip creating a standalone formula.
+**If GoReleaser exists without a `homebrew_casks:` or `brews:` section**: read `./references/goreleaser/workflow.md` to add Homebrew publishing through GoReleaser. Preserve the existing configuration and obtain any required overwrite approval; include the token setup or record it as deferred. Skip creating a standalone formula.
 
 **If no GoReleaser exists**: create a standalone Homebrew formula. Choose the appropriate template based on platform constraints.
+
+Apply `./references/homebrew-formula/workflow.md` for formula conventions and validation, including current official guidance and the tap's existing patterns.
 
 #### Cross-Platform Homebrew Formula
 
@@ -707,7 +711,7 @@ After completing all selected installer types, print a summary:
   - For go install: ensure the module has no `replace` directives and is tagged with a version
   - For cargo install: ensure the crate is published to crates.io (if applicable)
   - For release workflow: tag a release to trigger the workflow (e.g., `git tag v0.1.0 && git push origin v0.1.0`)
-  - If `HOMEBREW_TAP_TOKEN` was found to be missing during step 5: remind the user to configure it before the first release, either by invoking the add-goreleaser-homebrew skill for guided setup or by manually creating a fine-grained PAT and adding it as a repository secret
+  - If `HOMEBREW_TAP_TOKEN` was found to be missing during step 5: remind the user to configure it before the first release, using `./references/goreleaser/homebrew-tap-token.md` for guided setup if authorized, or by reporting setup as deferred
 
 ## Error Handling
 

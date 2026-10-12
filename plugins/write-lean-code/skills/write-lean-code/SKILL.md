@@ -3,7 +3,7 @@ name: write-lean-code
 description: >-
   Apply Lean 4 and Mathlib conventions whenever Lean is the subject, not only
   edits: writing, reading to answer questions, reviewing, naming, proofs, and
-  docstrings. For tests, use write-lean-tests.
+  docstrings, and compile-time tests that mirror the public library API.
 ---
 
 # Write Lean Code
@@ -15,16 +15,11 @@ description: >-
 1. **Tactic proofs for incremental feedback**: prefer tactic mode for complex proofs; use the VS Code infoview for step-by-step development
 1. **Clarity and composability**: write small, focused lemmas; name them to be discoverable via `exact?` and `apply?`
 
-## Skill dependencies
-
-- **Required:** None
-- **Optional:** `write-lean-tests`
-
 ## Workflow
 
 1. In a fresh clone or worktree, run the project's documented bootstrap script before any direct `lake build`. Mathlib must come from `lake exe cache get` (prebuilt artifacts), not a local source compilation.
 1. After bootstrap has succeeded in the current worktree, run `lake build <Module.Name>` to check compilation; run project linters if available.
-1. **Update the tests in the same change as the proof code** if the project has a test suite that mirrors the proof code. Whenever you add, rename, restate, or delete anything on a module's public surface, update the matching test file in the same change. Treat the test suite as part of the proof code, not an optional extra. For the compile-time, `example`-based regression style those test modules typically use (import discipline, 1:1 naming mirror, composition per milestone, anti-patterns), invoke the `write-lean-tests` skill, the companion to this one. If it is not installed, update the matching tests directly and say that its conventions were not applied. `references/comprehensive/build-infrastructure.md` covers the `testDriver` / `defaultTargets` wiring side.
+1. **Update the tests in the same change as the proof code** if the project has a test suite that mirrors the proof code. Whenever a module's public surface changes, update the matching test file. Read `./references/tests/workflow.md` for compile-time, `example`-based regression conventions, including import discipline, mirrored paths and composition per milestone. `references/comprehensive/build-infrastructure.md` covers `testDriver` / `defaultTargets` wiring.
 1. Before declaring a proof change finished, run the project's full local check (build + tests + any proof-boundary or lint checks the project defines).
 1. Review against essential checklist: `references/essential/checklist.md`
 1. For specific questions, consult: `references/comprehensive/{topic}.md`

@@ -76,4 +76,4 @@ If no Lean CI workflow exists, defer to the `scaffold-lean-library` skill rather
 
 - `lake lint` only works after Mathlib's prebuilt artifacts have been fetched (`lake exe cache get`). Run `make bootstrap` (or `bin/bootstrap-worktree`) once per fresh clone or worktree before the first `make lean-lint`.
 - The `lean-lint` target is intentionally separate from the meta `lint` target (`lint: lint-markdown lint-spelling`). `lean-lint` is gated on Mathlib cache presence; `lint-markdown` and `lint-spelling` are not. Combining them would couple the cheap text linters to the expensive Lean cache check.
-- For the test-library mirroring discipline that complements `lake lint` (compile-time `example`-based API regression tests under `<Name>Test/`), see the `write-lean-tests` skill.
+- For the test-library mirroring discipline that complements `lake lint` (compile-time `example`-based API regression tests under `<Name>Test/`), see the `write-lean-code` skill.
