@@ -31,7 +31,7 @@ The review covers committed changes since the merge base with the default branch
 
 ### Read-only, and honest about failure
 
-Every review aspect is read-only: in a `--sandbox read-only` Codex run, or under read-only instructions in a subagent. Either way, the skill compares the working tree before and after the review and reports any path whose content changed. That comparison catches lasting edits, not every write: a change only to the index, a write to an ignored, untracked file, or an edit reverted before the second scan leaves no trace.
+Every review aspect is read-only: in a `--sandbox read-only` Codex run, or under read-only instructions in a subagent. Either way, the skill compares the working tree before and after the review and reports any path whose content changed. That comparison catches lasting edits, not every write: a change only to the index, a write to an ignored, untracked file, an edit reverted before the second scan, or an edit that Git normalization maps back to the same content leaves no trace.
 
 An aspect whose run failed, timed out, or returned nothing or something unparseable is reported as **failed**, never as clean. A reviewer that crashed and a reviewer that found nothing produce the same empty list unless something checks, and the bundled helper checks every signal: the exit status, the output file, its size, its schema, and that it names the right aspect and snapshot.
 

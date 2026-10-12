@@ -34,6 +34,8 @@ Each part is there for a reason:
 - **`--model` and `--config model_reasoning_effort`** apply to that run only, so the user's Codex defaults are untouched.
 - **`--output-schema` and `--output-last-message` point outside the working tree.** A file written inside it would join the scope under review and move the snapshot. The helper refuses an `--out-dir` inside the repository.
 
+Stopping `codex-aspects run`, with TERM or by a failure partway through, stops every Codex run it started, so a `simplify` run cannot go on editing after the caller has measured its changes.
+
 The prompt goes in as one argument because stdin must stay `/dev/null`. The helper refuses a prompt above 120,000 bytes, under Linux's per-argument limit; a scope that large needs narrowing with `--base` or by committing unrelated work separately.
 
 ### Signals
@@ -64,12 +66,13 @@ Each subagent's task is complete on its own, so the skill needs no `[agents.<rol
 
 ## Checking the tree
 
-`review-scope` records `tree`, a content digest of every path git tracks or would track. `codex-aspects changes` diffs two of those trees, so it lists every path whose content changed between two scope reads, whichever bucket the path sits in, and marks those outside the first read's scope. Untracked files excluded by ignore rules are outside the digest, which matches the scope rule. A tracked file stays covered even when its path matches an ignore rule.
+`review-scope` records `tree`, a content digest of every path git tracks or would track. `codex-aspects changes` diffs two of those trees, so it lists every path whose content, as Git would store it, changed between two scope reads, whichever bucket the path sits in, and marks those outside the first read's scope. Untracked files excluded by ignore rules are outside the digest, which matches the scope rule. A tracked file stays covered even when its path matches an ignore rule.
 
-The comparison detects lasting content changes between two scans, and nothing more. It cannot see:
+The comparison detects lasting changes to that stored content between two scans, and nothing more. It cannot see:
 
 - a change only to the index, such as staging a file without editing it, because the tree is built from the content on disk;
 - a write to an ignored, untracked file, because those are outside the digest;
 - an edit reverted before the second scan, because only the two end states are compared.
+- an edit that Git normalizes away, such as a line-ending change under text normalization or one a clean filter undoes, because the digest is built from the content Git would store, not the bytes on disk.
 
 So an empty result means no lasting changes were found, not that nothing was written. On the `codex exec` path the read-only sandbox is what prevents writes, and the comparison is a second check. On the subagent path the comparison is the only check, with those blind spots.
