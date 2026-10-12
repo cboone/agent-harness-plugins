@@ -450,7 +450,7 @@ Review the fixes before pushing them, at most twice, without looping:
    ```
 
 1. **Act on each Important finding.** Before the first edit, record `git rev-parse HEAD` as `SECOND_BASE`. Fix the real findings as Valid Concerns items 3 to 6 describe, fixing the class and committing; these findings have no thread to resolve. Decline one only with a rationale, such as a finding outside the pull request's stated scope or threat model. Nits are listed, not fixed.
-1. **Review the second fix once.** When the previous item changed files, invoke the `review-anti-patterns` skill again with `--range SECOND_BASE..HEAD`, passing this continuation block:
+1. **Review the second fix once.** When the previous item changed files, first sweep `SECOND_BASE..HEAD` as step 5 does, updating the prepared pull request body correction, so the second fix's changes are described consistently. Then invoke the `review-anti-patterns` skill again with `--range SECOND_BASE..HEAD`, passing this continuation block:
 
    ```text
    review-anti-patterns --range SECOND_BASE..HEAD
@@ -473,6 +473,7 @@ Review the fixes before pushing them, at most twice, without looping:
 This step prevents CI failures from lint issues introduced while resolving feedback.
 
 1. **Check for changes**: skip this step only when the run has changed no files, per step 4's test, as when only nitpicks were resolved or threads replied to.
+1. Record `git rev-parse HEAD` as `LINT_BASE`.
 1. **Invoke the `lint-and-fix` skill** with `--no-push`:
 
    ```text
@@ -487,12 +488,12 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 
    This runs all detected project linters and formatters, fixes issues, and commits the fixes without pushing.
 
-1. If `lint-and-fix` reports `Lint status: success` or `Lint status: no-tools`, proceed to step 8. Any fix commits created by `lint-and-fix` will be included in the push.
+1. If `lint-and-fix` reports `Lint status: success` or `Lint status: no-tools`, read what it committed with `git diff --no-ext-diff --no-textconv LINT_BASE`. Formatting and whitespace need nothing more. When its commits change anything else, such as a name, a behavior or a documented value, sweep `LINT_BASE..HEAD` as step 5 does, updating the prepared pull request body correction, and review it once with the `review-anti-patterns` skill using step 6's second continuation block with `--range LINT_BASE..HEAD`. Record that review in step 9's `### Fix review` section; an Important finding still standing stops the push exactly as it does in step 6. Otherwise proceed to step 8, whose push includes the lint commits.
 1. If `lint-and-fix` reports unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, record a workflow-level failure. Do not claim lint success, do not push potentially non-compliant changes, skip step 8, and post the required partial or failed summary in step 9 because PR context exists.
 
 ### 8. Verify Completion
 
-Do not run this step if step 6 or step 7 stopped the push: a missing or failed fix review, an Important finding still standing after the second review, a lint failure, or skipped required lint work. In that case, go directly to step 9 and report why in the final summary; Valid and Incorrect threads stay open and the pull request body unchanged.
+Do not run this step if step 6 or step 7 stopped the push: a missing or failed fix review, an Important finding still standing after the second review or the lint review, a lint failure, or skipped required lint work. In that case, go directly to step 9 and report why in the final summary; Valid and Incorrect threads stay open and the pull request body unchanged.
 
 1. **Push any changes:** `git push`
 1. **Resolve each Valid or Incorrect thread** whose commit this push carried, using the script.
