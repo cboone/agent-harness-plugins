@@ -14,7 +14,7 @@ untracked symlink. Cases that change the tree run in a copy of it.
 
 ## Setup
 
-```scrut
+```scrut {fail_fast: true}
 $ fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && mkdir "${fixture}/bin" "${fixture}/out" "${fixture}/log" \
 >   && ln -s "${CODEX_STUB_BIN}" "${fixture}/bin/codex" \
