@@ -431,11 +431,11 @@ If the plugin-root path was not substituted, locate `**/monitor-pr/**/scripts/me
    Parent continuation:
    - Caller: monitor-pr
    - Resume target: the step that ran the batch: step 8b, step 8f, or the step 9 report.
-   - On completion: Report the `Deferred issues:` outcome and continue at the resume target.
-   - On filing failure: Report the findings left unfiled with their source links. From step 8b or step 8f, escalate per Step 9 instead of continuing, without running the batch again there; from step 9, continue the report.
+   - On `filed`, `none found` or `none approved`: Report the outcome and continue at the resume target.
+   - On any other outcome, including `none fileable` and `failure`: Report the findings left unfiled with their source links. From step 8b or step 8f, escalate per Step 9 instead of continuing, without running the batch again there; from step 9, continue the report.
    ```
 
-   Append the outcome to the report. Under `--no-fix`, list the findings the batch would propose instead of invoking it.
+   Append the outcome to the report. Only those three outcomes continue: every deferred finding is then filed, already tracked, or declined by the user, whose decision is its disposition and stays recorded in the resolver's summary comment. Under `--no-fix`, list the findings the batch would propose instead of invoking it.
 
 #### 8b. Settle the Merge Policy
 
