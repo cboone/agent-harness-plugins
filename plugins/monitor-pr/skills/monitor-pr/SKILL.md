@@ -371,7 +371,7 @@ This is a budget, not a verdict about progress. **Do not treat the shape of the 
 
 What matters is whether the findings are real. Keep going while each round produces valid, fixable defects, and escalate early per step 9 only when a round produces something that needs the user's judgment, per the escalation rules in step 6d. The budget exists to bound an unattended watch, not to second-guess a productive one.
 
-**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is this watch's round count plus the PR's earlier Copilot reviews. Count those once at step 1, leaving out any a resolver summary names as a Copilot notice. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Deferred rounds still count toward the round budget.
+**Late rounds triage instead of blocking.** `--triage-after <n>`, 5 by default, sets the last round in which every finding blocks. A review's triage round is this watch's round count plus the PR's earlier Copilot reviews. Count those once at step 1: read their bodies with one `fetch-reviews` call, classify each as step 3 does, and count only those classified `review`. From round `n + 1`, step 7b asks the resolver to defer Medium and Low findings, in lines this PR changed and in unchanged code alike, and only High findings still drive fixes. A finding without a severity label still blocks. `--triage-after never` passes no deferral at any round. Deferred rounds still count toward the round budget.
 
 `--rounds <n>` sets a different budget. `--rounds unlimited` removes it: the watch then runs until the PR is genuinely clean and never pauses to ask for more rounds, though every other escalation rule still applies.
 
@@ -428,12 +428,12 @@ If the plugin-root path was not substituted, locate `**/monitor-pr/**/scripts/me
 
    Parent continuation:
    - Caller: monitor-pr
-   - Resume target: the step that ran the batch, step 8b or step 8f.
+   - Resume target: the step that ran the batch: step 8b, step 8f, or the step 9 report.
    - On completion: Report the `Deferred issues:` outcome and continue at the resume target.
    - On filing failure: Report the findings left unfiled and continue at the resume target.
    ```
 
-   Append the outcome to the report.
+   Append the outcome to the report. Under `--no-fix`, list the findings the batch would propose instead of invoking it.
 
 #### 8b. Settle the Merge Policy
 
@@ -548,7 +548,7 @@ Run this once per PR, whichever path observed the merge, and record that it ran 
 
 1. **Print the final line**, with the merge SHA, the sync result, and the sessions notified, then end the watch, stopping any background watch still running.
 
-Under `--no-fix`, steps 8b to 8f report what they would do, the method and the approval requirement included, and do none of it: no merge watch, no merge, no sync, and no messages.
+Under `--no-fix`, step 8a's deferred-issue batch and steps 8b to 8f report what they would do, the method and the approval requirement included, and do none of it: no merge watch, no merge, no sync, and no messages.
 
 ### 9. Escalate
 
@@ -556,7 +556,7 @@ When an escalation rule fires, stop the wait loop, including any scheduled task 
 
 1. What is blocking, in one sentence.
 1. What was already tried, including any commits pushed during this watch.
-1. Any findings deferred under `--triage-after`, listed from the resolver's `### Deferred to follow-up` sections with their links. The deferred-issue batch files them at readiness or after the merge.
+1. Any findings deferred under `--triage-after`, after running step 8a's deferred-issue batch for them, resuming at this report, since the resolver has already resolved their threads.
 1. The specific question the user needs to answer.
 
 Then tell the user that `/monitor-pr` resumes the watch once they have decided.
