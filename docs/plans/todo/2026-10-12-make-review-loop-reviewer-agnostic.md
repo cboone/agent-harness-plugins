@@ -2,7 +2,7 @@
 
 ## Context
 
-`review-until-clean` has two hard-wired backends, Codex and Claude, and `references/backends.md` documents how to invoke, scope and parse each. Every new reviewer means another backend section (#522 asks for CodeRabbit). Issue #611 makes the loop own only scope, snapshot, ledger, fixing and stop rules, and accept any skill, slash command or shell command as `--reviewer`. This is a breaking change: `review-until-clean` 1.1.2 goes to 2.0.0.
+`review-until-clean` has two hard-wired backends, Codex and Claude, and `references/backends.md` documents how to invoke, scope and parse each. Every new reviewer means another backend section (#522 asks for CodeRabbit). Issue #611 makes the loop own only scope, snapshot, ledger, fixing and stop rules, and accept any skill, slash command or shell command as `--reviewer`. This is a breaking change: `review-until-clean` goes to 3.0.0, the major version after the 2.0.0 that `main` reached while this branch was open.
 
 Decisions taken during planning:
 
@@ -53,7 +53,7 @@ Delete `backends.md`. The new file contains only rules that apply to every revie
 ### 4. `plugins/review-until-clean/README.md`, `plugin.json`, catalog and root README
 
 - **README:** rewrite the invariants, and replace "Model diversity" with "Choosing a reviewer" (free-form, default from agent config, one per run, editing reviewers allowed). Requirements become: one reviewer, plus `git` and `jq`. Update the Usage block, option table, permissions JSON (drop the Codex- and Claude-specific allow rules) and examples.
-- **`.claude-plugin/plugin.json`:** version `2.0.0`, the new description, and the `codex` keyword dropped.
+- **`.claude-plugin/plugin.json`:** version `3.0.0` (`main` reached 2.0.0 independently while this branch was open), the new description, and the `codex` keyword dropped.
 - **Description, verbatim in all three places:** `.claude-plugin/marketplace.json`, the root `README.md` catalog row and the plugin README intro.
 
 ### 5. `review-pr-with-codex` owns the Codex invocation details
@@ -91,5 +91,5 @@ Each is signed, references (#611), and lands at a logical boundary:
 
 - `make build`, then `make lint`, `make validate` (catalog description match and cross-references, including no dangling `backends.md` links) and `make test-scrut`. Finish with `make test-all`, and observe the final result.
 - No plugin source, README or generated mirror references `backends.md` (plans and review records that describe its removal keep the name), no loop-level `--effort` option is documented (a reviewer's own `--effort` inside a quoted `--reviewer` value is expected), and no `review-until-clean` source mentions a named reviewer outside examples.
-- The `check-versions` skill confirms the version bumps: review-until-clean 2.0.0, review-pr-with-codex 1.0.1 and review-anti-patterns 1.0.1.
+- The `check-versions` skill confirms the version bumps: review-until-clean 3.0.0, review-pr-with-codex 2.0.1 and review-anti-patterns 1.0.2.
 - Read-through check of the workflow against the four invariants above. In particular, no path turns an empty, error-only or missing reply into `"findings": []`, and an edit round can never be reported clean.
