@@ -94,7 +94,7 @@ Run `review-scope` again into `<tmp>/scope-after.json` with the same `--base`, t
 
 If `changed` is not empty, something wrote to the tree during a read-only review. Report the paths and treat every finding as unreliable, since the reviewers may have read different versions of those files. Do not run `simplify`, and do not revert the changes yourself: they may be the user's own edits made in the meantime.
 
-An empty `changed` means no tracked or untracked, non-ignored file differs between the two scans. It does not prove nothing was written: a change only to the index, a write to an ignored file, or an edit reverted before the second scan leaves no trace in the comparison. Report the check as "no lasting changes found", never as "nothing was written".
+An empty `changed` means no tracked file, and no untracked file outside the ignore rules, differs between the two scans. It does not prove nothing was written: a change only to the index, a write to an ignored, untracked file, or an edit reverted before the second scan leaves no trace in the comparison. Report the check as "no lasting changes found", never as "nothing was written".
 
 ### 6. Decide on `simplify`
 

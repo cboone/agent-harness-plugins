@@ -64,12 +64,12 @@ Each subagent's task is complete on its own, so the skill needs no `[agents.<rol
 
 ## Checking the tree
 
-`review-scope` records `tree`, a content digest of every path git tracks or would track. `codex-aspects changes` diffs two of those trees, so it lists every path whose content changed between two scope reads, whichever bucket the path sits in, and marks those outside the first read's scope. Ignored files are outside the digest, which matches the scope rule.
+`review-scope` records `tree`, a content digest of every path git tracks or would track. `codex-aspects changes` diffs two of those trees, so it lists every path whose content changed between two scope reads, whichever bucket the path sits in, and marks those outside the first read's scope. Untracked files excluded by ignore rules are outside the digest, which matches the scope rule. A tracked file stays covered even when its path matches an ignore rule.
 
 The comparison detects lasting content changes between two scans, and nothing more. It cannot see:
 
 - a change only to the index, such as staging a file without editing it, because the tree is built from the content on disk;
-- a write to an ignored file, because ignored paths are outside the digest;
+- a write to an ignored, untracked file, because those are outside the digest;
 - an edit reverted before the second scan, because only the two end states are compared.
 
 So an empty result means no lasting changes were found, not that nothing was written. On the `codex exec` path the read-only sandbox is what prevents writes, and the comparison is a second check. On the subagent path the comparison is the only check, with those blind spots.
