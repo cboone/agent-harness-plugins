@@ -6,7 +6,7 @@
 
 Decisions taken during planning:
 
-- **Round mode is observed, not declared.** No mode flag. If the snapshot moved while the reviewer ran, the round was an edit round: the change is recorded as that round's result, and any findings it also reported go through `address-review`. A round is clean only when the run completed, nothing blocking was reported, and the snapshot did not move. Under `--report-only`, an edit is reported and never reverted.
+- **Round mode is observed, not declared.** No mode flag. If the snapshot moved while the reviewer ran, the round was an edit round: the change is recorded as that round's result, and any findings it also reported are recorded as notes and never queued for `address-review`; the next round reviews the resulting snapshot and raises any findings that still apply. A round is clean only when the run completed, nothing blocking was reported, and the snapshot did not move. Under `--report-only`, an edit is reported and never reverted.
 - **Coverage is verified from the reviewer's report.** Before each round, `git add -N` is offered for untracked files, for every reviewer. Afterwards, what the reviewer says it covered is compared against the four buckets. Coverage is `full`, `partial` (naming the buckets left out), or `unverified`. A clean round with unverified coverage reports `clean, coverage unverified`.
 - **The default reviewer comes from agent config.** Use a reviewer that the repository's `AGENTS.md` or `CLAUDE.md` names for `review-until-clean`. If none is named, ask once and mention that naming one avoids the question. #510 can replace the lookup later.
 
@@ -90,6 +90,6 @@ Each is signed, references (#611), and lands at a logical boundary:
 ## Verification
 
 - `make build`, then `make lint`, `make validate` (catalog description match and cross-references, including no dangling `backends.md` links) and `make test-scrut`. Finish with `make test-all`, and observe the final result.
-- `grep -rn "backends.md\|--effort" plugins/review-until-clean` returns nothing, and no `review-until-clean` source mentions a named reviewer outside examples.
+- No reference to `backends.md` remains, no loop-level `--effort` option is documented (a reviewer's own `--effort` inside a quoted `--reviewer` value is expected), and no `review-until-clean` source mentions a named reviewer outside examples.
 - The `check-versions` skill confirms the version bumps: review-until-clean 2.0.0, review-pr-with-codex 1.0.1 and review-anti-patterns 1.0.1.
 - Read-through check of the workflow against the three invariants above. In particular, no path turns an empty, error-only or missing reply into `"findings": []`, and an edit round can never be reported clean.
