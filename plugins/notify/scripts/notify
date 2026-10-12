@@ -18,13 +18,13 @@ readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR
 # Body length budget: a banner shows about two lines, an expanded alert about four.
 readonly BODY_LIMIT=140
 
-# alerter's own timeout, a backstop for when run_alerter is stopped before its
-# SIGKILL: alerter removes the banner when it expires.
+# Backstop if run_alerter never sends its SIGKILL. alerter removes the banner
+# when this expires.
 readonly FIRE_TIMEOUT=86400
 
-# Seconds alerter gets to post its banner, capped at 60. A waiting alerter
-# polls usernoted, at a cost that grows with the number waiting. The nine-digit
-# match keeps bash arithmetic from overflowing.
+# Seconds alerter gets to post its banner. A waiting alerter polls usernoted, at
+# a cost that grows with the number waiting. The nine-digit match keeps the
+# comparison from overflowing.
 WAIT_LIMIT=2
 if [[ "${NOTIFY_WAIT_LIMIT:-}" =~ ^[1-9][0-9]{0,8}$ ]]; then
   WAIT_LIMIT=$((NOTIFY_WAIT_LIMIT > 60 ? 60 : NOTIFY_WAIT_LIMIT))
@@ -453,9 +453,8 @@ function plan_heading() {
 # alerter dispatch
 # -----------------------------------------------------------------------------
 
-# Runs alerter with the given arguments and stops it with SIGKILL WAIT_LIMIT
-# seconds later unless it has exited. SIGKILL leaves the delivered banner in
-# Notification Center, while SIGTERM or SIGINT would make alerter remove it.
+# Stops alerter with SIGKILL WAIT_LIMIT seconds after launch, unless it exits
+# first. SIGTERM or SIGINT would make alerter remove its delivered banner.
 function run_alerter() {
   alerter "$@" --timeout "${FIRE_TIMEOUT}" &
   local pid=$! waited=0
@@ -466,10 +465,7 @@ function run_alerter() {
   kill -KILL "${pid}" 2> /dev/null || true
 }
 
-# Fires alerter through run_alerter, detached so the harness is never blocked.
-# Groups are suffixed with the session key. Stop groups fire once per turn (an
-# atomic mkdir marker) and are skipped while the originating pane is visible.
-# An empty sound omits --sound, so the notification is silent.
+# Fires alerter detached, so the harness is never blocked.
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
@@ -498,10 +494,7 @@ function fire_alerter_detached() {
     --group "${group}" \
     --app-icon "${icon}" \
     > /dev/null 2>&1 < /dev/null &
-  # Best-effort detach. In non-interactive shells without job control,
-  # `disown` can fail; under `set -e` that would abort the hook and skip
-  # the notification. The background process is already detached via the
-  # redirections above, so swallowing this error is safe.
+  # disown fails without job control, and set -e would then skip the notification.
   disown 2> /dev/null || true
 }
 

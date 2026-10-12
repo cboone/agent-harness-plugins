@@ -392,7 +392,7 @@ function main() {
       echo "Separate sessions retain separate banners"
       ;;
     delivery)
-      # `|| exit 1`: a failing [[ ]] or function does not trigger errexit in bash 3.2.
+      # `|| exit 1` throughout: a failing [[ ]] does not trigger errexit in bash 3.2.
       poll 150 find_held_pid || exit 1
       # The default grace period is 2 seconds; allow 6 under parallel load.
       poll 300 not_running "${HELD_PID}" || exit 1
