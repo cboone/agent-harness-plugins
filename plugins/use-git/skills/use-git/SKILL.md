@@ -36,6 +36,8 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 
 ## Workflow
 
+For issue creation, use the `use-git:create-issue` skill. It applies the tmpfile procedure below and verifies the stored issue body before cleanup.
+
 1. **Quick reference:** Check the decision table above
 1. **Tmpfile details:** Read `references/tmpfile-pattern.md`
 1. **HEREDOC details:** Read `references/heredoc-pattern.md`

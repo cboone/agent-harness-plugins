@@ -3,7 +3,7 @@ name: address-issue
 description: >-
   Plan and implement a GitHub issue on the current branch, stopping for approval
   first. Use for "address issue #42" or "fix issue #42"; for a new worktree, use
-  address-issue-in-worktree.
+  workmux:start-issue.
 argument-hint: "<issue-number...|description> [--dry-run|--no-approval] [--no-commit] [--commit-per-change]"
 ---
 
@@ -24,7 +24,7 @@ The user may provide these options inline:
 
 ## Several Issues
 
-Several issue numbers, as in `/address-issue 42 57`, are one combined piece of work: one plan, one approval gate, and one set of changes on the current branch. `address-issue-in-worktree` chains into this form when it opens one worktree for several issues. Every step below applies to each issue, as follows:
+Several issue numbers, as in `/address-issue 42 57`, are one combined piece of work: one plan, one approval gate, and one set of changes on the current branch. `workmux:start-issue` chains into this form when it opens one worktree for several issues. Every step below applies to each issue, as follows:
 
 - **Step 1:** fetch every issue by number. Several issues are always given as numbers; descriptive text names one issue and follows the single-issue workflow.
 - **Step 2:** check each issue's state. Ask about every closed issue at once, and drop any the user declines.

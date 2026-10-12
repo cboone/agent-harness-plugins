@@ -12,45 +12,6 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "ci-and-release",
-      "description": "Add a version subcommand with build metadata (version, commit hash, build date, Go runtime version, optional JSON output) to an existing Cobra-based Go CLI, wiring up ldflags in main.go, the cmd package, GoReleaser, and the Makefile.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["cli", "cobra", "go", "golang", "version"],
-      "license": "MIT",
-      "name": "add-cobra-version",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/add-cobra-version"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "scaffolding",
-      "description": "Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["code-of-conduct", "community", "contributing", "open-source", "security"],
-      "license": "MIT",
-      "name": "add-community-files",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/add-community-files"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "ci-and-release",
-      "description": "Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["github-actions", "go", "golang", "goreleaser", "homebrew"],
-      "license": "MIT",
-      "name": "add-goreleaser-homebrew",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/add-goreleaser-homebrew"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
       "category": "code-quality",
       "description": "Set up scrut snapshot-based CLI integration testing for a CLI project.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
@@ -77,19 +38,6 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "issues-and-worktrees",
-      "description": "Create a worktree, branch, and tmux window for a GitHub issue, then have the new session run address-issue to plan the work and stop for approval.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["git", "github", "issues", "tmux", "workmux", "worktree"],
-      "license": "MIT",
-      "name": "address-issue-in-worktree",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/address-issue-in-worktree"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
       "category": "code-review",
       "description": "Parse a review document for actionable feedback, work through items systematically, and track resolution progress.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
@@ -111,19 +59,6 @@
       "name": "bootstrap-project",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/bootstrap-project"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "code-quality",
-      "description": "Check and evaluate zsh scripts using shellcheck, shfmt, shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var, and checkbashisms.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["checkbashisms", "shellcheck", "shellharden", "shfmt", "zsh"],
-      "license": "MIT",
-      "name": "check-zsh-scripts",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/check-zsh-scripts"
     },
     {
       "author": {
@@ -168,19 +103,6 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "issues-and-worktrees",
-      "description": "Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["gh", "github", "issues", "workflow"],
-      "license": "MIT",
-      "name": "create-issue",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/create-issue"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
       "category": "agents",
       "description": "Guide for creating new plugins in this repository with consistent structure and conventions.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
@@ -194,14 +116,14 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "issues-and-worktrees",
-      "description": "Create a git worktree, branch, and tmux window from an issue number or a task description, with a prompt injected using workmux.",
+      "category": "ci-and-release",
+      "description": "Review Dependabot configuration and triage open Dependabot pull requests, applying configuration fixes or PR actions as approved.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["git", "tmux", "workmux", "worktree"],
+      "keywords": ["configuration", "dependabot", "dependencies", "github", "security"],
       "license": "MIT",
-      "name": "create-worktree",
+      "name": "dependabot",
       "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/create-worktree"
+      "source": "./dist/codex/plugins/dependabot"
     },
     {
       "author": {
@@ -246,21 +168,8 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "git",
-      "description": "Fetch and merge the base branch into the current feature branch with automatic conflict resolution.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["branch", "conflicts", "git", "merge"],
-      "license": "MIT",
-      "name": "merge-main",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/merge-main"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
       "category": "ci-and-release",
-      "description": "Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands.",
+      "description": "Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands; resolve Copilot feedback on demand.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["ci", "copilot", "github", "pull-requests", "workflow"],
       "license": "MIT",
@@ -280,19 +189,6 @@
       "name": "notify",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/notify"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "ci-and-release",
-      "description": "Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["ci", "concurrency", "github-actions", "optimization", "timeout", "workflow"],
-      "license": "MIT",
-      "name": "optimize-runner-usage",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/optimize-runner-usage"
     },
     {
       "author": {
@@ -363,19 +259,6 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "git",
-      "description": "Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["branch", "conflicts", "git", "rebase"],
-      "license": "MIT",
-      "name": "rebase-onto-main",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/rebase-onto-main"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
       "category": "scaffolding",
       "description": "Refresh existing project scaffolding against the latest plugin templates.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
@@ -397,19 +280,6 @@
       "name": "release",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/release"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "code-review",
-      "description": "Process and resolve GitHub Copilot automated PR review comments.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["code-review", "copilot", "github", "pull-requests"],
-      "license": "MIT",
-      "name": "resolve-copilot-pr-feedback",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/resolve-copilot-pr-feedback"
     },
     {
       "author": {
@@ -449,19 +319,6 @@
       "name": "review-colleague-pr",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/review-colleague-pr"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "ci-and-release",
-      "description": "Review a repository's Dependabot setup (dependabot.yml coverage and validity, grouping, labels, commit messages, and the repository settings and secrets Dependabot depends on), then apply the fixes the user selects.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["configuration", "dependabot", "dependencies", "github", "security"],
-      "license": "MIT",
-      "name": "review-dependabot-config",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/review-dependabot-config"
     },
     {
       "author": {
@@ -507,7 +364,7 @@
         "name": "Christopher Boone"
       },
       "category": "scaffolding",
-      "description": "Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.",
+      "description": "Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions and Homebrew tap support, or add version metadata to an existing Cobra CLI.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["cli", "go", "golang", "goreleaser", "scaffolding"],
       "license": "MIT",
@@ -546,7 +403,7 @@
         "name": "Christopher Boone"
       },
       "category": "scaffolding",
-      "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.",
+      "description": "Scaffold language-agnostic repository files: LICENSE, README, CHANGELOG, .gitignore, agent config and plans, with optional community files.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
       "license": "MIT",
@@ -585,7 +442,7 @@
         "name": "Christopher Boone"
       },
       "category": "ci-and-release",
-      "description": "Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.",
+      "description": "Create GitHub Actions CI and matching Makefile targets, or optimize existing workflows with path filters, concurrency groups and job timeouts.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["ci", "github-actions", "makefile", "setup", "testing", "workflow", "zig", "zsh"],
       "license": "MIT",
@@ -598,7 +455,7 @@
         "name": "Christopher Boone"
       },
       "category": "ci-and-release",
-      "description": "Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.",
+      "description": "Set up installer and distribution methods for Go, Swift, Rust and Zig projects, configure GoReleaser publishing, and write or update Homebrew formulae.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["cargo", "distribution", "github-actions", "go", "golang", "homebrew", "install", "release", "rust", "setup", "swift", "zig"],
       "license": "MIT",
@@ -650,7 +507,7 @@
         "name": "Christopher Boone"
       },
       "category": "issues-and-worktrees",
-      "description": "Review open GitHub issues and recommend what to work on next with prioritized reasoning.",
+      "description": "Recommend the next open GitHub issue in a focused terminal answer, with reasoning, progress signals and resource constraints.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["github", "issues", "planning", "prioritization", "triage"],
       "license": "MIT",
@@ -662,14 +519,14 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "ci-and-release",
-      "description": "Triage a repository's open Dependabot pull requests into safe to merge, needs refresh, needs testing, needs work, hold, superseded, or outdated, backed by evidence, then merge, rebase, or close them as the user approves.",
+      "category": "git",
+      "description": "Merge or rebase the base branch into the current branch, resolve conflicts, and push using the selected workflow.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["dependabot", "dependencies", "github", "pull-requests", "security", "triage"],
+      "keywords": ["branch", "conflicts", "git", "merge"],
       "license": "MIT",
-      "name": "triage-dependabot-prs",
+      "name": "sync-with-main",
       "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/triage-dependabot-prs"
+      "source": "./dist/codex/plugins/sync-with-main"
     },
     {
       "author": {
@@ -715,13 +572,26 @@
         "name": "Christopher Boone"
       },
       "category": "git",
-      "description": "Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance.",
+      "description": "Apply git and GitHub CLI conventions for tmpfile bodies, signed commits and safe pushes, and create GitHub issues.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["cli", "conventions", "gh", "git", "github", "permissions"],
       "license": "MIT",
       "name": "use-git",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/use-git"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "issues-and-worktrees",
+      "description": "Create worktrees, branches and tmux windows with workmux, or launch issue planning in a new session.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["git", "github", "issues", "tmux", "workmux", "worktree"],
+      "license": "MIT",
+      "name": "workmux",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./dist/codex/plugins/workmux"
     },
     {
       "author": {
@@ -766,19 +636,6 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "ci-and-release",
-      "description": "Write or update Homebrew formulae using current Homebrew guidance and cboone/homebrew-tap conventions.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["formula", "homebrew", "release", "ruby", "tap"],
-      "license": "MIT",
-      "name": "write-homebrew-formula",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/write-homebrew-formula"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
       "category": "code-quality",
       "description": "LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
@@ -793,26 +650,13 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
-      "description": "Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming.",
+      "description": "Lean 4 and Mathlib conventions for code, proofs, naming, documentation and compile-time tests that mirror the public library API.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["formal-methods", "lean", "lean4", "mathlib", "style"],
       "license": "MIT",
       "name": "write-lean-code",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/write-lean-code"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "code-quality",
-      "description": "Conventions for compile-time, example-based Lean 4 API regression tests that mirror a library's public surface.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["formal-methods", "lean", "lean4", "mathlib", "testing"],
-      "license": "MIT",
-      "name": "write-lean-tests",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/write-lean-tests"
     },
     {
       "author": {
@@ -897,7 +741,7 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
-      "description": "Applies zsh style conventions when creating or editing zsh scripts, configurations, and completions.",
+      "description": "Zsh scripting conventions for syntax, types, expansion, scope and completions, with a workflow for syntax checks, compilation, linting and formatting.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["completions", "format", "scripts", "style", "zsh"],
       "license": "MIT",

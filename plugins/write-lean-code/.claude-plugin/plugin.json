@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming.",
+  "description": "Lean 4 and Mathlib conventions for code, proofs, naming, documentation and compile-time tests that mirror the public library API.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["formal-methods", "lean", "lean4", "mathlib", "style"],
   "license": "MIT",
   "name": "write-lean-code",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.1.1"
+  "version": "1.2.0"
 }

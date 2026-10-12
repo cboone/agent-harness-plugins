@@ -231,6 +231,6 @@ build-review-checklists: plugins/set-up-review-config does not exist to receive 
 The count guards against a scan that finds nothing and passes vacuously.
 
 ```scrut
-$ cd "${REPO_ROOT}" && count=0 && for src in plugins/*/skills/*/references/review-checklist.md; do guide="${src#plugins/}"; guide="${guide%%/*}"; cmp -s "${src}" "plugins/set-up-review-config/skills/set-up-review-config/references/checklists/${guide}.md" || echo "stale: ${guide}"; count=$((count + 1)); done && if ((count >= 7)); then echo "at least seven sources: yes"; else echo "at least seven sources: no"; fi
-at least seven sources: yes
+$ cd "${REPO_ROOT}" && count=0 && for src in plugins/*/skills/*/references/review-checklist.md; do guide="${src#plugins/}"; guide="${guide%%/*}"; cmp -s "${src}" "plugins/set-up-review-config/skills/set-up-review-config/references/checklists/${guide}.md" || echo "stale: ${guide}"; count=$((count + 1)); done && if ((count >= 6)); then echo "at least six sources: yes"; else echo "at least six sources: no"; fi
+at least six sources: yes
 ```

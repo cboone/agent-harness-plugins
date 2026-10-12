@@ -2,7 +2,7 @@
 
 Each entry names a style guide, how to detect the files it covers, the routing globs written into the entry `SKILL.md`, and the bundled checklist installed as `.github/skills/code-review/<guide>.md`. Detection runs over `git ls-files` after the exclusions in step 2 of the workflow.
 
-A file can match more than one guide: Lean test modules get both Lean checklists. A routing bullet lists the concrete globs, followed by the exclusions that apply to it.
+A file can match more than one guide. The Lean checklist includes mirrored test-library conventions where the project uses them. A routing bullet lists the concrete globs, followed by the exclusions that apply to it.
 
 ## Shebang Rule
 
@@ -25,12 +25,6 @@ When either shell guide is installed, the entry skill's reporting rules include 
 - **Detect**: A tracked `lakefile.toml`, `lakefile.lean` or `lean-toolchain`, or any tracked `*.lean` file.
 - **Route**: `**/*.lean`.
 - **Checklist**: `./references/checklists/write-lean-code.md`
-
-## write-lean-tests
-
-- **Detect**: A Lean project whose lakefile names a test library, and a tracked directory with that name at any depth. The lakefile names it through a test driver, `testDriver = "NAMETest"` in `lakefile.toml`, or `testDriver := "NAMETest"` or a `@[test_driver]` attribute on the library in `lakefile.lean`, or through a `lean_lib` whose name ends in `Test`.
-- **Route**: `**/*.lean`, which covers the test directory and the test library's root module, for example `ShannonTest/**/*.lean` and `ShannonTest.lean`, and the library modules they mirror. The library files are routed here because the checklist's first rule is that a change to an exported declaration updates its mirrored test module, which a reviewer can only apply while looking at that change. A Lean file therefore carries both Lean checklists.
-- **Checklist**: `./references/checklists/write-lean-tests.md`
 
 ## write-bash-scripts
 

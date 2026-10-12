@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.",
+  "description": "Scaffold language-agnostic repository files: LICENSE, README, CHANGELOG, .gitignore, agent config and plans, with optional community files.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
   "license": "MIT",
   "name": "scaffold-new-repo",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.8.5"
+  "version": "1.9.1"
 }

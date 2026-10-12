@@ -2,7 +2,7 @@
 
 ## Tools
 
-Seven complementary tools from the `check-zsh-scripts` skill, each targeting a different class of issue:
+Seven complementary tools from the `write-zsh-scripts` skill, each targeting a different class of issue:
 
 | Tool                          | Purpose                              | Zsh Support  | Auto-Fix |
 | ----------------------------- | ------------------------------------ | ------------ | -------- |
@@ -267,7 +267,7 @@ format-zsh: ## Format zsh scripts (all zsh files including dotfiles)
 
 ## Notes
 
-- **Cross-reference**: The `check-zsh-scripts` skill provides interactive checking with the same 7-tool pipeline. This reference generates the scripts so the pipeline runs in CI via `make check-zsh`.
+- **Cross-reference**: The `write-zsh-scripts` skill provides interactive checking with the same 7-tool pipeline. This reference generates the scripts so the pipeline runs in CI via `make check-zsh`.
 - **shfmt experimental mode**: `shfmt -ln zsh` is experimental. If shfmt fails to parse a zsh-specific construct, the parse error is reported as informational but not counted as an error, so the overall run continues without failing on parser limitations. Formatting differences on files that parse successfully are still counted as errors.
 - **setopt side effects**: The setopt check **executes code** by sourcing files (it is not purely static analysis). The generated script skips config dotfiles that set globals by design. To disable this step (e.g., for projects where sourcing has unacceptable side effects), set `SKIP_SETOPT_CHECK=1` before running.
 - **Mixed bash/zsh projects**: Both `shell.md` and `zsh.md` tool stacks can coexist. ShellCheck uses the shebang for `.sh` files and `--shell=bash` override for `.zsh` files. shfmt uses default dialect for `.sh` files and `-ln zsh` for `.zsh` files.

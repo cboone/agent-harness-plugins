@@ -27,7 +27,7 @@ function usage() {
   cat << USAGE_TEXT
 Usage: ${SCRIPT_NAME} <command> [arguments]
 
-Support monitor-pr's merge step: settle the merge policy, watch the PR until
+Support monitor-pr:monitor's merge step: settle the merge policy, watch the PR until
 it merges, and bring the base branch up to date afterward.
 
 Commands:

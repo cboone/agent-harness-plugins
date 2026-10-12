@@ -200,7 +200,7 @@ Warning: skipping review 72: its body is not a string.
 
 ## A null or empty body comes back empty
 
-Every Copilot review is returned, so a caller and `monitor-pr`'s metadata probe agree on which review is newest. An empty body states nothing; any findings the review has are threads that `fetch` reports.
+Every Copilot review is returned, so a caller and `monitor-pr:monitor`'s metadata probe agree on which review is newest. An empty body states nothing; any findings the review has are threads that `fetch` reports.
 
 ```scrut
 $ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:00Z","body":""},{"id":2,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:01Z","body":null}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1 | jq -c '[.[] | {id, body}]'
@@ -413,20 +413,20 @@ Error: Usage: resolve-copilot-threads parse-audit (reads pull request JSON on st
 [1]
 ```
 
-## The copy `monitor-pr` ships runs the same way
+## The copy `monitor-pr:monitor` ships runs the same way
 
-`monitor-pr` runs this script's read-only commands in its snapshot step. A
+`monitor-pr:monitor` runs this script's read-only commands in its snapshot step. A
 `cmp` testcase in `repo-tooling.md` holds the two copies byte-identical; these
 run the shipped file, so a copy that matches but cannot execute still fails.
 
 ```scrut
-$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-missed-badges.json" | jq -c '{ids: [.[].id]}'
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-missed-badges.json" | jq -c '{ids: [.[].id]}'
 {"ids":[5449759699]}
 ```
 
 ## The step 3 probe filters pin their own output shapes
 
-`monitor-pr` does not print the whole `fetch-reviews` result on every tick.
+`monitor-pr:monitor` does not print the whole `fetch-reviews` result on every tick.
 Its per-tick filter selects the one review the metadata probe named and
 projects three fields, with no body text. These testcases run the filters
 exactly as the skill documents them, over `parse-reviews` so no authenticated
@@ -440,7 +440,7 @@ $ echo '[[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"commit_
 ```
 
 ```scrut
-$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | jq -c --argjson review_id 5446510102 '[.[] | select(.id == $review_id)] | last | {id, url, commitId}'
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | jq -c --argjson review_id 5446510102 '[.[] | select(.id == $review_id)] | last | {id, url, commitId}'
 {"id":5446510102,"url":"https://github.com/cboone/agent-harness-plugins/pull/559#pullrequestreview-5446510102","commitId":"164797e9ef480c9ad96c329ad9bb15a9432bf750"}
 ```
 
@@ -449,7 +449,7 @@ not a string or a wrong id produces, yields an all-null object rather than nothi
 this shape so a null `id` is read as an absent answer, never as a review.
 
 ```scrut
-$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | jq -c --argjson review_id 6000000099 '[.[] | select(.id == $review_id)] | last | {id, url, commitId}'
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | jq -c --argjson review_id 6000000099 '[.[] | select(.id == $review_id)] | last | {id, url, commitId}'
 {"id":null,"url":null,"commitId":null}
 ```
 
@@ -459,7 +459,7 @@ sentence follows more than 600 characters of other text, and comes through
 whole at the end.
 
 ```scrut
-$ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, html_url: "u", submitted_at: "2026-10-07T00:00:00Z", body: (("Preamble. " * 70) + "\n\nCopilot encountered an error and was unable to review this pull request.")}]' | "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c --argjson review_id 1 '[.[] | select(.id == $review_id)] | last | {id, body}' | jq -r '.id, (.body | length), (.body | split("\n") | last)'
+$ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, html_url: "u", submitted_at: "2026-10-07T00:00:00Z", body: (("Preamble. " * 70) + "\n\nCopilot encountered an error and was unable to review this pull request.")}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c --argjson review_id 1 '[.[] | select(.id == $review_id)] | last | {id, body}' | jq -r '.id, (.body | length), (.body | split("\n") | last)'
 1
 774
 Copilot encountered an error and was unable to review this pull request.
@@ -469,7 +469,7 @@ A review the result does not carry yields a null `id` and `body`, and a failed
 read yields no output at all. Neither is a body to classify.
 
 ```scrut
-$ echo '[]' | "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c --argjson review_id 1 '[.[] | select(.id == $review_id)] | last | {id, body}'
+$ echo '[]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c --argjson review_id 1 '[.[] | select(.id == $review_id)] | last | {id, body}'
 {"id":null,"body":null}
 ```
 
@@ -484,7 +484,7 @@ a failed `audit` emits nothing, and the filter then emits nothing too, so the
 watch reads "not observed" rather than "nothing uncovered".
 
 ```scrut
-$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/uncovered.json" | jq -c '{audited: true, items: [(.uncovered // error("no uncovered"))[] | "\(.surface):\(.id)"]}'
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/uncovered.json" | jq -c '{audited: true, items: [(.uncovered // error("no uncovered"))[] | "\(.surface):\(.id)"]}'
 {"audited":true,"items":["review-comment:9103","review-comment:9104","issue-comment:9202"]}
 ```
 
@@ -503,7 +503,7 @@ $ echo '{"surfaces":{}}' | jq -c '{audited: true, items: [(.uncovered // error("
 The thread-side filter reduces `fetch` the same way, to a count plus locations.
 
 ```scrut
-$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" fetch o r 8 | jq -c '{openThreads: length, locations: [.[].location]}'; rm -rf "${stub}"
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" fetch o r 8 | jq -c '{openThreads: length, locations: [.[].location]}'; rm -rf "${stub}"
 {"openThreads":3,"locations":["src/cache.js:42","docs/usage.md:(no-line)","src/util.js:3"]}
 ```
 

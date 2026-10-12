@@ -35,5 +35,5 @@ Extracts items from checkboxes, bullets, numbered lists, and headings in a revie
 
 ## See Also
 
-- [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): resolve automated Copilot review comments
+- [Resolve Copilot PR Feedback](../monitor-pr/README.md#monitor-prresolve-copilot-feedback): resolve automated Copilot review comments
 - [All plugins](../../../../README.md)
