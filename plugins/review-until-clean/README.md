@@ -74,17 +74,17 @@ Also required:
                     [--max-rounds <n>] [--confirm-clean] [--report-only] [--no-save]
 ```
 
-| Option                        | Description                                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `--reviewer <command>`        | The reviewer, as you would type it: a skill or slash command, or a shell command. Quote a value with spaces; its own options go inside it |
-| `--base <ref>`                | Take the merge base with this ref instead of with the default branch                                                                      |
-| `--severity <important\|nit>` | Lowest severity the loop fixes; default `important`                                                                                       |
-| `--max-rounds <n>`            | Cap the rounds; default 3                                                                                                                 |
-| `--confirm-clean`             | Require two consecutive clean rounds over the same snapshot rather than one                                                               |
-| `--report-only`               | Run one round, write the ledger, change nothing; with `--confirm-clean`, also run the confirming round when the first is clean            |
-| `--no-save`                   | Leave the ledger at its temporary path instead of saving it to `docs/reviews/`                                                            |
+| Option                        | Description                                                                                                                                                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--reviewer <command>`        | The reviewer, as you would type it: a skill or slash command, or a shell command. Quote a value with spaces; its own options go inside it                                                                      |
+| `--base <ref>`                | Take the merge base with this ref instead of with the default branch                                                                                                                                           |
+| `--severity <important\|nit>` | Lowest severity the loop fixes; default `important`                                                                                                                                                            |
+| `--max-rounds <n>`            | Cap the rounds; default 3                                                                                                                                                                                      |
+| `--confirm-clean`             | Require two consecutive clean rounds over the same snapshot rather than one                                                                                                                                    |
+| `--report-only`               | Run one round and write the ledger without a fix pass; with `--confirm-clean`, also run the confirming round when the first is clean. A reviewer that edits still edits, and its changes are kept and reported |
+| `--no-save`                   | Leave the ledger at its temporary path instead of saving it to `docs/reviews/`                                                                                                                                 |
 
-Each round asks you to confirm the item list before anything is edited, because [Address Review](../address-review/README.md) does the fixing and always confirms first. A reviewer that edits, such as `/simplify`, changes the tree itself; that round's changes are recorded in the ledger and reviewed by the next round. This is a gate you watch, not an unattended job.
+Before each fix pass, [Address Review](../address-review/README.md), which does the fixing, asks you to confirm the item list. A reviewer that edits, such as `/simplify`, changes the tree itself while it runs, before any such confirmation and under its own approval behavior; that round's changes are recorded in the ledger and reviewed by the next round when the round budget allows. This is a gate you watch, not an unattended job.
 
 When untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. It restores the index with `git reset -- <paths>` afterward, touching only those paths. Declining is fine; the untracked bucket is then recorded as not covered, unless the reviewer's report shows it read those files anyway. The snapshot is computed from file content rather than from index state, so staging a file this way does not move it.
 
