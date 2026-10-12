@@ -29,7 +29,9 @@ function main() {
     shift
     case "${arg}" in
       -H)
-        [[ "${1}" != @* ]] || header_file="${1#@}"
+        if [[ "${1}" == @* ]]; then
+          header_file="${1#@}"
+        fi
         shift
         ;;
       *) ;;
@@ -43,7 +45,9 @@ function main() {
       printf 'body: %s\n' "${body}"
       if [[ -n "${header_file}" ]]; then
         local matches=false
-        [[ "$(< "${header_file}")" != "Authorization: Bearer ${STUB_CURL_TOKEN:-}" ]] || matches=true
+        if [[ "$(< "${header_file}")" == "Authorization: Bearer ${STUB_CURL_TOKEN:-}" ]]; then
+          matches=true
+        fi
         printf 'header matches: %s, mode %s\n' "${matches}" "$(file_mode "${header_file}")"
       fi
     } >> "${STUB_CURL_LOG}"
