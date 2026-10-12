@@ -83,6 +83,19 @@ $ "${CODEX_ASPECTS_BIN}" schema | grep -c '(?[=!<]'
 [1]
 ```
 
+## Schema path pattern matches review-scope's
+
+The `file` pattern is the boundary that keeps a reviewer's path inside the
+repository, and it is written out in both helpers. This case fails if one copy
+changes without the other.
+
+```scrut
+$ diff <("${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --schema | jq -r '.properties.findings.items.properties.file.pattern') \
+>      <("${CODEX_ASPECTS_BIN}" schema | jq -r '.properties.findings.items.properties.file.pattern') \
+>   && echo identical
+identical
+```
+
 ## Unknown aspect
 
 ```scrut

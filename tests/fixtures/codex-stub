@@ -55,8 +55,8 @@ function mode_for() {
   printf 'ok'
 }
 
-function write_output() {
-  local file="${1}" aspect="${2}" snapshot="${3}" severity="${4}"
+function print_output() {
+  local aspect="${1}" snapshot="${2}" severity="${3}"
 
   jq -n --arg aspect "${aspect}" --arg snapshot "${snapshot}" --arg severity "${severity}" '{
     aspect: $aspect,
@@ -72,7 +72,7 @@ function write_output() {
     reviewed: $snapshot,
     strengths: ["Stub strength."],
     summary: "Stub summary."
-  }' > "${file}"
+  }'
 }
 
 function wait_for_barrier() {
@@ -143,9 +143,12 @@ function main() {
     } > "${CODEX_STUB_LOG_DIR}/${aspect}.args"
   fi
 
-  case "$(mode_for "${aspect}")" in
-    ok) write_output "${output}" "${aspect}" "${snapshot}" "" ;;
-    critical) write_output "${output}" "${aspect}" "${snapshot}" "critical" ;;
+  local mode
+  mode="$(mode_for "${aspect}")"
+
+  case "${mode}" in
+    ok) print_output "${aspect}" "${snapshot}" "" > "${output}" ;;
+    critical) print_output "${aspect}" "${snapshot}" "critical" > "${output}" ;;
     exit)
       echo "stub: simulated failure" >&2
       exit 1
@@ -154,26 +157,22 @@ function main() {
     empty) : > "${output}" ;;
     malformed) echo "I could not finish the review." > "${output}" ;;
     schema)
-      write_output "${output}" "${aspect}" "${snapshot}" ""
-      jq 'del(.strengths)' "${output}" > "${output}.tmp"
-      mv "${output}.tmp" "${output}"
+      print_output "${aspect}" "${snapshot}" "" | jq 'del(.strengths)' > "${output}"
       ;;
-    wrong-aspect) write_output "${output}" "types" "${snapshot}" "" ;;
-    wrong-snapshot) write_output "${output}" "${aspect}" "0000000" "" ;;
+    wrong-aspect) print_output "types" "${snapshot}" "" > "${output}" ;;
+    wrong-snapshot) print_output "${aspect}" "0000000" "" > "${output}" ;;
     write)
       echo "# simplified" >> "${CODEX_STUB_WRITE:?CODEX_STUB_WRITE is required for write mode}"
-      write_output "${output}" "${aspect}" "${snapshot}" ""
+      print_output "${aspect}" "${snapshot}" "" > "${output}"
       ;;
     multiple)
-      write_output "${output}.valid" "${aspect}" "${snapshot}" ""
       {
         echo '{"aspect": "types"}'
-        cat "${output}.valid"
+        print_output "${aspect}" "${snapshot}" ""
       } > "${output}"
-      rm -f "${output}.valid"
       ;;
     exit-after-output)
-      write_output "${output}" "${aspect}" "${snapshot}" ""
+      print_output "${aspect}" "${snapshot}" "" > "${output}"
       echo "stub: simulated failure after writing output" >&2
       exit 1
       ;;
@@ -186,10 +185,10 @@ function main() {
       ;;
     barrier | barrier-slow)
       wait_for_barrier "${aspect}"
-      if [[ "$(mode_for "${aspect}")" == "barrier-slow" ]]; then
+      if [[ "${mode}" == "barrier-slow" ]]; then
         sleep 1
       fi
-      write_output "${output}" "${aspect}" "${snapshot}" ""
+      print_output "${aspect}" "${snapshot}" "" > "${output}"
       ;;
     *) die "unknown mode for ${aspect}" ;;
   esac

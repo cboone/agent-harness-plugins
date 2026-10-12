@@ -127,6 +127,31 @@ function die() {
   exit 1
 }
 
+# Fails unless the option named in $1 was given a non-empty value in $2.
+# Called as `require_value "$@"` from an argument loop.
+function require_value() {
+  [[ $# -ge 2 && -n "${2}" ]] || die "${1} requires a value"
+}
+
+# The path rules, in jq, shared by the scope check and the output check so the
+# two cannot drift apart.
+#
+# - relative_path: non-empty, no leading `/`, and no empty, `.` or `..`
+#   segment. Scope paths use this alone, because git permits a leading `~` or a
+#   backslash in a file name, and a real file with one must not stop the review.
+# - safe_path: relative_path, and also no leading `~` and no backslash. A
+#   finding's path is reviewer output that someone will act on, so it gets the
+#   stricter rule, matching the schema's pattern.
+JQ_PATH_DEFS='
+  def relative_path:
+    type == "string" and length > 0
+    and (startswith("/") | not)
+    and (split("/") | all(. != "" and . != "." and . != ".."));
+  def safe_path:
+    relative_path and (startswith("~") | not) and (test("\\\\") | not);
+'
+readonly JQ_PATH_DEFS
+
 function require_command() {
   command -v "${1}" > /dev/null || die "${1} is required"
 }
@@ -165,14 +190,8 @@ function require_scope_file() {
   #   committed diff is left out of the prompt with no error.
   # - Every path is repository-relative, since the prompt tells the reviewer to
   #   read untracked paths by name and `../` would point it outside the
-  #   repository. The rule is looser than the findings schema's on purpose:
-  #   git permits a leading `~` or a backslash in a file name, and a real file
-  #   with one must not stop the review.
-  jq -e -n '
-    def relative_path:
-      type == "string" and length > 0
-      and (startswith("/") | not)
-      and (split("/") | all(. != "" and . != "." and . != ".."));
+  #   repository.
+  jq -e -n "${JQ_PATH_DEFS}"'
     def paths: type == "array" and all(relative_path);
     [inputs] as $values
     | ($values | length) == 1
@@ -269,22 +288,17 @@ function print_schema() {
 SCHEMA_TEXT
 }
 
-# A structural check of an output object against the schema above, in jq,
-# because no JSON Schema validator can be assumed on the user's machine. It
-# checks what the report depends on: the exact key sets, the types, the
-# enumerations, the ranges and the path rule. The path rule is written
-# differently from the schema's pattern on purpose, since jq has no trouble
-# expressing "no segment is . or .." directly.
+# valid_output: a structural check of an output object against the schema
+# above, in jq, because no JSON Schema validator can be assumed on the user's
+# machine. It checks what the report depends on: the exact key sets, the types,
+# the enumerations, the ranges and the path rule. The path rule is safe_path
+# rather than the schema's pattern, since jq has no trouble expressing "no
+# segment is . or .." directly.
 #
 # The $ names are jq variables and the single quotes keep them from the shell.
 # shellcheck disable=SC2016
-VALIDATE_FILTER='
+VALIDATE_DEFS="${JQ_PATH_DEFS}"'
   def exact_keys($keys): (keys | sort) == ($keys | sort);
-  def safe_path:
-    type == "string" and length > 0
-    and (test("^[/~\\\\]") | not)
-    and (test("\\\\") | not)
-    and (split("/") | all(. != "" and . != "." and . != ".."));
   def finding:
     type == "object"
     and exact_keys(["confidence", "detail", "file", "fix", "line", "severity", "title"])
@@ -295,15 +309,16 @@ VALIDATE_FILTER='
     and (.line == null or (.line | type == "number" and . == floor and . >= 1))
     and (.severity | IN("critical", "important", "suggestion"))
     and (.title | type == "string");
-  type == "object"
-  and exact_keys(["aspect", "findings", "reviewed", "strengths", "summary"])
-  and (.aspect | type == "string")
-  and (.findings | type == "array" and all(finding))
-  and (.reviewed | type == "string")
-  and (.strengths | type == "array" and all(type == "string"))
-  and (.summary | type == "string")
+  def valid_output:
+    type == "object"
+    and exact_keys(["aspect", "findings", "reviewed", "strengths", "summary"])
+    and (.aspect | type == "string")
+    and (.findings | type == "array" and all(finding))
+    and (.reviewed | type == "string")
+    and (.strengths | type == "array" and all(type == "string"))
+    and (.summary | type == "string");
 '
-readonly VALIDATE_FILTER
+readonly VALIDATE_DEFS
 
 # Prints one status object for an aspect's output. The checks run in the order
 # a failure would occur, and every one of them is a failure: a run that wrote
@@ -313,15 +328,7 @@ readonly VALIDATE_FILTER
 # process status of its own; the remaining checks then carry the weight.
 function aspect_status() {
   local aspect="${1}" output="${2}" snapshot="${3}" exit_code="${4}" log="${5}"
-  local reason="" value_count=""
-
-  # jq reads a file as a stream of values, and `jq -e` reports on the last one,
-  # so every check after this one would pass a file holding an invalid object
-  # followed by a valid one. Counting the values first means those checks only
-  # ever see a file with exactly one.
-  if [[ -s "${output}" ]]; then
-    value_count="$(jq -n '[inputs] | length' "${output}" 2> /dev/null)" || value_count=""
-  fi
+  local reason=""
 
   if [[ -n "${exit_code}" && "${exit_code}" != "0" ]]; then
     reason="codex exited with status ${exit_code}"
@@ -329,16 +336,21 @@ function aspect_status() {
     reason="no output file was written"
   elif [[ ! -s "${output}" ]]; then
     reason="the output file is empty"
-  elif [[ -z "${value_count}" || "${value_count}" == "0" ]]; then
-    reason="the output is not JSON"
-  elif [[ "${value_count}" != "1" ]]; then
-    reason="the output holds ${value_count} JSON values, not one"
-  elif ! jq -e "${VALIDATE_FILTER}" "${output}" > /dev/null 2>&1; then
-    reason="the output does not match the schema"
-  elif ! jq -e --arg aspect "${aspect}" '.aspect == $aspect' "${output}" > /dev/null; then
-    reason="the output names a different aspect"
-  elif ! jq -e --arg snapshot "${snapshot}" '.reviewed == $snapshot' "${output}" > /dev/null; then
-    reason="the output reviewed a different snapshot"
+  else
+    # One jq program checks the content, and it reads the file as a list of
+    # values first. jq reads a file as a stream and `jq -e` reports on the last
+    # value, so checks run over the stream would pass an invalid object
+    # followed by a valid one. A parse error stops jq with a non-zero status,
+    # which is the not-JSON case.
+    reason="$(jq -n -r --arg aspect "${aspect}" --arg snapshot "${snapshot}" "${VALIDATE_DEFS}"'
+      [inputs] as $values
+      | if ($values | length) == 0 then "the output is not JSON"
+        elif ($values | length) > 1 then "the output holds \($values | length) JSON values, not one"
+        elif ($values[0] | valid_output | not) then "the output does not match the schema"
+        elif $values[0].aspect != $aspect then "the output names a different aspect"
+        elif $values[0].reviewed != $snapshot then "the output reviewed a different snapshot"
+        else "" end
+    ' "${output}" 2> /dev/null)" || reason="the output is not JSON"
   fi
 
   jq -n \
@@ -370,27 +382,20 @@ function aspect_status() {
 # conclude the scope is smaller than it is.
 function render_scope() {
   local scope="${1}" top_level="${2}"
-  local base head committed_count staged_count unstaged_count
+  local diff_lines
 
-  base="$(jq -r '.base // ""' "${scope}")" || die "could not read the base from ${scope}"
-  head="$(jq -r '.head' "${scope}")" || die "could not read the head from ${scope}"
-  committed_count="$(jq -r '.committed | length' "${scope}")" \
-    || die "could not read the committed bucket from ${scope}"
-  staged_count="$(jq -r '.staged | length' "${scope}")" \
-    || die "could not read the staged bucket from ${scope}"
-  unstaged_count="$(jq -r '.unstaged | length' "${scope}")" \
-    || die "could not read the unstaged bucket from ${scope}"
+  # require_scope_file has already guaranteed a base whenever the committed
+  # bucket is non-empty, so the committed line always names one.
+  diff_lines="$(jq -r '
+    (if (.committed | length) > 0 then "- Committed changes: git diff \(.base) \(.head)" else empty end),
+    (if (.staged | length) > 0 then "- Staged changes: git diff --cached" else empty end),
+    (if (.unstaged | length) > 0 then "- Unstaged changes: git diff" else empty end)
+  ' "${scope}")" || die "could not read the scope buckets from ${scope}"
 
   echo "The scope is all of the following, and you must read all of it:"
   echo
-  if [[ -n "${base}" && "${committed_count}" != "0" ]]; then
-    echo "- Committed changes: git diff ${base} ${head}"
-  fi
-  if [[ "${staged_count}" != "0" ]]; then
-    echo "- Staged changes: git diff --cached"
-  fi
-  if [[ "${unstaged_count}" != "0" ]]; then
-    echo "- Unstaged changes: git diff"
+  if [[ -n "${diff_lines}" ]]; then
+    printf '%s\n' "${diff_lines}"
   fi
 
   # The untracked paths go through a file rather than a process substitution,
@@ -441,10 +446,7 @@ function aspect_body() {
 }
 
 function render_prompt() {
-  local aspect="${1}" scope="${2}" top_level="${3}"
-  local snapshot
-
-  snapshot="$(jq -r '.snapshot' "${scope}")" || die "could not read the snapshot from ${scope}"
+  local aspect="${1}" scope="${2}" top_level="${3}" snapshot="${4}"
 
   if [[ "${aspect}" == "simplify" ]]; then
     cat << 'WRITE_RULES'
@@ -509,12 +511,12 @@ function cmd_prompt() {
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       --aspect)
-        [[ $# -ge 2 ]] || die "--aspect requires a name"
+        require_value "$@"
         aspect="${2}"
         shift 2
         ;;
       --scope)
-        [[ $# -ge 2 ]] || die "--scope requires a file"
+        require_value "$@"
         scope="${2}"
         shift 2
         ;;
@@ -525,11 +527,12 @@ function cmd_prompt() {
   require_aspect "${aspect}"
   require_scope_file "${scope}"
 
-  local top_level
+  local top_level snapshot
   top_level="$(git rev-parse --show-toplevel 2> /dev/null)" \
     || die "not inside a git work tree"
+  snapshot="$(jq -r '.snapshot' "${scope}")"
 
-  render_prompt "${aspect}" "${scope}" "${top_level}"
+  render_prompt "${aspect}" "${scope}" "${top_level}" "${snapshot}"
 }
 
 function cmd_validate() {
@@ -538,12 +541,12 @@ function cmd_validate() {
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       --aspect)
-        [[ $# -ge 2 ]] || die "--aspect requires a name"
+        require_value "$@"
         aspect="${2}"
         shift 2
         ;;
       --scope)
-        [[ $# -ge 2 ]] || die "--scope requires a file"
+        require_value "$@"
         scope="${2}"
         shift 2
         ;;
@@ -583,27 +586,27 @@ function cmd_run() {
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       --aspect)
-        [[ $# -ge 2 ]] || die "--aspect requires a name"
+        require_value "$@"
         aspects+=("${2}")
         shift 2
         ;;
       --scope)
-        [[ $# -ge 2 ]] || die "--scope requires a file"
+        require_value "$@"
         scope="${2}"
         shift 2
         ;;
       --out-dir)
-        [[ $# -ge 2 ]] || die "--out-dir requires a directory"
+        require_value "$@"
         out_dir="${2}"
         shift 2
         ;;
       --model)
-        [[ $# -ge 2 && -n "${2}" ]] || die "--model requires a model"
+        require_value "$@"
         model="${2}"
         shift 2
         ;;
       --effort)
-        [[ $# -ge 2 && -n "${2}" ]] || die "--effort requires a level"
+        require_value "$@"
         effort="${2}"
         shift 2
         ;;
@@ -654,7 +657,7 @@ function cmd_run() {
   # written beside its output, as the record of what the reviewer was asked.
   local prompt prompt_bytes prompts=()
   for aspect in "${aspects[@]}"; do
-    prompt="$(render_prompt "${aspect}" "${scope}" "${top_level}")"
+    prompt="$(render_prompt "${aspect}" "${scope}" "${top_level}" "${snapshot}")"
     prompt_bytes="$(printf '%s' "${prompt}" | wc -c | tr -d ' ')"
     if [[ "${prompt_bytes}" -gt "${MAX_PROMPT_BYTES}" ]]; then
       die "the ${aspect} prompt is ${prompt_bytes} bytes, above the ${MAX_PROMPT_BYTES}-byte limit for one argument; untracked files are listed one by one, so commit or ignore some of them"
@@ -668,8 +671,9 @@ function cmd_run() {
   # prompt, and an agent harness's stdin is a pipe that never closes, so the
   # run would wait forever and never write its output file. --ephemeral keeps
   # each run from persisting a session.
-  local sandbox index=0
-  for aspect in "${aspects[@]}"; do
+  local sandbox index
+  for index in "${!aspects[@]}"; do
+    aspect="${aspects[${index}]}"
     sandbox="read-only"
     if [[ "${aspect}" == "simplify" ]]; then
       sandbox="workspace-write"
@@ -686,19 +690,17 @@ function cmd_run() {
       "${prompts[${index}]}" \
       < /dev/null > "${out_physical}/${aspect}.log" 2>&1 &
     RUNNING_PIDS+=("$!")
-    index=$((index + 1))
   done
 
   # `wait PID` returns that run's own exit status, which `|| exit_code=$?`
   # captures without tripping `set -e`.
   local exit_code statuses=()
-  index=0
-  for aspect in "${aspects[@]}"; do
+  for index in "${!aspects[@]}"; do
+    aspect="${aspects[${index}]}"
     exit_code=0
     wait "${RUNNING_PIDS[${index}]}" || exit_code=$?
     statuses+=("$(aspect_status "${aspect}" "${out_physical}/${aspect}.json" "${snapshot}" \
       "${exit_code}" "${out_physical}/${aspect}.log")")
-    index=$((index + 1))
   done
   RUNNING_PIDS=()
 
@@ -717,12 +719,12 @@ function cmd_changes() {
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       --before)
-        [[ $# -ge 2 ]] || die "--before requires a file"
+        require_value "$@"
         before="${2}"
         shift 2
         ;;
       --after)
-        [[ $# -ge 2 ]] || die "--after requires a file"
+        require_value "$@"
         after="${2}"
         shift 2
         ;;
@@ -745,16 +747,15 @@ function cmd_changes() {
   # The tree objects are review-scope's content digests of the whole working
   # tree, so diffing them lists every path whose content, as Git would store it
   # after normalization, changed between the two reads, whichever bucket it
-  # sits in. --no-renames lists a rename as its deletion and its addition: with
-  # rename detection on, git names only the new path, so moving an out-of-scope
-  # file into the scope would hide the removed source from outside_scope.
-  # --no-relative overrides a `diff.relative` setting, which would otherwise
-  # limit the diff to the current subdirectory and hide every change outside
-  # it. The output goes to a file first so git's exit status is checked rather
-  # than hidden behind jq's.
+  # sits in. The plumbing `git diff-tree` is used rather than `git diff`
+  # because it ignores the user's `diff.*` settings: with `diff.renames`, git
+  # names only a renamed file's new path, hiding the removed source from
+  # outside_scope, and with `diff.relative`, it hides every change outside the
+  # current subdirectory. The output goes to a file first so git's exit status
+  # is checked rather than hidden behind jq's.
   raw="$(mktemp "${TMP_DIR}/changes.XXXXXX")" \
     || die "could not create a temporary file for the tree comparison"
-  if ! git diff -z --no-renames --no-relative --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
+  if ! git diff-tree -r -z --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
     die "could not compare tree ${before_tree} with ${after_tree}"
   fi
 
