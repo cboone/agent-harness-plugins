@@ -20,7 +20,7 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 
 - **`notify`'s `run_alerter` stops each `alerter` with `SIGKILL` after `WAIT_LIMIT` seconds on purpose.** `SIGTERM` and `SIGINT` make `alerter` remove the delivered banner; `SIGKILL` leaves it in Notification Center. Each `run_alerter` stops only its own child `alerter`, within 60 seconds at most, so it needs no PID start-time check, lock or shared state. Do not ask for a gentler signal, a lock or a start-time check.
 
-- **`notify`'s `NOTIFY_WAIT_LIMIT` check rejects leading zeros before any arithmetic.** The `^[1-9][0-9]{0,8}$` match sends `09` or `010` to the 2-second default, so bash never parses them as octal. Do not ask for `10#` base prefixes or extra decimal parsing.
+- **`notify`'s `NOTIFY_WAIT_LIMIT` check rejects leading zeros before any arithmetic.** The `^[1-9][0-9]{0,8}$` match sends `09` or `010` to the 2-second default, so bash never parses them as octal. Do not ask for `10#` base prefixes or extra decimal parsing. Do not ask for scrut coverage of the 60-second cap either: a fixture can only show it by waiting more than 60 seconds per run, which the runtime budget in `tests/AGENTS.md` rules out.
 
 - **A fixture may `cd` after reading a `*_BIN` variable.** Those variables are absolute wherever scrut runs: the Makefile builds them from `$(CURDIR)`, and in CI the reusable `run-scrut-tests.yml` rewrites every `./`-prefixed `scrut-env` value in `.github/workflows/ci.yml` into an absolute path before exporting it. A `./plugins/...` value there never reaches a fixture as a relative path.
 
