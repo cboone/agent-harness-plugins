@@ -1,6 +1,6 @@
 # Scaffold Go CLI
 
-Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.
+Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions and Homebrew tap support, or add version metadata to an existing Cobra CLI.
 
 **Type:** Skill
 **Trigger:** `/scaffold-go-cli`
@@ -44,3 +44,7 @@ This skill runs git, GitHub CLI, and Go commands that trigger permission prompts
 - [Scaffold New Repo](../scaffold-new-repo/README.md): language-agnostic repo boilerplate (included automatically)
 - [Write Go Code](../write-go-code/README.md): Go style guide for writing code in the new project
 - [All plugins](../../../../README.md)
+
+## Additional workflows
+
+For an existing CLI, request "add a version command" or "add build metadata". Only the version workflow runs; it preserves the existing project. See `skills/scaffold-go-cli/references/existing-cli-version/workflow.md`.

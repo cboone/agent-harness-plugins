@@ -1,6 +1,6 @@
 # Set-Up Installers
 
-Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.
+Set up installer and distribution methods for Go, Swift, Rust and Zig projects, configure GoReleaser publishing, and write or update Homebrew formulae.
 
 **Type:** Skill
 **Trigger:** `/set-up-installers`
@@ -48,6 +48,10 @@ Pass an argument to skip the selection prompt:
 
 ## See Also
 
-- [Add GoReleaser Homebrew](../add-goreleaser-homebrew/README.md): add GoReleaser with Homebrew tap publishing (release pipeline)
+- [Add GoReleaser Homebrew](#additional-workflows): add GoReleaser with Homebrew tap publishing (release pipeline)
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): scaffold a full Go CLI project (includes GoReleaser)
 - [All plugins](../../../../README.md)
+
+## Additional workflows
+
+The GoReleaser mode uses authenticated `gh` and optionally `goreleaser` for local validation. Formula validation uses Homebrew; report unavailable checks. The modes are documented in `skills/set-up-installers/references/goreleaser/workflow.md` and `skills/set-up-installers/references/homebrew-formula/workflow.md`.

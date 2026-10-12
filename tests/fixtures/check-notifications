@@ -82,8 +82,8 @@ function main() {
   export PATH="${test_dir}/bin:${PATH}"
   export XDG_CACHE_HOME="${test_dir}/cache"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
-  # Keeps a developer's NOTIFY_WAIT_LIMIT out of the scenarios.
-  unset NOTIFY_WAIT_LIMIT
+  # Keeps inherited notify settings out of the scenarios.
+  unset NOTIFY_WAIT_LIMIT NOTIFY_SOUND_SET
 
   # The stub logs SIGTERM, which makes the real alerter remove its banner.
   # The trap is set before the call is logged, since scenarios wait for that log.
@@ -109,6 +109,65 @@ function main() {
   cd "${repo}"
   # The logical path; mktemp leaves a doubled slash when TMPDIR ends in /.
   repo="${PWD}"
+
+  if [[ "${scenario}" == sound-* ]]; then
+    local fixture_home="${test_dir}/home" sound_dir prefix=Chord role index
+    : > "${NOTIFY_TEST_LOG}"
+    sound_dir="${fixture_home}/Library/Sounds"
+    mkdir -p "${sound_dir}"
+    for role in stop permission attention; do
+      for index in 0 1 2 3 4; do
+        : > "${sound_dir}/${prefix}-${role}-${index}.aiff"
+      done
+    done
+    export NOTIFY_SOUND_SET="${prefix}"
+    case "${scenario}" in
+      sound-unset) unset NOTIFY_SOUND_SET ;;
+      sound-empty) export NOTIFY_SOUND_SET="" ;;
+      sound-invalid) export NOTIFY_SOUND_SET='../Chord' ;;
+      sound-gap) rm "${sound_dir}/Chord-stop-2.aiff" ;;
+      sound-missing) rm "${sound_dir}"/Chord-permission-*.aiff ;;
+      sound-zero) rm "${sound_dir}/Chord-stop-0.aiff" ;;
+      sound-counts) rm "${sound_dir}/Chord-permission-3.aiff" ;;
+      sound-extensions)
+        mv "${sound_dir}/Chord-stop-4.aiff" "${sound_dir}/Chord-stop-4.wav"
+        mv "${sound_dir}/Chord-attention-4.aiff" "${sound_dir}/Chord-attention-4.caf"
+        : > "${sound_dir}/Chord-permission-0.wav"
+        ;;
+      sound-other)
+        git init -q --template= -b sample "${test_dir}/another-repo"
+        cd "${test_dir}/another-repo"
+        ;;
+      sound-outside)
+        mkdir "${test_dir}/outside-repo"
+        cd "${test_dir}/outside-repo"
+        ;;
+      sound-worktree)
+        git -c user.name=Sample -c user.email=sample@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m sample
+        git worktree add -q -b sample "${test_dir}/worktree-folder"
+        cd "${test_dir}/worktree-folder"
+        ;;
+      sound-full) ;;
+      *)
+        echo "Unknown sound scenario: ${scenario}" >&2
+        return 1
+        ;;
+    esac
+    local event calls=0 sound_transcript="${test_dir}/sound-transcript.jsonl"
+    write_transcript "${sound_transcript}" ExitPlanMode '{"plan":"# Sample plan"}'
+    for event in cc-stop codex-stop cc-permission cc-question codex-question cc-elicit cc-permission; do
+      calls=$((calls + 1))
+      local sound_payload
+      sound_payload="$(jq -nc --arg session "sound-${calls}" \
+        --arg transcript "$(if [[ "${calls}" -eq 7 ]]; then printf '%s' "${sound_transcript}"; fi)" \
+        --arg message "$(if [[ "${calls}" -eq 7 ]]; then printf '%s' 'Claude Code needs your approval for the plan'; fi)" \
+        '{session_id: $session, message: $message, transcript_path: $transcript}')"
+      printf '%s' "${sound_payload}" | HOME="${fixture_home}" /bin/bash "${NOTIFY_BIN}" "${event}"
+      poll 150 alert_count_is "${calls}" || return 1
+    done
+    jq -r '.[index("--sound") + 1]' "${NOTIFY_TEST_LOG}"
+    return
+  fi
 
   local payload='{"session_id":"session-one","last_assistant_message":"Completed sample"}'
   local action="codex-stop" transcript="${test_dir}/transcript.jsonl" message=""

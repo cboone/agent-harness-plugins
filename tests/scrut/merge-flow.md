@@ -1,6 +1,6 @@
 # Merge flow
 
-Tests for the `merge-flow` script that `monitor-pr` bundles for its merge step. `policy` and `watch` run against `tests/fixtures/gh-stub`, answering from `tests/data/merge-flow/`. `sync` runs against real repositories built in a temporary directory, and `panes` against `tests/fixtures/tmux-stub`.
+Tests for the `merge-flow` script that `monitor-pr:monitor` bundles for its merge step. `policy` and `watch` run against `tests/fixtures/gh-stub`, answering from `tests/data/merge-flow/`. `sync` runs against real repositories built in a temporary directory, and `panes` against `tests/fixtures/tmux-stub`.
 
 ## Setup
 

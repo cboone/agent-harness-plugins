@@ -2,7 +2,8 @@
 name: scaffold-new-repo
 description: >-
   Scaffold a new repository's language-agnostic files: LICENSE, README,
-  CHANGELOG, agent config, and plans. Use for "scaffold a new repo".
+  CHANGELOG, agent config, and plans, with optional community files. Use for
+  "scaffold a new repo", "add community files", or "prepare for open source".
 ---
 
 # Scaffold New Repo
@@ -10,6 +11,8 @@ description: >-
 Generate the language-agnostic foundation files that every new repository starts with.
 
 ## Workflow
+
+For a community-files request or a parent workflow's community-files mode, run only `./references/community-files/workflow.md` to add or update CONTRIBUTING, CODE_OF_CONDUCT, SECURITY and the PR template. Skip foundation files. During full scaffolding, offer this optional workflow after generating foundation files.
 
 ### 1. Gather Project Information
 
@@ -186,7 +189,7 @@ Print a summary of what was created:
 - List every file generated
 - Note the project type used for `.gitignore`
 - Note the agent config files and symlink
-- Suggest running the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
+- Offer the community-files workflow from `./references/community-files/workflow.md` to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
 
 ## Error Handling
 

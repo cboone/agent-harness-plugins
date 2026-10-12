@@ -1,6 +1,6 @@
 # Set-Up CI
 
-Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.
+Create GitHub Actions CI and matching Makefile targets, or optimize existing workflows with path filters, concurrency groups and job timeouts.
 
 **Type:** Skill
 **Trigger:** `/set-up-ci`
@@ -34,3 +34,7 @@ Supported languages: Go (CLI and library), JavaScript/TypeScript, Python, Rust, 
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): scaffold a full Go CLI project (includes CI)
 - [Scaffold Go Library](../scaffold-go-library/README.md): scaffold a Go library project (includes CI)
 - [All plugins](../../README.md)
+
+## Additional workflows
+
+For "reduce CI costs" or a runner-usage mode selection, follow `skills/set-up-ci/references/runner-usage/workflow.md` without regenerating existing jobs. New workflows apply the same eligibility, concurrency and timeout rules.

@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Create worktrees, branches and tmux windows with workmux, or launch issue planning in a new session.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["git", "tmux", "workmux", "worktree"],
+  "license": "MIT",
+  "name": "workmux",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

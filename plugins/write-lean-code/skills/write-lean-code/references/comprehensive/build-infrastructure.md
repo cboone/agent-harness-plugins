@@ -169,7 +169,7 @@ PR review tooling (including GitHub Copilot's suggestions) sometimes flags impor
 
 ## `testDriver` vs `defaultTargets`
 
-This section covers only the Lake wiring; for the test-module style itself (import discipline, 1:1 naming mirror, composition per milestone, anti-patterns), use the companion `write-lean-tests` skill.
+This section covers only the Lake wiring; for the test-module style itself (import discipline, 1:1 naming mirror, composition per milestone, anti-patterns), use the companion `write-lean-code` skill.
 
 Lake exposes two ways to wire up a test library of the compile-time `example`-based form (where each test is an `example` that restates a public definition or lemma and thus type-checks iff the public surface still matches):
 

@@ -13,7 +13,7 @@ Audit every version reference in a repository, resolve current upstream versions
 ## Skill dependencies
 
 - **Required:** `lint-and-fix`
-- **Optional:** `triage-dependabot-prs`
+- **Optional:** `dependabot:triage-prs`
 
 ## Workflow
 
@@ -96,7 +96,7 @@ Use this shape:
 
 After the matrix, list up-to-date surfaces and unresolved upstream lookups separately. Make the distinction between "not selected yet", "not recommended", and "blocked" explicit.
 
-When an open Dependabot PR already targets the latest value, the upgrade is already proposed. Recommend handling that PR with the `triage-dependabot-prs` skill rather than applying the upgrade locally, and say so in the Recommendation cell (for example, `Recommended: triage #42`). When the PR targets an older version than the latest, note that a local upgrade will supersede it.
+When an open Dependabot PR already targets the latest value, the upgrade is already proposed. Recommend handling that PR with the `dependabot:triage-prs` skill rather than applying the upgrade locally, and say so in the Recommendation cell (for example, `Recommended: triage #42`). When the PR targets an older version than the latest, note that a local upgrade will supersede it.
 
 ### 7. Ask for Selection
 
@@ -107,7 +107,7 @@ Ask the user which upgrades to apply. Offer these choices:
 - Apply only selected candidate numbers
 - Audit only
 - Apply all except custom exclusions
-- Triage the open Dependabot PRs instead, for the candidates that have one (invoke the `triage-dependabot-prs` skill; offer this choice only when that skill is installed)
+- Triage the open Dependabot PRs instead, for the candidates that have one (invoke the `dependabot:triage-prs` skill; offer this choice only when that skill is installed)
 
 Do not apply upgrades until the user explicitly selects a scope. If the user asks for audit-only, stop after reporting the matrix.
 
@@ -137,7 +137,7 @@ Summarize the result under these headings:
 - Follow-up validation
 - Dependabot PRs superseded
 
-Include any commands that failed and the concrete candidate numbers affected. Under "Dependabot PRs superseded", list each open Dependabot PR that an applied upgrade makes redundant, and suggest closing them with the `triage-dependabot-prs` skill once the upgrade merges.
+Include any commands that failed and the concrete candidate numbers affected. Under "Dependabot PRs superseded", list each open Dependabot PR that an applied upgrade makes redundant, and suggest closing them with the `dependabot:triage-prs` skill once the upgrade merges.
 
 ## Reference Navigation
 

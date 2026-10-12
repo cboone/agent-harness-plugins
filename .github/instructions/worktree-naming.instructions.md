@@ -1,5 +1,5 @@
 ---
-applyTo: "plugins/create-worktree/**,plugins/address-issue-in-worktree/**,dist/codex/plugins/create-worktree/**,dist/codex/plugins/address-issue-in-worktree/**"
+applyTo: "plugins/workmux/**,dist/codex/plugins/workmux/**"
 ---
 
 # Worktree naming review instructions

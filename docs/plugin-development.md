@@ -32,10 +32,10 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, `publish-report-board`, `push-notification`, `resolve-copilot-pr-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
+A skill can ship executable helpers too. `workmux`, `publish-report-board`, `push-notification`, `monitor-pr` and `dependabot` each bundle a `scripts/` directory that the skill body invokes:
 
 ```text
-plugins/create-worktree/
+plugins/workmux/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── README.md
@@ -48,13 +48,9 @@ plugins/create-worktree/
         └── SKILL.md
 ```
 
-`create-worktree` and `address-issue-in-worktree` ship byte-identical copies of all three scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference in a `SKILL.md` body to resolve inside its own plugin, so the scripts cannot be shared across plugins. Three testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
+`review-until-clean` and `review-pr-with-codex` ship byte-identical copies of `review-scope`, guarded by a scrut testcase. `review-pr-with-codex` takes its scope buckets for the reviewers' prompts and compares its content trees to detect lasting changes the read-only aspects made to tracked files and to untracked files outside the ignore rules, so a fix to either behavior belongs in both copies.
 
-`resolve-copilot-pr-feedback` and `monitor-pr` share `resolve-copilot-threads` the same way, guarded by a fourth testcase. `monitor-pr` calls only its read-only `fetch`, `fetch-reviews` and `audit` commands, to see whether Copilot reviewed the current head and what is left open before it decides whether to dispatch to the resolver. Sharing the file is the point: the watch and the resolver read the same review data, so they cannot disagree about what Copilot left.
-
-`review-until-clean` and `review-pr-with-codex` share `review-scope` the same way, guarded by a fifth testcase. `review-pr-with-codex` takes its scope buckets for the reviewers' prompts and compares its content trees to detect lasting changes the read-only aspects made to tracked files and to untracked files outside the ignore rules, so a fix to either behavior belongs in both copies.
-
-A skill refers to each script it ships by its plugin-root path, so `create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` and `monitor-pr` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their own copy. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
+A skill refers to each script it ships by its plugin-root path, so `workmux:create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `monitor-pr:resolve-copilot-feedback` and `monitor-pr:monitor` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their shared helper. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
 
 A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI, where the placeholder is not substituted in skills. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
 
@@ -103,7 +99,7 @@ Widening the allowlist means measuring the new field first. Install a skill that
 
 ### Argument hints
 
-Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr` displays its options. Every skill that accepts arguments should declare one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` rejects any other form of the value, and requires the field only on skills with an `## Options` heading outside fenced code, so a skill that describes its arguments in prose elsewhere, such as `review-plan`, needs the hint added by hand. Codex CLI ignores it, so it passes through the Codex mirror unchanged.
+Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr:monitor` displays its options. Every skill that accepts arguments should declare one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` rejects any other form of the value, and requires the field only on skills with an `## Options` heading outside fenced code, so a skill that describes its arguments in prose elsewhere, such as `review-plan`, needs the hint added by hand. Codex CLI ignores it, so it passes through the Codex mirror unchanged.
 
 ### Invocation policy
 
@@ -144,7 +140,7 @@ Rule 17 of `bin/validate-plugins` checks the budget. It renders each generated `
 ```yaml
 description: >-
   Merge the base branch into the current branch, resolve conflicts, and push.
-  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
+  Use for "merge main" or "sync with main"; to rebase, use sync-with-main:rebase.
 ```
 
 Add `agents/openai.yaml` to a canonical skill only for supported interface metadata or an MCP tool dependency; no skill needs one today, and an invocation-policy override belongs in `disable-model-invocation`, which the generator [translates into that manifest](#invocation-policy) for Codex alone. Never set its `interface.short_description`: Codex prints that in place of `description`, silently replacing the routing description. Do not add keys this repository invents to portable plugin manifests or to `agents/openai.yaml`.
@@ -197,7 +193,7 @@ Declare every skill a workflow composes in a `## Skill dependencies` section of 
 ## Skill dependencies
 
 - **Required:** `lint-and-fix`
-- **Optional:** `review-branch`, `resolve-copilot-pr-feedback`
+- **Optional:** `review-branch`, `monitor-pr:resolve-copilot-feedback`
 ```
 
 Write `None` for an empty category. A skill that composes nothing omits the section.
@@ -273,12 +269,13 @@ Skills name each other and point at files by path, and a stale one fails only in
 
 What gets resolved, and against what:
 
-| Spelling                                                    | Resolved against              |
-| ----------------------------------------------------------- | ----------------------------- |
-| `plugins/…`, `dist/codex/…`                                 | the repository root           |
-| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill |
-| `./references/…`                                            | the skill directory           |
-| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`  |
+| Spelling                                                    | Resolved against                       |
+| ----------------------------------------------------------- | -------------------------------------- |
+| `plugins/…`, `dist/codex/…`                                 | the repository root                    |
+| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill          |
+| `./references/…`                                            | the skill directory                    |
+| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`           |
+| `` `/plugin:skill` `` and a qualified name beside "skill"   | `plugins/plugin/skills/skill/SKILL.md` |
 
 `${CLAUDE_PLUGIN_ROOT}/scripts/…` is left to rule 18, which also checks the executable bit. A bare backticked name is not checked: nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the sentence around it.
 
@@ -295,7 +292,7 @@ The same script checks skill dependencies, which the [Skill dependencies](#skill
 
 - Every composition reference, "Invoke the `NAME` skill" with or without a slash before the name, in a `SKILL.md` or any file under its `references/`, is declared in that skill's `## Skill dependencies` section.
 - The section has exactly one `- **Required:**` line and one `- **Optional:**` line, each holding `None` or backticked skill names separated by commas, and nothing else.
-- Every declared name resolves to a `plugins/*/skills/NAME/SKILL.md`, appears in only one category, and appears only once.
+- Every declared bare name resolves to a `plugins/*/skills/NAME/SKILL.md`; a qualified `plugin:skill` name resolves to `plugins/plugin/skills/skill/SKILL.md`. Each name appears in only one category and only once. Use qualified names for skills in multi-skill plugins so resolution identifies both the plugin and skill. Composition references, dependency declarations and their uses accept the same qualified syntax; invocation references may include a leading slash.
 - Every declared name is used: the skill names it, backticked with or without a leading slash, somewhere outside the section, as a selection list does for each candidate.
 
 Other wording, such as "use the `review-branch` skill instead" or "run `/lint-and-fix` next", is not composition and needs no declaration. The exception is "invoke `NAME`" without the canonical phrase: it reads as composition but escapes the checks above, so it draws a warning when `NAME` is a skill that the owning skill neither declares nor is itself. Rewrite a real composition with the canonical phrase and declare it, and reword a mention that is not one. A warning does not fail validation. An ignore comment does not exempt a dependency finding.
