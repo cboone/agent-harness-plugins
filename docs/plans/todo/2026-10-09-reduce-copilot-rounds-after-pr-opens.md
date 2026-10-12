@@ -80,7 +80,7 @@ Findings per review by round: 1.1, 0.8, 0.9, 0.7, 0.9, 0.6, 0.8 for rounds 1 to 
 
 ### Phase 2: `review-anti-patterns` skill
 
-1. New plugin via the `create-plugin` skill, starting at `1.0.0`, with catalog entry, README and Codex/OpenCode mirrors from `make build`.
+1. New plugin via the `create-plugin` skill, starting at `1.0.0`, with catalog entry, README and Codex mirror from `make build`.
 1. `SKILL.md`: options `--range <rev-range>` (default: merge base with the default branch through the working tree), `--files <paths>` and `--severity important|nit`. Workflow: resolve the scope, read the changed hunks with enough surrounding context to see parallel paths, walk the checklist, return findings with the evidence each item asked for, and never edit.
 1. `references/checklist.md`: the thirteen patterns as reviewer questions, each with what settles it and a short example from the analysis. Group them into code, agent prose and docs consistency so a scope that is all Markdown skips what cannot apply.
 1. `references/mechanical-checks.md`: commands that settle the platform pattern where the project has them, such as `terraform validate`, `gcloud ... --validate-only`, `actionlint`, GraphQL schema validation, running each documented command once, and `plant-defects` for tests that cannot fail. The skill runs only checks the project already supports and reports the rest as unverified.
