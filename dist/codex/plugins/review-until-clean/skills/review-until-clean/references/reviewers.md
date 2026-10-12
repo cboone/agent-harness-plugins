@@ -100,7 +100,7 @@ The snapshot binds `HEAD`, the resolved merge base, and the working tree's conte
 
 A change made by something other than the reviewer during its run, such as a formatter on save or another session, is indistinguishable from the reviewer's own edit. It is recorded the same way, which costs at most one more round and never a wrong clean result.
 
-The changed paths come from comparing the two scope reads: every path in either read's file lists whose content differs, plus any path that appears in only one of them. List them in the ledger; do not summarize them as "the reviewer made changes".
+The changed paths come from the content trees the two scope reads report: `git diff-tree -r -z --name-only <tree before> <tree after>` lists exactly the paths whose stored content changed, added or deleted. Do not derive them from the file lists. Those lists sort paths into buckets, and staging, unstaging or `git add -N` moves a path between them, or off them, without changing a byte, so a path that only left a list is not an edit. Record a `HEAD` or base change separately, as above. List the paths in the ledger; do not summarize them as "the reviewer made changes".
 
 Under `--report-only`, an edit round is reported with its changed paths, and nothing is reverted. Reverting would be the loop editing code under `--report-only`, and a guess about which edits were the reviewer's.
 
