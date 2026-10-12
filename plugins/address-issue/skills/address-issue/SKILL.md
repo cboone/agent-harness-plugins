@@ -139,7 +139,7 @@ If there are no task list items, treat the entire issue as a single task.
 
 **If your harness provides plan mode** (Claude Code) and neither flag was given: call `EnterPlanMode` before exploring, keep the exploration read-only, then call `ExitPlanMode` with the plan below and wait for the approval result.
 
-**Otherwise** (Codex CLI, OpenCode, or any harness without those tools): present the plan below, then stop and wait for the user to confirm, adjust, or reject it.
+**Otherwise** (Codex CLI, or any harness without those tools): present the plan below, then stop and wait for the user to confirm, adjust, or reject it.
 
 Enter plan mode here rather than at step 1. Steps 1 and 4 are read-only, but step 3 writes to GitHub, and plan mode would block it.
 

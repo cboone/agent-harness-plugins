@@ -102,7 +102,7 @@ help:
 	@echo "  format             Auto-fix Markdown and formatting"
 	@echo "  validate           Validate JSON and plugin structure"
 	@echo "  validate-corpus    Validate the review case corpus (needs REVIEW_CASE_CORPUS_DIR)"
-	@echo "  build              Regenerate bundled review checklists and the Codex and OpenCode mirrors"
+	@echo "  build              Regenerate bundled review checklists and the Codex mirror"
 	@echo "  test-scrut         Run the scrut documents in parallel (SCRUT_JOBS=N to limit)"
 	@echo "  test-scrut-update  Re-record scrut expectations"
 	@echo "  test-all           lint + validate + test-scrut"
@@ -143,7 +143,6 @@ build:
 	bin/build-review-checklists
 	bin/build-shared-references
 	bin/build-codex-marketplace
-	bin/build-opencode-mirror
 
 test-scrut:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }

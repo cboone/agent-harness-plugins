@@ -44,6 +44,11 @@ The user may provide these options inline:
 - **--plan**: Commit only the plan file
 - **--all**: Stage and commit all changes (including untracked files)
 
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `trim-text`
+
 ## Workflow
 
 ### 1. Check for Changes
@@ -139,6 +144,19 @@ Analyze the diff to generate a commit message:
 1. **Write the description**: A concise summary (under 72 characters, unless a project convention detected above sets a different limit) focused on _why_ the change was made, not _what_ files changed.
 1. **Add context when relevant**: Reference issue numbers if they appear in branch names (e.g., branch `fix/issue-42-login-bug` suggests `fixes #42`).
 
+#### Trim the body
+
+When the message has a body, split off its trailing lines first: the run of lines at the end in which every line is a trailer such as `Signed-off-by:` or `Claude-Session:` or a closing line such as `fixes #42`, whether or not a blank line precedes it. Issue references inside the prose stay in it. When no prose remains, keep the drafted body unchanged and record the trim as nothing to trim. Otherwise, invoke the `trim-text` skill on the remaining prose, passing this continuation block after it:
+
+```text
+Parent continuation:
+- Caller: commit
+- Resume target: Step 6, create the commit
+- Profile: none
+```
+
+When `Status` is `success`, use the returned `Trimmed text` as the prose, then append one blank line and the split-off block exactly as drafted. Use the drafted body unchanged, block included, when the status is anything else, when the trimmed prose is empty, when it adds or drops an issue reference, a closing keyword, or a trailer-like line, or when any code span, code block, or link target in the drafted prose is missing or changed. When `Flagged` suggests a correction to a claim, check the claim against the staged diff before committing: apply the correction when the diff confirms it, and otherwise keep the claim and report the flag. Record the outcome, along with any `Flagged` and `Cut material` lines, and report it in step 7, or with the error if the commit fails. If the `trim-text` skill is not installed, record the trim as skipped.
+
 ### 6. Create the Commit
 
 All commits must be GPG signed. Use a HEREDOC for the commit message to ensure proper formatting:
@@ -159,6 +177,7 @@ After a successful commit:
 
 1. Run `git status` to verify success.
 1. Report the commit hash and message.
+1. Report the body trim recorded in step 5: trimmed, nothing to trim, failed, unavailable, or discarded with the reason, or skipped. Relay any flagged or cut material.
 1. **If `--push` was specified**: Push to the remote.
 
 ```bash

@@ -7,27 +7,27 @@ Last updated: February 15, 2026
 
 ## The Landscape
 
-Every major AI coding agent reads some form of Markdown instruction file from your project. The idea is simple: instead of repeating "we use pnpm, not npm" and "always run tests before committing" in every prompt, you write it once and the agent reads it automatically at session start. The ecosystem has fragmented into several distinct formats with varying degrees of cross-tool compatibility. This document maps the territory across the four tools that matter most -- Claude Code, OpenAI Codex, GitHub Copilot, and OpenCode -- and gives you a concrete strategy.
+Every major AI coding agent reads some form of Markdown instruction file from your project. The idea is simple: instead of repeating "we use pnpm, not npm" and "always run tests before committing" in every prompt, you write it once and the agent reads it automatically at session start. The ecosystem has fragmented into several distinct formats with varying degrees of cross-tool compatibility. This document maps the territory across the three tools that matter most -- Claude Code, OpenAI Codex, and GitHub Copilot -- and gives you a concrete strategy.
 
 ---
 
 ## Comparison Table
 
-| Feature                       | **CLAUDE.md**                                                                    | **AGENTS.md**                                                                                                        | **copilot-instructions.md**                                                    | **SKILL.md**                                             |
-| ----------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| **Primary tool**              | Claude Code                                                                      | Codex, Copilot, OpenCode, and 40+ others                                                                             | GitHub Copilot (chat, agent, code review)                                      | Claude Code, Codex (open standard)                       |
-| **Governance**                | Anthropic                                                                        | Agentic AI Foundation (Linux Foundation)                                                                             | GitHub/Microsoft                                                               | Agent Skills open standard                               |
-| **File location**             | Repo root, subdirs, `~/.claude/CLAUDE.md`, `.claude/rules/`                      | Repo root, subdirs, `~/.codex/AGENTS.md`, `~/.config/opencode/AGENTS.md`                                             | `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md` | `.claude/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md` |
-| **Format**                    | Plain Markdown                                                                   | Plain Markdown                                                                                                       | Plain Markdown (with optional YAML frontmatter for path-scoped files)          | Markdown with YAML frontmatter                           |
-| **Hierarchical loading**      | Yes -- global to project root to subdirectory, plus `.claude/rules/` auto-loaded | Yes -- global to project root to walk down to cwd; closest file wins                                                 | Yes -- org-level to repo-level to path-specific `.instructions.md`             | No -- loaded on-demand when skill is invoked             |
-| **File imports / references** | `@path/to/file` syntax; recursive                                                | Via `opencode.json` `instructions` array or `@` read directives in the file                                          | Prompt files can use `#file:path` references                                   | Can reference supporting files in skill directory        |
-| **Path-scoping**              | Subdirectory `CLAUDE.md` files scope to that dir                                 | Subdirectory files scope to that dir; closest wins                                                                   | `applyTo` glob in `.instructions.md` frontmatter                               | Skills loaded only when relevant to the task             |
-| **Override mechanism**        | Subdirectory files supplement parent                                             | `AGENTS.override.md` in any dir; later files override earlier                                                        | Path-specific instructions supplement repo-wide                                | Invocation control: user-only, model-invokable, or both  |
-| **Init command**              | `/init` generates starter file                                                   | `/init` in OpenCode and Codex scans project                                                                          | Copilot coding agent auto-suggests on first PR; `/init` in VS Code             | `/skills` or `$skill-installer`                          |
-| **Live editing**              | Ask Claude to edit the file directly                                             | Manual editing                                                                                                       | Manual editing                                                                 | Direct file editing                                      |
-| **Cross-tool support**        | Claude Code only (but Copilot reads it as a fallback at root)                    | **Broadest**: Codex, Copilot, OpenCode, plus Gemini CLI, Cursor, Zed, Roo Code, Kilo Code, Amp, Jules, and many more | Copilot ecosystem (VS Code, JetBrains, GitHub.com); also reads `AGENTS.md`     | Claude Code + Codex (open standard)                      |
-| **Recommended length**        | Under 300 lines; fewer is better                                                 | No official limit; same general "keep it lean" advice                                                                | Short, self-contained statements; 10-20 instructions to start                  | Focused per-skill; reference files loaded on-demand      |
-| **Version control**           | Yes, commit to repo                                                              | Yes, commit to repo                                                                                                  | Yes, in `.github/`                                                             | Yes, in `.claude/skills/` or `.agents/skills/`           |
+| Feature                       | **CLAUDE.md**                                                                    | **AGENTS.md**                                                                                              | **copilot-instructions.md**                                                    | **SKILL.md**                                             |
+| ----------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| **Primary tool**              | Claude Code                                                                      | Codex, Copilot, and 40+ others                                                                             | GitHub Copilot (chat, agent, code review)                                      | Claude Code, Codex (open standard)                       |
+| **Governance**                | Anthropic                                                                        | Agentic AI Foundation (Linux Foundation)                                                                   | GitHub/Microsoft                                                               | Agent Skills open standard                               |
+| **File location**             | Repo root, subdirs, `~/.claude/CLAUDE.md`, `.claude/rules/`                      | Repo root, subdirs, `~/.codex/AGENTS.md`                                                                   | `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md` | `.claude/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md` |
+| **Format**                    | Plain Markdown                                                                   | Plain Markdown                                                                                             | Plain Markdown (with optional YAML frontmatter for path-scoped files)          | Markdown with YAML frontmatter                           |
+| **Hierarchical loading**      | Yes -- global to project root to subdirectory, plus `.claude/rules/` auto-loaded | Yes -- global to project root to walk down to cwd; closest file wins                                       | Yes -- org-level to repo-level to path-specific `.instructions.md`             | No -- loaded on-demand when skill is invoked             |
+| **File imports / references** | `@path/to/file` syntax; recursive                                                | Via `@` read directives in the file                                                                        | Prompt files can use `#file:path` references                                   | Can reference supporting files in skill directory        |
+| **Path-scoping**              | Subdirectory `CLAUDE.md` files scope to that dir                                 | Subdirectory files scope to that dir; closest wins                                                         | `applyTo` glob in `.instructions.md` frontmatter                               | Skills loaded only when relevant to the task             |
+| **Override mechanism**        | Subdirectory files supplement parent                                             | `AGENTS.override.md` in any dir; later files override earlier                                              | Path-specific instructions supplement repo-wide                                | Invocation control: user-only, model-invokable, or both  |
+| **Init command**              | `/init` generates starter file                                                   | `/init` in Codex scans project                                                                             | Copilot coding agent auto-suggests on first PR; `/init` in VS Code             | `/skills` or `$skill-installer`                          |
+| **Live editing**              | Ask Claude to edit the file directly                                             | Manual editing                                                                                             | Manual editing                                                                 | Direct file editing                                      |
+| **Cross-tool support**        | Claude Code only (but Copilot reads it as a fallback at root)                    | **Broadest**: Codex, Copilot, plus Gemini CLI, Cursor, Zed, Roo Code, Kilo Code, Amp, Jules, and many more | Copilot ecosystem (VS Code, JetBrains, GitHub.com); also reads `AGENTS.md`     | Claude Code + Codex (open standard)                      |
+| **Recommended length**        | Under 300 lines; fewer is better                                                 | No official limit; same general "keep it lean" advice                                                      | Short, self-contained statements; 10-20 instructions to start                  | Focused per-skill; reference files loaded on-demand      |
+| **Version control**           | Yes, commit to repo                                                              | Yes, commit to repo                                                                                        | Yes, in `.github/`                                                             | Yes, in `.claude/skills/` or `.agents/skills/`           |
 
 ---
 
@@ -45,11 +45,9 @@ Key limitation: Claude Code-specific. No other tool natively reads `CLAUDE.md` a
 
 This is the emerging industry standard, now stewarded by the Agentic AI Foundation under the Linux Foundation. It originated from collaborative efforts by OpenAI (Codex), Google (Jules), Cursor, Amp, and Factory. The format is intentionally minimal: just Markdown with whatever headings you want. No special syntax, no required frontmatter, no schema to validate against.
 
-The adoption is broad and growing. Among the tools covered here: Codex uses it as the primary instruction file (having migrated from `codex.md`), Copilot reads it alongside its own format, and OpenCode uses it natively. Over 40,000 open-source projects already have an `AGENTS.md`.
+The adoption is broad and growing. Among the tools covered here: Codex uses it as the primary instruction file (having migrated from `codex.md`), and Copilot reads it alongside its own format. Over 40,000 open-source projects already have an `AGENTS.md`.
 
 **Codex's implementation** is the most sophisticated: it walks from the project root down to your current working directory, checking each directory for `AGENTS.override.md` first, then `AGENTS.md`, concatenating them in order. The 32 KiB default limit (`project_doc_max_bytes`) can be raised in config. You can also add fallback filenames in `config.toml` so Codex will read your existing `CLAUDE.md` or `TEAM_GUIDE.md`.
-
-**OpenCode's implementation** reads `AGENTS.md` as its primary instruction file. The first matching file wins in each category -- if you have both `AGENTS.md` and `CLAUDE.md`, only `AGENTS.md` is used. OpenCode also supports custom instruction file paths via the `instructions` array in `opencode.json`, including glob patterns like `packages/*/AGENTS.md`.
 
 **Copilot's implementation** reads `AGENTS.md` files at the root and in subdirectories. If both `AGENTS.md` and `copilot-instructions.md` exist, instructions from both are used. Root-level `AGENTS.md` is treated as primary instructions; other locations are treated as additional.
 
@@ -99,7 +97,7 @@ Every format supports plain Markdown for instructions. Every format supports pro
 
 ### The convergence toward AGENTS.md
 
-The single most important trend is the convergence around `AGENTS.md` as a cross-tool standard. Codex migrated from `codex.md` to `AGENTS.md`. Copilot reads `AGENTS.md` alongside its own format. OpenCode uses `AGENTS.md` natively. Claude Code is the holdout -- it reads `CLAUDE.md` -- but a simple symlink bridges the gap.
+The single most important trend is the convergence around `AGENTS.md` as a cross-tool standard. Codex migrated from `codex.md` to `AGENTS.md`. Copilot reads `AGENTS.md` alongside its own format. Claude Code is the holdout -- it reads `CLAUDE.md` -- but a simple symlink bridges the gap.
 
 ### Where they diverge
 
@@ -109,7 +107,7 @@ The single most important trend is the convergence around `AGENTS.md` as a cross
 
 **Override semantics.** Codex's `AGENTS.override.md` is unique -- it lets you temporarily override instructions in any directory without modifying the base file. No other tool has this concept.
 
-**Import mechanisms.** Claude Code uses `@path/to/file` syntax inline in CLAUDE.md. OpenCode uses the `instructions` array in `opencode.json` with glob support. Codex uses `project_doc_fallback_filenames` for alternate filenames. Copilot's prompt files use `#file:path`. Each approach is different and tool-specific.
+**Import mechanisms.** Claude Code uses `@path/to/file` syntax inline in CLAUDE.md. Codex uses `project_doc_fallback_filenames` for alternate filenames. Copilot's prompt files use `#file:path`. Each approach is different and tool-specific.
 
 ---
 
@@ -117,7 +115,7 @@ The single most important trend is the convergence around `AGENTS.md` as a cross
 
 ### 1. Make AGENTS.md your single source of truth
 
-Put your core project instructions in `AGENTS.md` at the repo root. This is the one file that works across Codex, Copilot, and OpenCode natively. Structure it with clear Markdown headings:
+Put your core project instructions in `AGENTS.md` at the repo root. This is the one file that works across Codex and Copilot natively. Structure it with clear Markdown headings:
 
 ```markdown
 # AGENTS.md
@@ -203,17 +201,7 @@ For monorepos, take advantage of Copilot's path-specific instructions:
 
 Single-language repos can use scoped files too: a `.github/instructions/lean.instructions.md` with `applyTo: "**/*.lean"` is the right home for review conventions that only apply to Lean code (Mathlib-aware naming, no line-length limit, single-line comment paragraphs).
 
-### 5. For OpenCode: configure custom instruction paths
-
-OpenCode reads `AGENTS.md` natively. If you want it to also pull in docs from elsewhere in your project, use the `instructions` array in `opencode.json`:
-
-```json
-{
-  "instructions": ["docs/development-standards.md", "packages/*/AGENTS.md"]
-}
-```
-
-### 6. Global (user-level) instructions
+### 5. Global (user-level) instructions
 
 For personal cross-project preferences, maintain one canonical file and symlink it:
 
@@ -228,13 +216,9 @@ ln -sfn ~/.agents/AGENTS.md ~/.claude/CLAUDE.md
 # Codex
 mkdir -p ~/.codex
 ln -sfn ~/.agents/AGENTS.md ~/.codex/AGENTS.md
-
-# OpenCode
-mkdir -p ~/.config/opencode
-ln -sfn ~/.agents/AGENTS.md ~/.config/opencode/AGENTS.md
 ```
 
-### 7. What goes where -- a decision framework
+### 6. What goes where -- a decision framework
 
 | Instruction type                                      | Where to put it                                                  |
 | ----------------------------------------------------- | ---------------------------------------------------------------- |
@@ -246,7 +230,7 @@ ln -sfn ~/.agents/AGENTS.md ~/.config/opencode/AGENTS.md
 | Personal preferences (all projects)                   | `~/.agents/AGENTS.md` symlinked to each tool                     |
 | Temporary overrides                                   | `AGENTS.override.md` (Codex)                                     |
 
-### 8. Things to avoid
+### 7. Things to avoid
 
 **Don't use instruction files for things linters do better.** Code formatting belongs in `.editorconfig`, `.prettierrc`, or `rustfmt.toml`.
 
@@ -260,7 +244,7 @@ ln -sfn ~/.agents/AGENTS.md ~/.config/opencode/AGENTS.md
 
 ## Summary
 
-AGENTS.md is winning as the cross-tool standard, with backing from the Linux Foundation and native support in Codex, Copilot, and OpenCode. Claude Code is the one tool that requires its own filename, but a symlink or Codex fallback config bridges the gap trivially.
+AGENTS.md is winning as the cross-tool standard, with backing from the Linux Foundation and native support in Codex and Copilot. Claude Code is the one tool that requires its own filename, but a symlink or Codex fallback config bridges the gap trivially.
 
 The practical strategy is a hub-and-spoke model: AGENTS.md is the hub containing core project instructions, and tool-specific locations (`.claude/rules/`, `.github/instructions/`, skills directories) are spokes that add capabilities the hub can't express. Skills handle context bloat by loading detailed instructions on demand rather than eagerly.
 

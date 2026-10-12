@@ -344,9 +344,9 @@ validate_codex_generated_output
 #
 # Rule 16 proves dist/codex matches what the generator produces today, which
 # would still pass if the generator started rewriting skills. Codex must see
-# the same name, routing description and dependency block that Claude Code and
-# OpenCode load, so every generated SKILL.md is compared with its canonical
-# source here rather than taken on trust.
+# the same name, routing description and dependency block that Claude Code
+# loads, so every generated SKILL.md is compared with its canonical source here
+# rather than taken on trust.
 #
 # One difference is sanctioned. Codex has no frontmatter field for invocation
 # policy and ignores `disable-model-invocation`, so the generator drops that
@@ -905,17 +905,13 @@ validate_review_checklists
 
 # ─── 21. Skill frontmatter fields are on the allowlist ──────────────────────
 #
-# Claude Code accepts around twenty SKILL.md frontmatter fields, OpenCode
-# documents five and Codex CLI two, and all three tolerate what they do not
-# recognize. A misspelling such as `disable-model-invokation` therefore has no
-# effect anywhere and reports nothing. This rule names the fields this
-# repository ships, so a typo fails here instead of going unnoticed.
+# Claude Code and Codex CLI both ignore frontmatter fields they do not
+# recognize, so a misspelling such as `disable-model-invokation` silently does
+# nothing. This rule names the fields this repository ships, so a typo fails.
 #
-# Widening the allowlist is deliberate work, not a formality: each new field
-# needs its Codex and OpenCode handling measured and recorded in
-# docs/plugin-development.md, because a field Claude Code honors can be silently
-# dropped by the other two. `disable-model-invocation` is the case in point, and
-# the only field with a Codex counterpart today.
+# Before widening the allowlist, measure the new field in Codex and record the
+# result in docs/plugin-development.md: Codex can drop a field Claude Code
+# honors, as it does `disable-model-invocation`.
 #
 # The rule also requires a non-empty, double-quoted `argument-hint` on every
 # skill with an `## Options` section, since Claude Code shows that hint after a

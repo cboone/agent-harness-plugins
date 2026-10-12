@@ -15,14 +15,13 @@ Beyond the instruction/context files (CLAUDE.md, AGENTS.md, etc.), every AI codi
 
 ## The Root Directory Footprint
 
-| Tool               | Files at project root        | Files in hidden directories                                                                                                                                                   | Total project-level files                |
-| ------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **Claude Code**    | `CLAUDE.md`, `.mcp.json`     | `.claude/settings.json`, `.claude/settings.local.json`, `.claude/rules/*.md`, `.claude/skills/*/SKILL.md`, `.claude/commands/*.md`                                            | 2 root + many in `.claude/`              |
-| **OpenAI Codex**   | `AGENTS.md`                  | `.codex/config.toml`, `.agents/skills/*/SKILL.md`                                                                                                                             | 1 root + few in `.codex/` and `.agents/` |
-| **GitHub Copilot** | _(none)_                     | `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`, `.github/chatmodes/*.chatmode.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md` | 0 root, all in `.github/`                |
-| **OpenCode**       | `AGENTS.md`, `opencode.json` | _(none)_                                                                                                                                                                      | 2 root                                   |
+| Tool               | Files at project root    | Files in hidden directories                                                                                                                                                   | Total project-level files                |
+| ------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Claude Code**    | `CLAUDE.md`, `.mcp.json` | `.claude/settings.json`, `.claude/settings.local.json`, `.claude/rules/*.md`, `.claude/skills/*/SKILL.md`, `.claude/commands/*.md`                                            | 2 root + many in `.claude/`              |
+| **OpenAI Codex**   | `AGENTS.md`              | `.codex/config.toml`, `.agents/skills/*/SKILL.md`                                                                                                                             | 1 root + few in `.codex/` and `.agents/` |
+| **GitHub Copilot** | _(none)_                 | `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`, `.github/chatmodes/*.chatmode.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md` | 0 root, all in `.github/`                |
 
-With the symlink strategy (CLAUDE.md to AGENTS.md), your realistic root footprint across all four tools is: `AGENTS.md`, `CLAUDE.md` (symlink), `.mcp.json` (if using MCP servers), and `opencode.json` (if using OpenCode). Three or four visible files.
+With the symlink strategy (CLAUDE.md to AGENTS.md), your realistic root footprint across all three tools is: `AGENTS.md`, `CLAUDE.md` (symlink), and `.mcp.json` (if using MCP servers). Two or three visible files.
 
 ---
 
@@ -322,70 +321,25 @@ The `applyTo` glob determines which files trigger these instructions; separate m
 
 ---
 
-### OpenCode
-
-OpenCode uses a JSON config file and follows the AGENTS.md convention for instructions. It's the most straightforward config setup.
-
-#### Project-level files
-
-```text
-your-project/
-+-- AGENTS.md                          # Instructions (primary)
-+-- opencode.json                      # Project configuration
-```
-
-#### User-level files
-
-```text
-~/.config/opencode/
-+-- opencode.json                      # Global configuration
-+-- AGENTS.md                          # Global instructions
-```
-
-#### Key opencode.json options
-
-```json
-{
-  "instructions": ["docs/development-standards.md", "test/testing-guidelines.md", "packages/*/AGENTS.md"],
-  "provider": "anthropic",
-  "model": "claude-sonnet-4.5",
-  "mcpServers": {
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@anthropic-ai/github-mcp"]
-    }
-  }
-}
-```
-
-#### Notable unique features
-
-- **Custom instruction file paths with globs** -- the `instructions` array in `opencode.json` can point to any Markdown files, including glob patterns. This is how you reference instruction files tucked away in `docs/` or spread across a monorepo without needing them at root.
-- **Provider-agnostic** -- supports 75+ models from Claude, OpenAI, Gemini, and local models via Ollama/LM Studio. Configuration switches between them.
-- **LSP integration** -- configurable Language Server Protocol servers give the LLM typed feedback from your codebase.
-- **Instruction file precedence** -- if you have both `AGENTS.md` and `CLAUDE.md`, only `AGENTS.md` is used. Similarly, `~/.config/opencode/AGENTS.md` takes precedence over `~/.claude/CLAUDE.md`.
-
----
-
 ## Cross-Tool Configuration Comparison
 
 ### What each config system controls
 
-| Capability                      | Claude Code                                  | Codex                                             | Copilot                         | OpenCode                           |
-| ------------------------------- | -------------------------------------------- | ------------------------------------------------- | ------------------------------- | ---------------------------------- |
-| **Config format**               | JSON                                         | TOML                                              | JSON (VS Code settings)         | JSON                               |
-| **Config location (project)**   | `.claude/settings.json`                      | `.codex/config.toml`                              | _(VS Code settings only)_       | `opencode.json` (root)             |
-| **Config location (user)**      | `~/.claude/settings.json`                    | `~/.codex/config.toml`                            | VS Code user settings           | `~/.config/opencode/opencode.json` |
-| **Model selection**             | `env` vars in settings.json                  | `model` in config.toml                            | VS Code settings                | `model` in opencode.json           |
-| **Permissions / approvals**     | `permissions` rules (allow/deny/ask)         | `approval_policy` (4 levels)                      | N/A (cloud-managed)             | N/A                                |
-| **Sandboxing**                  | Permission rules + sandbox config            | `sandbox_mode` + granular `[sandbox_*]`           | N/A                             | N/A                                |
-| **MCP servers**                 | `.mcp.json` or `mcpServers` in settings.json | `[mcp_servers]` in config.toml                    | N/A                             | `mcpServers` in opencode.json      |
-| **Hooks / lifecycle**           | `hooks` in settings.json (pre/post tool use) | `notify` in config.toml (completion notification) | N/A                             | N/A                                |
-| **Custom instruction paths**    | `@path` imports in CLAUDE.md                 | `project_doc_fallback_filenames`                  | `file` refs in VS Code settings | `instructions` array with globs    |
-| **Schema validation**           | Yes (`$schema` key)                          | Yes (`#:schema` comment)                          | Via VS Code                     | No                                 |
-| **Named profiles**              | No                                           | Yes (`[profiles.*]`)                              | No                              | No                                 |
-| **Admin enforcement**           | `managed-settings.json` in system dirs       | `requirements.toml` in system dirs                | GitHub org-level settings       | No                                 |
-| **Git-ignored personal config** | `.claude/settings.local.json` (auto)         | N/A (project config is all-or-nothing)            | N/A                             | N/A                                |
+| Capability                      | Claude Code                                  | Codex                                             | Copilot                         |
+| ------------------------------- | -------------------------------------------- | ------------------------------------------------- | ------------------------------- |
+| **Config format**               | JSON                                         | TOML                                              | JSON (VS Code settings)         |
+| **Config location (project)**   | `.claude/settings.json`                      | `.codex/config.toml`                              | _(VS Code settings only)_       |
+| **Config location (user)**      | `~/.claude/settings.json`                    | `~/.codex/config.toml`                            | VS Code user settings           |
+| **Model selection**             | `env` vars in settings.json                  | `model` in config.toml                            | VS Code settings                |
+| **Permissions / approvals**     | `permissions` rules (allow/deny/ask)         | `approval_policy` (4 levels)                      | N/A (cloud-managed)             |
+| **Sandboxing**                  | Permission rules + sandbox config            | `sandbox_mode` + granular `[sandbox_*]`           | N/A                             |
+| **MCP servers**                 | `.mcp.json` or `mcpServers` in settings.json | `[mcp_servers]` in config.toml                    | N/A                             |
+| **Hooks / lifecycle**           | `hooks` in settings.json (pre/post tool use) | `notify` in config.toml (completion notification) | N/A                             |
+| **Custom instruction paths**    | `@path` imports in CLAUDE.md                 | `project_doc_fallback_filenames`                  | `file` refs in VS Code settings |
+| **Schema validation**           | Yes (`$schema` key)                          | Yes (`#:schema` comment)                          | Via VS Code                     |
+| **Named profiles**              | No                                           | Yes (`[profiles.*]`)                              | No                              |
+| **Admin enforcement**           | `managed-settings.json` in system dirs       | `requirements.toml` in system dirs                | GitHub org-level settings       |
+| **Git-ignored personal config** | `.claude/settings.local.json` (auto)         | N/A (project config is all-or-nothing)            | N/A                             |
 
 ### Version control decisions
 
@@ -398,7 +352,6 @@ your-project/
 | `AGENTS.md` / `CLAUDE.md`                   | **Yes**                  | Core project instructions                                                                       |
 | `.github/copilot-instructions.md`           | **Yes**                  | Team-shared Copilot instructions                                                                |
 | `.github/instructions/**/*.instructions.md` | **Yes**                  | Team-shared path-scoped instructions                                                            |
-| `opencode.json`                             | **Yes** (if no secrets)  | Team-shared OpenCode config                                                                     |
 | `~/.claude/settings.json`                   | **No** (user-level)      | Personal global preferences                                                                     |
 | `~/.codex/config.toml`                      | **No** (user-level)      | Personal global preferences                                                                     |
 
@@ -415,7 +368,6 @@ your-project/
 +-- AGENTS.md                  # Single source of truth for all tools
 +-- CLAUDE.md -> AGENTS.md     # Symlink for Claude Code
 +-- .mcp.json                  # MCP servers (if any)
-+-- opencode.json              # OpenCode config (if using)
 +-- .claude/                   # Claude Code config + rules + skills
 +-- .codex/                    # Codex config (if using)
 +-- .github/                   # Copilot instructions (already exists)
@@ -473,10 +425,9 @@ agents/
 +-- codex-config.toml    # symlinked to ~/.codex/config.toml
 
 # Install script:
-mkdir -p ~/.claude ~/.codex ~/.config/opencode
+mkdir -p ~/.claude ~/.codex
 ln -sfn ~/dotfiles/agents/AGENTS.md ~/.claude/CLAUDE.md
 ln -sfn ~/dotfiles/agents/AGENTS.md ~/.codex/AGENTS.md
-ln -sfn ~/dotfiles/agents/AGENTS.md ~/.config/opencode/AGENTS.md
 ln -sfn ~/dotfiles/agents/claude-settings.json ~/.claude/settings.json
 ln -sfn ~/dotfiles/agents/codex-config.toml ~/.codex/config.toml
 ```
@@ -485,18 +436,18 @@ One place to edit, version-controlled, portable across machines.
 
 ### 6. What goes in each config file -- a decision framework
 
-| Setting type                          | Where to put it                                                  |
-| ------------------------------------- | ---------------------------------------------------------------- |
-| Model selection (personal preference) | User-level config for each tool                                  |
-| Team permission/sandbox policies      | `.claude/settings.json`, `.codex/config.toml` (project-level)    |
-| MCP servers (team-shared)             | `.mcp.json` at project root                                      |
-| MCP servers (personal)                | `.claude/settings.local.json` or `~/.codex/config.toml`          |
-| Custom instruction file references    | `opencode.json` `instructions` array, or `@imports` in CLAUDE.md |
-| Codex fallback filenames              | `~/.codex/config.toml` `project_doc_fallback_filenames`          |
-| Pre/post tool hooks                   | `.claude/settings.json` `hooks`                                  |
-| Copilot code review config            | VS Code `settings.json` or `.github/instructions/`               |
-| Path-scoped instructions              | `.github/instructions/**/*.instructions.md` (Copilot)            |
-| Telemetry/privacy controls            | User-level `settings.json` or `config.toml` `env` vars           |
+| Setting type                          | Where to put it                                               |
+| ------------------------------------- | ------------------------------------------------------------- |
+| Model selection (personal preference) | User-level config for each tool                               |
+| Team permission/sandbox policies      | `.claude/settings.json`, `.codex/config.toml` (project-level) |
+| MCP servers (team-shared)             | `.mcp.json` at project root                                   |
+| MCP servers (personal)                | `.claude/settings.local.json` or `~/.codex/config.toml`       |
+| Custom instruction file references    | `@imports` in CLAUDE.md                                       |
+| Codex fallback filenames              | `~/.codex/config.toml` `project_doc_fallback_filenames`       |
+| Pre/post tool hooks                   | `.claude/settings.json` `hooks`                               |
+| Copilot code review config            | VS Code `settings.json` or `.github/instructions/`            |
+| Path-scoped instructions              | `.github/instructions/**/*.instructions.md` (Copilot)         |
+| Telemetry/privacy controls            | User-level `settings.json` or `config.toml` `env` vars        |
 
 ---
 

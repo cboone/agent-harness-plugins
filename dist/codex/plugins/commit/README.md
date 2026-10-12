@@ -13,6 +13,8 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 Analyzes your diff to generate well-structured conventional commit messages that match your repository's existing style. Handles staged-only vs. all changes, supports commit-and-push workflows, and can detect plan files for separate commits.
 
+When [Trim Text](../trim-text/README.md) is installed, a commit message body goes through it before committing. The subject, trailers, and issue references stay as drafted.
+
 ## Usage
 
 ```text
@@ -54,4 +56,5 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 ## See Also
 
 - [PR](../pr/README.md): commit, push, and open a pull request in one step
+- [Trim Text](../trim-text/README.md): trims the commit message body
 - [All plugins](../../../../README.md)
