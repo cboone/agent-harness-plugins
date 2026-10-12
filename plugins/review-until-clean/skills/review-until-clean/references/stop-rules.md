@@ -92,7 +92,7 @@ Three rules keep a run from spending every round on the same disagreement:
 | `clean-with-declines` | A clean round whose remaining findings are all carried declines                                                                                                                               |
 | `decisions-needed`    | Findings remain that the loop cannot resolve on its own, or, under `--report-only`, the reviewer edited the tree and its changes await a decision                                             |
 | `stopped`             | The round limit was reached before a clean result: with findings outstanding, with fixes or reviewer edits not yet reviewed, or, under `--confirm-clean`, with a clean round left unconfirmed |
-| `failed`              | A round did not produce a usable review, or no review could start: no reviewer, no commits, or a remote ref moved                                                                             |
+| `failed`              | A round did not produce a usable review, or no review could start: no reviewer, no commits, a remote ref moved, or history was rewritten                                                      |
 | `no-op`               | The scope was empty, so there was nothing to review and no round ran                                                                                                                          |
 
 `failed` is not a softer `stopped`. `stopped` means the loop worked and ran out of rounds before it reached a clean result it could report, whether findings were left, the last fixes were never reviewed, or a clean round was never confirmed; `failed` means the loop learned nothing and its result carries no information about the code.
