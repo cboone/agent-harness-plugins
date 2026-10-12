@@ -88,11 +88,13 @@ It starts one `codex exec --sandbox read-only` per aspect, waits for all of them
 
 When the session cannot spawn subagents after all, run each rendered task yourself, one after another, saving and validating each result the same way. Say in the report that the aspects ran sequentially and in this session.
 
-### 5. Confirm nothing was written
+### 5. Check the tree for lasting changes
 
 Run `review-scope` again into `<tmp>/scope-after.json` with the same `--base`, then `codex-aspects changes --before <tmp>/scope.json --after <tmp>/scope-after.json`.
 
 If `changed` is not empty, something wrote to the tree during a read-only review. Report the paths and treat every finding as unreliable, since the reviewers may have read different versions of those files. Do not run `simplify`, and do not revert the changes yourself: they may be the user's own edits made in the meantime.
+
+An empty `changed` means no tracked or untracked, non-ignored file differs between the two scans. It does not prove nothing was written: a change only to the index, a write to an ignored file, or an edit reverted before the second scan leaves no trace in the comparison. Report the check as "no lasting changes found", never as "nothing was written".
 
 ### 6. Decide on `simplify`
 

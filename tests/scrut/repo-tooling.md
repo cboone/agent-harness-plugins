@@ -211,8 +211,8 @@ identical
 
 `review-until-clean` and `review-pr-with-codex` ship the same `review-scope`,
 for the same rule 18 reason. `review-pr-with-codex` uses its scope buckets for
-the reviewers' prompts and its content tree to prove that the read-only aspects
-wrote nothing, so a fix to either guarantee belongs in both copies.
+the reviewers' prompts and its content tree to detect lasting changes made by
+the read-only aspects, so a fix to either behavior belongs in both copies.
 
 ```scrut
 $ cd "${REPO_ROOT}" && cmp plugins/review-until-clean/scripts/review-scope plugins/review-pr-with-codex/scripts/review-scope && echo identical
