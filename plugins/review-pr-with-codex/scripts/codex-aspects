@@ -733,11 +733,13 @@ function cmd_changes() {
   # after normalization, changed between the two reads, whichever bucket it
   # sits in. --no-renames lists a rename as its deletion and its addition: with
   # rename detection on, git names only the new path, so moving an out-of-scope
-  # file into the scope would hide the removed source from outside_scope. The
-  # output goes to a file first so git's exit status is checked rather than
-  # hidden behind jq's.
+  # file into the scope would hide the removed source from outside_scope.
+  # --no-relative overrides a `diff.relative` setting, which would otherwise
+  # limit the diff to the current subdirectory and hide every change outside
+  # it. The output goes to a file first so git's exit status is checked rather
+  # than hidden behind jq's.
   raw="$(mktemp "${TMPDIR:-/tmp}/codex-aspects.XXXXXX")"
-  if ! git diff -z --no-renames --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
+  if ! git diff -z --no-renames --no-relative --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
     rm -f "${raw}"
     die "could not compare tree ${before_tree} with ${after_tree}"
   fi

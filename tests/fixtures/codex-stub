@@ -18,8 +18,12 @@
 #   multiple        an invalid object followed by a valid output, in one file
 #   barrier         valid output, written only once every run has started
 #   barrier-slow    as barrier, then a further second before writing
-#   hang            write its process ID to <CODEX_STUB_PID_DIR>/<aspect>.pid,
-#                   then run until stopped, writing no output
+#   exit-after-output
+#                   valid output, then exit 1
+#   hang            start a long-running child, write its process ID to
+#                   <CODEX_STUB_PID_DIR>/<aspect>.child.pid and the stub's own
+#                   to <aspect>.pid, then wait until stopped, writing no
+#                   output. The child stands in for a process Codex starts.
 #
 # The barrier modes prove the runs are concurrent. Each run marks itself
 # started in CODEX_STUB_BARRIER_DIR and waits, for at most ten seconds, until
@@ -168,11 +172,17 @@ function main() {
       } > "${output}"
       rm -f "${output}.valid"
       ;;
+    exit-after-output)
+      write_output "${output}" "${aspect}" "${snapshot}" ""
+      echo "stub: simulated failure after writing output" >&2
+      exit 1
+      ;;
     hang)
-      echo "$$" > "${CODEX_STUB_PID_DIR:?CODEX_STUB_PID_DIR is required for hang mode}/${aspect}.pid"
-      while true; do
-        sleep 1
-      done
+      local pid_dir="${CODEX_STUB_PID_DIR:?CODEX_STUB_PID_DIR is required for hang mode}"
+      sleep 300 &
+      echo "$!" > "${pid_dir}/${aspect}.child.pid"
+      echo "$$" > "${pid_dir}/${aspect}.pid"
+      wait
       ;;
     barrier | barrier-slow)
       wait_for_barrier "${aspect}"

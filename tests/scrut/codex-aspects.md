@@ -228,6 +228,22 @@ comments | failed | the output file is empty | 0
 types | failed | the output is not JSON | 0
 ```
 
+## A non-zero exit fails the aspect even when its output is valid
+
+A run can write a complete, matching result and then fail. The exit status is
+checked first, so that result is never reported as a finished review.
+
+```scrut
+$ CODEX_STUB_MODES="code=exit-after-output" \
+>   "${CODEX_ASPECTS_BIN}" run --aspect code \
+>   --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/exit-after.json"; echo "exit=$?" \
+>   && jq -r '.[] | "\(.aspect): \(.status), \(.reason)"' "${FIXTURE}/exit-after.json" \
+>   && "${CODEX_ASPECTS_BIN}" validate --aspect code --scope "${FIXTURE}/scope.json" "${FIXTURE}/out/code.json" | jq -r .status
+exit=3
+code: failed, codex exited with status 1
+ok
+```
+
 ## Output that misses the schema, or names another aspect or snapshot, fails
 
 ```scrut
@@ -311,8 +327,10 @@ tests
 ## Stopping the helper stops its Codex runs
 
 A `simplify` run has write access, so a run left going after the helper stops
-could keep editing after its changes were measured. The stub here runs until
-stopped; once the helper receives TERM, the stub must be gone as well.
+could keep editing after its changes were measured. The stub here starts a
+long-running child, standing in for a process Codex starts, and waits until
+stopped. Once the helper receives TERM, the stub and its child must both be
+gone.
 
 ```scrut
 $ mkdir "${FIXTURE}/pids" "${FIXTURE}/cancel-out" \
@@ -322,11 +340,16 @@ $ mkdir "${FIXTURE}/pids" "${FIXTURE}/cancel-out" \
 >   && helper=$! \
 >   && for attempt in $(seq 50); do [ -s "${FIXTURE}/pids/simplify.pid" ] && break; sleep 0.1; done \
 >   && stub="$(cat "${FIXTURE}/pids/simplify.pid")" \
+>   && child="$(cat "${FIXTURE}/pids/simplify.child.pid")" \
 >   && kill -TERM "${helper}" \
 >   && { wait "${helper}"; echo "helper exit=$?"; } \
->   && if kill -0 "${stub}" 2> /dev/null; then echo "stub still running"; kill "${stub}"; else echo "stub stopped"; fi
+>   && sleep 0.2 \
+>   && for entry in "stub:${stub}" "child:${child}"; do \
+>        if kill -0 "${entry#*:}" 2> /dev/null; then echo "${entry%%:*} still running"; kill "${entry#*:}"; else echo "${entry%%:*} stopped"; fi; \
+>      done
 helper exit=143
 stub stopped
+child stopped
 ```
 
 ## A prompt too large for one argument stops the run before Codex starts
@@ -522,4 +545,21 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/staged" && cd "${FIXTURE}/staged" \
 >   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/staged-scope.json" \
 >   | grep -e '^- Staged changes' -e '^- Unstaged changes'
 - Staged changes: git diff --cached
+```
+
+## Changes covers the whole tree with diff.relative on, from a subdirectory
+
+`diff.relative` limits `git diff` to the current subdirectory, so without
+`--no-relative` a change outside it would leave `changed` empty and the
+read-only check would pass.
+
+```scrut
+$ cp -R "${FIXTURE}/repo" "${FIXTURE}/relative" && cd "${FIXTURE}/relative" \
+>   && git config diff.relative true \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/relative-before.json" \
+>   && printf 'edited\n' >> other.sh \
+>   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/relative-after.json" \
+>   && mkdir sub && cd sub \
+>   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/relative-before.json" --after "${FIXTURE}/relative-after.json" | jq -c '{changed, outside_scope}'
+{"changed":["other.sh"],"outside_scope":["other.sh"]}
 ```
