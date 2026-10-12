@@ -63,12 +63,28 @@ function stop_running_codex() {
   RUNNING_PIDS=()
 }
 
-# One EXIT trap covers every way out: a normal return, a `die` partway through
-# `run` after some runs have started, and a fatal signal such as TERM, since
-# Bash runs the EXIT trap before a fatal signal ends the shell. Measured on
-# Bash 5 and on macOS Bash 3.2: TERM sent to the helper stops its runs, and the
-# helper still exits 143.
-trap stop_running_codex EXIT
+# A private directory for every temporary file, created by main once the
+# arguments are known. One directory rather than a list of files, because
+# prompts are rendered in command substitutions: a subshell can create a file
+# in it, but could not add that file to a list the parent removes.
+TMP_DIR=""
+
+function cleanup() {
+  stop_running_codex
+  if [[ -n "${TMP_DIR}" ]]; then
+    rm -rf "${TMP_DIR}" \
+      || echo "${SCRIPT_NAME}: could not remove ${TMP_DIR}" >&2
+  fi
+  return 0
+}
+
+# One EXIT trap covers every way out: a normal return, a `die` partway through,
+# and a fatal signal such as TERM, since Bash runs the EXIT trap before a fatal
+# signal ends the shell. Measured on Bash 5 and on macOS Bash 3.2: TERM sent to
+# the helper stops its runs, and the helper still exits 143. Bash does not run
+# it when a command substitution's subshell exits, so a prompt rendered in one
+# leaves TMP_DIR in place for the next.
+trap cleanup EXIT
 
 function usage() {
   cat << 'USAGE_TEXT'
@@ -382,10 +398,9 @@ function render_scope() {
   # untracked files at all. NUL separators keep a file name holding a newline
   # intact, which is also why they cannot pass through a shell variable.
   local untracked_list
-  untracked_list="$(mktemp "${TMPDIR:-/tmp}/codex-aspects.XXXXXX")" \
+  untracked_list="$(mktemp "${TMP_DIR}/untracked.XXXXXX")" \
     || die "could not create a temporary file for the untracked paths"
   if ! jq -j '.untracked[] | ., "\u0000"' "${scope}" > "${untracked_list}"; then
-    rm -f "${untracked_list}"
     die "could not read the untracked paths from ${scope}"
   fi
 
@@ -409,7 +424,6 @@ function render_scope() {
       printf '  - %s\n' "${path}"
     fi
   done < "${untracked_list}"
-  rm -f "${untracked_list}"
 
   [[ -z "${unreadable_link}" ]] || die "could not read the symlink ${unreadable_link}"
 }
@@ -738,9 +752,9 @@ function cmd_changes() {
   # limit the diff to the current subdirectory and hide every change outside
   # it. The output goes to a file first so git's exit status is checked rather
   # than hidden behind jq's.
-  raw="$(mktemp "${TMPDIR:-/tmp}/codex-aspects.XXXXXX")"
+  raw="$(mktemp "${TMP_DIR}/changes.XXXXXX")" \
+    || die "could not create a temporary file for the tree comparison"
   if ! git diff -z --no-renames --no-relative --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
-    rm -f "${raw}"
     die "could not compare tree ${before_tree} with ${after_tree}"
   fi
 
@@ -756,7 +770,6 @@ function cmd_changes() {
         changed: $changed,
         outside_scope: ($changed - $in_scope)
       }' < "${raw}"
-  rm -f "${raw}"
 }
 
 function main() {
@@ -782,6 +795,9 @@ function main() {
 
   require_command jq
   require_command git
+
+  TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-aspects.XXXXXX")" \
+    || die "could not create a temporary directory"
 
   case "${command}" in
     prompt) cmd_prompt "$@" ;;

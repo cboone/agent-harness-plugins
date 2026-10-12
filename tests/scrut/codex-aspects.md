@@ -488,6 +488,23 @@ exit=3
 the output does not match the schema
 ```
 
+## Changes fails when the trees cannot be compared
+
+A tree object that is missing, for example after `git gc` collected it, makes
+`git diff` fail. That must stop the command, never print an empty change
+list, which would read as a clean read-only check.
+
+```scrut
+$ jq '.tree = "0000000000000000000000000000000000000001"' "${FIXTURE}/scope.json" > "${FIXTURE}/missing-tree.json" \
+>   && { "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/missing-tree.json" --after "${FIXTURE}/scope.json" \
+>        > "${FIXTURE}/missing-tree.out" 2> "${FIXTURE}/missing-tree.err"; echo "exit=$?"; } \
+>   && tail -1 "${FIXTURE}/missing-tree.err" | sed "s/[0-9a-f]\{40\}/SHA/g" \
+>   && wc -c < "${FIXTURE}/missing-tree.out" | tr -d ' '
+exit=1
+codex-aspects: could not compare tree SHA with SHA
+0
+```
+
 ## Changes is empty when nothing changed
 
 ```scrut
