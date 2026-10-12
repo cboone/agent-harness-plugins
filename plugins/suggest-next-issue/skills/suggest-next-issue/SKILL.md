@@ -1,15 +1,17 @@
 ---
 name: suggest-next-issue
 description: >-
-  Recommend which open GitHub issue to work on next, with reasoning. Use for
-  "suggest next issue", "what should I work on next", or "prioritize issues", or
-  to find work that can run in parallel or avoids a claimed resource.
+  Give a focused recommendation for the next open GitHub issue, with reasoning.
+  Use for "what should I work on next" or work that avoids claimed resources;
+  for a full backlog board, use publish-report-board.
 argument-hint: "[--label <name>] [--parallel-only] [filters...]"
 ---
 
 # Suggest Next Issue
 
 Analyze open GitHub issues and recommend what to work on next.
+
+This workflow gives a focused terminal answer. For a persistent view of the full backlog, lanes, dependencies and work in progress, use the `publish-report-board` skill's backlog-triage board. Both use the shared progress model to distinguish work available to start from work already in progress.
 
 ## Options
 
