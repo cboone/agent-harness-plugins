@@ -66,31 +66,36 @@ A skill or command runs with this session's own tools, so nothing structural sto
 
 ### Shell command
 
-Run it from the repository root, in **one** tool call, as a script file under `bash -e -o pipefail`, with stdin closed and both output streams captured to files **outside the working tree**:
+Run it from the repository root as a script file under `bash -e -o pipefail`, with stdin closed and both output streams captured to files **outside the working tree**. Do it in two tool calls, so the reviewer's value never passes through a shell:
 
-```bash
-tmp="$(mktemp -d "${TMPDIR:-/tmp}/review-until-clean.XXXXXX")"
-printf 'reviewer_tmp=%s\n' "${tmp}"
-cat > "${tmp}/reviewer.sh" << 'REVIEWER_VALUE'
-<the --reviewer value, exactly as given>
-REVIEWER_VALUE
-if bash -e -o pipefail "${tmp}/reviewer.sh" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"; then
-  reviewer_status=0
-else
-  reviewer_status=$?
-fi
-printf 'reviewer_status=%s\n' "${reviewer_status}"
-```
+1. Make the capture directory, and note the path it prints:
+
+   ```bash
+   tmp="$(mktemp -d "${TMPDIR:-/tmp}/review-until-clean.XXXXXX")"
+   printf 'reviewer_tmp=%s\n' "${tmp}"
+   ```
+
+2. Write the `--reviewer` value, exactly as given, to `<reviewer_tmp>/reviewer.sh` with the harness's file-writing tool, and then run only these fixed lines, with the printed path in place of `<reviewer_tmp>`:
+
+   ```bash
+   tmp='<reviewer_tmp>'
+   if bash -e -o pipefail "${tmp}/reviewer.sh" < /dev/null > "${tmp}/stdout" 2> "${tmp}/stderr"; then
+     reviewer_status=0
+   else
+     reviewer_status=$?
+   fi
+   printf 'reviewer_status=%s\n' "${reviewer_status}"
+   ```
 
 Each part is there for a reason:
 
-- **The value written to a script file through a quoted heredoc.** The value usually contains quotes of its own, such as `jq -s '…'`, so it cannot go inside single quotes: its first `'` would end the string, and the rest would run in the caller's shell, outside every redirect. A heredoc whose delimiter is quoted writes every character literally. It is not inside `$( )`, because macOS's bash 3.2 still parses a heredoc there as shell text, so an apostrophe in a comment or an unbalanced `)` would break it. Pick a delimiter that does not appear as a line of its own in the value.
+- **The value written to a script file by a file-writing tool.** The value usually contains quotes of its own, such as `jq -s '…'`, so it cannot go inside single quotes: its first `'` would end the string, and the rest would run in the caller's shell, outside every redirect. A heredoc fixes the quoting but needs a delimiter, and a value that holds that delimiter as a line of its own would end the heredoc early and run the remainder in the caller's shell. A file-writing tool takes the value as data, so there is no quoting rule and no delimiter to collide with, and the shell only ever runs the fixed lines above. The capture directory is made in a separate call because the file cannot be written before its path exists.
 - **One script, with `pipefail`.** The value may be a pipeline, such as `tool --json | jq -s '…'`. Written out bare, the redirects attach only to its last command: the first one keeps the harness's stdin, its stderr escapes the capture, and the status is the last command's. A reviewer that exits non-zero having printed a finding then comes back as status 0 with `jq`'s empty result, which is a failed review recorded as a clean one. Running the whole value as one script puts every command under the redirects, and `pipefail` makes a failure in any stage the script's status.
 - **`-e`.** `pipefail` covers one pipeline at a time, so in `tool | cat; echo done` a later command that succeeds would still set the status to 0. `-e` ends the script at the first command that fails, so that failure is the script's status. It has exceptions, such as a command tested by `if` or joined by `&&` or `||`, so a reviewer value should be the reviewer command itself, optionally piped into its output processing, and not a script that wraps it in further logic.
 - **A reviewer that exits 1 to report findings.** Many CLIs, linters among them, exit 0 when clean, 1 when they found something, and higher on error, and the loop reads every non-zero exit as a failed round. Declare the findings code inside the value, as in `ruff check . || test $? -eq 1`: the `||` keeps `-e` from ending the script on the 1, and `test` passes only that code, so a real error still fails the round.
 - **The `if` around it.** It records the status even when the caller runs under `set -e`, which would otherwise end the caller before the diagnostics were captured.
 - **`reviewer_status`, not `status`.** The surrounding lines run in the caller's shell, which is often zsh, and zsh reserves `status` as a read-only alias for `$?`. Assigning it fails with `read-only variable: status` whatever the reviewer returned, so the exit status is lost.
-- **The directory first, the status last.** An agent's shell does not keep variables from one tool call to the next, and the run itself prints nothing, since both streams go to files. The first line names the directory before the reviewer starts, so its output can still be found if the call is cut off; the last line gives the status. Read both from the output, and record the status before anything else runs; never run the reviewer again to recover them, since that is a silent retry and repeats an editing reviewer's edits.
+- **The directory first, the status last.** An agent's shell does not keep variables from one tool call to the next, and the run itself prints nothing, since both streams go to files. The first call names the directory before the reviewer starts, so its output can still be found if the run is cut off; the last line of the second call gives the status. Read both from the output, and record the status before anything else runs; never run the reviewer again to recover them, since that is a silent retry and repeats an editing reviewer's edits.
 - **A timeout to match the reviewer.** A full review can take many minutes, longer than an agent shell tool's default timeout, which is two minutes in Claude Code. Give the call the longest timeout the tool allows, or run it in the background and wait for it to finish. A call cut off by the tool's timeout is a failed round: record what the directory holds and stop, rather than running the reviewer again.
 - **`< /dev/null`.** Many CLIs read stdin when it is not a terminal. An agent harness's stdin is a pipe that never reaches end of file, so without the redirect such a CLI waits forever and the round produces nothing at all.
 - **Files outside the working tree.** The snapshot covers every non-ignored path in the tree, so an output file written into the repository is itself a change. It would move the snapshot, turn every round into an edit round, and hand the next round the reviewer's own output as new code. `./ledger.md` gives the same rule for the ledger. A `TMPDIR` that points inside the working tree would defeat this, so `review-scope` refuses one: step 1 fails with `TMPDIR must point outside the working tree` before any reviewer runs, and the capture directory, made under the same `TMPDIR`, is never created inside the repository.
