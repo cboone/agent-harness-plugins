@@ -24,7 +24,7 @@ Run one reviewer over every local change, fix the findings at or above a severit
 - **--report-only**: run one round, write the ledger, and fix nothing; under `--confirm-clean`, also run the confirming round when the first is clean. A reviewer that edits still edits, and its changes are kept and reported
 - **--no-save**: leave the ledger at its temporary path instead of saving it to `docs/reviews/`
 
-Severity order is Critical > Important > Nit. The default fixes Critical and Important; `critical` fixes only Critical, and `nit` fixes all three. Findings below the threshold are printed and recorded as open, but never block a clean round. An unlabelled finding is Important, so it does not block under `critical`. Reject any other threshold before running a reviewer.
+Severity order is Critical > Important > Nit. The default fixes Critical and Important; `critical` fixes only Critical, and `nit` fixes all three. Print and record lower-severity findings as open; they do not block cleanliness. Unlabelled findings are Important and do not block under `critical`. Reject other thresholds before running a reviewer.
 
 ## Skill dependencies
 
@@ -154,7 +154,7 @@ Under `--report-only`, go to step 11 whatever the result, except that the confir
 
 Confirm first that the fixer is available. If it is not, stop and report: "Required skill `address-review` is not installed. Install it with `/plugin install address-review@agent-harness-plugins` in Claude Code or `codex plugin add address-review@agent-harness-plugins` in Codex, then rerun." Leave the ledger in place, move it as step 11 does, and end with `decisions-needed`: the findings are still worth having, and the loop cannot resolve them itself. `--report-only` never reaches this step.
 
-Step 7 has already printed the round's findings. Invoke the `address-review` skill on the ledger, with every open item below the threshold, including items from earlier rounds, pre-skipped through its `--skip` option. Under `--severity critical`, skip all Important and Nit items and queue only Critical items. Compute skip numbers from the fixer's item ordering across the whole ledger, not from the stable `F` identifiers. Skipped findings remain unchecked and open; skipping does not decline or defer them. If no eligible item remains, do not invoke the fixer. Include this continuation block:
+After step 7 prints the findings, invoke the `address-review` skill on the ledger. Use `--skip` for every open item below the threshold across all rounds. Under `--severity critical`, skip Important and Nit items and queue only Critical items. Use the fixer's item numbers across the whole ledger, not stable `F` identifiers. Leave skipped findings unchecked and open, without declining or deferring them. Do not invoke the fixer when no eligible item remains. Include this continuation block:
 
 ```text
 Parent continuation:
@@ -184,7 +184,7 @@ Print the status line, the ledger path, the reviewer, the selected threshold, an
 Review-until-clean status: <clean|clean-with-declines|decisions-needed|stopped|failed|no-op>
 ```
 
-Keep terminal status tokens unchanged, but qualify every human-readable clean result with `at <threshold>`, including `clean-with-declines at critical`. Record `Severity: <critical|important|nit>` in the ledger header for every run. A clean Critical-threshold result is `clean at critical`, even when Important or Nit findings remain open; list those findings as below threshold. State the coverage alongside it. Under `--confirm-clean`, also name the two rounds that confirmed the result and the snapshot they share, so the report shows the confirmation happened. A clean result whose coverage was `partial` is `clean at <threshold>, partial scope`, and one whose coverage was `unverified` is `clean at <threshold>, coverage unverified`; neither is ever plain `clean`. One reviewer pass is a sample, so report what was covered rather than that the branch is free of defects.
+Keep terminal status tokens unchanged. Qualify every human-readable clean result with `at <threshold>`, including `clean-with-declines at critical`. Record `Severity: <critical|important|nit>` in every ledger header. Report `clean at critical` even with open Important or Nit findings, listing them as below threshold. Include coverage: `clean at <threshold>, partial scope` or `clean at <threshold>, coverage unverified` when applicable. Under `--confirm-clean`, name both confirming rounds and their shared snapshot. Report what was covered; one pass does not establish that the branch is free of defects.
 
 ## Key Conventions
 

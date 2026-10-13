@@ -231,8 +231,8 @@ The loop uses three levels, ordered Critical > Important > Nit. Map the reviewer
 | Medium, minor, low, nit, suggestion, style, info, P2 and below, pre-existing | Nit       |
 | No label                                                                     | Important |
 
-**An unlabelled finding is Important.** A reviewer that does not grade its findings is still saying each one is a defect, and mapping them to Nit would let a reviewer with no severities never block a clean result at the default threshold. Under `--severity critical`, an unlabelled finding remains open but does not block or enter the fixer queue.
+**Map unlabelled findings to Important**, so ungraded findings block at the default threshold. Under `--severity critical`, leave them open without blocking or queueing them for fixes.
 
-A label that fits neither row is mapped by meaning, and the original label is kept in the finding's `detail` so the mapping can be checked. Use Critical for an equivalent label only when its meaning identifies the reviewer's highest blocking severity; do not promote an unlabelled finding or an ordinary Important label to Critical.
+Map other labels by meaning and keep the original label in `detail`. Use Critical only for an equivalent highest blocking severity; never promote unlabelled findings or ordinary Important labels to Critical.
 
 Pre-existing findings map to Nit rather than being dropped. They are real, and they are not what this branch is answerable for.

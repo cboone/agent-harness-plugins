@@ -11,9 +11,9 @@ A round is clean when **all four** hold. Any one of them missing is not clean.
 1. **Nothing is left undeclined at or above the threshold.** Findings below `--severity`, and findings carried as declined, do not block.
 1. **The snapshot still matches.** Recomputed at the moment of the decision, not taken from the start of the round.
 
-Report the result with its coverage attached. A round whose coverage was `partial` reports `clean at <threshold>, partial scope`, and one whose coverage was `unverified` reports `clean at <threshold>, coverage unverified`, because a clean result that quietly covered less than the scope is the failure this whole design exists to prevent.
+Include coverage in the result: `clean at <threshold>, partial scope` for `partial`, or `clean at <threshold>, coverage unverified` for `unverified`.
 
-Every human-readable clean result names the threshold: `clean at critical` or `clean-with-declines at critical`, for example. The ledger keeps the existing status token and records the threshold separately. Under `critical`, open Important and Nit findings, including unlabelled findings mapped to Important, do not block; they stay printed and recorded as open. Carried declines below the threshold do not turn a result into `clean-with-declines`. Completion, mode, snapshot and coverage checks still apply.
+Name the threshold in every human-readable clean result, such as `clean at critical` or `clean-with-declines at critical`. Keep the ledger status token and record the threshold separately. Under `critical`, print and record Important and Nit findings as open, including unlabelled findings mapped to Important; they do not block. Lower-severity carried declines do not produce `clean-with-declines`. Completion, mode, snapshot and coverage checks still apply.
 
 ## Empty is not clean
 
