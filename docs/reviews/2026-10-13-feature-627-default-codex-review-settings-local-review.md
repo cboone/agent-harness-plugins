@@ -55,11 +55,23 @@ Step 1 allows at most two rounds, so it ends here; the fixes go to step 2's revi
 
 Reviewed snapshot `2e377ed2` at head `28b56bd3`. Installed `review-pr-with-codex` 2.0.3 through `codex exec`, `gpt-6.1-sol` at `xhigh`, window from the global Codex config. Aspects `code`, `errors`, `tests`, `comments` and `types` ran in parallel and all succeeded; `simplify` was not selected. The tree check found no lasting changes.
 
-| # | Finding | Reviewer label | Our severity | Decision |
-| --- | --- | --- | --- | --- |
-| 1 | The subagent fallback cannot ask for a base branch, so it returns `unavailable` where the old in-session flow asked (code) | important | Important | Fixed: the calling session resolves the default branch before either delegated path |
-| 2 | No test exercises `result-check.jq` (tests) | important | Important | Fixed: `tests/scrut/result-check.md`, 14 cases, registered in the Makefile and CI; removing the invariant line fails 2 of them |
-| 3 | The check accepts `complete: true` with a non-success status or a non-empty `not_reviewed` (types) | important | Important | Fixed: the check enforces the invariant |
-| 4 | The plan says omitted flags fell back to the user's settings, though model and effort were already set (comments) | suggestion | Nit | Fixed |
+| #   | Finding                                                                                                                    | Reviewer label | Our severity | Decision                                                                                                                       |
+| --- | -------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | The subagent fallback cannot ask for a base branch, so it returns `unavailable` where the old in-session flow asked (code) | important      | Important    | Fixed: the calling session resolves the default branch before either delegated path                                            |
+| 2   | No test exercises `result-check.jq` (tests)                                                                                | important      | Important    | Fixed: `tests/scrut/result-check.md`, 14 cases, registered in the Makefile and CI; removing the invariant line fails 2 of them |
+| 3   | The check accepts `complete: true` with a non-success status or a non-empty `not_reviewed` (types)                         | important      | Important    | Fixed: the check enforces the invariant                                                                                        |
+| 4   | The plan says omitted flags fell back to the user's settings, though model and effort were already set (comments)          | suggestion     | Nit          | Fixed                                                                                                                          |
 
 Findings at Important with behavior-changing fixes, so step 2 runs another round.
+
+## Step 2, round 2: `review-pr-with-codex`
+
+Reviewed snapshot `ed119301` at head `6adffbda`. Same settings and aspects; all five succeeded, and the tree check found no lasting changes.
+
+| # | Finding | Reviewer label | Our severity | Decision |
+| --- | --- | --- | --- | --- |
+| 1 | No test drives the Codex fallback dispatch: stubbed Codex failures, several JSON values, `failure` replies (tests) | important | Nit: the dispatch is agent prose with no runner to drive; each check it names is executable, and the `jq` check is covered | Recorded, not fixed. Covering it needs a new runner script, a design change. Downgrade reported for a decision |
+| 2 | README promises the window to Codex subagents, which may keep the session's settings (comments) | suggestion | Nit | Fixed |
+| 3 | A `success` reply may have an empty `reviewed` or `report` (types) | suggestion | Nit | Fixed, with 3 scrut cases |
+
+No finding at Important by our severity, so step 2 ends after this round, pending the decision on the downgrade.
