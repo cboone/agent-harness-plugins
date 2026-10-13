@@ -1,5 +1,6 @@
-# Passes only a reply that matches result-schema.json. Run as
-# `jq -e -f result-check.jq <reply>`; keep the two files in step.
+# Passes only a reply that matches result-schema.json and whose complete
+# flag agrees with its status and not_reviewed list, which the schema cannot
+# express. Run as `jq -e -f result-check.jq <reply>`; keep the two in step.
 def string_array: type == "array" and all(.[]; type == "string");
 def finding:
   type == "object"
@@ -16,3 +17,4 @@ and (.reviewed | type == "string")
 and (.report | type == "string")
 and (.findings | type == "array" and all(.[]; finding))
 and ([.excluded, .not_reviewed, .unverified] | all(string_array))
+and (.complete == false or (.status == "success" and .not_reviewed == []))

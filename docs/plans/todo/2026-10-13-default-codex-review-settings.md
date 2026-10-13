@@ -2,7 +2,7 @@
 
 ## Context
 
-Callers pass the Codex model, context window and effort by hand on every call, and an omitted flag falls back to the user's interactive Codex settings. Each Codex-using skill should carry its own defaults:
+`review-pr-with-codex` already sets the model and effort on each run, but its effort defaults to `medium` and its context window is unset, so the window falls back to the user's Codex settings. The other three skills have no Codex path, so callers run them through `codex exec` with these settings by hand. Each Codex-using skill should carry its own defaults:
 
 | Skill                           | Model         | Window (`model_context_window`) | Effort  |
 | ------------------------------- | ------------- | ------------------------------- | ------- |

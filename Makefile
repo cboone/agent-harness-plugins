@@ -80,6 +80,7 @@ SCRUT_ENV := \
 	REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN="$(CURDIR)/plugins/review-pr-with-codex/scripts/review-scope" \
 	CODEX_ASPECTS_BIN="$(CURDIR)/plugins/review-pr-with-codex/scripts/codex-aspects" \
 	CODEX_STUB_BIN="$(CURDIR)/tests/fixtures/codex-stub" \
+	RESULT_CHECK_JQ="$(CURDIR)/plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq" \
 	RUN_SCRUT_DOCUMENTS_BIN="$(CURDIR)/bin/run-scrut-documents" \
 	SCRUT_STUB_BIN="$(CURDIR)/tests/fixtures/scrut-stub" \
 	GIT_CONFIG_GLOBAL=/dev/null \
