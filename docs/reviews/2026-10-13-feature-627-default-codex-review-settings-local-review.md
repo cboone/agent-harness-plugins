@@ -68,10 +68,21 @@ Findings at Important with behavior-changing fixes, so step 2 runs another round
 
 Reviewed snapshot `ed119301` at head `6adffbda`. Same settings and aspects; all five succeeded, and the tree check found no lasting changes.
 
-| # | Finding | Reviewer label | Our severity | Decision |
-| --- | --- | --- | --- | --- |
-| 1 | No test drives the Codex fallback dispatch: stubbed Codex failures, several JSON values, `failure` replies (tests) | important | Nit: the dispatch is agent prose with no runner to drive; each check it names is executable, and the `jq` check is covered | Recorded, not fixed. Covering it needs a new runner script, a design change. Downgrade reported for a decision |
-| 2 | README promises the window to Codex subagents, which may keep the session's settings (comments) | suggestion | Nit | Fixed |
-| 3 | A `success` reply may have an empty `reviewed` or `report` (types) | suggestion | Nit | Fixed, with 3 scrut cases |
+| #   | Finding                                                                                                            | Reviewer label | Our severity                                                                                                               | Decision                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 1   | No test drives the Codex fallback dispatch: stubbed Codex failures, several JSON values, `failure` replies (tests) | important      | Nit: the dispatch is agent prose with no runner to drive; each check it names is executable, and the `jq` check is covered | Recorded, not fixed. Covering it needs a new runner script, a design change. Downgrade reported for a decision |
+| 2   | README promises the window to Codex subagents, which may keep the session's settings (comments)                    | suggestion     | Nit                                                                                                                        | Fixed                                                                                                          |
+| 3   | A `success` reply may have an empty `reviewed` or `report` (types)                                                 | suggestion     | Nit                                                                                                                        | Fixed, with 3 scrut cases                                                                                      |
 
 No finding at Important by our severity, so step 2 ends after this round, pending the decision on the downgrade.
+
+Decision: Chris accepted the downgrade of step 2 round 2's finding 1 and the move to step 3.
+
+## Step 3: `trim-comments` and `trim-text` through Codex
+
+Head `08285906`. Both as Codex dry runs through this branch's own path: `gpt-6.1-sol`, effort `low`, window `872000`, read-only sandbox, in parallel. Both exited 0 with a reply holding the file list and a table, and every file in scope was listed. `trim-comments` used the default scope with merge base `db9eb7e4`; `trim-text` got the 15 canonical prose files the branch changed, limited to changed text.
+
+- `trim-comments`: 2 proposals. The `result-check.jq` header was rewritten to a middle version that keeps its usage line; the `codex-aspects` window comment was kept, since the proposal dropped that 872000 is the model's largest window.
+- `trim-text`: 13 proposals. 12 applied as proposed; the `codex-exec.md` settings bullet was kept, since the rewrite was no shorter and less clear.
+
+Committed as `361e824b`.
