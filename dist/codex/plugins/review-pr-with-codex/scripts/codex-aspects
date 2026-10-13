@@ -18,8 +18,10 @@ KNOWN_ASPECTS=(code errors tests comments types simplify)
 readonly KNOWN_ASPECTS
 
 DEFAULT_MODEL="gpt-6.1-sol"
-DEFAULT_EFFORT="medium"
-readonly DEFAULT_MODEL DEFAULT_EFFORT
+DEFAULT_EFFORT="xhigh"
+# The model's largest model_context_window; Codex otherwise uses its own default.
+DEFAULT_WINDOW=872000
+readonly DEFAULT_MODEL DEFAULT_EFFORT DEFAULT_WINDOW
 
 # Linux caps one execve argument at 128 KiB, and the prompt is one argument
 # because stdin must stay /dev/null. A prompt near the cap is refused before
@@ -142,10 +144,12 @@ Usage: codex-aspects schema
        codex-aspects run --aspect <name> [--aspect <name>...] --scope <file>
                          --out-dir <dir> [--guide-name <name>...]
                          [--model <model>] [--effort <level>]
+                         [--window <tokens>]
        codex-aspects run --aspect simplify --scope <file> --out-dir <dir>
                          --reviewed-scope <file> --results <file>
                          --statuses <file> --reviewed-aspect <name>...
                          [--guide-name <name>...] [--model <model>] [--effort <level>]
+                         [--window <tokens>]
        codex-aspects validate --aspect <name> --scope <file> <output-file>
        codex-aspects changes --before <file> --after <file>
 
@@ -172,7 +176,8 @@ Options:
   --out-dir <dir>   Existing directory outside the working tree for prompts,
                     outputs and logs
   --model <model>   Codex model; default gpt-6.1-sol
-  --effort <level>  Codex reasoning effort; default medium
+  --effort <level>  Codex reasoning effort; default xhigh
+  --window <tokens> Codex model_context_window; default 872000
   --guide-name <name>  Additional instruction fallback name, repeatable
   --reviewed-scope <file>  Scope the review aspects read; simplify only
   --reviewed-aspect <name> Review aspect the gate checks, repeatable
@@ -859,6 +864,7 @@ function physical_dir() {
 
 function cmd_run() {
   local scope="" out_dir="" model="${DEFAULT_MODEL}" effort="${DEFAULT_EFFORT}"
+  local window="${DEFAULT_WINDOW}"
   local aspects=() gate_args=()
 
   while [[ $# -gt 0 ]]; do
@@ -888,6 +894,11 @@ function cmd_run() {
         effort="${2}"
         shift 2
         ;;
+      --window)
+        require_value "$@"
+        window="${2}"
+        shift 2
+        ;;
       --guide-name)
         require_value "$@"
         add_guide_name "${2}"
@@ -903,6 +914,7 @@ function cmd_run() {
   done
 
   [[ ${#aspects[@]} -gt 0 ]] || die "--aspect is required"
+  [[ "${window}" =~ ^[1-9][0-9]*$ ]] || die "--window must be a positive whole number of tokens"
 
   local aspect seen=" "
   for aspect in "${aspects[@]}"; do
@@ -1019,6 +1031,7 @@ function cmd_run() {
       --ephemeral \
       --model "${model}" \
       --config "model_reasoning_effort=\"${effort}\"" \
+      --config "model_context_window=${window}" \
       --output-schema "${out_physical}/schema.json" \
       --output-last-message "${out_physical}/${aspect}.json" \
       ${extra_args[@]+"${extra_args[@]}"} \

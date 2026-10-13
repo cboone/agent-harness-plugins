@@ -21,6 +21,7 @@ codex exec \
   --ephemeral \
   --model <model> \
   --config 'model_reasoning_effort="<effort>"' \
+  --config model_context_window=<window> \
   --output-schema <out-dir>/schema.json \
   --output-last-message <out-dir>/<aspect>.json \
   "<rendered prompt>" < /dev/null
@@ -33,7 +34,7 @@ Each part is there for a reason:
 - **External `--cd` and `--skip-git-repo-check`.** The helper rejects repository-local `TMPDIR` to keep its working directory and prompt artifacts external. This excludes current checkout instructions from initial project-instruction discovery. Global instructions and user configuration remain active. The prompt supplies historical guidance and absolute reads with `git -C`; keep the session directory outside the checkout. `simplify` receives `--add-dir <repository root>` for authorized edits.
 - **`--sandbox read-only`** makes the read-only rule structural. `simplify` alone gets `workspace-write`, and the helper refuses to run it beside any other aspect, without passing the review gate, or when the scope changed after `--scope` was captured. The recheck runs immediately before launch but takes no lock, so a concurrent edit in that window is not prevented.
 - **`--ephemeral`** keeps each run from persisting a session.
-- **`--model` and `--config model_reasoning_effort`** apply to that run only, so the user's Codex defaults are untouched.
+- **`--model`, `--config model_reasoning_effort` and `--config model_context_window`** apply to that run only, so the user's Codex defaults are untouched and never fill in for an omitted option. The helper's defaults are `gpt-6.1-sol`, `xhigh` and `872000`, that model's largest window; it refuses a `--window` that is not a positive whole number.
 - **`--output-schema` is checked before the review starts, and not every keyword survives.** Measured against `codex-cli 0.157.1`, `pattern` and `minimum` are honored, and a `pattern` with lookaround is rejected with `Invalid JSON schema: regex lookaround is not supported` and HTTP 400, which fails the aspect with no output file. After editing the schema, run it through one real invocation rather than trusting that a valid JSON Schema is an acceptable one.
 - **`--output-schema` and `--output-last-message` point outside the working tree.** A file written inside it would join the scope under review and move the snapshot. The helper refuses an `--out-dir` inside the repository.
 
