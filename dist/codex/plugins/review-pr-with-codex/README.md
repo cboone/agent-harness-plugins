@@ -75,7 +75,7 @@ An aspect whose run failed, timed out, or returned nothing or something unparsea
 | `--effort <level>`  | Codex reasoning effort for every aspect; default `xhigh`                                                                        |
 | `--window <tokens>` | Codex context window (`model_context_window`) for every aspect; default `872000`; set it too when `--model` names another model |
 
-The model, effort and window are passed on each run, so your own Codex defaults stay as they are and never fill in for an omitted option.
+Each `codex exec` run gets the model, effort and window, so your own Codex defaults stay as they are and never fill in for an omitted option. Codex subagents, used when the review starts in a Codex session, keep the session's settings where the harness cannot override them; the report gives the settings that applied.
 
 ## Recommended Permissions
 

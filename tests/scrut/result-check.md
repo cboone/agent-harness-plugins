@@ -112,3 +112,26 @@ $ check '[.]'
 false
 [1]
 ```
+
+## A successful review without a report fails
+
+```scrut
+$ check '.report = " "'
+false
+[1]
+```
+
+## A successful review that names no scope fails
+
+```scrut
+$ check '.reviewed = ""'
+false
+[1]
+```
+
+## A failed run may leave the scope and report empty
+
+```scrut
+$ check '.status = "failure" | .complete = false | .findings = [] | .reviewed = "" | .report = ""'
+true
+```
