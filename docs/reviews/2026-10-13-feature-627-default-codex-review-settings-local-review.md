@@ -32,21 +32,34 @@ Round 1 found Important findings and the fixes change agent behavior, so step 1 
 
 Reviewed head: `221d5844`. Same reviewers and settings. Codex completion checks passed; result `success`, `complete: true`, 1 Important. `/simplify` confirmed every round 1 fix, and reported 1 Important and 13 Nits.
 
-| # | Finding | Reviewer label | Our severity | Decision |
-| --- | --- | --- | --- | --- |
-| 1 | Resolved trim file names are passed back to Codex and expanded with `:(glob)` again, so `[slug]` in a name selects other files (Codex) | important | Important | Fixed: the prompt makes each path a literal file name |
-| 2 | Nothing checks that the Codex trim run covered every file in scope (`/simplify` #10) | Nit | Important: a dropped file reads as nothing to trim | Fixed: the reply starts with the files classified, and missing files are classified in session |
-| 3 | Shared-reference Copilot instructions describe only the progress model in general terms | Important | Nit: Copilot reviews are off until 2026-11-01 | Fixed: the bullets name the progress model |
-| 4 | "A Codex session runs the skill in place" is false for review-anti-patterns' fallback order; README claims the sandbox in that case | Nit | Nit | Fixed |
-| 5 | Plugin development guide's general shared-reference rule sits inside one bullet; "both plugins" is wrong for two copies | Nit | Nit | Fixed |
-| 6 | `mktemp` wrapper adds nothing and defeats the permission rule | Nit | Nit | Fixed: bare `mktemp -d` |
-| 7 | Missing `jq` found only after a full Codex run | Nit | Nit | Fixed: a "When to use it" condition |
-| 8 | "`--files` paths made root-relative" is a no-op | Nit | Nit | Fixed |
-| 9 | "Skip to step 4" in step 1 bypasses the proposal checks | Nit | Nit | Fixed: step 1 defers to the Codex section |
-| 10 | trim-text forces one profile on every file in the Codex run | Nit | Nit | Fixed: `--profile` only when the user gave one |
-| 11 | `--run-checks` mostly ends unverified in the sandbox | Nit | Nit | Fixed: `--run-checks` skips Codex |
-| 12 | The `--window` default does not follow `--model` | Nit | Nit | Fixed: documented |
-| 13 | `def strings` shadows a jq built-in | Nit | Nit | Fixed: `string_array` |
-| 14 | Small `codex-exec.md` cleanups | Nit | Nit | Fixed |
+| #   | Finding                                                                                                                                | Reviewer label | Our severity                                       | Decision                                                                                       |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Resolved trim file names are passed back to Codex and expanded with `:(glob)` again, so `[slug]` in a name selects other files (Codex) | important      | Important                                          | Fixed: the prompt makes each path a literal file name                                          |
+| 2   | Nothing checks that the Codex trim run covered every file in scope (`/simplify` #10)                                                   | Nit            | Important: a dropped file reads as nothing to trim | Fixed: the reply starts with the files classified, and missing files are classified in session |
+| 3   | Shared-reference Copilot instructions describe only the progress model in general terms                                                | Important      | Nit: Copilot reviews are off until 2026-11-01      | Fixed: the bullets name the progress model                                                     |
+| 4   | "A Codex session runs the skill in place" is false for review-anti-patterns' fallback order; README claims the sandbox in that case    | Nit            | Nit                                                | Fixed                                                                                          |
+| 5   | Plugin development guide's general shared-reference rule sits inside one bullet; "both plugins" is wrong for two copies                | Nit            | Nit                                                | Fixed                                                                                          |
+| 6   | `mktemp` wrapper adds nothing and defeats the permission rule                                                                          | Nit            | Nit                                                | Fixed: bare `mktemp -d`                                                                        |
+| 7   | Missing `jq` found only after a full Codex run                                                                                         | Nit            | Nit                                                | Fixed: a "When to use it" condition                                                            |
+| 8   | "`--files` paths made root-relative" is a no-op                                                                                        | Nit            | Nit                                                | Fixed                                                                                          |
+| 9   | "Skip to step 4" in step 1 bypasses the proposal checks                                                                                | Nit            | Nit                                                | Fixed: step 1 defers to the Codex section                                                      |
+| 10  | trim-text forces one profile on every file in the Codex run                                                                            | Nit            | Nit                                                | Fixed: `--profile` only when the user gave one                                                 |
+| 11  | `--run-checks` mostly ends unverified in the sandbox                                                                                   | Nit            | Nit                                                | Fixed: `--run-checks` skips Codex                                                              |
+| 12  | The `--window` default does not follow `--model`                                                                                       | Nit            | Nit                                                | Fixed: documented                                                                              |
+| 13  | `def strings` shadows a jq built-in                                                                                                    | Nit            | Nit                                                | Fixed: `string_array`                                                                          |
+| 14  | Small `codex-exec.md` cleanups                                                                                                         | Nit            | Nit                                                | Fixed                                                                                          |
 
 Step 1 allows at most two rounds, so it ends here; the fixes go to step 2's review.
+
+## Step 2, round 1: `review-pr-with-codex`
+
+Reviewed snapshot `2e377ed2` at head `28b56bd3`. Installed `review-pr-with-codex` 2.0.3 through `codex exec`, `gpt-6.1-sol` at `xhigh`, window from the global Codex config. Aspects `code`, `errors`, `tests`, `comments` and `types` ran in parallel and all succeeded; `simplify` was not selected. The tree check found no lasting changes.
+
+| # | Finding | Reviewer label | Our severity | Decision |
+| --- | --- | --- | --- | --- |
+| 1 | The subagent fallback cannot ask for a base branch, so it returns `unavailable` where the old in-session flow asked (code) | important | Important | Fixed: the calling session resolves the default branch before either delegated path |
+| 2 | No test exercises `result-check.jq` (tests) | important | Important | Fixed: `tests/scrut/result-check.md`, 14 cases, registered in the Makefile and CI; removing the invariant line fails 2 of them |
+| 3 | The check accepts `complete: true` with a non-success status or a non-empty `not_reviewed` (types) | important | Important | Fixed: the check enforces the invariant |
+| 4 | The plan says omitted flags fell back to the user's settings, though model and effort were already set (comments) | suggestion | Nit | Fixed |
+
+Findings at Important with behavior-changing fixes, so step 2 runs another round.
