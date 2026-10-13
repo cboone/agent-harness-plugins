@@ -100,8 +100,8 @@ function print_schema() {
             "type": ["integer", "null"]
           },
           "severity": {
-            "description": "Important for anything that breaks behavior, loses or leaks data, or breaks the build or a release. Nit otherwise.",
-            "enum": ["important", "nit"]
+            "description": "Critical for the highest blocking severity, such as a blocker or P0. Important for other behavior, data, build or release defects. Nit otherwise.",
+            "enum": ["critical", "important", "nit"]
           },
           "title": {
             "description": "One sentence stating the defect.",

@@ -162,7 +162,7 @@ Compare what the reviewer reports it reviewed against the four buckets from step
 
 Judge from what the reviewer reported, not from what it is documented to do. A reviewer's default range is often the branch's upstream rather than its merge base, and on a pushed branch that leaves every committed change out while the run still looks complete.
 
-A clean round with `partial` coverage reports `clean, partial scope`, and one with `unverified` coverage reports `clean, coverage unverified`. Neither is ever plain `clean`.
+A clean round with `partial` coverage reports `clean at <threshold>, partial scope`, and one with `unverified` coverage reports `clean at <threshold>, coverage unverified`. Every clean result names the selected threshold, even with full coverage.
 
 Do not split a round to reach full coverage. Running the reviewer once over one bucket, fixing, and then running it over another means no round ever saw the whole scope, and the eventual clean result is not what it claims. Reporting partial or unverified coverage is always allowed.
 
@@ -222,16 +222,17 @@ A finding with no location, such as a remark about the design as a whole, is rec
 
 ### Severity
 
-The repository's own two levels are Important and Nit. Map the reviewer's labels into them, whatever words it uses:
+The loop uses three levels, ordered Critical > Important > Nit. Map the reviewer's labels into them, whatever words it uses:
 
 | Reviewer label                                                               | Mapped to |
 | ---------------------------------------------------------------------------- | --------- |
-| Critical, blocker, high, major, important, error, P0, P1, "must fix"         | Important |
+| Critical, blocker, P0                                                        | Critical  |
+| High, major, important, error, P1, "must fix"                                | Important |
 | Medium, minor, low, nit, suggestion, style, info, P2 and below, pre-existing | Nit       |
 | No label                                                                     | Important |
 
-**An unlabelled finding is Important.** A reviewer that does not grade its findings is still saying each one is a defect, and mapping them to Nit would let a reviewer with no severities never block a clean result at the default threshold.
+**An unlabelled finding is Important.** A reviewer that does not grade its findings is still saying each one is a defect, and mapping them to Nit would let a reviewer with no severities never block a clean result at the default threshold. Under `--severity critical`, an unlabelled finding remains open but does not block or enter the fixer queue.
 
-A label that fits neither row is mapped by meaning, and the original label is kept in the finding's `detail` so the mapping can be checked. Do not introduce a third level.
+A label that fits neither row is mapped by meaning, and the original label is kept in the finding's `detail` so the mapping can be checked. Use Critical for an equivalent label only when its meaning identifies the reviewer's highest blocking severity; do not promote an unlabelled finding or an ordinary Important label to Critical.
 
 Pre-existing findings map to Nit rather than being dropped. They are real, and they are not what this branch is answerable for.

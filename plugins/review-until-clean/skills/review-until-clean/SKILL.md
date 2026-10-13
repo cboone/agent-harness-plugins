@@ -3,7 +3,7 @@ name: review-until-clean
 description: >-
   Loop any reviewer and fix its findings until the snapshot is clean. Use for
   "review until clean".
-argument-hint: "[--reviewer <command>] [--base <ref>] [--severity important|nit] [--max-rounds <n>] [--confirm-clean] [--report-only] [--no-save]"
+argument-hint: "[--reviewer <command>] [--base <ref>] [--severity critical|important|nit] [--max-rounds <n>] [--confirm-clean] [--report-only] [--no-save]"
 ---
 
 # Review Until Clean
@@ -18,11 +18,13 @@ Run one reviewer over every local change, fix the findings at or above a severit
 
 - **--reviewer `<command>`**: the reviewer, written as a person would type it: a skill or slash command such as `/pr-review-toolkit:review-pr` or `/review-pr-with-codex --effort high`, or a shell command such as `coderabbit review --agent --fresh`. Quote a value with spaces. The reviewer's own options go inside the value. Exactly one reviewer per run
 - **--base `<ref>`**: take the merge base with this ref instead of with the default branch
-- **--severity `<important|nit>`**: lowest severity the loop fixes; default `important`
+- **--severity `<critical|important|nit>`**: lowest severity the loop fixes; default `important`
 - **--max-rounds `<n>`**: cap the rounds; default 3
 - **--confirm-clean**: require two consecutive clean rounds over the same snapshot rather than one. After the first clean round, run a confirming round with no fix pass in between
 - **--report-only**: run one round, write the ledger, and fix nothing; under `--confirm-clean`, also run the confirming round when the first is clean. A reviewer that edits still edits, and its changes are kept and reported
 - **--no-save**: leave the ledger at its temporary path instead of saving it to `docs/reviews/`
+
+Severity order is Critical > Important > Nit. The default fixes Critical and Important; `critical` fixes only Critical, and `nit` fixes all three. Findings below the threshold are printed and recorded as open, but never block a clean round. An unlabelled finding is Important, so it does not block under `critical`. Reject any other threshold before running a reviewer.
 
 ## Skill dependencies
 
@@ -152,7 +154,7 @@ Under `--report-only`, go to step 11 whatever the result, except that the confir
 
 Confirm first that the fixer is available. If it is not, stop and report: "Required skill `address-review` is not installed. Install it with `/plugin install address-review@agent-harness-plugins` in Claude Code or `codex plugin add address-review@agent-harness-plugins` in Codex, then rerun." Leave the ledger in place, move it as step 11 does, and end with `decisions-needed`: the findings are still worth having, and the loop cannot resolve them itself. `--report-only` never reaches this step.
 
-Step 7 has already printed the round's findings. Invoke the `address-review` skill on the ledger, with items below the threshold pre-skipped through its `--skip` option and this continuation block:
+Step 7 has already printed the round's findings. Invoke the `address-review` skill on the ledger, with every open item below the threshold, including items from earlier rounds, pre-skipped through its `--skip` option. Under `--severity critical`, skip all Important and Nit items and queue only Critical items. Compute skip numbers from the fixer's item ordering across the whole ledger, not from the stable `F` identifiers. Skipped findings remain unchecked and open; skipping does not decline or defer them. If no eligible item remains, do not invoke the fixer. Include this continuation block:
 
 ```text
 Parent continuation:
@@ -176,13 +178,13 @@ After the final validity check, restore only this run's intent-to-add entries. B
 
 Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, reserving the name with an exclusive create before the move, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Move any reply or stderr file stored beside it along with it, named after the ledger, as in `<ledger name>-round-2-reply.txt`, and update the names in the ledger. Use `.txt`: a reply kept verbatim is not formatted, and Markdown linting and formatting would fail on it or change it. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
 
-Print the status line, the ledger path, the reviewer, and the coverage:
+Print the status line, the ledger path, the reviewer, the selected threshold, and the coverage:
 
 ```text
 Review-until-clean status: <clean|clean-with-declines|decisions-needed|stopped|failed|no-op>
 ```
 
-State the coverage alongside it. Under `--confirm-clean`, also name the two rounds that confirmed the result and the snapshot they share, so the report shows the confirmation happened. A clean result whose coverage was `partial` is `clean, partial scope`, and one whose coverage was `unverified` is `clean, coverage unverified`; neither is ever plain `clean`. One reviewer pass is a sample, so report what was covered rather than that the branch is free of defects.
+Keep terminal status tokens unchanged, but qualify every human-readable clean result with `at <threshold>`, including `clean-with-declines at critical`. Record `Severity: <critical|important|nit>` in the ledger header for every run. A clean Critical-threshold result is `clean at critical`, even when Important or Nit findings remain open; list those findings as below threshold. State the coverage alongside it. Under `--confirm-clean`, also name the two rounds that confirmed the result and the snapshot they share, so the report shows the confirmation happened. A clean result whose coverage was `partial` is `clean at <threshold>, partial scope`, and one whose coverage was `unverified` is `clean at <threshold>, coverage unverified`; neither is ever plain `clean`. One reviewer pass is a sample, so report what was covered rather than that the branch is free of defects.
 
 ## Key Conventions
 
@@ -190,7 +192,7 @@ State the coverage alongside it. Under `--confirm-clean`, also name the two roun
 - **Nothing is pushed.** The loop ends at a commit at the latest. A reviewer that pushes, fetches, posts or rewrites history ends the run as `failed` when step 5's checks or its own report show it; those checks catch the common cases, not every one, so a reviewer is chosen on the understanding that it does none of these.
 - **The index is restored.** Anything staged to make a file visible to a reviewer is unstaged when the round ends, including when the round fails.
 - **Nothing the round writes lands in the working tree**, except what the reviewer or the fixer changes in the code itself. Output files, schemas and the ledger stay in a temporary directory.
-- **Severity uses the repository's own words.** Important and Nit, mapped from whatever the reviewer uses, per `./references/reviewers.md`. Do not introduce a third ladder.
+- **Severity uses the repository's own words.** Critical, Important and Nit, mapped from whatever the reviewer uses, per `./references/reviewers.md`.
 
 ## Reference Navigation
 
@@ -218,7 +220,7 @@ Fixed F1. Declined F2: the cache is cleared by the caller on every failure path.
 Round 2 of 3, snapshot 9b7e034, reviewer "coderabbit review --agent --fresh", report round, coverage full
   No findings at or above important. F2 carried as declined.
 
-Review-until-clean status: clean-with-declines, full scope
+Review-until-clean status: clean-with-declines at important, full scope
 Ledger: docs/reviews/2026-09-22-feature-465-add-review-until-clean-skill-until-clean.md
 ```
 
@@ -228,7 +230,7 @@ Under `--confirm-clean`, the same run continues past round 2 instead of ending t
 Round 3 of 3 (confirming 2/2), snapshot 9b7e034, reviewer "coderabbit review --agent --fresh", report round, coverage full
   No findings at or above important. F2 carried as declined.
 
-Review-until-clean status: clean-with-declines, full scope, confirmed by rounds 2 and 3 over snapshot 9b7e034
+Review-until-clean status: clean-with-declines at important, full scope, confirmed by rounds 2 and 3 over snapshot 9b7e034
 ```
 
 With a reviewer that edits, such as `/simplify`, a round that changes the tree is followed by one that reviews the change:
@@ -240,7 +242,18 @@ Round 1 of 3, snapshot 4f2a9c1, reviewer /simplify, edit round, coverage unverif
 Round 2 of 3, snapshot 7c01d5e, reviewer /simplify, report round, coverage unverified
   No changes, no findings.
 
-Review-until-clean status: clean, coverage unverified
+Review-until-clean status: clean at important, coverage unverified
+```
+
+With `--severity critical`, lower-severity findings stay open even when the round is clean:
+
+```text
+Round 1 of 3, snapshot 4f2a9c1, reviewer "coderabbit review --agent --fresh", report round, coverage full
+  F1  important  src/session.ts:142  token refresh races with logout, leaving stale sessions active
+  F2  nit        README.md:18        option table omits the default
+  No findings at or above critical. F1 and F2 remain open below threshold.
+
+Review-until-clean status: clean at critical, full scope
 ```
 
 ## Error Handling

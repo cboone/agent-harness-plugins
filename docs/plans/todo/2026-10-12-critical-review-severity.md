@@ -26,4 +26,31 @@ No push or pull request is included. Issue #615 remains in progress until merge 
 
 ## Validation record
 
-Pending implementation.
+Implementation is complete. `review-until-clean` is version `3.1.0`; the shared-helper update bumps `review-pr-with-codex` to `2.0.2`.
+
+### Instruction-path checks
+
+These checks trace the skill and reference rules; they are not live reviewer runs.
+
+| Scenario                                                 | Specified result                                                            |
+| -------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Critical, Important and Nit findings at `critical`       | Only Critical enters the fixer queue; all findings are printed and recorded |
+| Only Important, Nit or unlabelled findings at `critical` | `clean at critical`; lower findings remain open                             |
+| Critical and Important findings at default `important`   | Both block and enter the fixer queue                                        |
+| Any severity at `nit`                                    | All three levels block and enter the fixer queue                            |
+| Carried Critical decline at `critical`                   | `clean-with-declines at critical` when no blocking findings remain          |
+| Only lower-severity declines at `critical`               | `clean at critical`                                                         |
+| Confirmation with lower-severity findings                | Both rounds apply the same threshold and snapshot rules                     |
+| Report-only with blocking Critical findings              | Findings are reported without a fix pass                                    |
+| Failed review, edit round or invalid snapshot            | Threshold cannot make the round clean                                       |
+
+### Automated checks
+
+- `make build`: passed; generated Codex mirrors committed with the canonical sources.
+- `make lint`: passed. Subsequent README and plan edits passed scoped Markdown lint and Prettier checks.
+- `make validate`: passed after the final build.
+- `make test-scrut`: 23 of 27 documents passed on the initial run. Codex-aspects, notifications and launch-workmux failed because the sandbox denied process-list access; all three passed when rerun with that access. The catalog suite detected mirror drift while README wording was being edited during the initial run; it passed after the final build. Every document has a passing final result.
+- Changed review-scope suite: 43 cases passed, including the three-level severity schema and byte-identical shared helpers.
+- `git diff --check`: passed.
+
+No live reviewer loop was run. Threshold behavior is specified by agent instructions; the executable regression checks cover the schema, helpers and repository validators.

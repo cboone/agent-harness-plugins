@@ -11,7 +11,9 @@ A round is clean when **all four** hold. Any one of them missing is not clean.
 1. **Nothing is left undeclined at or above the threshold.** Findings below `--severity`, and findings carried as declined, do not block.
 1. **The snapshot still matches.** Recomputed at the moment of the decision, not taken from the start of the round.
 
-Report the result with its coverage attached. A round whose coverage was `partial` reports `clean, partial scope`, and one whose coverage was `unverified` reports `clean, coverage unverified`, because a clean result that quietly covered less than the scope is the failure this whole design exists to prevent.
+Report the result with its coverage attached. A round whose coverage was `partial` reports `clean at <threshold>, partial scope`, and one whose coverage was `unverified` reports `clean at <threshold>, coverage unverified`, because a clean result that quietly covered less than the scope is the failure this whole design exists to prevent.
+
+Every human-readable clean result names the threshold: `clean at critical` or `clean-with-declines at critical`, for example. The ledger keeps the existing status token and records the threshold separately. Under `critical`, open Important and Nit findings, including unlabelled findings mapped to Important, do not block; they stay printed and recorded as open. Carried declines below the threshold do not turn a result into `clean-with-declines`. Completion, mode, snapshot and coverage checks still apply.
 
 ## Empty is not clean
 
@@ -69,7 +71,7 @@ A single clean round is the default finish. It is also the weakest point in the 
 
 **The confirming round counts against `--max-rounds`, with one exception.** When a round is left in the budget, the confirming round uses it, like any other round. When the first clean round used the last round, the confirming round runs anyway, as one round past the cap. That extra round is a review only: if it leaves a blocking finding or edits the tree, nothing is fixed or reviewed again, and the run ends `stopped` with the findings listed. If it is clean, the pair completes as usual. It also runs only to confirm: if the snapshot moved after the last clean round, it does not run, and the run ends `stopped` with that reason. If the snapshot moves during it, the round is discarded as any invalidated round is, but no round is left to start, so the run ends `stopped` and reports the tree changed during confirmation. Without the exception, a run whose first clean round lands on the last round could never be confirmed.
 
-The terminal status follows the same table as an unconfirmed run: `clean-with-declines` when either round of the pair relied on carried declines, and `clean` otherwise. Coverage still applies, so a confirmed pair with `partial` or `unverified` coverage reports it, as for a single round.
+The terminal status follows the same table as an unconfirmed run: `clean-with-declines` when either round of the pair relied on carried declines at or above the threshold, and `clean` otherwise. Coverage still applies, so a confirmed pair with `partial` or `unverified` coverage reports it, as for a single round.
 
 Under `--report-only`, the confirming round still runs when the first round is clean and the snapshot has not moved since. The loop fixes nothing in either round; a reviewer that edits still does, and its edits are kept and reported. `--report-only` has no round budget, so the cap rules above do not apply to it and it never reports `stopped`:
 
@@ -89,7 +91,7 @@ Three rules keep a run from spending every round on the same disagreement:
 | Status                | Meaning                                                                                                                                                                                       |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `clean`               | A clean report round, with the coverage stated                                                                                                                                                |
-| `clean-with-declines` | A clean round whose remaining findings are all carried declines                                                                                                                               |
+| `clean-with-declines` | A clean round that relies on carried declines at or above the threshold                                                                                                                       |
 | `decisions-needed`    | Findings remain that the loop cannot resolve on its own, or, under `--report-only`, the reviewer edited the tree and its changes await a decision                                             |
 | `stopped`             | The round limit was reached before a clean result: with findings outstanding, with fixes or reviewer edits not yet reviewed, or, under `--confirm-clean`, with a clean round left unconfirmed |
 | `failed`              | A round did not produce a usable review, or no review could start: no reviewer, no commits, a remote ref moved, or history was rewritten                                                      |
