@@ -86,3 +86,9 @@ Head `08285906`. Both as Codex dry runs through this branch's own path: `gpt-6.1
 - `trim-text`: 13 proposals. 12 applied as proposed; the `codex-exec.md` settings bullet was kept, since the rewrite was no shorter and less clear.
 
 Committed as `361e824b`.
+
+## Step 4: semgrep baseline scan
+
+`semgrep` 1.180.0, `--config auto --baseline-commit db9eb7e4`, in a disposable `git clone --shared` of head `9757e969` in the session scratchpad, with `SEMGREP_REPO_NAME=cboone/agent-harness-plugins`. 29 paths scanned; no new findings.
+
+Coverage gap: semgrep's shell parser reports partial parsing for `plugins/review-pr-with-codex/scripts/codex-aspects` (lines 3 to the end, so effectively unscanned) and four short spans of `bin/build-shared-references`. Both errors occur at the merge base too, so they predate the branch; `shellcheck` covers both scripts.
