@@ -25,7 +25,7 @@ function cleanup() {
 trap cleanup EXIT
 
 function usage() {
-  cat << 'USAGE_TEXT'
+  cat << 'USAGETEXT'
 Usage: review-scope [--base <ref>]
        review-scope --schema
 
@@ -42,7 +42,7 @@ Options:
                 branch; committed changes are those from the merge base to HEAD
   --schema      Print the JSON Schema for reviewer findings and exit
   -h, --help    Show this help
-USAGE_TEXT
+USAGETEXT
 }
 
 function die() {
@@ -72,7 +72,7 @@ function die() {
 # review-until-clean's `references/ledger.md` carries the location check that
 # covers every reviewer.
 function print_schema() {
-  cat << 'SCHEMA_TEXT'
+  cat << 'SCHEMATEXT'
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
@@ -121,7 +121,7 @@ function print_schema() {
   "required": ["findings", "reviewed"],
   "type": "object"
 }
-SCHEMA_TEXT
+SCHEMATEXT
 }
 
 function require_command() {
