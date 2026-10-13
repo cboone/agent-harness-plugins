@@ -195,10 +195,11 @@ After step 1 has resolved and filtered the scope, run the dry run through `codex
 
 - Model `gpt-6.1-sol`, effort `low` and window `872000`.
 - Arguments: with paths, the root-relative files step 1 kept, each quoted; with the default scope, none. Then `--dry-run`.
-- With the default scope, this addition to the prompt, with step 1's result: `Use merge base <merge-base> for the default scope; do not look up the base branch.`
-- This addition to the prompt: `In the step 7 table, give each before and after in full, never truncated, with the file:line where it starts now. With nothing to change, reply with exactly: No changes proposed.`
+- With paths, this addition to the prompt: `Each path argument is one literal file name: expand it with :(literal) in place of :(glob).`
+- With the default scope, this addition, with step 1's result: `Use merge base <merge-base> for the default scope; do not look up the base branch.`
+- This addition: `Start the reply with a line "Files classified:" followed by every file you classified, one per line. Then give the step 7 table, with each before and after in full, never truncated, and the file:line where it starts now; or, with nothing to change, the line: No changes proposed.`
 
-A finished reply holds that table or that exact line; anything else fails the shape check. A reply that passes takes the place of steps 2 and 3. Read every proposal against the current file and the standard above, keep the ones that hold, and reclassify the rest yourself; the session that edits owns the result. Drop any proposal for a file outside step 1's scope, and name it in the report. Then continue from step 4, or, with `--dry-run`, report the checked proposals. When Codex does not apply or its reply fails a check, run steps 2 and 3 in this session.
+A finished reply holds the file list and then the table or that line; anything else fails the shape check. A reply that passes takes the place of steps 2 and 3 for the files it lists. Read every proposal against the current file and the standard above, keep the ones that hold, and reclassify the rest yourself; the session that edits owns the result. Run steps 2 and 3 in this session for any of step 1's files the list leaves out, and drop any proposal for a file outside step 1's scope, naming both in the report. Then continue from step 4, or, with `--dry-run`, report the checked proposals. When Codex does not apply or its reply fails a check, run steps 2 and 3 in this session.
 
 ## Workflow
 
@@ -246,7 +247,7 @@ Filter every path list, including the file of a single named comment, before rea
 
 Report the remaining file list before editing, listing untracked files separately, since they count as entirely changed and may not belong to this branch's work.
 
-Then get the Codex proposals described in "Proposals through Codex"; when they arrive, skip to step 4.
+Then follow "Proposals through Codex", which says where to continue.
 
 ### 2. Collect comments
 

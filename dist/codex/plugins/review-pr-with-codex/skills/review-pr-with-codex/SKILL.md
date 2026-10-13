@@ -19,7 +19,7 @@ Run several focused Codex reviews of the current branch, one per aspect, and mer
 - **--base `<ref>`**: take the merge base with this ref instead of with the default branch
 - **--model `<model>`**: Codex model for every aspect; default `gpt-6.1-sol`
 - **--effort `<level>`**: Codex reasoning effort for every aspect; default `xhigh`
-- **--window `<tokens>`**: Codex context window (`model_context_window`) for every aspect, a positive whole number; default `872000`, the default model's largest
+- **--window `<tokens>`**: Codex context window (`model_context_window`) for every aspect, a positive whole number; default `872000`, the default model's largest; set it too when `--model` names another model
 
 The model, effort and window are set on each run, so an omitted option never falls back to the user's own Codex settings, and those settings stay unchanged.
 

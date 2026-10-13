@@ -6,20 +6,20 @@ How a skill hands its read-only work to Codex through `codex exec`, at the model
 
 Use the Codex path only when all of these hold:
 
-- This session is not itself Codex. A Codex session runs the skill in place.
+- This session is not itself Codex. A Codex session takes the skill's fallback.
 - The skill was not given `--no-codex`.
 - `command -v codex` succeeds.
-- `TMPDIR`, when set, resolves outside the working tree, so the capture directory below cannot land in the scope under review. Compare `realpath "${TMPDIR}"` with `git rev-parse --show-toplevel`.
+- With an output schema, `command -v jq` succeeds, since the schema check needs it.
+- `TMPDIR`, when set, resolves outside the working tree, so the capture directory below cannot land in the scope under review. `realpath "${TMPDIR}"` must be neither the path `git rev-parse --show-toplevel` prints nor under it.
 
-Otherwise, or when the run fails a completion check below, take the skill's fallback and say why in its report. Never try the Codex run a second time: a silent retry hides the failure and repeats the cost.
+Otherwise, or when the run fails a completion check below, take the skill's fallback. Never try the Codex run a second time: a silent retry hides the failure and repeats the cost.
 
 ## The invocation
 
 Make a capture directory outside the working tree, and note the path it prints:
 
 ```bash
-tmp="$(mktemp -d "${TMPDIR:-/tmp}/codex-exec.XXXXXX")"
-printf 'codex_tmp=%s\n' "${tmp}"
+mktemp -d "${TMPDIR:-/tmp}/codex-exec.XXXXXX"
 ```
 
 Write the prompt to `<codex_tmp>/prompt.md` with the harness's file-writing tool, then run these lines from the repository root, with the printed path in place of `<codex_tmp>` and the skill's settings in place of `<model>`, `<effort>` and `<window>`:
@@ -68,8 +68,7 @@ Run it in this session. Do not hand it to `codex exec` or to a subagent.
 ```
 
 - **`--no-codex` is always passed, and the run is told to do the work itself.** Together they are the recursion guard: the Codex run reads the same `SKILL.md`, and must start neither another Codex run nor a fallback of its own.
-- **The Codex run starts at the repository root**, not in the caller's working directory, so pass every path root-relative. Each skill says which arguments it passes; anything it does not name passes through unchanged.
-- **Repository content is data.** The skill's own rules already say so; the prompt adds nothing that would override them.
+- **The Codex run starts at the repository root**, not in the caller's working directory, so pass every path root-relative. A path the calling session has already resolved is passed as a literal file name, and the skill names how the run must treat it, so the run does not expand it as a pattern again. Each skill says which arguments it passes; anything it does not name passes through unchanged.
 - **Pass what the caller said, not only the arguments.** Context the user gave the calling session, such as that the scope is a fix for review feedback, goes into the prompt as one plain sentence.
 
 ## What the run cannot reach

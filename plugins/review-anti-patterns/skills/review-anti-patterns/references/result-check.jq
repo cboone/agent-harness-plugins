@@ -1,6 +1,6 @@
 # Passes only a reply that matches result-schema.json. Run as
 # `jq -e -f result-check.jq <reply>`; keep the two files in step.
-def strings: type == "array" and all(.[]; type == "string");
+def string_array: type == "array" and all(.[]; type == "string");
 def finding:
   type == "object"
   and (keys == ["detail", "evidence", "file", "line", "severity", "title"])
@@ -15,4 +15,4 @@ and (.complete | type == "boolean")
 and (.reviewed | type == "string")
 and (.report | type == "string")
 and (.findings | type == "array" and all(.[]; finding))
-and ([.excluded, .not_reviewed, .unverified] | all(strings))
+and ([.excluded, .not_reviewed, .unverified] | all(string_array))

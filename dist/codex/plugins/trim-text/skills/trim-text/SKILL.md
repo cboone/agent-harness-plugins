@@ -146,10 +146,11 @@ For paths, Codex proposes the changes in a read-only dry run, and this session c
 After step 1 has resolved the file list and the profile, run the dry run through `codex exec` as `./references/codex-exec.md` describes, when it says the Codex path applies, with:
 
 - Model `gpt-6.1-sol`, effort `low` and window `872000`.
-- Arguments: the root-relative files step 1 kept, each quoted, then `--profile <the profile step 1 picked>` and `--dry-run`.
-- This addition to the prompt: `In the step 7 table, give each before and after in full, never truncated or summarized, including units replaced together, with the file:line where each starts now. With nothing to change, reply with exactly: No changes proposed.`
+- Arguments: the root-relative files step 1 kept, each quoted, then `--profile <name>` when the user gave one, then `--dry-run`.
+- This addition to the prompt: `Each path argument is one literal file name: expand it with :(literal) in place of :(glob).`
+- This addition: `Start the reply with a line "Files classified:" followed by every file you classified and its profile, one per line. Then give the step 7 table, with each before and after in full, never truncated or summarized, including units replaced together, and the file:line where each starts now; or, with nothing to change, the line: No changes proposed.`
 
-A finished reply holds that table or that exact line; anything else fails the shape check. A reply that passes takes the place of steps 2 and 3. Read every proposal against the current file, the standard above and the profile, keep the ones that hold, and reclassify the rest yourself; the session that edits owns the result, and "Preserve meaning" still applies to each one. Then reread the result as a whole, as step 3 ends, since keeping only some proposals can leave a dangling "this" or a list of one. Drop any proposal for a file outside step 1's scope, and name it in the report. Then continue from step 4, or, with `--dry-run`, report the checked proposals. When Codex does not apply or its reply fails a check, run steps 2 and 3 in this session.
+A finished reply holds the file list and then the table or that line; anything else fails the shape check. A reply that passes takes the place of steps 2 and 3 for the files it lists. Read every proposal against the current file, the standard above and the profile, keep the ones that hold, and reclassify the rest yourself; the session that edits owns the result, and "Preserve meaning" still applies to each one. Then reread the result as a whole, as step 3 ends, since keeping only some proposals can leave a dangling "this" or a list of one. Run steps 2 and 3 in this session for any of step 1's files the list leaves out, and drop any proposal for a file outside step 1's scope, naming both in the report. Then continue from step 4, or, with `--dry-run`, report the checked proposals. When Codex does not apply or its reply fails a check, run steps 2 and 3 in this session.
 
 ## Workflow
 
@@ -163,7 +164,7 @@ A finished reply holds that table or that exact line; anything else fails the sh
 
 Pick the profile from `--profile`, then from the continuation block's `Profile` line, or else from the scope: a PR or issue is `pr-and-issue-bodies`; a file listed under `agent-instructions` in the profile table is that profile; anything else is `none`. Read the profile's reference file, and say which profile applied in the report.
 
-For paths, then get the Codex proposals described in "Proposals through Codex"; when they arrive, skip to step 4.
+For paths, then follow "Proposals through Codex", which says where to continue.
 
 ### 2. Split into units
 

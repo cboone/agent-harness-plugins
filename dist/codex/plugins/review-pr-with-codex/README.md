@@ -66,14 +66,14 @@ An aspect whose run failed, timed out, or returned nothing or something unparsea
 /review-pr-with-codex [aspects...|all] [--base <ref>] [--model <model>] [--effort <level>] [--window <tokens>]
 ```
 
-| Option              | Description                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `aspects...`        | Any of `code`, `errors`, `tests`, `comments`, `types`, `simplify`; named aspects always run |
-| `all`               | Every aspect that applies to the change; the default                                        |
-| `--base <ref>`      | Take the merge base with this ref instead of with the default branch                        |
-| `--model <model>`   | Codex model for every aspect; default `gpt-6.1-sol`                                         |
-| `--effort <level>`  | Codex reasoning effort for every aspect; default `xhigh`                                    |
-| `--window <tokens>` | Codex context window (`model_context_window`) for every aspect; default `872000`            |
+| Option              | Description                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `aspects...`        | Any of `code`, `errors`, `tests`, `comments`, `types`, `simplify`; named aspects always run                                     |
+| `all`               | Every aspect that applies to the change; the default                                                                            |
+| `--base <ref>`      | Take the merge base with this ref instead of with the default branch                                                            |
+| `--model <model>`   | Codex model for every aspect; default `gpt-6.1-sol`                                                                             |
+| `--effort <level>`  | Codex reasoning effort for every aspect; default `xhigh`                                                                        |
+| `--window <tokens>` | Codex context window (`model_context_window`) for every aspect; default `872000`; set it too when `--model` names another model |
 
 The model, effort and window are passed on each run, so your own Codex defaults stay as they are and never fill in for an omitted option.
 
