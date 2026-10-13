@@ -92,3 +92,9 @@ Committed as `361e824b`.
 `semgrep` 1.180.0, `--config auto --baseline-commit db9eb7e4`, in a disposable `git clone --shared` of head `9757e969` in the session scratchpad, with `SEMGREP_REPO_NAME=cboone/agent-harness-plugins`. 29 paths scanned; no new findings.
 
 Coverage gap: semgrep's shell parser reports partial parsing for `plugins/review-pr-with-codex/scripts/codex-aspects` (lines 3 to the end, so effectively unscanned) and four short spans of `bin/build-shared-references`. Both errors occur at the merge base too, so they predate the branch; `shellcheck` covers both scripts.
+
+## Step 5: `lint-and-fix --no-push`
+
+The repository's documented commands: `make format`, `make build`, `make lint` and `make validate`. All exited 0, and nothing changed on disk, so no lint commit was needed. The full scrut suite last passed after step 2 round 2 (28 documents); step 3 changed only prose and one comment, and the affected `result-check` and `build-shared-references` documents passed again after it.
+
+The local review order is complete; the branch is at the push and draft-PR gate.
