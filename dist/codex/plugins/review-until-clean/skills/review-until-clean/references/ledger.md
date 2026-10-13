@@ -47,6 +47,7 @@ Under `--no-save`, the ledger stays at its temporary path and that path is repor
 
 Base: <base-ref> (<base-sha>)
 Reviewer: <the --reviewer value> (<from --reviewer | from agent config | chosen when asked>)
+Severity: <critical|important|nit>
 Rounds: <n> of <max>
 Status: <clean|clean-with-declines|decisions-needed|stopped|failed|no-op>
 Confirmation: <off | rounds <n> and <m> over snapshot <snapshot> | unconfirmed>
@@ -147,11 +148,13 @@ A declined finding is still a defect in the reviewer's eyes, so the next round r
 
 Once a round's findings are recorded, match them against the declines already in this run's ledger and in the earlier ledgers of the same branch in `docs/reviews/`, by location and substance rather than by wording, since the reviewer will phrase it differently. A match is recorded as declined, carrying the original reason and the round it was first declined in. It does not go to `address-review`, and it does not block a clean result.
 
-A round whose only findings at or above the threshold are carried declines is **clean-with-declines**. That is a real terminal state, not a failure: the reviewer has nothing new to say, and the open disagreements are written down.
+A clean round that relies on carried declines at or above the threshold is **clean-with-declines**. That is a real terminal state, not a failure: the reviewer has nothing new to say, and the open disagreements are written down.
 
 A decline from an earlier run carries the same way, naming the ledger and the finding it came from, so a settled question is not asked again in every run. The branch's ledgers are those named `<date>-<branch>-until-clean*.md` for this branch.
 
 Do not carry a decline across a change to the code it was about. If the code the finding is about has changed since it was declined, raise it fresh, because the reason it was declined may no longer hold. A line number that moved only because of edits elsewhere in the file is not such a change.
+
+Record the selected threshold in the header for every terminal status. Keep `Status` as the existing status token; qualify human-readable clean results with `at <threshold>`. Lower-severity findings remain Open and unchecked, including in a clean ledger. Under `critical`, skip every Important and Nit item when invoking `address-review`; use its item numbers across the entire ledger, not the stable finding identifiers.
 
 ## What a clean ledger says
 
@@ -163,6 +166,6 @@ A clean run still writes its ledger, and the final section states the coverage r
 No undeclined findings at or above <threshold> from <reviewer> over snapshot <snapshot>, covering <coverage>.
 ```
 
-Under `--confirm-clean`, the result names both rounds of the pair: "No undeclined findings at or above `<threshold>` from `<reviewer>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`." `<threshold>` is the `--severity` in effect, Important or Nit, and "undeclined" leaves room for the carried declines a `clean-with-declines` result still has.
+Under `--confirm-clean`, the result names both rounds of the pair: "No undeclined findings at or above `<threshold>` from `<reviewer>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`." `<threshold>` is the `--severity` in effect, Critical, Important or Nit, and "undeclined" leaves room for the carried declines a `clean-with-declines` result still has.
 
 One reviewer pass is a sample. The ledger records what was reviewed and by what, which is a claim that can be checked, unlike "the branch is clean".

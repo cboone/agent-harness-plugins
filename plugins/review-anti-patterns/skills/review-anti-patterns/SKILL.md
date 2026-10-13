@@ -101,7 +101,7 @@ Read `./references/mechanical-checks.md`. For each item step 4 could not settle 
 - **Important**: the defect breaks behavior, lets a rejected input through, accepts invalid input, loses or leaks data, or breaks the build or a release. In docs and agent prose, it is Important when a reader or agent who follows the text would take a consequential wrong action: push, skip a required check, report the wrong status, or run something unsafe.
 - **Nit**: anything else that is still wrong, such as a document that disagrees with the code in a way that misleads nobody, or agent prose that is unclear but leads to the right action.
 
-These are `review-until-clean`'s two levels, except that a defect the change did not introduce keeps its severity rather than dropping to Nit; say in its `detail` that it predates the change. Report findings at or above `--severity`.
+This reviewer emits only Important and Nit, matching those levels in `review-until-clean`'s Critical > Important > Nit model. Its findings do not block `review-until-clean --severity critical`. Keep a pre-existing defect's severity and note in `detail` that it predates the change. Report findings at or above `--severity`.
 
 ### 7. Report
 
