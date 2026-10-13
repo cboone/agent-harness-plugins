@@ -96,7 +96,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - "review pr with codex": every applicable read-only review aspect
 - "/review-pr-with-codex all simplify": review, then explicitly authorized simplification, validation and final review
 - "/review-pr-with-codex code errors": only the code and error-handling aspects
-- "/review-pr-with-codex tests --effort high": the tests aspect at higher effort
+- "/review-pr-with-codex tests --effort medium": the tests aspect at lower effort, for a faster run
 - "/review-pr-with-codex --base release/2.0": review against a release branch
 
 ## Attribution

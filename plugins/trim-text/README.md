@@ -48,7 +48,7 @@ How it applies the result depends on the input:
 
 With no argument, the skill trims the body of the current branch's open PR. `--profile` overrides the profile detected from the input. `--dry-run` reports the proposed changes without editing anything. `--no-commit` edits files and verifies them but leaves the edits uncommitted. `--no-codex` classifies file paths in the current session instead of through Codex.
 
-When `codex` is installed, file paths first get a read-only Codex dry run (`codex exec` in a read-only sandbox, on `gpt-6.1-sol` at `low` effort with an 872k context window, set on the run so your own Codex settings never apply). The current session checks each proposal against the standard and the profile before applying it. PR and issue bodies and pasted text always run in the current session. When Codex is missing or its run fails a completion check, the session classifies the text itself and says so.
+When `codex` is installed, file paths first get a read-only Codex dry run (`codex exec` in a read-only sandbox, on `gpt-6.1-sol` at `low` effort with an 872k context window, set on the run so your own Codex settings never apply). Started from a Codex session, the skill runs in that session instead, on that session's model and settings. The current session checks each proposal against the standard and the profile before applying it. PR and issue bodies and pasted text always run in the current session. When Codex is missing or its run fails a completion check, the session classifies the text itself and says so.
 
 ## Recommended Permissions
 
