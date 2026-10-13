@@ -4,7 +4,7 @@ description: >-
   Trim and rewrite code comments in changed files or given paths: what the code
   does, then the minimum why. Use for "trim comments" or a comment that is too
   long or jargony; not for PR review comments or general code cleanup.
-argument-hint: "[paths...] [--dry-run] [--no-commit]"
+argument-hint: "[paths...] [--dry-run] [--no-commit] [--no-codex]"
 ---
 
 # Trim Comments
@@ -18,6 +18,7 @@ The user may provide these options inline:
 - **paths**: A path, glob, or file list. Every comment in those files is in scope, changed or not. Without paths, the scope is the comments in or directly above code the current branch changed: committed changes since the base branch, plus staged, unstaged, and untracked files. When the user points at a single comment, that comment is the whole scope.
 - **--dry-run**: Report proposed changes without editing or committing.
 - **--no-commit**: Edit and verify, but leave the edits uncommitted. By default the skill commits its edits, and it never pushes.
+- **--no-codex**: Classify the comments in this session rather than through a Codex dry run; see "Proposals through Codex".
 
 ## The standard
 
@@ -186,6 +187,20 @@ Two entries apply to whole files, generated files and prose documents, and step 
 - Prose documents: `.md` files, including Copilot instruction files. Those have different length rules.
 - Comments outside the scope. Do not sweep the whole repository.
 
+## Proposals through Codex
+
+For a path or default scope, Codex proposes the changes in a read-only dry run, and this session checks and applies them. A single named comment always runs in this session.
+
+After step 1 has resolved and filtered the scope, run the dry run through `codex exec` as `./references/codex-exec.md` describes, when it says the Codex path applies, with:
+
+- Model `gpt-6.1-sol`, effort `low` and window `872000`.
+- Arguments: the user's paths, if any, then `--dry-run`.
+- This addition to the prompt: `In the step 7 table, give each before and after in full, never truncated, with the file:line where it starts now.`
+
+A reply that passes the completion checks takes the place of steps 2 and 3. Read every proposal for a file in this session's scope against the current file and the standard above, keep the ones that hold, and reclassify the rest yourself; the session that edits owns the result. Drop proposals for files outside the scope step 1 resolved, and name them in the report. Then continue from step 4, or, with `--dry-run`, report the checked proposals. When Codex does not apply or its reply fails a check, run steps 2 and 3 in this session.
+
+The report names the path that ran, with the Codex settings, or why it ran in this session.
+
 ## Workflow
 
 ### 1. Resolve scope
@@ -231,6 +246,8 @@ Filter every path list, including the file of a single named comment, before rea
 - Drop binary files, such as images, archives, and databases: anything where `grep -Iq . "./$path"` fails, which also drops empty files, since they hold no comments.
 
 Report the remaining file list before editing, listing untracked files separately, since they count as entirely changed and may not belong to this branch's work.
+
+Then get the Codex proposals described in "Proposals through Codex"; when they arrive, skip to step 4.
 
 ### 2. Collect comments
 
@@ -338,6 +355,10 @@ Before finishing, confirm:
 - No sentence carries two separate behaviors, and no clause trails off into "which is…" pointing back up the sentence
 - No comment explains what a language or framework construct does
 - No CSS comment restates the declaration under it, or names what the property does rather than why this value
+
+## Reference Navigation
+
+- `./references/codex-exec.md`: how the dry run goes through `codex exec`, and the checks that tell a finished run from a failed one; shared with `review-anti-patterns` and `trim-text`
 
 ## Error Handling
 

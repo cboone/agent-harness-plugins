@@ -5,7 +5,7 @@ description: >-
   the point first, then the minimum why. Use for "trim this text", "tighten
   the PR body", or "this instruction is too long"; for code comments, use
   trim-comments.
-argument-hint: "[paths...|pr|issue <n>] [--profile <name>] [--dry-run] [--no-commit]"
+argument-hint: "[paths...|pr|issue <n>] [--profile <name>] [--dry-run] [--no-commit] [--no-codex]"
 ---
 
 # Trim Text
@@ -22,6 +22,7 @@ The user may provide these options inline:
 - **--profile <name>**: `pr-and-issue-bodies`, `agent-instructions`, or `none`. Overrides the detection in step 1.
 - **--dry-run**: Report proposed changes without editing, committing, or writing to GitHub: for files and PR or issue bodies, steps 4 to 6 are skipped. Pasted text and drafts still get the full rewrite, since step 4 edits nothing for them.
 - **--no-commit**: For paths, edit and verify but leave the edits uncommitted. By default the skill commits its edits to files, and it never pushes.
+- **--no-codex**: For paths, classify the units in this session rather than through a Codex dry run; see "Proposals through Codex".
 
 With no argument and no pasted text, the scope is the open PR for the current branch. If there is none, ask for paths, a reference, or the text.
 
@@ -138,6 +139,20 @@ A claim that is no longer true is the one exception to the checks above. When th
 
 Style rules from the user's and the repository's instructions already in context, such as banned punctuation or required terminology, apply to every rewrite.
 
+## Proposals through Codex
+
+For paths, Codex proposes the changes in a read-only dry run, and this session checks and applies them. A PR or issue body, pasted text and a draft always run in this session: the dry run's sandbox has no network to fetch a body, and pasted text is not in a file it can read.
+
+After step 1 has resolved the file list and the profile, run the dry run through `codex exec` as `./references/codex-exec.md` describes, when it says the Codex path applies, with:
+
+- Model `gpt-6.1-sol`, effort `low` and window `872000`.
+- Arguments: the user's paths, `--profile <the profile step 1 picked>`, then `--dry-run`.
+- This addition to the prompt: `In the step 7 table, give each before and after in full, never truncated, with the file:line where it starts now.`
+
+A reply that passes the completion checks takes the place of steps 2 and 3. Read every proposal for a file in this session's scope against the current file, the standard above and the profile, keep the ones that hold, and reclassify the rest yourself; the session that edits owns the result, and "Preserve meaning" still applies to each one. Drop proposals for files outside the scope step 1 resolved, and name them in the report. Then continue from step 4, or, with `--dry-run`, report the checked proposals. When Codex does not apply or its reply fails a check, run steps 2 and 3 in this session.
+
+The report names the path that ran, with the Codex settings, or why it ran in this session.
+
 ## Workflow
 
 ### 1. Resolve scope and profile
@@ -149,6 +164,8 @@ Style rules from the user's and the repository's instructions already in context
 **Paths:** they are relative to the current working directory, like any command-line argument. Expand each one with `git ls-files -z --cached --others --exclude-standard --full-name -- ':(glob)<path>'`, which prints paths from the repository root. Split the output on NUL bytes, run later commands from the root (`git rev-parse --show-toplevel`), and pass each path as one quoted argument (`"./$path"`). Replace a symlink whose target (`realpath "./$path"`) is a regular file inside the repository with that target, made relative to the repository root again by removing the root's `realpath` and the `/` after it, so `CLAUDE.md` pointing at `AGENTS.md` trims `AGENTS.md`, and list each file once. Drop generated files, secret-bearing paths, any other symlink and anything reached through a symlinked directory, anything that is not a regular file, and binary files (`grep -Iq . "./$path"` fails). Drop source files whose prose lives in comments, and point the user at `trim-comments` for them. Report a path that matches nothing or lies outside the repository and continue with the rest, then report the remaining file list before editing.
 
 Pick the profile from `--profile`, then from the continuation block's `Profile` line, or else from the scope: a PR or issue is `pr-and-issue-bodies`; a file listed under `agent-instructions` in the profile table is that profile; anything else is `none`. Read the profile's reference file, and say which profile applied in the report.
+
+For paths, then get the Codex proposals described in "Proposals through Codex"; when they arrive, skip to step 4.
 
 ### 2. Split into units
 
@@ -238,6 +255,11 @@ Trimmed text:
 `Trimmed text` comes last: everything after its line is the text, so a line inside it that looks like a field name is still text.
 
 `no-op` means nothing needed trimming. `failure` means the text could not be processed, and `unavailable` means a capability the trim needs is missing; for both, the parent uses its original draft. The parent relays `Flagged` and `Cut material` to the user.
+
+## Reference Navigation
+
+- `./references/pr-and-issue-bodies.md` and `./references/agent-instructions.md`: the profiles; see "Profiles"
+- `./references/codex-exec.md`: how the dry run goes through `codex exec`, and the checks that tell a finished run from a failed one; shared with `review-anti-patterns` and `trim-comments`
 
 ## Error Handling
 
