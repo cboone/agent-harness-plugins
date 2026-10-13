@@ -21,7 +21,7 @@ Run several focused Codex reviews of the current branch, one per aspect, and mer
 - **--effort `<level>`**: Codex reasoning effort for every aspect; default `xhigh`
 - **--window `<tokens>`**: Codex context window (`model_context_window`) for every aspect, a positive whole number; default `872000`, the default model's largest; set it too when `--model` names another model
 
-The model, effort and window are set on each run, so an omitted option never falls back to the user's own Codex settings, and those settings stay unchanged.
+Set the model, effort and window on each run. Never use the user's Codex settings for an omitted option or change those settings.
 
 ## The rules
 

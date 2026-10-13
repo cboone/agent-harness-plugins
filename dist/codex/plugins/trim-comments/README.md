@@ -48,7 +48,7 @@ This skill runs read-only Git and GitHub CLI commands to find its scope. To allo
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The Codex run is one multi-line `codex exec` command that no simple rule matches, so it prompts; approve it when it runs, or pass `--no-codex`. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project. Its commit is a `git commit` limited to the edited files. It prompts by default; to let it run unattended, also allow `Bash(git commit *)`.
+If you already have a `permissions.allow` array, merge these entries into it. The multi-line `codex exec` command matches no simple permission rule. Approve its prompt or pass `--no-codex`. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project. Its commit is a `git commit` limited to the edited files. It prompts by default; to let it run unattended, also allow `Bash(git commit *)`.
 
 ## Examples
 

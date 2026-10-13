@@ -62,7 +62,7 @@ This skill reads PR and issue bodies with the GitHub CLI and runs read-only Git 
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The Codex run is one multi-line `codex exec` command that no simple rule matches, so it prompts; approve it when it runs, or pass `--no-codex`. The skill also runs the project's own linters and formatters in check mode, which depend on the project. Its writes prompt by default: `gh pr edit` and `gh issue edit` update a body after you approve the diff in the conversation, and `git commit` commits edited files. To let them run without a second prompt, also allow:
+If you already have a `permissions.allow` array, merge these entries into it. The multi-line `codex exec` command matches no simple permission rule. Approve its prompt or pass `--no-codex`. The skill also runs the project's own linters and formatters in check mode, which depend on the project. Its writes prompt by default: `gh pr edit` and `gh issue edit` update a body after you approve the diff in the conversation, and `git commit` commits edited files. To let them run without a second prompt, also allow:
 
 ```json
 {

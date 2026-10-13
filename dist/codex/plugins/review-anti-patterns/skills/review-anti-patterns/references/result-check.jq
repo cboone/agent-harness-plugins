@@ -1,7 +1,5 @@
-# Passes only a reply that matches result-schema.json, whose complete flag
-# agrees with its status and not_reviewed list, and which, when successful,
-# names its scope and report: rules the schema cannot express. Run as
-# `jq -e -f result-check.jq <reply>`; keep the two in step.
+# Checks a reply against result-schema.json and the completion rules it cannot
+# express. Run as `jq -e -f result-check.jq <reply>`; keep both in step.
 def string_array: type == "array" and all(.[]; type == "string");
 def finding:
   type == "object"

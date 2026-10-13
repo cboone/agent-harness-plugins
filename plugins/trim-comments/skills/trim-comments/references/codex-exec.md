@@ -1,6 +1,6 @@
 # Running a Skill Through `codex exec`
 
-How a skill hands its read-only work to Codex through `codex exec`, at the model, effort and context window the skill names, and how the calling session tells a finished run from one that failed. Each skill that reads this file names its own settings, prompt and fallback; everything here applies to all of them.
+How to run a skill's read-only work through `codex exec` and check that it finished. Each consuming skill names its model, effort, context window, prompt and fallback.
 
 ## When to use it
 
@@ -9,8 +9,8 @@ Use the Codex path only when all of these hold:
 - This session is not itself Codex. A Codex session takes the skill's fallback.
 - The skill was not given `--no-codex`.
 - `command -v codex` succeeds.
-- With an output schema, `command -v jq` succeeds, since the schema check needs it.
-- `TMPDIR`, when set, resolves outside the working tree, so the capture directory below cannot land in the scope under review. `realpath "${TMPDIR}"` must be neither the path `git rev-parse --show-toplevel` prints nor under it.
+- With an output schema, `command -v jq` succeeds.
+- When `TMPDIR` is set, `realpath "${TMPDIR}"` must be outside the working tree: neither the path `git rev-parse --show-toplevel` prints nor under it.
 
 Otherwise, or when the run fails a completion check below, take the skill's fallback. Never try the Codex run a second time: a silent retry hides the failure and repeats the cost.
 
@@ -53,11 +53,11 @@ Each part is there for a reason:
 - **`< /dev/null`.** `codex exec` appends a non-terminal stdin to the prompt. An agent harness's stdin is a pipe that never closes, so without the redirect the run waits forever and writes nothing.
 - **The prompt from a file.** The prompt holds paths and arguments with quotes of their own; a file-writing tool takes it as data, so no quoting rule applies.
 - **`codex_status`, not `status`.** zsh reserves `status` as a read-only variable, so assigning it fails and loses the exit status.
-- **A long timeout.** A full run can take many minutes, longer than an agent shell tool's default timeout. Give the call the longest timeout the tool allows, or run it in the background and wait for it. A call cut off by the timeout is a failed run.
+- **A long timeout.** Give the call the longest timeout the tool allows, or run it in the background and wait for it. A timeout is a failed run.
 
 ## The prompt
 
-The prompt tells Codex to follow the skill from its own file rather than from an installed copy, so the run does not depend on the plugin being installed in Codex:
+Point the prompt at the skill's own file so the run does not require the plugin to be installed in Codex:
 
 ```text
 Follow the skill at <absolute path to this skill's SKILL.md>, reading its
@@ -67,9 +67,9 @@ Run it in this session. Do not hand it to `codex exec` or to a subagent.
 <the skill's additions>
 ```
 
-- **`--no-codex` is always passed, and the run is told to do the work itself.** Together they are the recursion guard: the Codex run reads the same `SKILL.md`, and must start neither another Codex run nor a fallback of its own.
+- **Always pass `--no-codex` and tell the run to do the work itself.** It reads the same `SKILL.md`; these instructions prevent it from starting another Codex run or its own fallback.
 - **The Codex run starts at the repository root**, not in the caller's working directory, so pass every path root-relative. A path the calling session has already resolved is passed as a literal file name, and the skill names how the run must treat it, so the run does not expand it as a pattern again. Each skill says which arguments it passes; anything it does not name passes through unchanged.
-- **Pass what the caller said, not only the arguments.** Context the user gave the calling session, such as that the scope is a fix for review feedback, goes into the prompt as one plain sentence.
+- **Include the user's context as one plain sentence in the prompt**, such as that the scope is a fix for review feedback.
 
 ## What the run cannot reach
 

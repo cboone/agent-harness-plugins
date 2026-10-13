@@ -59,7 +59,7 @@ This skill runs read-only Git and GitHub CLI commands to find its scope, every G
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The Codex run is one multi-line `codex exec` command that no simple rule matches, so it prompts; approve it when it runs, or pass `--no-codex`. The mechanical checks run the project's own linters, validators and tests, which depend on the project.
+If you already have a `permissions.allow` array, merge these entries into it. The multi-line `codex exec` command matches no simple permission rule. Approve its prompt or pass `--no-codex`. The mechanical checks run the project's own linters, validators and tests, which depend on the project.
 
 ## Examples
 
