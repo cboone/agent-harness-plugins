@@ -318,7 +318,10 @@ Derive every rule from the guide. When a guide's rule changes, update its checkl
 
 A reference that skills in two plugins read lives in one plugin and is copied into the other, because a skill can read only files its own plugin ships. `bin/build-shared-references`, run by `make build`, keeps the copies byte for byte identical to their sources; its `SHARED_REFERENCES` list names each source and copy. Rule 22 of `bin/validate-plugins` fails when a copy is missing or differs from its source. Edit the source, never the copy, and bump both plugins forward when the source changes.
 
-The shared reference is the progress model: `plugins/publish-report-board/skills/publish-report-board/references/progress-model.md`, copied to `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`. Write a shared reference for every consumer, and leave rules only one consumer follows in that consumer's own references.
+The shared references are:
+
+- The progress model: `plugins/publish-report-board/skills/publish-report-board/references/progress-model.md`, copied to `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`.
+- The `codex exec` path: `plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md`, copied to the `references/` directories of `trim-comments` and `trim-text`. Each consumer's `SKILL.md` names its own model, effort, window, prompt additions and fallback. Write a shared reference for every consumer, and leave rules only one consumer follows in that consumer's own references.
 
 ## Adding a plugin
 

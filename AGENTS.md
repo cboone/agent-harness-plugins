@@ -6,7 +6,7 @@ This is the canonical source for Claude Code plugins (skills and hooks), with a 
 
 ## Critical constraints
 
-- Edit canonical sources in `plugins/<name>/`. Never hand-edit `dist/`, `.agents/`, `set-up-review-config`'s `references/checklists/` copies of each style guide's `references/review-checklist.md`, or `suggest-next-issue`'s copy of `publish-report-board`'s `references/progress-model.md`; regenerate with `make build` and commit the results when source changes affect them.
+- Edit canonical sources in `plugins/<name>/`. Never hand-edit `dist/`, `.agents/`, `set-up-review-config`'s `references/checklists/` copies of each style guide's `references/review-checklist.md`, `suggest-next-issue`'s copy of `publish-report-board`'s `references/progress-model.md`, or the `trim-comments` and `trim-text` copies of `review-anti-patterns`'s `references/codex-exec.md`; regenerate with `make build` and commit the results when source changes affect them.
 - `.claude-plugin/marketplace.json` is the catalog of record. Each plugin's `.claude-plugin/plugin.json` is its sole version source; a `.codex-plugin/plugin.json` mirrors that version when present. New plugins start at `1.0.0`; wording/fixes are patch changes, new capabilities are minor changes, and breaking changes are major changes.
 - After merging, rebasing or before creating a PR, use the repository's [check-versions skill](.claude/skills/check-versions/SKILL.md).
 - Merge PRs with merge commits only (`gh pr merge --merge`). The repository disables squash and rebase merging.
@@ -61,7 +61,7 @@ MIT; see `LICENSE`.
 - Rules under a checklist's Important heading are P1. All other checklist rules are P2 or lower.
 - Start each finding with the checklist name and the rule name, for example `write-bash-scripts: Strict mode`.
 - Do not report what these CI checks already report: `markdownlint-cli2`, `prettier`, `shellcheck`, `shfmt`, `actionlint`, `bin/validate-json`, `bin/validate-plugins`, the `make build` generated-mirror drift check, `scrut`.
-- Do not review these paths: `yarn.lock`, `dist/`, `.agents/`, `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/`, `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`, `docs/plans/done/`, `.github/skills/code-review/*.md` except `SKILL.md`.
+- Do not review these paths: `yarn.lock`, `dist/`, `.agents/`, `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/`, `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`, `plugins/trim-comments/skills/trim-comments/references/codex-exec.md`, `plugins/trim-text/skills/trim-text/references/codex-exec.md`, `docs/plans/done/`, `.github/skills/code-review/*.md` except `SKILL.md`.
 - Claude Code Review takes its severities from `REVIEW.md`.
 - Rules outside this block take precedence over it.
 
