@@ -28,8 +28,8 @@ function transcript_text() {
   jq -nc --arg text "${2}" '{type: "assistant", message: {content: [{type: "text", text: $text}]}}' >> "${1}"
 }
 
-# Appends a turn with promptId $2: a prompt with the extra fields in JSON $3,
-# then a tool round trip carrying the same promptId.
+# Appends a turn whose prompt and tool result share promptId $2, with the extra
+# fields in JSON $3 on the prompt.
 function transcript_turn() {
   # Sample promptIds are plain tokens, so they need no JSON escaping.
   local id_field="{\"promptId\":\"${2}\"}"
@@ -118,8 +118,8 @@ function main() {
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
-  # notify asks ps only for its parent's terminal and command line; agent-run
-  # commands have no terminal.
+  # Stubs the parent's terminal and command line; the default has no terminal,
+  # like an agent-run command.
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s %s\\n" "${NOTIFY_TEST_TTY:-??}" "${NOTIFY_TEST_PARENT:-bash check-notifications}"' > "${test_dir}/bin/ps"
   chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript" "${test_dir}/bin/ps"
@@ -499,7 +499,6 @@ function main() {
       ;;
     *) ;;
   esac
-  # Completion scenarios that classify the turn from a transcript.
   if [[ "${scenario}" =~ ^(quiet-)?(codex|turn)- ]]; then
     [[ ! "${scenario}" =~ ^(quiet-)?turn- ]] || action="cc-stop"
     payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"

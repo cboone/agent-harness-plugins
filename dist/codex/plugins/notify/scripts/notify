@@ -370,13 +370,11 @@ JQ
 readonly PENDING_JQ
 
 # Prints "background" when the current Claude Code turn did not start with the
-# user's prompt, or nothing; read after TURN_JQ. The turn's main-session user
-# records share a promptId and end, newest first, at one with another promptId
-# or at a TURN_JQ prompt without one, as in older transcripts. Only a "human"
-# turnOrigin, or else origin.kind, is the user's. With neither, a turn whose
-# messages, compaction summaries aside, are all meta, such as a scheduled wake,
-# is background. Records without a promptId add nothing, so a turn without one
-# stays unknown and keeps its banner.
+# user's prompt, or nothing; read after TURN_JQ. Newest first, the turn's
+# main-session user records share a promptId and end at one with another, or at
+# a TURN_JQ prompt without one. Only a "human" turnOrigin, or else origin.kind,
+# is the user's; with neither, a turn whose messages, compaction summaries
+# aside, are all meta is background. A turn without a promptId is unknown.
 IFS= read -r -d '' TURN_ORIGIN_JQ << 'JQ' || true
 [label $out
   | foreach (inputs | (fromjson? // null) | objects | select(is_user and .isSidechain != true)) as $r
@@ -414,15 +412,11 @@ function extract_last_assistant_text() {
   reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null || true
 }
 
-# Prints "headless" when the Codex process running this hook is `codex exec`,
-# its alias `e`, or `codex review`, "interactive" for any other Codex command,
-# or nothing when the parent is not Codex. `ps` joins arguments with spaces, so
-# only a command that the first argument other than a plain flag names is
-# certain. When that argument is an option that may take a value, which may
-# contain spaces, or a word that names no command, such as a prompt, the
-# parent's terminal decides: the interactive TUI always has one, and a run an
-# agent starts has none. The commands and flags listed follow `codex --help` in
-# Codex 0.162.1.
+# Prints "headless" for `codex exec`, `e` or `review`, "interactive" for another
+# Codex command, or nothing when the parent is not Codex. `ps` loses argument
+# boundaries, so after an option that may take a value, or a word that names no
+# command, the parent's terminal decides: the interactive TUI always has one.
+# The commands and flags follow `codex --help` in Codex 0.162.1.
 function codex_parent_command() {
   local tty args word
   local -a words
@@ -452,14 +446,11 @@ function codex_parent_command() {
   esac
 }
 
-# Succeeds when the user started the turn, so its completion posts a banner.
-# Unknown origins count as the user's.
+# Succeeds when the user started the turn or its origin is unknown.
 # - Claude Code: TURN_ORIGIN_JQ finds no background origin in transcript $1.
-# - Codex: the session is not a subagent, such as a guardian review, and its
-#   Codex parent is not headless (see codex_parent_command). The transcript's
-#   first line is its session_meta record, whose source ("cli", "exec" or
-#   {"subagent": …}) is kept when another command resumes the session, so it
-#   decides only when the parent is not Codex.
+# - Codex: the session is not a subagent and codex_parent_command is not
+#   "headless". A resumed session keeps its transcript's first source, so that
+#   source decides only when the parent is not Codex.
 function turn_started_by_user() {
   local transcript_path="${1}" origin session_source=""
   if [[ "${HARNESS}" == claude ]]; then
