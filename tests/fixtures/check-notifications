@@ -5,8 +5,9 @@
 set -euo pipefail
 
 # Transcript helpers append one Claude Code record to the file in $1.
+# Appends a prompt, with the extra fields in optional JSON $2.
 function transcript_prompt() {
-  jq -nc '{type: "user", message: {content: "Sample prompt"}}' >> "${1}"
+  jq -nc --argjson extra "${2:-"{}"}" '{type: "user", message: {content: "Sample prompt"}} + $extra' >> "${1}"
 }
 
 # Appends a tool_use with id $2, name $3 and JSON input $4.
@@ -15,10 +16,11 @@ function transcript_tool_use() {
     '{type: "assistant", message: {content: [{type: "tool_use", id: $id, name: $name, input: $input}]}}' >> "${1}"
 }
 
-# Appends the tool_result answering tool_use id $2.
+# Appends the tool_result answering tool_use id $2, with the extra fields in
+# optional JSON $3.
 function transcript_result() {
-  jq -nc --arg id "${2}" \
-    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: $id, content: "ok"}]}}' >> "${1}"
+  jq -nc --arg id "${2}" --argjson extra "${3:-"{}"}" \
+    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: $id, content: "ok"}]}} + $extra' >> "${1}"
 }
 
 # Appends assistant text $2.
@@ -29,17 +31,17 @@ function transcript_text() {
 # Appends a turn with promptId $2: a prompt with the extra fields in JSON $3,
 # then a tool round trip carrying the same promptId.
 function transcript_turn() {
-  jq -nc --arg id "${2}" --argjson extra "${3}" \
-    '{type: "user", promptId: $id, message: {content: "Sample prompt"}} + $extra' >> "${1}"
+  local id_field
+  id_field="$(jq -nc --arg id "${2}" '{promptId: $id}')"
+  transcript_prompt "${1}" "$(jq -nc --argjson id "${id_field}" --argjson extra "${3}" '$id + $extra')"
   transcript_tool_use "${1}" "tool-${2}" Bash '{"command":"make"}'
-  jq -nc --arg id "${2}" \
-    '{type: "user", promptId: $id, message: {content: [{type: "tool_result", tool_use_id: ("tool-" + $id), content: "ok"}]}}' >> "${1}"
+  transcript_result "${1}" "tool-${2}" "${id_field}"
   transcript_text "${1}" "Completed sample"
 }
 
 # Writes to $1 a Codex transcript whose session source is JSON $2.
 function codex_transcript() {
-  jq -nc --argjson source "${2}" '{type: "session_meta", payload: {originator: "codex_exec", source: $source}}' > "${1}"
+  jq -nc --argjson source "${2}" '{type: "session_meta", payload: {source: $source}}' > "${1}"
 }
 
 # Writes to $1 a turn whose pending tool use is $2 with input $3.
@@ -116,7 +118,10 @@ function main() {
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
-  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript"
+  # notify asks ps only for its parent's command line.
+  printf '%s\n' '#!/usr/bin/env bash' \
+    'printf "%s\\n" "${NOTIFY_TEST_PARENT:-bash check-notifications}"' > "${test_dir}/bin/ps"
+  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript" "${test_dir}/bin/ps"
 
   # Subtitles name the repository and fall back to the branch suffix. An empty
   # template keeps a personal init.templateDir out of the sample repository.
@@ -422,44 +427,46 @@ function main() {
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
-    codex-cli | quiet-codex-exec | quiet-codex-subagent)
-      case "${scenario}" in
-        codex-cli) codex_transcript "${transcript}" '"cli"' ;;
-        quiet-codex-exec) codex_transcript "${transcript}" '"exec"' ;;
-        quiet-codex-subagent) codex_transcript "${transcript}" '{"subagent":{"other":"guardian"}}' ;;
-        *)
-          echo "Unknown Codex scenario: ${scenario}" >&2
-          return 1
-          ;;
-      esac
-      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"
+    codex-cli) codex_transcript "${transcript}" '"cli"' ;;
+    quiet-codex-exec) codex_transcript "${transcript}" '"exec"' ;;
+    quiet-codex-subagent) codex_transcript "${transcript}" '{"subagent":{"other":"guardian"}}' ;;
+    quiet-codex-exec-resume)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex -c model=sample exec resume sample-session"
       ;;
-    turn-* | quiet-turn-*)
-      action="cc-stop"
-      case "${scenario}" in
-        turn-human) transcript_turn "${transcript}" p1 '{"turnOrigin":"human","origin":{"kind":"human"}}' ;;
-        turn-human-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"human"}}' ;;
-        turn-untagged) transcript_turn "${transcript}" p1 '{}' ;;
-        quiet-turn-task) transcript_turn "${transcript}" p1 '{"turnOrigin":"task_notification","origin":{"kind":"task-notification"}}' ;;
-        quiet-turn-peer) transcript_turn "${transcript}" p1 '{"turnOrigin":"peer","origin":{"kind":"peer"},"isMeta":true}' ;;
-        quiet-turn-scheduled) transcript_turn "${transcript}" p1 '{"turnOrigin":"scheduled","isMeta":true}' ;;
-        quiet-turn-sdk) transcript_turn "${transcript}" p1 '{"turnOrigin":"sdk"}' ;;
-        quiet-turn-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"task-notification"}}' ;;
-        quiet-turn-meta) transcript_turn "${transcript}" p1 '{"isMeta":true}' ;;
-        quiet-turn-compacted)
-          transcript_turn "${transcript}" p1 '{"isMeta":true}'
-          jq -nc '{type: "user", promptId: "p1", isCompactSummary: true, message: {content: "This session is being continued"}}' >> "${transcript}"
-          ;;
-        quiet-turn-after-human)
-          transcript_turn "${transcript}" p1 '{"turnOrigin":"human"}'
-          transcript_turn "${transcript}" p2 '{"turnOrigin":"task_notification"}'
-          ;;
-        *)
-          echo "Unknown turn scenario: ${scenario}" >&2
-          return 1
-          ;;
-      esac
-      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"
+    quiet-codex-exec-alias)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="/opt/sample/bin/codex --cd /tmp/sample e Sample prompt"
+      ;;
+    codex-interactive-resume)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex resume sample-session"
+      ;;
+    codex-option-value)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex --model exec Sample prompt"
+      ;;
+    turn-human) transcript_turn "${transcript}" p1 '{"turnOrigin":"human","origin":{"kind":"human"}}' ;;
+    turn-human-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"human"}}' ;;
+    turn-untagged) transcript_turn "${transcript}" p1 '{}' ;;
+    turn-without-prompt-id)
+      transcript_turn "${transcript}" p1 '{"turnOrigin":"task_notification"}'
+      transcript_prompt "${transcript}"
+      transcript_text "${transcript}" "Completed sample"
+      ;;
+    quiet-turn-task) transcript_turn "${transcript}" p1 '{"turnOrigin":"task_notification","origin":{"kind":"task-notification"}}' ;;
+    quiet-turn-peer) transcript_turn "${transcript}" p1 '{"turnOrigin":"peer","origin":{"kind":"peer"},"isMeta":true}' ;;
+    quiet-turn-scheduled) transcript_turn "${transcript}" p1 '{"turnOrigin":"scheduled","isMeta":true}' ;;
+    quiet-turn-sdk) transcript_turn "${transcript}" p1 '{"turnOrigin":"sdk"}' ;;
+    quiet-turn-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"task-notification"}}' ;;
+    quiet-turn-meta) transcript_turn "${transcript}" p1 '{"isMeta":true}' ;;
+    quiet-turn-compacted)
+      transcript_turn "${transcript}" p1 '{"isMeta":true}'
+      transcript_prompt "${transcript}" '{"promptId":"p1","isCompactSummary":true}'
+      ;;
+    quiet-turn-after-human)
+      transcript_turn "${transcript}" p1 '{"turnOrigin":"human"}'
+      transcript_turn "${transcript}" p2 '{"turnOrigin":"task_notification"}'
       ;;
     delivery | delivery-leading-zero)
       export NOTIFY_TEST_HOLD=1
@@ -469,6 +476,11 @@ function main() {
       ;;
     *) ;;
   esac
+  # Completion scenarios that classify the turn from a transcript.
+  if [[ "${scenario}" == *codex-* || "${scenario}" == *turn-* ]]; then
+    [[ "${scenario}" != *turn-* ]] || action="cc-stop"
+    payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"
+  fi
   if [[ "${action}" == cc-permission ]]; then
     payload="$(jq -nc --arg path "${transcript}" --arg message "${message}" \
       '{session_id: "session-one", transcript_path: $path} + (if $message == "" then {} else {message: $message} end)')"

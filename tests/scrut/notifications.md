@@ -563,6 +563,42 @@ $ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-subagent
 No alert
 ```
 
+## Codex exec resuming an interactive session
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-exec-resume
+No alert
+```
+
+## Codex exec through its alias
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-exec-alias
+No alert
+```
+
+## Interactive Codex resuming an exec session
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" codex-interactive-resume
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+codex.png
+```
+
+## Codex option value that looks like a command
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" codex-option-value
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+codex.png
+```
+
 ## Turn started by the user
 
 ```scrut
@@ -589,6 +625,17 @@ claude-code.png
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" turn-untagged
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+claude-code.png
+```
+
+## Turn without a promptId after one with a promptId
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" turn-without-prompt-id
 Done
 sample-repo · Sample task
 Completed sample
