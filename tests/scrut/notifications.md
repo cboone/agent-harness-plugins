@@ -538,6 +538,120 @@ $ "${CHECK_NOTIFICATIONS_BIN}" subagent
 No alert
 ```
 
+## Interactive Codex session completion
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" codex-cli
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+codex.png
+```
+
+## Codex exec completion
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-exec
+No alert
+```
+
+## Codex subagent completion
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-subagent
+No alert
+```
+
+## Turn started by the user
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" turn-human
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+claude-code.png
+```
+
+## Turn started by the user in an older transcript
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" turn-human-legacy
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+claude-code.png
+```
+
+## Turn without an origin
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" turn-untagged
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+claude-code.png
+```
+
+## Turn started by a background task
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-turn-task
+No alert
+```
+
+## Turn started by another session
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-turn-peer
+No alert
+```
+
+## Turn started by a scheduled wake
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-turn-scheduled
+No alert
+```
+
+## Turn started through the SDK
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-turn-sdk
+No alert
+```
+
+## Turn started by a background task in an older transcript
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-turn-legacy
+No alert
+```
+
+## Turn with only meta prompts
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-turn-meta
+No alert
+```
+
+## Compaction summary in a meta turn
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-turn-compacted
+No alert
+```
+
+## Background turn after the user's turn
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-turn-after-human
+No alert
+```
+
 ## Background window in the active terminal
 
 ```scrut

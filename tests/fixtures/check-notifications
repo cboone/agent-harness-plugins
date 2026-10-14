@@ -26,6 +26,22 @@ function transcript_text() {
   jq -nc --arg text "${2}" '{type: "assistant", message: {content: [{type: "text", text: $text}]}}' >> "${1}"
 }
 
+# Appends a turn with promptId $2: a prompt with the extra fields in JSON $3,
+# then a tool round trip carrying the same promptId.
+function transcript_turn() {
+  jq -nc --arg id "${2}" --argjson extra "${3}" \
+    '{type: "user", promptId: $id, message: {content: "Sample prompt"}} + $extra' >> "${1}"
+  transcript_tool_use "${1}" "tool-${2}" Bash '{"command":"make"}'
+  jq -nc --arg id "${2}" \
+    '{type: "user", promptId: $id, message: {content: [{type: "tool_result", tool_use_id: ("tool-" + $id), content: "ok"}]}}' >> "${1}"
+  transcript_text "${1}" "Completed sample"
+}
+
+# Writes to $1 a Codex transcript whose session source is JSON $2.
+function codex_transcript() {
+  jq -nc --argjson source "${2}" '{type: "session_meta", payload: {originator: "codex_exec", source: $source}}' > "${1}"
+}
+
 # Writes to $1 a turn whose pending tool use is $2 with input $3.
 function write_transcript() {
   transcript_prompt "${1}"
@@ -406,6 +422,45 @@ function main() {
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
+    codex-cli | quiet-codex-exec | quiet-codex-subagent)
+      case "${scenario}" in
+        codex-cli) codex_transcript "${transcript}" '"cli"' ;;
+        quiet-codex-exec) codex_transcript "${transcript}" '"exec"' ;;
+        quiet-codex-subagent) codex_transcript "${transcript}" '{"subagent":{"other":"guardian"}}' ;;
+        *)
+          echo "Unknown Codex scenario: ${scenario}" >&2
+          return 1
+          ;;
+      esac
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"
+      ;;
+    turn-* | quiet-turn-*)
+      action="cc-stop"
+      case "${scenario}" in
+        turn-human) transcript_turn "${transcript}" p1 '{"turnOrigin":"human","origin":{"kind":"human"}}' ;;
+        turn-human-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"human"}}' ;;
+        turn-untagged) transcript_turn "${transcript}" p1 '{}' ;;
+        quiet-turn-task) transcript_turn "${transcript}" p1 '{"turnOrigin":"task_notification","origin":{"kind":"task-notification"}}' ;;
+        quiet-turn-peer) transcript_turn "${transcript}" p1 '{"turnOrigin":"peer","origin":{"kind":"peer"},"isMeta":true}' ;;
+        quiet-turn-scheduled) transcript_turn "${transcript}" p1 '{"turnOrigin":"scheduled","isMeta":true}' ;;
+        quiet-turn-sdk) transcript_turn "${transcript}" p1 '{"turnOrigin":"sdk"}' ;;
+        quiet-turn-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"task-notification"}}' ;;
+        quiet-turn-meta) transcript_turn "${transcript}" p1 '{"isMeta":true}' ;;
+        quiet-turn-compacted)
+          transcript_turn "${transcript}" p1 '{"isMeta":true}'
+          jq -nc '{type: "user", promptId: "p1", isCompactSummary: true, message: {content: "This session is being continued"}}' >> "${transcript}"
+          ;;
+        quiet-turn-after-human)
+          transcript_turn "${transcript}" p1 '{"turnOrigin":"human"}'
+          transcript_turn "${transcript}" p2 '{"turnOrigin":"task_notification"}'
+          ;;
+        *)
+          echo "Unknown turn scenario: ${scenario}" >&2
+          return 1
+          ;;
+      esac
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"
+      ;;
     delivery | delivery-leading-zero)
       export NOTIFY_TEST_HOLD=1
       # A leading zero fails validation, so the default grace period applies.
@@ -422,7 +477,7 @@ function main() {
   # Polls for up to 3 seconds for the detached alerter stub to log its call.
   local count=0
   case "${scenario}" in
-    visible | subagent | permission-question) ;;
+    visible | subagent | permission-question | quiet-*) ;;
     *)
       while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
         sleep 0.02
@@ -464,7 +519,7 @@ function main() {
       [[ "$(jq -r '.[index("--timeout") + 1]' "${NOTIFY_TEST_LOG}")" == 86400 ]] || exit 1
       echo "Alerter stops after the grace period without SIGTERM"
       ;;
-    visible | subagent | permission-question)
+    visible | subagent | permission-question | quiet-*)
       # Gives a detached alerter time to appear before asserting none did.
       sleep 0.2
       [[ ! -e "${NOTIFY_TEST_LOG}" ]]

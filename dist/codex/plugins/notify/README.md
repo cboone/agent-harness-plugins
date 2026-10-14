@@ -65,6 +65,7 @@ Delivers native macOS notifications so you can work in other apps while an agent
   - Question bodies show the first question, followed by `(+N more)` when there are several.
 - **Event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion by default. An optional [repository sound set](#repository-sound-set) substitutes variants. Claude's idle reminders are disabled.
 - **Session-specific groups**: banners from unrelated sessions do not replace one another. Completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored.
+- **Completions you started**: only a turn that began with your prompt posts `Done`. In Claude Code, a turn started by a background task's result, another session's message, a scheduled or `/loop` wake, an idle notice, or an SDK caller ends silently; the plugin reads the turn's origin from the transcript. In Codex, `codex exec` runs and subagent sessions, such as guardian reviews, end silently; the plugin reads the session's source from the first line of its transcript. When the transcript or its origin is unavailable, the banner is posted. A banner for your prompt fires when that turn ends, even while background work it started is still running; the results that arrive later post nothing.
 - **Visibility-aware completion**: completion alerts are suppressed when the host terminal application is frontmost and a focused tmux client displays the originating pane. The terminal is identified from `$TERM_PROGRAM`, which must be one of Apple Terminal (`Apple_Terminal`), iTerm2 (`iTerm.app`), Ghostty (`ghostty`), WezTerm (`WezTerm`), VS Code (`vscode`) or Alacritty (`alacritty`). If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
 - **Fire-and-forget delivery**: each `alerter` is stopped a short grace period after launch (see [Notes and caveats](#notes-and-caveats)), so no process waits on the banner. Banners stay in Notification Center. Clicking one does not focus the originating terminal or tmux pane.
 
@@ -72,7 +73,7 @@ Delivers native macOS notifications so you can work in other apps while an agent
 
 ### Claude Code
 
-`UserPromptSubmit` resets completion deduplication without posting a banner. The idle reminder hook is not registered. Claude Code also raises a permission prompt for `AskUserQuestion`; that prompt posts nothing, because the question banner already covers it.
+`UserPromptSubmit` resets completion deduplication without posting a banner. `Stop` posts only for turns that began with your prompt. The idle reminder hook is not registered. Claude Code also raises a permission prompt for `AskUserQuestion`; that prompt posts nothing, because the question banner already covers it.
 
 | Event                                         | Title                                 | Body                                                     | Sound   |
 | --------------------------------------------- | ------------------------------------- | -------------------------------------------------------- | ------- |
@@ -91,7 +92,7 @@ MCP tools appear by their tool name, as in `Approve batch?`, with the server nam
 | `PreToolUse:request_user_input` | `Question` or `<N> questions` | The first question, then `(+N more)` | `Tink`  |
 | `Stop`                          | `Done`                        | Summary of `last_assistant_message`  | `Glass` |
 
-`UserPromptSubmit` resets completion deduplication without posting a banner. Repeated Stop events in the same user turn are suppressed, including their sounds. A Stop hook that requests continuation can still cause the first completion banner before that continuation finishes; the notification plugin does not decide whether other Stop hooks will continue the turn.
+`UserPromptSubmit` resets completion deduplication without posting a banner. `Stop` posts nothing for `codex exec` runs or subagent sessions. Repeated Stop events in the same user turn are suppressed, including their sounds. A Stop hook that requests continuation can still cause the first completion banner before that continuation finishes; the notification plugin does not decide whether other Stop hooks will continue the turn.
 
 ## Repository sound set
 
@@ -118,7 +119,7 @@ The selected name is passed to `alerter --sound` without an extension. macOS sea
 - Every event launches `alerter` in a detached process, so the harness is never held up. Completion markers are stored under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/`; deleting this cache resets deduplication.
 - A waiting `alerter` 26.5 polls the macOS notification daemon several times a second, and the daemon's load grows quickly with the number of waiting processes. The plugin therefore stops each `alerter` with `SIGKILL` 2 seconds after launch. `SIGKILL` leaves the delivered banner and its sound intact; `SIGTERM` and `SIGINT` would make `alerter` remove the banner. Set `NOTIFY_WAIT_LIMIT` in the harness's environment to change the grace period, in whole seconds up to 60, for example if banners go missing under heavy load. `alerter`'s own 24-hour timeout is only a backstop; it removes the banner when it expires.
 - `scripts/notify` parses under macOS `/bin/bash` 3.2, which `#!/usr/bin/env bash` finds when Homebrew is not on `PATH`. A parse failure exits 2, which Claude Code treats as blocking the hook's event, so the test suite parses it with `/bin/bash`. CI runs on Linux, where `/bin/bash` is bash 5, so only local macOS runs check bash 3.2.
-- The transcript-based extractors (pending tool use, and the last assistant message when a Stop payload lacks the field) stream the transcript JSONL newest line first (`tac`, or `tail -r` on stock macOS) into one `jq` pass that stops at the current turn's prompt; a slash-command invocation starts a turn like a typed prompt. Time and memory follow the current turn rather than the file: a 20,000-line turn takes under a tenth of a second. A pending call is reduced to the fields its preview reads, so a 50 MB `Write` takes under half a second.
+- The transcript-based extractors (pending tool use, the turn's origin, and the last assistant message when a Stop payload lacks the field) stream the transcript JSONL newest line first (`tac`, or `tail -r` on stock macOS) into one `jq` pass that stops at the current turn's prompt; a slash-command invocation starts a turn like a typed prompt. Time and memory follow the current turn rather than the file: a 20,000-line turn takes under a tenth of a second. A pending call is reduced to the fields its preview reads, so a 50 MB `Write` takes under half a second.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.
 
 ## See Also

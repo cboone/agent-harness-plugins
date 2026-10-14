@@ -367,6 +367,34 @@ turn
 JQ
 readonly PENDING_JQ
 
+# Prints "background" when the current Claude Code turn did not start with the
+# user's prompt, or nothing. A turn's user records share its promptId; reading
+# newest first, they end at a user record with another promptId. Compaction
+# summaries count only when nothing else remains. The turn's origin is its
+# records' turnOrigin, else their origin.kind (older transcripts), and only
+# "human" is the user's. With neither, a turn whose prompt records are all meta,
+# such as a scheduled wake, is background. Unknown turns print nothing.
+IFS= read -r -d '' TURN_ORIGIN_JQ << 'JQ' || true
+def is_user: (.type == "user" or .type == "human") and .isSidechain != true;
+def is_prompt:
+  (.message | objects | .content) as $c
+  | ($c | type) == "string"
+    or (($c | type) == "array" and (any($c[]?; type == "object" and .type == "tool_result") | not));
+[label $out
+  | foreach (inputs | (fromjson? // null) | objects | select(is_user and (.promptId | type) == "string")) as $r
+      (null; . // $r.promptId; if $r.promptId == . then $r else break $out end)]
+| map(select(.isCompactSummary != true)) as $kept
+| (if ($kept | length) > 0 then $kept else . end) as $records
+| [$records[] | (.turnOrigin // (.origin | objects | .kind)) | strings] as $origins
+| if ($origins | length) > 0 then
+    (if any($origins[]; . == "human") then empty else "background" end)
+  else
+    [$records[] | select(is_prompt)] as $prompts
+    | if ($prompts | length) > 0 and all($prompts[]; .isMeta == true) then "background" else empty end
+  end
+JQ
+readonly TURN_ORIGIN_JQ
+
 # Prints file $1 newest line first. Stock macOS has tail -r but no tac. Its
 # stderr is silenced because jq stops reading at the turn's prompt.
 function reverse_lines() {
@@ -383,6 +411,35 @@ function extract_last_assistant_text() {
     return 0
   fi
   reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null || true
+}
+
+# Succeeds when the current Claude Code turn began without the user's prompt,
+# such as a background task's result, another session's message or a scheduled
+# wake. See TURN_ORIGIN_JQ.
+function claude_turn_is_background() {
+  local transcript_path origin
+  transcript_path="$(hook_string transcript_path)"
+  if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
+    return 1
+  fi
+  # jq stops reading at the turn's start, which can fail the reversal under
+  # pipefail, so the pipeline's status is ignored.
+  origin="$(reverse_lines "${transcript_path}" | jq -Rnr "${TURN_ORIGIN_JQ}" 2> /dev/null)" || true
+  [[ "${origin}" == background ]]
+}
+
+# Succeeds when the Codex session is headless: a `codex exec` run or a
+# subagent, such as a guardian review. The transcript's first line is its
+# session_meta record, whose source is "exec", a {"subagent": …} object, or
+# "cli" for the interactive TUI.
+function codex_session_is_headless() {
+  local transcript_path
+  transcript_path="$(hook_string transcript_path)"
+  if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
+    return 1
+  fi
+  head -n 1 "${transcript_path}" 2> /dev/null \
+    | jq -e 'select(.type == "session_meta") | .payload.source | . == "exec" or type == "object"' > /dev/null 2>&1
 }
 
 # $2 is the tool named by the prompt's message; $3 is "true" for the plan
@@ -629,6 +686,16 @@ function do_cc_permission() {
 
 function do_stop() {
   local icon="${1}"
+  # Only turns the user started post a completion banner. Skipped turns leave
+  # the completion marker alone.
+  if [[ "${HARNESS}" == codex ]]; then
+    if codex_session_is_headless; then
+      return 0
+    fi
+  elif claude_turn_is_background; then
+    return 0
+  fi
+
   local reply
   # A JSON reply's summary is taken before the cap, which would cut the object.
   reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '
