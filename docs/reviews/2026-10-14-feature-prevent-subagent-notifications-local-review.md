@@ -62,3 +62,15 @@ Reviewed snapshot `f1d82cd1` at head `73c94bc4`. Installed `review-pr-with-codex
 New cases: an option value ending in `exec` in a terminal posts, and `codex exec` in a terminal is silent. `notifications.md` passes 82 cases and `notification-sounds.md` 13; lint and validation pass. Known trade-off, documented in the README: a `codex exec` started in a terminal with a value-taking option before `exec` posts its banner.
 
 Findings at Important with behavior-changing fixes, so step 2 runs another round.
+
+## Step 2, round 2: `review-pr-with-codex`
+
+Reviewed snapshot `3cf10ef7` at head `259aade4`. Same settings and aspects; all five succeeded, and the tree check found no lasting changes.
+
+| #   | Finding                                                                                                     | Reviewer label | Our severity | Decision                                                                |
+| --- | ----------------------------------------------------------------------------------------------------------- | -------------- | ------------ | ----------------------------------------------------------------------- |
+| 1   | The alias case reaches suppression through the terminal fallback, so removing `e` leaves it passing (tests) | suggestion     | Nit          | Fixed: the case runs `codex e` in a terminal; removing `e` now fails it |
+| 2   | The origin filter's comment omits that records need a `promptId` (comments)                                 | suggestion     | Nit          | Fixed                                                                   |
+| 3   | The README's Codex suppression claims omit the terminal exception (comments)                                | suggestion     | Nit          | Fixed: both claims point to Notes and caveats                           |
+
+No finding at Important, so step 2 ends after this round. Fixes committed as `8ef49204`.
