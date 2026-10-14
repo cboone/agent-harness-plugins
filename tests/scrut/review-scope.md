@@ -48,11 +48,18 @@ $ "${REVIEW_SCOPE_BIN}" --schema | jq -r '[.required[], (.properties.findings.it
 findings reviewed detail,evidence,file,line,severity,title
 ```
 
-## Findings schema constrains severity to the two levels the ledger uses
+## Findings schema constrains severity to the three levels the ledger uses
 
 ```scrut
 $ "${REVIEW_SCOPE_BIN}" --schema | jq -c '.properties.findings.items.properties.severity.enum'
-["important","nit"]
+["critical","important","nit"]
+```
+
+## Shared helper copies stay byte-identical
+
+```scrut
+$ cmp "${REVIEW_SCOPE_BIN}" "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" && echo "shared helper copies match"
+shared helper copies match
 ```
 
 ## Findings schema rejects a line number that anchors nothing
