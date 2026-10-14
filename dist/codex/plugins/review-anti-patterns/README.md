@@ -15,13 +15,16 @@ A general review asks whether a change is right. This skill asks narrower questi
 
 The checklist has thirteen patterns, and each names the kinds of files it applies to: code, agent prose or docs, so a change touching only docs skips what cannot apply there. Agent prose, such as skills, prompts and agent instruction files, is reviewed as a program: rule order, branches that end nowhere, rules that conflict, and commands that the permission block does not cover. Where an item depends on how a platform behaves, the skill runs a read-only check such as `actionlint` or a validate-only flag, runs project tests and scripts only when you pass `--run-checks`, and reports anything it could not check as unverified rather than passed.
 
-It never edits. Nothing but its instructions enforces that unless you run it somewhere that cannot write, and `--run-checks` lets project code run, which can write; the report says which applied and lists anything a check left behind. It returns JSON whose findings have the same fields as [Review Until Clean](../review-until-clean/README.md)'s, each with the case that goes wrong and the evidence, plus whether the review covered the whole scope and what it left unverified. A plain-text report follows, naming the siblings examined for each finding, so a fix can cover the whole class at once.
+It runs through [Codex](https://github.com/openai/codex) when `codex` is installed and `--run-checks` is off: `codex exec` in a read-only sandbox, on `gpt-6.1-sol` at `high` effort with an 872k context window, set on the run so your own Codex settings never apply. Otherwise, including when started from a Codex session, or when its run fails a completion check (a non-zero exit, an empty reply, or a reply that does not match the result schema), it falls back to a fresh read-only subagent, then to the current session, and says which ran.
+
+It never edits. On the `codex exec` path, the sandbox enforces that. Otherwise nothing but its instructions does, unless you run it somewhere that cannot write, and `--run-checks` lets project code run, which can write. The report says which applied and lists anything a check left behind. It returns JSON whose findings have the same fields as [Review Until Clean](../review-until-clean/README.md)'s, each with the case that goes wrong and the evidence, plus whether the review covered the whole scope and what it left unverified. A plain-text report follows, naming the siblings examined for each finding, so a fix can cover the whole class at once.
 
 It is built for your own changes in your own checkout: it trusts your git and SSH configuration and the repository's own tooling, and does not defend against a deliberately malicious diff. Review a contributor's pull request crafted to attack the reviewer with a sandboxed tool instead.
 
 ## Requirements
 
 - A Git repository with an `origin` remote. The skill finds the default branch from `origin/HEAD`, falling back to the [GitHub CLI](https://cli.github.com/). The GitHub CLI also reads the open pull request's body; without it, the report says the body was not reviewed.
+- Optional: [`codex`](https://github.com/openai/codex), authenticated, and [`jq`](https://jqlang.org/), for the preferred Codex path.
 
 ## Usage
 
@@ -37,6 +40,7 @@ It is built for your own changes in your own checkout: it trusts your git and SS
 | `--files <paths>`             | Limit the scope to these paths or globs. The report lists the changed files this leaves out.                                                                                                    |
 | `--severity <important\|nit>` | Lowest severity reported. The default, `nit`, reports everything.                                                                                                                               |
 | `--run-checks`                | Also run checks that execute repository code: tests, Makefile targets and package scripts. Pass it only for code you trust, such as your own branch; the skill cannot tell from the repository. |
+| `--no-codex`                  | Skip Codex, and run in a fresh read-only subagent or the current session.                                                                                                                       |
 
 Two places it fits:
 
@@ -50,12 +54,12 @@ This skill runs read-only Git and GitHub CLI commands to find its scope, every G
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git --no-pager -c core.fsmonitor=false *)", "Bash(ssh -G *)", "Bash(gh repo view *)", "Bash(gh pr list *)"]
+    "allow": ["Bash(git --no-pager -c core.fsmonitor=false *)", "Bash(ssh -G *)", "Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(command -v codex)", "Bash(mktemp -d*)"]
   }
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The mechanical checks run the project's own linters, validators and tests, which depend on the project.
+If you already have a `permissions.allow` array, merge these entries into it. The multi-line `codex exec` command matches no simple permission rule. Approve its prompt or pass `--no-codex`. The mechanical checks run the project's own linters, validators and tests, which depend on the project.
 
 ## Examples
 

@@ -34,6 +34,7 @@ How it applies the result depends on the input:
 - The [GitHub CLI](https://cli.github.com/), authenticated, for PR and issue bodies.
 - A Git repository for file paths.
 - `realpath` (GNU coreutils, or macOS 13 and later) for a symlinked instruction file such as `CLAUDE.md`.
+- Optional: [`codex`](https://github.com/openai/codex), authenticated, for the Codex dry run on file paths.
 
 ## Usage
 
@@ -45,7 +46,9 @@ How it applies the result depends on the input:
 /trim-text docs/guide.md --profile none --no-commit
 ```
 
-With no argument, the skill trims the body of the current branch's open PR. `--profile` overrides the profile detected from the input. `--dry-run` reports the proposed changes without editing anything. `--no-commit` edits files and verifies them but leaves the edits uncommitted.
+With no argument, the skill trims the body of the current branch's open PR. `--profile` overrides the profile detected from the input. `--dry-run` reports the proposed changes without editing anything. `--no-commit` edits files and verifies them but leaves the edits uncommitted. `--no-codex` classifies file paths in the current session instead of through Codex.
+
+When `codex` is installed, file paths first get a read-only Codex dry run (`codex exec` in a read-only sandbox, on `gpt-6.1-sol` at `low` effort with an 872k context window, set on the run so your own Codex settings never apply). Started from a Codex session, the skill runs in that session instead, on that session's model and settings. The current session checks each proposal against the standard and the profile before applying it. PR and issue bodies and pasted text always run in the current session. When Codex is missing or its run fails a completion check, the session classifies the text itself and says so.
 
 ## Recommended Permissions
 
@@ -54,12 +57,12 @@ This skill reads PR and issue bodies with the GitHub CLI and runs read-only Git 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git status *)", "Bash(git --no-pager diff *)", "Bash(git show *)", "Bash(git cat-file -e *)", "Bash(git symbolic-ref *)", "Bash(git config --get *)", "Bash(git remote)", "Bash(git branch --show-current)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(grep -Iq *)", "Bash(mktemp -u *)", "Bash(rm -f */gh-body-*)", "Bash(realpath *)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git status *)", "Bash(git --no-pager diff *)", "Bash(git show *)", "Bash(git cat-file -e *)", "Bash(git symbolic-ref *)", "Bash(git config --get *)", "Bash(git remote)", "Bash(git branch --show-current)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(grep -Iq *)", "Bash(mktemp -u *)", "Bash(rm -f */gh-body-*)", "Bash(realpath *)", "Bash(command -v codex)", "Bash(mktemp -d*)"]
   }
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linters and formatters in check mode, which depend on the project. Its writes prompt by default: `gh pr edit` and `gh issue edit` update a body after you approve the diff in the conversation, and `git commit` commits edited files. To let them run without a second prompt, also allow:
+If you already have a `permissions.allow` array, merge these entries into it. The multi-line `codex exec` command matches no simple permission rule. Approve its prompt or pass `--no-codex`. The skill also runs the project's own linters and formatters in check mode, which depend on the project. Its writes prompt by default: `gh pr edit` and `gh issue edit` update a body after you approve the diff in the conversation, and `git commit` commits edited files. To let them run without a second prompt, also allow:
 
 ```json
 {

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "complete": {
+      "description": "True only when the review ran and every applicable item was walked over everything in scope.",
+      "type": "boolean"
+    },
+    "excluded": {
+      "description": "Changed files left out on purpose, by --files or as generated.",
+      "items": { "type": "string" },
+      "type": "array"
+    },
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "description": "What is wrong and the concrete case that goes wrong.",
+            "type": "string"
+          },
+          "evidence": {
+            "description": "The evidence that settles the finding.",
+            "type": "string"
+          },
+          "file": {
+            "description": "Repository-relative path, or PR body for a finding in the pull request description.",
+            "type": "string"
+          },
+          "line": {
+            "description": "1-indexed line the finding anchors to, or null for a whole file, a deleted file or the pull request body.",
+            "minimum": 1,
+            "type": ["integer", "null"]
+          },
+          "severity": {
+            "description": "important or nit, as step 6 of the skill defines them.",
+            "enum": ["important", "nit"]
+          },
+          "title": {
+            "description": "Starts with the checklist item's name.",
+            "type": "string"
+          }
+        },
+        "required": ["detail", "evidence", "file", "line", "severity", "title"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "not_reviewed": {
+      "description": "What the review should have covered and did not, with the reason for each.",
+      "items": { "type": "string" },
+      "type": "array"
+    },
+    "report": {
+      "description": "The plain-text report that step 7 of the skill prints after the JSON.",
+      "type": "string"
+    },
+    "reviewed": {
+      "description": "The scope as a range: the --range as given, or <merge-base>..working-tree.",
+      "type": "string"
+    },
+    "status": {
+      "enum": ["success", "no-op", "failure", "unavailable"]
+    },
+    "unverified": {
+      "description": "Each check that was not run, with the command that would settle it.",
+      "items": { "type": "string" },
+      "type": "array"
+    }
+  },
+  "required": ["complete", "excluded", "findings", "not_reviewed", "report", "reviewed", "status", "unverified"],
+  "type": "object"
+}

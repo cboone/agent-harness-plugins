@@ -4,7 +4,7 @@ description: >-
   Trim and rewrite code comments in changed files or given paths: what the code
   does, then the minimum why. Use for "trim comments" or a comment that is too
   long or jargony; not for PR review comments or general code cleanup.
-argument-hint: "[paths...] [--dry-run] [--no-commit]"
+argument-hint: "[paths...] [--dry-run] [--no-commit] [--no-codex]"
 ---
 
 # Trim Comments
@@ -18,6 +18,7 @@ The user may provide these options inline:
 - **paths**: A path, glob, or file list. Every comment in those files is in scope, changed or not. Without paths, the scope is the comments in or directly above code the current branch changed: committed changes since the base branch, plus staged, unstaged, and untracked files. When the user points at a single comment, that comment is the whole scope.
 - **--dry-run**: Report proposed changes without editing or committing.
 - **--no-commit**: Edit and verify, but leave the edits uncommitted. By default the skill commits its edits, and it never pushes.
+- **--no-codex**: Classify the comments in this session rather than through a Codex dry run; see "Proposals through Codex".
 
 ## The standard
 
@@ -186,11 +187,25 @@ Two entries apply to whole files, generated files and prose documents, and step 
 - Prose documents: `.md` files, including Copilot instruction files. Those have different length rules.
 - Comments outside the scope. Do not sweep the whole repository.
 
+## Proposals through Codex
+
+For a path or default scope, Codex proposes the changes in a read-only dry run, and this session checks and applies them. A single named comment always runs in this session.
+
+After step 1 has resolved and filtered the scope, run the dry run through `codex exec` as `./references/codex-exec.md` describes, when it says the Codex path applies, with:
+
+- Model `gpt-6.1-sol`, effort `low` and window `872000`.
+- Arguments: with paths, the root-relative files step 1 kept, each quoted; with the default scope, none. Then `--dry-run`.
+- With paths, this addition to the prompt: `Each path argument is one literal file name: expand it with :(literal) in place of :(glob).`
+- With the default scope, this addition, with step 1's result: `Use merge base <merge-base> for the default scope; do not look up the base branch.`
+- This addition: `Start the reply with a line "Files classified:" followed by every file you classified, one per line. Then give the step 7 table, with each before and after in full, never truncated, and the file:line where it starts now; or, with nothing to change, the line: No changes proposed.`
+
+A finished reply holds the file list and then the table or that line; anything else fails the shape check. A reply that passes takes the place of steps 2 and 3 for the files it lists. Read every proposal against the current file and the standard above, keep the ones that hold, and reclassify the rest yourself; the session that edits owns the result. Run steps 2 and 3 in this session for any of step 1's files the list leaves out, and drop any proposal for a file outside step 1's scope, naming both in the report. Then continue from step 4, or, with `--dry-run`, report the checked proposals. When Codex does not apply or its reply fails a check, run steps 2 and 3 in this session.
+
 ## Workflow
 
 ### 1. Resolve scope
 
-If the user pointed at a single comment, it is the whole scope: expand its file like a user-given path below, then apply the filter at the end of this step. If the file survives, go to step 3 with that one comment as the only item to classify, reading the rest of the file only for context; otherwise report that it was skipped and why, and stop. If the user gave paths, which are relative to the current working directory like any command-line argument, expand every one of them, whether a file, a directory, or a glob, with `git ls-files -z --cached --others --exclude-standard --full-name -- ':(glob)<path>'`. Quoting keeps the shell from expanding a glob first, `:(glob)` makes `**` match any depth as in a shell, and ignored files and paths outside the repository stay out, including the contents of a named directory. Then filter the paths as described at the end of this step, and go to step 2.
+If the user pointed at a single comment, it is the whole scope: expand its file like a user-given path below, then apply the filter at the end of this step. If the file survives, go to step 3 with that one comment as the only item to classify, reading the rest of the file only for context; otherwise report that it was skipped and why, and stop. If the user gave paths, which are relative to the current working directory like any command-line argument, expand every one of them, whether a file, a directory, or a glob, with `git ls-files -z --cached --others --exclude-standard --full-name -- ':(glob)<path>'`. Quoting keeps the shell from expanding a glob first, `:(glob)` makes `**` match any depth as in a shell, and ignored files and paths outside the repository stay out, including the contents of a named directory. Then skip to the filter at the end of this step, and continue from there.
 
 Every path list in this step comes from a `-z` command: split it on NUL bytes only, never on newlines, so a filename containing a newline or quote arrives intact and unescaped. Never paste a path into command text. Keep the current path in a shell variable and pass it, with any pathspec prefix, as one double-quoted argument to every command, Git or not, including `realpath` and `test`. Every path is root-relative and these checks run from the repository root, so write it as `"./$path"` for commands other than Git; a filename beginning with `-` is then never read as an option. This applies to user-given paths here and to the changed filenames in step 2, since either can contain spaces, quotes, or shell metacharacters.
 
@@ -231,6 +246,8 @@ Filter every path list, including the file of a single named comment, before rea
 - Drop binary files, such as images, archives, and databases: anything where `grep -Iq . "./$path"` fails, which also drops empty files, since they hold no comments.
 
 Report the remaining file list before editing, listing untracked files separately, since they count as entirely changed and may not belong to this branch's work.
+
+Then follow "Proposals through Codex", which says where to continue.
 
 ### 2. Collect comments
 
@@ -338,6 +355,10 @@ Before finishing, confirm:
 - No sentence carries two separate behaviors, and no clause trails off into "which is…" pointing back up the sentence
 - No comment explains what a language or framework construct does
 - No CSS comment restates the declaration under it, or names what the property does rather than why this value
+
+## Reference Navigation
+
+- `./references/codex-exec.md`: how the dry run goes through `codex exec`, and the checks that tell a finished run from a failed one; shared with `review-anti-patterns` and `trim-text`
 
 ## Error Handling
 

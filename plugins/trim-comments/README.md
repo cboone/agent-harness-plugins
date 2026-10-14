@@ -21,6 +21,7 @@ The scope defaults to comments in or directly above code changed since the base 
 
 - A Git repository. The [GitHub CLI](https://cli.github.com/) finds the base branch when it is available; otherwise the skill falls back to the remote's `HEAD` ref, and asks when neither is set.
 - `realpath`, which the path safety filter uses. It ships with GNU coreutils and with macOS 13 and later.
+- Optional: [`codex`](https://github.com/openai/codex), authenticated, for the Codex dry run.
 
 ## Usage
 
@@ -31,7 +32,9 @@ The scope defaults to comments in or directly above code changed since the base 
 /trim-comments --no-commit
 ```
 
-`--dry-run` reports the proposed changes without editing or committing. `--no-commit` edits and verifies but leaves the edits uncommitted. Paths put every comment in those files in scope, changed or not, after the same safety filter drops generated files, prose documents, secret-bearing paths, symlinks, and anything that is not a regular file.
+`--dry-run` reports the proposed changes without editing or committing. `--no-commit` edits and verifies but leaves the edits uncommitted. `--no-codex` classifies the comments in the current session instead of through Codex. Paths put every comment in those files in scope, changed or not, after the same safety filter drops generated files, prose documents, secret-bearing paths, symlinks, and anything that is not a regular file.
+
+When `codex` is installed, a path or default scope first gets a read-only Codex dry run (`codex exec` in a read-only sandbox, on `gpt-6.1-sol` at `low` effort with an 872k context window, set on the run so your own Codex settings never apply). Started from a Codex session, the skill runs in that session instead, on that session's model and settings. The current session checks each proposal against the standard before applying it. When Codex is missing or its run fails a completion check, the session classifies the comments itself and says so.
 
 ## Recommended Permissions
 
@@ -40,12 +43,12 @@ This skill runs read-only Git and GitHub CLI commands to find its scope. To allo
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh repo view *)", "Bash(git symbolic-ref *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git --no-pager diff *)", "Bash(git ls-files *)", "Bash(git status *)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(git rev-parse *)", "Bash(git remote)", "Bash(git config --get *)", "Bash(realpath *)", "Bash(test -f *)", "Bash(grep -Iq *)"]
+    "allow": ["Bash(gh repo view *)", "Bash(git symbolic-ref *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git --no-pager diff *)", "Bash(git ls-files *)", "Bash(git status *)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(git rev-parse *)", "Bash(git remote)", "Bash(git config --get *)", "Bash(realpath *)", "Bash(test -f *)", "Bash(grep -Iq *)", "Bash(command -v codex)", "Bash(mktemp -d*)"]
   }
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project. Its commit is a `git commit` limited to the edited files. It prompts by default; to let it run unattended, also allow `Bash(git commit *)`.
+If you already have a `permissions.allow` array, merge these entries into it. The multi-line `codex exec` command matches no simple permission rule. Approve its prompt or pass `--no-codex`. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project. Its commit is a `git commit` limited to the edited files. It prompts by default; to let it run unattended, also allow `Bash(git commit *)`.
 
 ## Examples
 

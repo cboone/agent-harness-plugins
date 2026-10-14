@@ -20,6 +20,8 @@ export LC_ALL=C
 # Each entry is SOURCE|COPY, both relative to the repository root.
 SHARED_REFERENCES=(
   "plugins/publish-report-board/skills/publish-report-board/references/progress-model.md|plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md"
+  "plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md|plugins/trim-comments/skills/trim-comments/references/codex-exec.md"
+  "plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md|plugins/trim-text/skills/trim-text/references/codex-exec.md"
 )
 readonly SHARED_REFERENCES
 

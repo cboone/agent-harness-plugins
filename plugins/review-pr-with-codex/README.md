@@ -63,18 +63,19 @@ An aspect whose run failed, timed out, or returned nothing or something unparsea
 ## Usage
 
 ```text
-/review-pr-with-codex [aspects...|all] [--base <ref>] [--model <model>] [--effort <level>]
+/review-pr-with-codex [aspects...|all] [--base <ref>] [--model <model>] [--effort <level>] [--window <tokens>]
 ```
 
-| Option             | Description                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| `aspects...`       | Any of `code`, `errors`, `tests`, `comments`, `types`, `simplify`; named aspects always run |
-| `all`              | Every aspect that applies to the change; the default                                        |
-| `--base <ref>`     | Take the merge base with this ref instead of with the default branch                        |
-| `--model <model>`  | Codex model for every aspect; default `gpt-6.1-sol`                                         |
-| `--effort <level>` | Codex reasoning effort for every aspect; default `medium`                                   |
+| Option              | Description                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `aspects...`        | Any of `code`, `errors`, `tests`, `comments`, `types`, `simplify`; named aspects always run                                     |
+| `all`               | Every aspect that applies to the change; the default                                                                            |
+| `--base <ref>`      | Take the merge base with this ref instead of with the default branch                                                            |
+| `--model <model>`   | Codex model for every aspect; default `gpt-6.1-sol`                                                                             |
+| `--effort <level>`  | Codex reasoning effort for every aspect; default `xhigh`                                                                        |
+| `--window <tokens>` | Codex context window (`model_context_window`) for every aspect; default `872000`; set it too when `--model` names another model |
 
-The model and effort are passed on each run, so your own Codex defaults stay as they are.
+Each `codex exec` run sets the model, effort and window. Omitted options never use or change personal Codex defaults. Reviews started in Codex use subagents, which keep session settings where the harness cannot override them. The report names the settings applied.
 
 ## Recommended Permissions
 
@@ -95,7 +96,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - "review pr with codex": every applicable read-only review aspect
 - "/review-pr-with-codex all simplify": review, then explicitly authorized simplification, validation and final review
 - "/review-pr-with-codex code errors": only the code and error-handling aspects
-- "/review-pr-with-codex tests --effort high": the tests aspect at higher effort
+- "/review-pr-with-codex tests --effort medium": the tests aspect at lower effort, for a faster run
 - "/review-pr-with-codex --base release/2.0": review against a release branch
 
 ## Attribution

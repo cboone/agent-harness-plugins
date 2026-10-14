@@ -452,7 +452,7 @@ explicitly as well, so the guarantee does not rest on that default alone.
 
 ```scrut
 $ printf "" | "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" \
->   --model test-model --effort high > /dev/null && cat "${FIXTURE}/log/code.args"
+>   --model test-model --effort high --window 1000 > /dev/null && cat "${FIXTURE}/log/code.args"
 --cd
 <path>
 --skip-git-repo-check
@@ -463,6 +463,8 @@ read-only
 test-model
 --config
 model_reasoning_effort="high"
+--config
+model_context_window=1000
 --output-schema
 <path>
 --output-last-message
@@ -470,13 +472,29 @@ model_reasoning_effort="high"
 stdin: character-device
 ```
 
-## The default model and effort
+## The default model, effort and window
 
 ```scrut
 $ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > /dev/null \
 >   && grep -A1 -e '^--model$' -e '^--config$' "${FIXTURE}/log/code.args" | grep -v -e '^--' -e '^--$'
 gpt-6.1-sol
-model_reasoning_effort="medium"
+model_reasoning_effort="xhigh"
+model_context_window=872000
+```
+
+## A window that is not a positive whole number
+
+```scrut
+$ for window in 872k 0 -1; do
+>   "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" --window "${window}" 2>&1
+>   echo "exit=$?"
+> done
+codex-aspects: --window must be a positive whole number of tokens
+exit=1
+codex-aspects: --window must be a positive whole number of tokens
+exit=1
+codex-aspects: --window must be a positive whole number of tokens
+exit=1
 ```
 
 ## Simplify runs alone
