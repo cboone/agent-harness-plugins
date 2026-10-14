@@ -74,3 +74,12 @@ Reviewed snapshot `3cf10ef7` at head `259aade4`. Same settings and aspects; all 
 | 3   | The README's Codex suppression claims omit the terminal exception (comments)                                | suggestion     | Nit          | Fixed: both claims point to Notes and caveats                           |
 
 No finding at Important, so step 2 ends after this round. Fixes committed as `8ef49204`.
+
+## Step 3: `trim-comments` and `trim-text` through Codex
+
+Head `600bec5f`. Both as Codex dry runs: `gpt-6.1-sol`, effort `low`, window `872000`, read-only sandbox, in parallel. Both exited 0 with a reply holding the file list and a table, and every file in scope was listed. `trim-comments` used the default scope with merge base `84e83462`, leaving out `dist/`; `trim-text` got `plugins/notify/README.md`, limited to changed text, under the `none` profile. The completed plan, this ledger and the scrut document's headings were left out.
+
+- `trim-comments`: 6 proposals. The three function headers in `notify` were rewritten to middle versions: the proposals dropped the terminal reason, the Codex version the lists follow and the per-harness rules. The two fixture comments were rewritten to keep what the stub's default terminal stands for; the comment above the payload block was deleted as proposed.
+- `trim-text`: 5 proposals, all sentence splits, applied as proposed.
+
+Committed as `d8298e96`. `notifications.md` passes 82 cases and `notification-sounds.md` 13; lint and validation pass.
