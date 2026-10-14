@@ -5,8 +5,9 @@
 set -euo pipefail
 
 # Transcript helpers append one Claude Code record to the file in $1.
+# Appends a prompt, with the extra fields in optional JSON $2.
 function transcript_prompt() {
-  jq -nc '{type: "user", message: {content: "Sample prompt"}}' >> "${1}"
+  jq -nc --argjson extra "${2:-"{}"}" '{type: "user", message: {content: "Sample prompt"}} + $extra' >> "${1}"
 }
 
 # Appends a tool_use with id $2, name $3 and JSON input $4.
@@ -15,15 +16,32 @@ function transcript_tool_use() {
     '{type: "assistant", message: {content: [{type: "tool_use", id: $id, name: $name, input: $input}]}}' >> "${1}"
 }
 
-# Appends the tool_result answering tool_use id $2.
+# Appends the tool_result answering tool_use id $2, with the extra fields in
+# optional JSON $3.
 function transcript_result() {
-  jq -nc --arg id "${2}" \
-    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: $id, content: "ok"}]}}' >> "${1}"
+  jq -nc --arg id "${2}" --argjson extra "${3:-"{}"}" \
+    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: $id, content: "ok"}]}} + $extra' >> "${1}"
 }
 
 # Appends assistant text $2.
 function transcript_text() {
   jq -nc --arg text "${2}" '{type: "assistant", message: {content: [{type: "text", text: $text}]}}' >> "${1}"
+}
+
+# Appends a turn whose prompt and tool result share promptId $2, with the extra
+# fields in JSON $3 on the prompt.
+function transcript_turn() {
+  # Sample promptIds are plain tokens, so they need no JSON escaping.
+  local id_field="{\"promptId\":\"${2}\"}"
+  transcript_prompt "${1}" "$(jq -nc --argjson id "${id_field}" --argjson extra "${3}" '$id + $extra')"
+  transcript_tool_use "${1}" "tool-${2}" Bash '{"command":"make"}'
+  transcript_result "${1}" "tool-${2}" "${id_field}"
+  transcript_text "${1}" "Completed sample"
+}
+
+# Writes to $1 a Codex transcript whose session source is JSON $2.
+function codex_transcript() {
+  jq -nc --argjson source "${2}" '{type: "session_meta", payload: {source: $source}}' > "${1}"
 }
 
 # Writes to $1 a turn whose pending tool use is $2 with input $3.
@@ -100,7 +118,11 @@ function main() {
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
-  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript"
+  # Stubs the parent's terminal and command line; the default has no terminal,
+  # like an agent-run command.
+  printf '%s\n' '#!/usr/bin/env bash' \
+    'printf "%s %s\\n" "${NOTIFY_TEST_TTY:-??}" "${NOTIFY_TEST_PARENT:-bash check-notifications}"' > "${test_dir}/bin/ps"
+  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript" "${test_dir}/bin/ps"
 
   # Subtitles name the repository and fall back to the branch suffix. An empty
   # template keeps a personal init.templateDir out of the sample repository.
@@ -406,6 +428,69 @@ function main() {
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
+    codex-cli) codex_transcript "${transcript}" '"cli"' ;;
+    quiet-codex-exec) codex_transcript "${transcript}" '"exec"' ;;
+    quiet-codex-subagent) codex_transcript "${transcript}" '{"subagent":{"other":"guardian"}}' ;;
+    quiet-codex-exec-resume)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex -c model=sample exec resume sample-session"
+      ;;
+    quiet-codex-exec-alias)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="/opt/sample/bin/codex e Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
+    quiet-codex-spaced-value)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex --cd /tmp/sample project exec resume sample-session"
+      ;;
+    # --ephemeral writes no transcript, so the payload's path does not exist.
+    quiet-codex-exec-ephemeral) export NOTIFY_TEST_PARENT="codex exec --ephemeral --cd /tmp/sample Sample prompt" ;;
+    quiet-codex-review)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex review"
+      ;;
+    codex-spaced-value-terminal)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex --cd /tmp/sample exec" NOTIFY_TEST_TTY=ttys001
+      ;;
+    quiet-codex-exec-terminal)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex exec Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
+    codex-terminal-prompt)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
+    codex-interactive-resume)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex resume sample-session"
+      ;;
+    codex-option-value)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex --model exec Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
+    turn-human) transcript_turn "${transcript}" p1 '{"turnOrigin":"human","origin":{"kind":"human"}}' ;;
+    turn-human-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"human"}}' ;;
+    turn-untagged) transcript_turn "${transcript}" p1 '{}' ;;
+    turn-without-prompt-id)
+      transcript_turn "${transcript}" p1 '{"turnOrigin":"task_notification"}'
+      transcript_prompt "${transcript}"
+      transcript_text "${transcript}" "Completed sample"
+      ;;
+    quiet-turn-task) transcript_turn "${transcript}" p1 '{"turnOrigin":"task_notification","origin":{"kind":"task-notification"}}' ;;
+    quiet-turn-peer) transcript_turn "${transcript}" p1 '{"turnOrigin":"peer","origin":{"kind":"peer"},"isMeta":true}' ;;
+    quiet-turn-scheduled) transcript_turn "${transcript}" p1 '{"turnOrigin":"scheduled","isMeta":true}' ;;
+    quiet-turn-sdk) transcript_turn "${transcript}" p1 '{"turnOrigin":"sdk"}' ;;
+    quiet-turn-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"task-notification"}}' ;;
+    quiet-turn-meta) transcript_turn "${transcript}" p1 '{"isMeta":true}' ;;
+    quiet-turn-compacted)
+      transcript_turn "${transcript}" p1 '{"isMeta":true}'
+      transcript_prompt "${transcript}" '{"promptId":"p1","isCompactSummary":true}'
+      ;;
+    quiet-turn-after-human)
+      transcript_turn "${transcript}" p1 '{"turnOrigin":"human"}'
+      transcript_turn "${transcript}" p2 '{"turnOrigin":"task_notification"}'
+      ;;
     delivery | delivery-leading-zero)
       export NOTIFY_TEST_HOLD=1
       # A leading zero fails validation, so the default grace period applies.
@@ -414,6 +499,10 @@ function main() {
       ;;
     *) ;;
   esac
+  if [[ "${scenario}" =~ ^(quiet-)?(codex|turn)- ]]; then
+    [[ ! "${scenario}" =~ ^(quiet-)?turn- ]] || action="cc-stop"
+    payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"
+  fi
   if [[ "${action}" == cc-permission ]]; then
     payload="$(jq -nc --arg path "${transcript}" --arg message "${message}" \
       '{session_id: "session-one", transcript_path: $path} + (if $message == "" then {} else {message: $message} end)')"
@@ -422,13 +511,13 @@ function main() {
   # Polls for up to 3 seconds for the detached alerter stub to log its call.
   local count=0
   case "${scenario}" in
-    visible | subagent | permission-question) ;;
+    visible | subagent | permission-question | quiet-*) ;;
     *)
       while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
         sleep 0.02
         count=$((count + 1))
       done
-      [[ -s "${NOTIFY_TEST_LOG}" ]]
+      [[ -s "${NOTIFY_TEST_LOG}" ]] || exit 1
       ;;
   esac
   case "${scenario}" in
@@ -443,7 +532,7 @@ function main() {
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action%-stop}-turn-start"
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
       wait_for_alerts 2
-      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]]
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]] || exit 1
       echo "Next user prompt allows another completion"
       ;;
     groups)
@@ -464,10 +553,10 @@ function main() {
       [[ "$(jq -r '.[index("--timeout") + 1]' "${NOTIFY_TEST_LOG}")" == 86400 ]] || exit 1
       echo "Alerter stops after the grace period without SIGTERM"
       ;;
-    visible | subagent | permission-question)
+    visible | subagent | permission-question | quiet-*)
       # Gives a detached alerter time to appear before asserting none did.
       sleep 0.2
-      [[ ! -e "${NOTIFY_TEST_LOG}" ]]
+      [[ ! -e "${NOTIFY_TEST_LOG}" ]] || exit 1
       echo "No alert"
       ;;
     *) jq -r '.[index("--title") + 1], .[index("--subtitle") + 1], .[index("--message") + 1], .[index("--sound") + 1], (.[index("--app-icon") + 1] | split("/") | last)' "${NOTIFY_TEST_LOG}" ;;

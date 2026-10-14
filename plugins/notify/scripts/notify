@@ -286,11 +286,13 @@ function compute_subtitle() {
 # Read with `read -d ''` because bash 3.2 cannot parse these heredocs inside $().
 IFS= read -r -d '' TURN_JQ << 'JQ' || true
 def content: (.message | objects | .content) // "";
+def is_user: .type == "user" or .type == "human";
+def is_result: content | type == "array" and any(.[]?; type == "object" and .type == "tool_result");
 def kind:
   content as $c
   | if .type == "assistant" then "assistant"
-    elif (.type == "user" or .type == "human") and .isMeta != true then
-      (if ($c | type) == "array" and any($c[]?; type == "object" and .type == "tool_result") then "result"
+    elif is_user and .isMeta != true then
+      (if is_result then "result"
        elif ($c | type) == "string" and ($c | test("^<local-")) then "other"
        else "prompt" end)
     else "other" end;
@@ -367,6 +369,31 @@ turn
 JQ
 readonly PENDING_JQ
 
+# Prints "background" when the current Claude Code turn did not start with the
+# user's prompt, or nothing; read after TURN_JQ. Newest first, the turn's
+# main-session user records share a promptId and end at one with another, or at
+# a TURN_JQ prompt without one. Only a "human" turnOrigin, or else origin.kind,
+# is the user's; with neither, a turn whose messages, compaction summaries
+# aside, are all meta is background. A turn without a promptId is unknown.
+IFS= read -r -d '' TURN_ORIGIN_JQ << 'JQ' || true
+[label $out
+  | foreach (inputs | (fromjson? // null) | objects | select(is_user and .isSidechain != true)) as $r
+      (null; . // (($r.promptId | strings) // null);
+       if ($r.promptId | type) == "string" then
+         (if $r.promptId == . then
+            $r | {origin: (.turnOrigin // (.origin | objects | .kind) // null), isMeta, isCompactSummary, message: (is_result | not)}
+          else break $out end)
+       elif ($r | kind) == "prompt" then break $out
+       else empty end)]
+| [.[] | .origin | strings] as $origins
+| [.[] | select(.message and .isCompactSummary != true)] as $messages
+| if ($origins | length) > 0 then
+    (if any($origins[]; . == "human") then empty else "background" end)
+  elif ($messages | length) > 0 and all($messages[]; .isMeta == true) then "background"
+  else empty end
+JQ
+readonly TURN_ORIGIN_JQ
+
 # Prints file $1 newest line first. Stock macOS has tail -r but no tac. Its
 # stderr is silenced because jq stops reading at the turn's prompt.
 function reverse_lines() {
@@ -383,6 +410,68 @@ function extract_last_assistant_text() {
     return 0
   fi
   reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null || true
+}
+
+# Prints "headless" for `codex exec`, `e` or `review`, "interactive" for another
+# Codex command, or nothing when the parent is not Codex. `ps` loses argument
+# boundaries, so after an option that may take a value, or a word that names no
+# command, the parent's terminal decides: the interactive TUI always has one.
+# The commands and flags follow `codex --help` in Codex 0.162.1.
+function codex_parent_command() {
+  local tty args word
+  local -a words
+  read -r tty args <<< "$(ps -ww -o tty=,args= -p "${PPID}" 2> /dev/null)" || return 0
+  read -r -a words <<< "${args}"
+  [[ "${#words[@]}" -gt 0 && "${words[0]##*/}" == codex ]] || return 0
+  for word in "${words[@]:1}"; do
+    case "${word}" in
+      --strict-config | --oss | --approve-for-me | --dangerously-bypass-approvals-and-sandbox | \
+        --dangerously-bypass-hook-trust | --worktree | --search | --no-alt-screen | --no-daemon) ;;
+      exec | e | review)
+        echo headless
+        return 0
+        ;;
+      agents | login | logout | mcp | plugin | app-server | remote-control | app | completion | update | doctor | \
+        sandbox | debug | apply | a | resume | queue | archive | delete | migrate-rollouts | unarchive | fork | \
+        cloud | exec-server | features | help)
+        echo interactive
+        return 0
+        ;;
+      *) break ;;
+    esac
+  done
+  case "${tty}" in
+    '' | '?' | '??') echo headless ;;
+    *) echo interactive ;;
+  esac
+}
+
+# Succeeds when the user started the turn or its origin is unknown.
+# - Claude Code: TURN_ORIGIN_JQ finds no background origin in transcript $1.
+# - Codex: the session is not a subagent and codex_parent_command is not
+#   "headless". A resumed session keeps its transcript's first source, so that
+#   source decides only when the parent is not Codex.
+function turn_started_by_user() {
+  local transcript_path="${1}" origin session_source=""
+  if [[ "${HARNESS}" == claude ]]; then
+    if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
+      return 0
+    fi
+    origin="$(reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${TURN_ORIGIN_JQ}" 2> /dev/null)" || true
+    [[ "${origin}" != background ]]
+    return
+  fi
+  # `codex exec --ephemeral` writes no transcript, so the parent still decides.
+  if [[ -n "${transcript_path}" && -f "${transcript_path}" ]]; then
+    session_source="$(head -n 1 "${transcript_path}" 2> /dev/null \
+      | jq -r 'select(.type == "session_meta") | .payload.source | if type == "object" then "subagent" else strings end' 2> /dev/null)" || session_source=""
+  fi
+  [[ "${session_source}" != subagent ]] || return 1
+  case "$(codex_parent_command)" in
+    headless) return 1 ;;
+    interactive) return 0 ;;
+    *) [[ "${session_source}" != exec ]] ;;
+  esac
 }
 
 # $2 is the tool named by the prompt's message; $3 is "true" for the plan
@@ -628,8 +717,11 @@ function do_cc_permission() {
 }
 
 function do_stop() {
-  local icon="${1}"
-  local reply
+  local icon="${1}" transcript_path reply
+  transcript_path="$(hook_string transcript_path)"
+  # A skipped turn leaves the completion marker alone.
+  turn_started_by_user "${transcript_path}" || return 0
+
   # A JSON reply's summary is taken before the cap, which would cut the object.
   reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '
     .last_assistant_message // empty | strings
@@ -640,8 +732,6 @@ function do_stop() {
   # reply stays empty rather than borrowing an earlier message.
   if [[ "${HARNESS}" == claude ]] \
     && [[ "$(printf '%s' "${HOOK_INPUT}" | jq -r 'has("last_assistant_message")' 2> /dev/null)" == false ]]; then
-    local transcript_path
-    transcript_path="$(hook_string transcript_path)"
     reply="$(extract_last_assistant_text "${transcript_path}")"
   fi
 
