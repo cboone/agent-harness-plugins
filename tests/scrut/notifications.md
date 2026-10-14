@@ -577,6 +577,38 @@ $ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-exec-alias
 No alert
 ```
 
+## Codex exec after an option value with a space
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-spaced-value
+No alert
+```
+
+## Codex exec without a transcript
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-exec-ephemeral
+No alert
+```
+
+## Codex review
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-review
+No alert
+```
+
+## Interactive Codex started with a prompt
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" codex-terminal-prompt
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+codex.png
+```
+
 ## Interactive Codex resuming an exec session
 
 ```scrut

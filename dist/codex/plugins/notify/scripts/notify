@@ -371,25 +371,26 @@ readonly PENDING_JQ
 
 # Prints "background" when the current Claude Code turn did not start with the
 # user's prompt, or nothing; read after TURN_JQ. The turn's main-session user
-# records share a promptId and end, newest first, at one with another promptId;
-# a transcript without promptIds ends the read at TURN_JQ's prompt and prints
-# nothing. Only a "human" turnOrigin, or else origin.kind, is the user's. With
-# neither, a turn whose prompts, compaction summaries aside, are all meta, such
-# as a scheduled wake, is background.
+# records share a promptId and end, newest first, at one with another promptId
+# or at a TURN_JQ prompt without one, as in older transcripts. Only a "human"
+# turnOrigin, or else origin.kind, is the user's. With neither, a turn whose
+# messages, compaction summaries aside, are all meta, such as a scheduled wake,
+# is background.
 IFS= read -r -d '' TURN_ORIGIN_JQ << 'JQ' || true
 [label $out
   | foreach (inputs | (fromjson? // null) | objects | select(is_user and .isSidechain != true)) as $r
       (null; . // (($r.promptId | strings) // null);
        if ($r.promptId | type) == "string" then
-         (if $r.promptId == . then $r | {turnOrigin, origin, isMeta, isCompactSummary, prompt: (is_result | not)}
+         (if $r.promptId == . then
+            $r | {origin: (.turnOrigin // (.origin | objects | .kind) // null), isMeta, isCompactSummary, message: (is_result | not)}
           else break $out end)
-       elif . == null and ($r | kind) == "prompt" then break $out
+       elif ($r | kind) == "prompt" then break $out
        else empty end)]
-| [.[] | (.turnOrigin // (.origin | objects | .kind)) | strings] as $origins
-| [.[] | select(.prompt and .isCompactSummary != true)] as $prompts
+| [.[] | .origin | strings] as $origins
+| [.[] | select(.message and .isCompactSummary != true)] as $messages
 | if ($origins | length) > 0 then
     (if any($origins[]; . == "human") then empty else "background" end)
-  elif ($prompts | length) > 0 and all($prompts[]; .isMeta == true) then "background"
+  elif ($messages | length) > 0 and all($messages[]; .isMeta == true) then "background"
   else empty end
 JQ
 readonly TURN_ORIGIN_JQ
@@ -412,15 +413,18 @@ function extract_last_assistant_text() {
   reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null || true
 }
 
-# Prints "exec" when the Codex process running this hook is `codex exec`,
-# "interactive" for any other Codex command, or nothing when the parent is not
-# Codex. The command is the first argument that is neither a global option nor
-# its value. `ps` joins arguments with spaces, so a value containing one can
-# misplace it.
+# Prints "headless" when the Codex process running this hook is `codex exec`,
+# its alias `e`, or `codex review`, "interactive" for any other Codex command,
+# or nothing when the parent is not Codex. The command is the first argument
+# that is neither a global option nor its value. `ps` joins arguments with
+# spaces, so a bare word that names no command may be a prompt or the rest of a
+# spaced option value; the parent's terminal decides it, since the interactive
+# TUI always has one. The commands and options listed follow `codex --help` in
+# Codex 0.162.1; a command added later reads as a bare word.
 function codex_parent_command() {
-  local args word skip=false
+  local tty args word skip=false
   local -a words
-  args="$(ps -ww -o args= -p "${PPID}" 2> /dev/null)" || return 0
+  read -r tty args <<< "$(ps -ww -o tty=,args= -p "${PPID}" 2> /dev/null)" || return 0
   read -r -a words <<< "${args}"
   [[ "${#words[@]}" -gt 0 && "${words[0]##*/}" == codex ]] || return 0
   for word in "${words[@]:1}"; do
@@ -436,11 +440,22 @@ function codex_parent_command() {
       # --image takes every following argument, so no command can follow.
       -i | --image) break ;;
       -*) ;;
-      exec | e)
-        echo exec
+      exec | e | review)
+        echo headless
         return 0
         ;;
-      *) break ;;
+      agents | login | logout | mcp | plugin | app-server | remote-control | app | completion | update | doctor | \
+        sandbox | debug | apply | a | resume | queue | archive | delete | migrate-rollouts | unarchive | fork | \
+        cloud | exec-server | features | help)
+        break
+        ;;
+      *)
+        case "${tty}" in
+          '' | '?' | '??') echo headless ;;
+          *) echo interactive ;;
+        esac
+        return 0
+        ;;
     esac
   done
   echo interactive
@@ -449,26 +464,29 @@ function codex_parent_command() {
 # Succeeds when the user started the turn, so its completion posts a banner.
 # Unknown origins count as the user's.
 # - Claude Code: TURN_ORIGIN_JQ finds no background origin in transcript $1.
-# - Codex: the session is not a subagent, such as a guardian review, and is not
-#   a `codex exec` run. The transcript's first line is its session_meta record,
-#   whose source ("cli", "exec" or {"subagent": …}) is kept when another command
-#   resumes the session, so the parent process decides between the two commands
-#   when it can.
+# - Codex: the session is not a subagent, such as a guardian review, and its
+#   Codex parent is not headless (see codex_parent_command). The transcript's
+#   first line is its session_meta record, whose source ("cli", "exec" or
+#   {"subagent": …}) is kept when another command resumes the session, so it
+#   decides only when the parent is not Codex.
 function turn_started_by_user() {
-  local transcript_path="${1}" origin session_source
-  if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
-    return 0
-  fi
+  local transcript_path="${1}" origin session_source=""
   if [[ "${HARNESS}" == claude ]]; then
+    if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
+      return 0
+    fi
     origin="$(reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${TURN_ORIGIN_JQ}" 2> /dev/null)" || true
     [[ "${origin}" != background ]]
     return
   fi
-  session_source="$(head -n 1 "${transcript_path}" 2> /dev/null \
-    | jq -r 'select(.type == "session_meta") | .payload.source | if type == "object" then "subagent" else strings end' 2> /dev/null)" || session_source=""
+  # `codex exec --ephemeral` writes no transcript, so the parent still decides.
+  if [[ -n "${transcript_path}" && -f "${transcript_path}" ]]; then
+    session_source="$(head -n 1 "${transcript_path}" 2> /dev/null \
+      | jq -r 'select(.type == "session_meta") | .payload.source | if type == "object" then "subagent" else strings end' 2> /dev/null)" || session_source=""
+  fi
   [[ "${session_source}" != subagent ]] || return 1
   case "$(codex_parent_command)" in
-    exec) return 1 ;;
+    headless) return 1 ;;
     interactive) return 0 ;;
     *) [[ "${session_source}" != exec ]] ;;
   esac

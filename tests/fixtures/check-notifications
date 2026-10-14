@@ -31,8 +31,8 @@ function transcript_text() {
 # Appends a turn with promptId $2: a prompt with the extra fields in JSON $3,
 # then a tool round trip carrying the same promptId.
 function transcript_turn() {
-  local id_field
-  id_field="$(jq -nc --arg id "${2}" '{promptId: $id}')"
+  # Sample promptIds are plain tokens, so they need no JSON escaping.
+  local id_field="{\"promptId\":\"${2}\"}"
   transcript_prompt "${1}" "$(jq -nc --argjson id "${id_field}" --argjson extra "${3}" '$id + $extra')"
   transcript_tool_use "${1}" "tool-${2}" Bash '{"command":"make"}'
   transcript_result "${1}" "tool-${2}" "${id_field}"
@@ -118,9 +118,10 @@ function main() {
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
-  # notify asks ps only for its parent's command line.
+  # notify asks ps only for its parent's terminal and command line; agent-run
+  # commands have no terminal.
   printf '%s\n' '#!/usr/bin/env bash' \
-    'printf "%s\\n" "${NOTIFY_TEST_PARENT:-bash check-notifications}"' > "${test_dir}/bin/ps"
+    'printf "%s %s\\n" "${NOTIFY_TEST_TTY:-??}" "${NOTIFY_TEST_PARENT:-bash check-notifications}"' > "${test_dir}/bin/ps"
   chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript" "${test_dir}/bin/ps"
 
   # Subtitles name the repository and fall back to the branch suffix. An empty
@@ -438,13 +439,27 @@ function main() {
       codex_transcript "${transcript}" '"cli"'
       export NOTIFY_TEST_PARENT="/opt/sample/bin/codex --cd /tmp/sample e Sample prompt"
       ;;
+    quiet-codex-spaced-value)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex --cd /tmp/sample project exec resume sample-session"
+      ;;
+    # --ephemeral writes no transcript, so the payload's path does not exist.
+    quiet-codex-exec-ephemeral) export NOTIFY_TEST_PARENT="codex exec --ephemeral --cd /tmp/sample Sample prompt" ;;
+    quiet-codex-review)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex review"
+      ;;
+    codex-terminal-prompt)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
     codex-interactive-resume)
       codex_transcript "${transcript}" '"exec"'
       export NOTIFY_TEST_PARENT="codex resume sample-session"
       ;;
     codex-option-value)
       codex_transcript "${transcript}" '"exec"'
-      export NOTIFY_TEST_PARENT="codex --model exec Sample prompt"
+      export NOTIFY_TEST_PARENT="codex --model exec Sample prompt" NOTIFY_TEST_TTY=ttys001
       ;;
     turn-human) transcript_turn "${transcript}" p1 '{"turnOrigin":"human","origin":{"kind":"human"}}' ;;
     turn-human-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"human"}}' ;;
@@ -477,8 +492,8 @@ function main() {
     *) ;;
   esac
   # Completion scenarios that classify the turn from a transcript.
-  if [[ "${scenario}" == *codex-* || "${scenario}" == *turn-* ]]; then
-    [[ "${scenario}" != *turn-* ]] || action="cc-stop"
+  if [[ "${scenario}" =~ ^(quiet-)?(codex|turn)- ]]; then
+    [[ ! "${scenario}" =~ ^(quiet-)?turn- ]] || action="cc-stop"
     payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"
   fi
   if [[ "${action}" == cc-permission ]]; then
