@@ -83,3 +83,15 @@ Head `600bec5f`. Both as Codex dry runs: `gpt-6.1-sol`, effort `low`, window `87
 - `trim-text`: 5 proposals, all sentence splits, applied as proposed.
 
 Committed as `d8298e96`. `notifications.md` passes 82 cases and `notification-sounds.md` 13; lint and validation pass.
+
+## Step 4: semgrep baseline scan
+
+`semgrep` 1.180.0, `--config auto --baseline-commit 84e83462`, in a disposable `git clone --shared` of head `951cce2a` in the session scratchpad, with `SEMGREP_REPO_NAME=cboone/agent-harness-plugins`. 6 paths scanned; no new findings.
+
+Coverage gap: semgrep's shell parser reports partial parsing for `plugins/notify/scripts/notify` from line 11 to the end, so the script is effectively unscanned. The same error occurs at the merge base, so it predates the branch; `shellcheck` covers the script.
+
+## Step 5: `lint-and-fix --no-push`
+
+The repository's documented commands: `make format`, `make build`, `make lint` and `make validate`. All exited 0, and nothing changed on disk, so no lint commit was needed. The full scrut suite passed all 28 documents. An earlier full run failed `launch-workmux.md`, which this branch does not touch; it passed on that rerun and twice more on its own, so the failure reads as intermittent under parallel load.
+
+The local review order is complete; the branch is at the push and draft-PR gate.
