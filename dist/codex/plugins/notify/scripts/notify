@@ -415,31 +415,23 @@ function extract_last_assistant_text() {
 
 # Prints "headless" when the Codex process running this hook is `codex exec`,
 # its alias `e`, or `codex review`, "interactive" for any other Codex command,
-# or nothing when the parent is not Codex. The command is the first argument
-# that is neither a global option nor its value. `ps` joins arguments with
-# spaces, so a bare word that names no command may be a prompt or the rest of a
-# spaced option value; the parent's terminal decides it, since the interactive
-# TUI always has one. The commands and options listed follow `codex --help` in
-# Codex 0.162.1; a command added later reads as a bare word.
+# or nothing when the parent is not Codex. `ps` joins arguments with spaces, so
+# only a command that the first argument other than a plain flag names is
+# certain. When that argument is an option that may take a value, which may
+# contain spaces, or a word that names no command, such as a prompt, the
+# parent's terminal decides: the interactive TUI always has one, and a run an
+# agent starts has none. The commands and flags listed follow `codex --help` in
+# Codex 0.162.1.
 function codex_parent_command() {
-  local tty args word skip=false
+  local tty args word
   local -a words
   read -r tty args <<< "$(ps -ww -o tty=,args= -p "${PPID}" 2> /dev/null)" || return 0
   read -r -a words <<< "${args}"
   [[ "${#words[@]}" -gt 0 && "${words[0]##*/}" == codex ]] || return 0
   for word in "${words[@]:1}"; do
-    if [[ "${skip}" == true ]]; then
-      skip=false
-      continue
-    fi
     case "${word}" in
-      -c | --config | --enable | --disable | --remote | --remote-auth-token-env | --local-provider | \
-        -m | --model | -p | --profile | -s | --sandbox | -C | --cd | --add-dir | -a | --ask-for-approval)
-        skip=true
-        ;;
-      # --image takes every following argument, so no command can follow.
-      -i | --image) break ;;
-      -*) ;;
+      --strict-config | --oss | --approve-for-me | --dangerously-bypass-approvals-and-sandbox | \
+        --dangerously-bypass-hook-trust | --worktree | --search | --no-alt-screen | --no-daemon) ;;
       exec | e | review)
         echo headless
         return 0
@@ -447,18 +439,16 @@ function codex_parent_command() {
       agents | login | logout | mcp | plugin | app-server | remote-control | app | completion | update | doctor | \
         sandbox | debug | apply | a | resume | queue | archive | delete | migrate-rollouts | unarchive | fork | \
         cloud | exec-server | features | help)
-        break
-        ;;
-      *)
-        case "${tty}" in
-          '' | '?' | '??') echo headless ;;
-          *) echo interactive ;;
-        esac
+        echo interactive
         return 0
         ;;
+      *) break ;;
     esac
   done
-  echo interactive
+  case "${tty}" in
+    '' | '?' | '??') echo headless ;;
+    *) echo interactive ;;
+  esac
 }
 
 # Succeeds when the user started the turn, so its completion posts a banner.

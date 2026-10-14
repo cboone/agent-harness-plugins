@@ -598,6 +598,24 @@ $ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-review
 No alert
 ```
 
+## Interactive Codex with an option value that ends in a command
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" codex-spaced-value-terminal
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+codex.png
+```
+
+## Codex exec in a terminal
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-codex-exec-terminal
+No alert
+```
+
 ## Interactive Codex started with a prompt
 
 ```scrut

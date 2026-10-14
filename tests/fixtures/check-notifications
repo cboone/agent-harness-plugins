@@ -449,6 +449,14 @@ function main() {
       codex_transcript "${transcript}" '"cli"'
       export NOTIFY_TEST_PARENT="codex review"
       ;;
+    codex-spaced-value-terminal)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex --cd /tmp/sample exec" NOTIFY_TEST_TTY=ttys001
+      ;;
+    quiet-codex-exec-terminal)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex exec Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
     codex-terminal-prompt)
       codex_transcript "${transcript}" '"exec"'
       export NOTIFY_TEST_PARENT="codex Sample prompt" NOTIFY_TEST_TTY=ttys001
@@ -510,7 +518,7 @@ function main() {
         sleep 0.02
         count=$((count + 1))
       done
-      [[ -s "${NOTIFY_TEST_LOG}" ]]
+      [[ -s "${NOTIFY_TEST_LOG}" ]] || exit 1
       ;;
   esac
   case "${scenario}" in
@@ -525,7 +533,7 @@ function main() {
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action%-stop}-turn-start"
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
       wait_for_alerts 2
-      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]]
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]] || exit 1
       echo "Next user prompt allows another completion"
       ;;
     groups)
@@ -549,7 +557,7 @@ function main() {
     visible | subagent | permission-question | quiet-*)
       # Gives a detached alerter time to appear before asserting none did.
       sleep 0.2
-      [[ ! -e "${NOTIFY_TEST_LOG}" ]]
+      [[ ! -e "${NOTIFY_TEST_LOG}" ]] || exit 1
       echo "No alert"
       ;;
     *) jq -r '.[index("--title") + 1], .[index("--subtitle") + 1], .[index("--message") + 1], .[index("--sound") + 1], (.[index("--app-icon") + 1] | split("/") | last)' "${NOTIFY_TEST_LOG}" ;;
