@@ -437,7 +437,7 @@ function main() {
       ;;
     quiet-codex-exec-alias)
       codex_transcript "${transcript}" '"cli"'
-      export NOTIFY_TEST_PARENT="/opt/sample/bin/codex --cd /tmp/sample e Sample prompt"
+      export NOTIFY_TEST_PARENT="/opt/sample/bin/codex e Sample prompt" NOTIFY_TEST_TTY=ttys001
       ;;
     quiet-codex-spaced-value)
       codex_transcript "${transcript}" '"cli"'

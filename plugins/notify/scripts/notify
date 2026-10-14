@@ -375,7 +375,8 @@ readonly PENDING_JQ
 # or at a TURN_JQ prompt without one, as in older transcripts. Only a "human"
 # turnOrigin, or else origin.kind, is the user's. With neither, a turn whose
 # messages, compaction summaries aside, are all meta, such as a scheduled wake,
-# is background.
+# is background. Records without a promptId add nothing, so a turn without one
+# stays unknown and keeps its banner.
 IFS= read -r -d '' TURN_ORIGIN_JQ << 'JQ' || true
 [label $out
   | foreach (inputs | (fromjson? // null) | objects | select(is_user and .isSidechain != true)) as $r
