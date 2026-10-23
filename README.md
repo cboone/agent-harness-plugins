@@ -16,6 +16,8 @@ GitHub keeps traffic data for 14 days. This branch keeps it indefinitely: `daily
 
 | Date | Clones | Unique cloners | CI checkouts | Dynamic jobs | Est. external clones | Views | Unique visitors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2026-10-22 | 15 | 12 | 1 | 0 | 14 | 7 | 4 |
+| 2026-10-21 | 74 | 22 | 31 | 4 | 39 | 10 | 2 |
 | 2026-10-20 | 59 | 18 | 1 | 1 | 57 | 4 | 4 |
 | 2026-10-19 | 125 | 26 | 2 | 0 | 123 | 9 | 5 |
 | 2026-10-18 | 31 | 20 | 1 | 0 | 30 | 13 | 2 |
@@ -28,8 +30,6 @@ GitHub keeps traffic data for 14 days. This branch keeps it indefinitely: `daily
 | 2026-10-11 | 1575 | 158 | 1021 | 40 | 514 | 43 | 4 |
 | 2026-10-10 | 588 | 52 | 332 | 12 | 244 | 36 | 7 |
 | 2026-10-09 | 199 | 54 | 86 | 3 | 110 | 12 | 2 |
-| 2026-10-08 | 593 | 145 | 256 | 10 | 327 | 18 | 3 |
-| 2026-10-07 | 1403 | 83 | 1119 | 54 | 230 | 32 | 2 |
 
 ## Weekly totals
 
@@ -37,7 +37,7 @@ Weeks start on Monday. An asterisk marks a week with clones on days not yet coun
 
 | Week of | Clones | Automation clones | Est. external clones | Views |
 | --- | ---: | ---: | ---: | ---: |
-| 2026-10-19 | 184 | 4 | 180 | 13 |
+| 2026-10-19 | 273 | 40 | 233 | 30 |
 | 2026-10-12 | 3211 | 2064 | 1147 | 121 |
 | 2026-10-05 | 4610 | 3122 | 1488 | 154 |
 | 2026-09-28 | 594 | 151 | 443 | 64 |
