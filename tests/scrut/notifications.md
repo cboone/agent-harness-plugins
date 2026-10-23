@@ -520,6 +520,33 @@ $ "${CHECK_NOTIFICATIONS_BIN}" visible
 No alert
 ```
 
+## Visible pane when tmux names itself the terminal
+
+tmux 3.2 and later set `TERM_PROGRAM=tmux` in every pane, so the terminal comes from `__CFBundleIdentifier`.
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-visible-tmux-bundle
+No alert
+```
+
+## Visible pane with the terminal from the tmux server
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" quiet-visible-tmux-global
+No alert
+```
+
+## Unknown terminal under tmux
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" tmux-unknown-terminal
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+codex.png
+```
+
 ## Active terminal with another pane visible
 
 ```scrut
