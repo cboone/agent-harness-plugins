@@ -1,6 +1,6 @@
 # Local review ledger: feature/638-tier-aware-notifications
 
-Issue #638. Base `147a9c7e`. Local review order: structural reviews, `review-pr-with-codex`, trims, semgrep, `lint-and-fix --no-push`. Copilot does not review this branch.
+Issue #638. Base `147a9c7e`. Local review order: structural reviews, `review-pr-with-codex`, trims, semgrep, `lint-and-fix --no-push`. Copilot does not review this branch. Commit hashes below name the branch's commits before step 6 tidied it.
 
 ## Step 1, round 1 (Nit): `review-anti-patterns` and `/simplify`, report only
 
@@ -92,3 +92,7 @@ One baseline scan of head `cf209ea2` in a disposable `git clone --shared`: semgr
 ## Step 5: `lint-and-fix --no-push`
 
 Installed `lint-and-fix` 1.4.3, following the repository's documented commands: `make format` as the fixer, then `make lint` (markdownlint, Prettier, shellcheck, shfmt, actionlint), `make validate` and the CI drift check of the generated mirrors. The agent config forbids no fixer. Nothing needed fixing, every check passed, and no commit was made.
+
+## Step 6: tidy
+
+The branch was backed up and rebuilt after the pushed proposal commit `1a5054e1` as three signed commits: the feature with its README, version bump and mirror, the tests, and these documents. The rebuilt tree matched the backup exactly. This section was added afterwards.
