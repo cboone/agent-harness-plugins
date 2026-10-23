@@ -5,6 +5,8 @@
 # and shells out to alerter with per-event title, subtitle, body, sound, group,
 # and per-harness icon. Titles name the action; the icon names the harness.
 # Events fire detached, and each alerter is stopped shortly after launch.
+# A session placed in a tier (top, lead or worker) by NOTIFY_TIER or a tiers
+# file posts only what nothing else brings to the person; see resolve_tier.
 #
 # Must parse under macOS /bin/bash 3.2, what `env bash` finds without Homebrew.
 # A syntax error exits 2, and Claude Code treats exit 2 as blocking the event.
@@ -30,6 +32,11 @@ if [[ "${NOTIFY_WAIT_LIMIT:-}" =~ ^[1-9][0-9]{0,8}$ ]]; then
   WAIT_LIMIT=$((NOTIFY_WAIT_LIMIT > 60 ? 60 : NOTIFY_WAIT_LIMIT))
 fi
 readonly WAIT_LIMIT
+
+readonly TIERS_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/agent-harness-notify/tiers"
+
+# Separates tmux names with a character tmux preserves and names cannot contain.
+readonly TMUX_FIELD_SEP=$'\037'
 
 # Reduces a reply to plain prose for a banner body. Lengths count Unicode code
 # points.
@@ -132,8 +139,11 @@ Subcommands:
   codex-question    Codex PreToolUse:request_user_input
   codex-stop        Codex Stop
   codex-turn-start  Codex UserPromptSubmit (resets completion deduplication)
+  explain [TRANSCRIPT]
+                    Print this pane's tier, subtitle and sounds, reading the
+                    session name from TRANSCRIPT or $CLAUDE_CODE_SESSION_ID's
 
-Each subcommand reads its hook payload as JSON on stdin.
+Each hook subcommand reads its hook payload as JSON on stdin.
 USAGE_TEXT
 }
 
@@ -186,8 +196,25 @@ function repo_name() {
   printf '%s' "${name}"
 }
 
-# POSIX cksum hashes the repository name's bytes without a trailing newline.
-# Equal role counts select equal indices; missing roles retain built-in sounds.
+# Prints how many of the sound files $1-0, $1-1, ... exist in ~/Library/Sounds
+# before the first gap.
+function count_sound_variants() {
+  local stem="${1}" count=0 base
+  while :; do
+    base="${HOME}/Library/Sounds/${stem}-${count}"
+    if [[ -f "${base}.aiff" || -f "${base}.wav" || -f "${base}.caf" ]]; then
+      count=$((count + 1))
+    else
+      break
+    fi
+  done
+  printf '%s' "${count}"
+}
+
+# A tiered session takes its tier's <prefix>-<tier>-<role>-<n> subset, then the
+# plain <prefix>-<role>-<n> set. POSIX cksum hashes the place, or else the
+# repository name, without a trailing newline. Equal role counts select equal
+# indices; missing roles retain built-in sounds.
 function resolve_sound() {
   local builtin="${1}" prefix="${NOTIFY_SOUND_SET:-}" role
   if [[ ! "${prefix}" =~ ^[A-Za-z0-9._-]+$ ]]; then
@@ -204,25 +231,27 @@ function resolve_sound() {
       ;;
   esac
 
-  local count=0 base
-  while :; do
-    base="${HOME}/Library/Sounds/${prefix}-${role}-${count}"
-    if [[ -f "${base}.aiff" || -f "${base}.wav" || -f "${base}.caf" ]]; then
-      count=$((count + 1))
-    else
-      break
-    fi
-  done
+  local stem count=0
+  if [[ -n "${TIER}" ]]; then
+    stem="${prefix}-${TIER}-${role}"
+    count="$(count_sound_variants "${stem}")"
+  fi
+  if [[ "${count}" -eq 0 ]]; then
+    stem="${prefix}-${role}"
+    count="$(count_sound_variants "${stem}")"
+  fi
   if [[ "${count}" -eq 0 ]]; then
     printf '%s' "${builtin}"
     return
   fi
 
-  local repo checksum
-  repo="$(repo_name)"
-  checksum="$(printf '%s' "${repo}" | cksum)"
+  local key="${PLACE}" checksum
+  if [[ -z "${key}" ]]; then
+    key="$(repo_name)"
+  fi
+  checksum="$(printf '%s' "${key}" | cksum)"
   checksum="${checksum%% *}"
-  printf '%s' "${prefix}-${role}-$((checksum % count))"
+  printf '%s' "${stem}-$((checksum % count))"
 }
 
 function compute_branch_suffix() {
@@ -267,6 +296,151 @@ function compute_subtitle() {
     task="$(compute_branch_suffix)"
   fi
   printf '%s · %s' "${repo}" "${task}"
+}
+
+# -----------------------------------------------------------------------------
+# Session tiers
+# -----------------------------------------------------------------------------
+
+# Set by resolve_tier. TIER is top, lead or worker, or empty for an untiered
+# session; TIER_RULE says what set it. PLACE is "<tmux session>: <window>" for
+# a tiered session in tmux, or empty.
+TIER=""
+TIER_RULE=""
+PLACE=""
+# Read at most once per event.
+TMUX_SESSION=""
+TMUX_WINDOW=""
+SESSION_NAME=""
+SESSION_NAME_READ=false
+
+# Sets SESSION_NAME from transcript $1: the newest agent-name (--name) or
+# custom-title (rename) record. grep keeps a large transcript out of jq, and
+# the type check drops lines that only quote such a record.
+function read_session_name() {
+  local transcript_path="${1}"
+  [[ "${SESSION_NAME_READ}" == false ]] || return 0
+  SESSION_NAME_READ=true
+  if [[ "${HARNESS}" != claude || -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
+    return 0
+  fi
+  SESSION_NAME="$(grep -E '"type":"(agent-name|custom-title)"' "${transcript_path}" 2> /dev/null \
+    | jq -Rnr 'reduce (inputs | fromjson? | objects) as $record (null;
+        if $record.type == "agent-name" then ($record.agentName | strings) // .
+        elif $record.type == "custom-title" then ($record.customTitle | strings) // .
+        else . end)
+      // empty' 2> /dev/null)" || SESSION_NAME=""
+}
+
+# Sets TMUX_SESSION and TMUX_WINDOW for $TMUX_PANE, or leaves them empty.
+function read_tmux_names() {
+  [[ -n "${TMUX_PANE:-}" ]] || return 0
+  local names
+  names="$(tmux display-message -t "${TMUX_PANE}" -p "#{session_name}${TMUX_FIELD_SEP}#{window_name}" 2> /dev/null)" || return 0
+  [[ "${names}" == *"${TMUX_FIELD_SEP}"* ]] || return 0
+  TMUX_SESSION="${names%%"${TMUX_FIELD_SEP}"*}"
+  TMUX_WINDOW="${names#*"${TMUX_FIELD_SEP}"}"
+}
+
+# Sets PLACE from the tmux names, dropping the private-use glyphs of icon fonts,
+# which banners cannot render. A window named only with them gives way to the
+# Claude session name from transcript $1, else to the tmux session alone.
+function compute_place() {
+  local transcript_path="${1}" window
+  [[ -n "${TMUX_SESSION}" ]] || return 0
+  window="$(printf '%s' "${TMUX_WINDOW}" | jq -Rr 'gsub("\\p{Co}"; "") | gsub("^\\s+|\\s+$"; "")' 2> /dev/null)" || window=""
+  if [[ -z "${window}" ]]; then
+    read_session_name "${transcript_path}"
+    window="${SESSION_NAME}"
+  fi
+  PLACE="${TMUX_SESSION}${window:+: ${window}}"
+}
+
+# Sets TIER and TIER_RULE from NOTIFY_TIER, else from the first matching rule
+# in the tiers file, then PLACE for a tiered session. Skips lines without a
+# tier name, unknown fields and patterns bash cannot compile (=~ returns 2);
+# an empty field matches nothing. An unreadable tiers file counts as absent, so
+# hooks post as untiered. $1 is the transcript, read only for a `name` rule or
+# PLACE.
+function resolve_tier() {
+  local transcript_path="${1}" file="${TIERS_FILE}"
+  case "${NOTIFY_TIER:-}" in
+    top | lead | worker)
+      TIER="${NOTIFY_TIER}"
+      TIER_RULE="NOTIFY_TIER=${NOTIFY_TIER}"
+      ;;
+    *) ;;
+  esac
+  if [[ ! -f "${file}" || ! -r "${file}" ]]; then
+    file=""
+  fi
+  if [[ -z "${TIER}" && -z "${file}" ]]; then
+    return 0
+  fi
+  read_tmux_names
+
+  if [[ -z "${TIER}" ]]; then
+    local socket="${TMUX:-}" server="" line number=0 tier field pattern value
+    if [[ -n "${socket}" ]]; then
+      socket="${socket%%,*}"
+      server="${socket##*/}"
+    fi
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      number=$((number + 1))
+      read -r tier field pattern <<< "${line%$'\r'}"
+      case "${tier}" in
+        top | lead | worker) ;;
+        *) continue ;;
+      esac
+      case "${field}" in
+        window) value="${TMUX_WINDOW}" ;;
+        session) value="${TMUX_SESSION}" ;;
+        server) value="${server}" ;;
+        name)
+          read_session_name "${transcript_path}"
+          value="${SESSION_NAME}"
+          ;;
+        dir) value="${CLAUDE_PROJECT_DIR:-${PWD}}" ;;
+        *) continue ;;
+      esac
+      if [[ -n "${value}" && -n "${pattern}" && "${value}" =~ ${pattern} ]]; then
+        TIER="${tier}"
+        TIER_RULE="line ${number}: ${tier} ${field} ${pattern}"
+        break
+      fi
+    done < "${file}"
+  fi
+
+  if [[ -n "${TIER}" ]]; then
+    compute_place "${transcript_path}"
+  fi
+}
+
+# Succeeds when the session's tier keeps event $1 (stop, plan or question) from
+# posting. Workers report by message and never ask the person anything. A top
+# or lead session puts its questions and plans on the coordinator's list first.
+# Permission prompts and elicitation dialogs post in every tier.
+function tier_silences() {
+  case "${TIER}:${1}" in
+    worker:stop | top:plan | lead:plan | ?*:question) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+function tier_title() {
+  if [[ "${TIER}" == worker ]]; then
+    printf 'Worker: %s' "${1}"
+  else
+    printf '%s' "${1}"
+  fi
+}
+
+function banner_subtitle() {
+  if [[ -n "${PLACE}" ]]; then
+    printf '%s' "${PLACE}"
+  else
+    compute_subtitle
+  fi
 }
 
 # -----------------------------------------------------------------------------
@@ -394,6 +568,22 @@ IFS= read -r -d '' TURN_ORIGIN_JQ << 'JQ' || true
 JQ
 readonly TURN_ORIGIN_JQ
 
+# Prints "answered" when the person answered or rejected an AskUserQuestion or
+# ExitPlanMode call in the current Claude Code turn; read after TURN_JQ. Only
+# Claude Code's fixed rejection text marks an error result as the person's; if
+# that text changes, rejections stop counting and Done posts.
+IFS= read -r -d '' ANSWERED_JQ << 'JQ' || true
+def text: .content | if type == "string" then . elif type == "array" then [.[] | objects | .text | strings] | join(" ") else "" end;
+def from_person: .is_error != true or (text | startswith("The user doesn't want to proceed"));
+turn
+| [.[] | select(kind == "assistant") | blocks | select(.type == "tool_use")
+    | select(.name == "AskUserQuestion" or .name == "ExitPlanMode") | .id | strings] as $asked
+| [.[] | select(kind == "result") | blocks | select(.type == "tool_result") | select(from_person)
+    | .tool_use_id | strings] as $results
+| if any($asked[]; . as $id | any($results[]; . == $id)) then "answered" else empty end
+JQ
+readonly ANSWERED_JQ
+
 # Prints file $1 newest line first. Stock macOS has tail -r but no tac. Its
 # stderr is silenced because jq stops reading at the turn's prompt.
 function reverse_lines() {
@@ -472,6 +662,18 @@ function turn_started_by_user() {
     interactive) return 0 ;;
     *) [[ "${session_source}" != exec ]] ;;
   esac
+}
+
+# Succeeds when the person answered a question or plan prompt in the current
+# Claude Code turn of transcript $1. A Codex turn never counts: its errors share
+# an answer's shape.
+function turn_answered_prompt() {
+  local transcript_path="${1}" answered
+  if [[ "${HARNESS}" != claude || -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
+    return 1
+  fi
+  answered="$(reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${ANSWERED_JQ}" 2> /dev/null)" || true
+  [[ "${answered}" == answered ]]
 }
 
 # $2 is the tool named by the prompt's message; $3 is "true" for the plan
@@ -630,14 +832,16 @@ function fire_alerter_detached() {
 # Claude Code event handlers
 # -----------------------------------------------------------------------------
 
+# An MCP server raises the dialog, so in every tier only a banner announces it.
 function do_cc_elicit() {
   local message body
+  resolve_tier "$(hook_string transcript_path)"
   message="$(hook_string message)"
   body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT}")"
 
   fire_alerter_detached \
-    "Question" \
-    "$(compute_subtitle)" \
+    "$(tier_title Question)" \
+    "$(banner_subtitle)" \
     "${body:-Needs input}" \
     "$(resolve_sound Tink)" \
     "claude-elicit" \
@@ -647,6 +851,7 @@ function do_cc_elicit() {
 function do_cc_permission() {
   local transcript_path message wanted="" plan=false
   transcript_path="$(hook_string transcript_path)"
+  resolve_tier "${transcript_path}"
   message="$(hook_string message)"
   # Only the first line names the prompt; the full message is the body only
   # when no tool preview replaces it.
@@ -679,10 +884,13 @@ function do_cc_permission() {
     # The PreToolUse question banner already covers this prompt.
     AskUserQuestion) return 0 ;;
     ExitPlanMode)
+      if tier_silences plan; then
+        return 0
+      fi
       body="$(plan_heading "${pending}")"
       fire_alerter_detached \
-        "Plan ready for review" \
-        "$(compute_subtitle)" \
+        "$(tier_title "Plan ready for review")" \
+        "$(banner_subtitle)" \
         "$(truncate_with_ellipsis "${body:-Review the proposed plan}" "${BODY_LIMIT}")" \
         "$(resolve_sound Tink)" \
         "claude-plan" \
@@ -708,8 +916,8 @@ function do_cc_permission() {
   fi
 
   fire_alerter_detached \
-    "${title}" \
-    "$(compute_subtitle)" \
+    "$(tier_title "${title}")" \
+    "$(banner_subtitle)" \
     "${body:-Needs permission}" \
     "$(resolve_sound Funk)" \
     "claude-permission" \
@@ -721,6 +929,14 @@ function do_stop() {
   transcript_path="$(hook_string transcript_path)"
   # A skipped turn leaves the completion marker alone.
   turn_started_by_user "${transcript_path}" || return 0
+  resolve_tier "${transcript_path}"
+  if tier_silences stop; then
+    return 0
+  fi
+  # No Done when the person just answered a tiered session's question or plan.
+  if [[ -n "${TIER}" ]] && turn_answered_prompt "${transcript_path}"; then
+    return 0
+  fi
 
   # A JSON reply's summary is taken before the cap, which would cut the object.
   reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '
@@ -739,8 +955,8 @@ function do_stop() {
   body="$(summarize_reply "${reply}")"
 
   fire_alerter_detached \
-    "Done" \
-    "$(compute_subtitle)" \
+    "$(tier_title Done)" \
+    "$(banner_subtitle)" \
     "${body:-Task completed}" \
     "$(resolve_sound Glass)" \
     "${HARNESS}-stop" \
@@ -751,20 +967,38 @@ function do_stop() {
 # Shared handlers
 # -----------------------------------------------------------------------------
 
+# Prints the bundle identifier of the host terminal, or fails. tmux 3.2 and
+# later set TERM_PROGRAM=tmux in panes, so it then comes from
+# __CFBundleIdentifier, else the server's global TERM_PROGRAM. Both date from
+# the server's start: a client attached from another terminal names the wrong
+# application, and the banner posts.
+function host_terminal_bundle() {
+  local program="${TERM_PROGRAM:-}"
+  if [[ "${program}" == tmux ]]; then
+    if [[ -n "${__CFBundleIdentifier:-}" ]]; then
+      printf '%s' "${__CFBundleIdentifier}"
+      return 0
+    fi
+    program="$(tmux show-environment -g TERM_PROGRAM 2> /dev/null)" || return 1
+    program="${program#TERM_PROGRAM=}"
+  fi
+  case "${program}" in
+    Apple_Terminal) printf '%s' com.apple.Terminal ;;
+    iTerm.app) printf '%s' com.googlecode.iterm2 ;;
+    ghostty) printf '%s' com.mitchellh.ghostty ;;
+    WezTerm) printf '%s' com.github.wez.wezterm ;;
+    vscode) printf '%s' com.microsoft.VSCode ;;
+    alacritty) printf '%s' org.alacritty ;;
+    *) return 1 ;;
+  esac
+}
+
 # Only suppress completion when both the host application and exact pane
 # are visible. Unknown application or tmux state preserves notification delivery.
 function originating_pane_visible() {
   [[ -n "${TMUX_PANE:-}" && -n "${TMUX:-}" ]] || return 1
   local bundle front clients
-  case "${TERM_PROGRAM:-}" in
-    Apple_Terminal) bundle="com.apple.Terminal" ;;
-    iTerm.app) bundle="com.googlecode.iterm2" ;;
-    ghostty) bundle="com.mitchellh.ghostty" ;;
-    WezTerm) bundle="com.github.wez.wezterm" ;;
-    vscode) bundle="com.microsoft.VSCode" ;;
-    alacritty) bundle="org.alacritty" ;;
-    *) return 1 ;;
-  esac
+  bundle="$(host_terminal_bundle)" || return 1
   front="$(osascript -l JavaScript -e 'ObjC.import("AppKit"); ObjC.unwrap($.NSWorkspace.sharedWorkspace.frontmostApplication.bundleIdentifier)' 2> /dev/null)" || return 1
   [[ "${front}" == "${bundle}" ]] || return 1
   clients="$(tmux list-clients -F '#{pane_id}|#{client_flags}' 2> /dev/null)" || return 1
@@ -779,6 +1013,10 @@ function originating_pane_visible() {
 # Unexpected tool_input shapes fall back to "Needs input".
 function do_question() {
   local icon="${1}" questions count first
+  resolve_tier "$(hook_string transcript_path)"
+  if tier_silences question; then
+    return 0
+  fi
   questions="$(printf '%s' "${HOOK_INPUT}" | jq -c '
     (.tool_input // {}) as $input
     | (if ($input | type) == "string" then ($input | fromjson? // {}) else $input end)
@@ -796,8 +1034,49 @@ function do_question() {
   fi
   body="$(truncate_with_ellipsis "${first:-Needs input}" "$((BODY_LIMIT - ${#suffix}))")${suffix}"
 
-  fire_alerter_detached "${title}" "$(compute_subtitle)" "${body}" \
+  fire_alerter_detached "$(tier_title "${title}")" "$(banner_subtitle)" "${body}" \
     "$(resolve_sound Tink)" "${HARNESS}-question" "${ASSETS_DIR}/${icon}.png"
+}
+
+# Prints the tier, subtitle and sounds the hooks would use in this pane. The
+# session name comes from transcript $1, else from the transcript of
+# $CLAUDE_CODE_SESSION_ID, which a `!` command in Claude Code inherits. Fails on
+# a tiers file or transcript it cannot read or find, which the hooks pass over.
+function do_explain() {
+  local transcript_path="${1}" projects_dir candidate
+  HARNESS="claude"
+  if [[ -e "${TIERS_FILE}" && ! (-f "${TIERS_FILE}" && -r "${TIERS_FILE}") ]]; then
+    echo "Error: cannot read the tiers file ${TIERS_FILE}; check that it is a readable file." >&2
+    return 1
+  fi
+  if [[ -n "${transcript_path}" && ! (-f "${transcript_path}" && -r "${transcript_path}") ]]; then
+    echo "Error: cannot read the transcript ${transcript_path}." >&2
+    return 1
+  fi
+  if [[ -z "${transcript_path}" && -n "${CLAUDE_CODE_SESSION_ID:-}" ]]; then
+    projects_dir="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}/projects"
+    # The pattern keeps the ID from adding path segments or glob characters.
+    if [[ "${CLAUDE_CODE_SESSION_ID}" =~ ^[A-Za-z0-9-]+$ ]]; then
+      for candidate in "${projects_dir}/"*"/${CLAUDE_CODE_SESSION_ID}.jsonl"; do
+        if [[ -f "${candidate}" && -r "${candidate}" ]]; then
+          transcript_path="${candidate}"
+          break
+        fi
+      done
+    fi
+    if [[ -z "${transcript_path}" ]]; then
+      echo "Error: found no readable transcript for session ${CLAUDE_CODE_SESSION_ID} in ${projects_dir}." >&2
+      return 1
+    fi
+  fi
+  resolve_tier "${transcript_path}"
+  read_session_name "${transcript_path}"
+  printf 'tier: %s\n' "${TIER:-untiered}"
+  printf 'rule: %s\n' "${TIER_RULE:-none}"
+  printf 'name: %s\n' "${SESSION_NAME:-none}"
+  printf 'subtitle: %s\n' "$(banner_subtitle)"
+  printf 'sounds: stop %s, permission %s, attention %s\n' \
+    "$(resolve_sound Glass)" "$(resolve_sound Funk)" "$(resolve_sound Tink)"
 }
 
 # -----------------------------------------------------------------------------
@@ -808,6 +1087,10 @@ function main() {
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
     exit 0
+  fi
+  if [[ "${1:-}" == explain ]]; then
+    do_explain "${2:-}"
+    exit
   fi
 
   HOOK_INPUT="$(cat)"

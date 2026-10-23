@@ -51,7 +51,7 @@ Delivers native macOS notifications so you can work in other apps while an agent
 
 - **A per-harness icon**: Claude Code or Codex's app icon. The icon identifies the agent, so titles leave the harness name out.
 - **A title that names the action**: `Done`, `Approve <Tool>?` (or `Needs approval` when no tool can be identified), `Question` or `<N> questions`, or `Plan ready for review`.
-- **A subtitle that identifies the task**: `<repo> · <task>`. The repository name comes from git's shared repository directory, so a worktree reports its repository rather than its folder; outside git, the folder name is used. The task is the tmux pane title (set by `workmux`, Claude Code or similar) with leading status glyphs such as `✳` removed. When the pane title names no task (a shell, editor, `tmux`, `ssh` or harness name, a shell's `user@host:path` default, or the repository or folder name), the task is the branch suffix, everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
+- **A subtitle that identifies the task**: `<repo> · <task>`, or for a [tiered session](#session-tiers) in tmux, the tmux session and window to act in. The repository name comes from git's shared repository directory, so a worktree reports its repository rather than its folder; outside git, the folder name is used. The task is the tmux pane title (set by `workmux`, Claude Code or similar) with leading status glyphs such as `✳` removed. When the pane title names no task (a shell, editor, `tmux`, `ssh` or harness name, a shell's `user@host:path` default, or the repository or folder name), the task is the branch suffix, everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
 - **A short body**: per-event content (see matrix below), kept within 140 characters.
   - Completion bodies summarize the agent's final reply. Markdown is removed, and headings, list items and paragraphs read as separate sentences. Fenced code and tables, with or without leading pipes, are dropped, as are status lines (a leading `▸`, or two or more `·` separators) when the reply has prose; a reply without prose uses its status lines, and one with neither uses its first code or table line. An unclosed fence is read as prose. Whole sentences are kept in order. A sentence that no longer fits is cut at a word boundary with `…` when it is the first sentence or at least 40 characters remain; otherwise it and every later sentence are dropped. A reply that is a JSON object with a string `summary` field is summarized from that field.
   - Claude Code permission bodies show a per-tool preview of the call the prompt is about. The Notification payload omits the call's input, so the plugin reads the current turn's tool calls without a result yet from the transcript and chooses one by the payload's message:
@@ -63,13 +63,15 @@ Delivers native macOS notifications so you can work in other apps while an agent
     File paths are shown relative to the repository root (or under `~`) and truncated from the left so the file name stays visible. Bash commands drop a leading `cd` into the working directory or repository root. When no call matches, the body is the payload message.
 
   - Question bodies show the first question, followed by `(+N more)` when there are several.
-- **Event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion by default. An optional [repository sound set](#repository-sound-set) substitutes variants. Claude's idle reminders are disabled.
+- **Event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion by default. An optional [repository sound set](#repository-sound-set) substitutes variants, with [tier subsets](#tier-sound-subsets) for tiered sessions. Claude's idle reminders are disabled.
 - **Session-specific groups**: banners from unrelated sessions do not replace one another. Completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored.
 - **Completions you started**: only a turn that began with your prompt posts `Done`. Claude Code turns started by a background task, another session, a scheduled or `/loop` wake, an idle notice or an SDK caller end silently. So do Codex subagents such as guardian reviews, and `codex exec` and `codex review` runs, with one exception in [Notes and caveats](#notes-and-caveats). When the origin is unknown, the banner is posted. Your turn's banner fires when the turn ends, even if its background work is still running. Later results post nothing.
-- **Visibility-aware completion**: completion alerts are suppressed when the host terminal application is frontmost and a focused tmux client displays the originating pane. The terminal is identified from `$TERM_PROGRAM`, which must be one of Apple Terminal (`Apple_Terminal`), iTerm2 (`iTerm.app`), Ghostty (`ghostty`), WezTerm (`WezTerm`), VS Code (`vscode`) or Alacritty (`alacritty`). If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
+- **Visibility-aware completion**: completion alerts are suppressed when the host terminal application is frontmost and a focused tmux client displays the originating pane. The terminal is identified from `$TERM_PROGRAM`, which must be one of Apple Terminal (`Apple_Terminal`), iTerm2 (`iTerm.app`), Ghostty (`ghostty`), WezTerm (`WezTerm`), VS Code (`vscode`) or Alacritty (`alacritty`). tmux 3.2 and later set `TERM_PROGRAM=tmux` in every pane; the terminal then comes from `__CFBundleIdentifier`, or else from the tmux server's global `TERM_PROGRAM`, both inherited from where the server started. tmux reports a focused client only with `set -g focus-events on`. If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
 - **Fire-and-forget delivery**: each `alerter` is stopped a short grace period after launch (see [Notes and caveats](#notes-and-caveats)), so no process waits on the banner. Banners stay in Notification Center. Clicking one does not focus the originating terminal or tmux pane.
 
 ## When it fires
+
+These tables describe untiered sessions; [tiered sessions](#session-tiers) post less.
 
 ### Claude Code
 
@@ -94,6 +96,61 @@ MCP tools appear by their tool name, as in `Approve batch?`, with the server nam
 
 `UserPromptSubmit` resets completion deduplication without posting a banner. `Stop` posts nothing for subagent sessions or `codex exec` and `codex review` runs, except a run started in a terminal with an option that takes a value before its command; see [Notes and caveats](#notes-and-caveats). Repeated Stop events in the same user turn are suppressed, including their sounds. A Stop hook that requests continuation can still cause the first completion banner before that continuation finishes; the notification plugin does not decide whether other Stop hooks will continue the turn.
 
+## Session tiers
+
+When many sessions run in tiers, each in a named tmux window, place each session in a tier so a banner fires only when nothing else brings the event to you:
+
+- `top`: a session that coordinates others and keeps your list of open asks.
+- `lead`: a session that asks you things directly, such as a project's conductor or a standing monitor. It adds each ask to the top session's list before asking.
+- `worker`: a session that reports to a lead by message and never asks you anything.
+
+A session placed in no tier is untiered and behaves as the rest of this README describes.
+
+### What tiered sessions post
+
+| Event                                              | `top` and `lead`                                                                             | `worker`                  |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------- |
+| Completion of a turn your prompt started           | `Done`, unless you answered one of the session's questions or plans in it (Claude Code only) | nothing                   |
+| Completion of a turn started any other way         | nothing                                                                                      | nothing                   |
+| Permission prompt                                  | posts                                                                                        | posts, titled `Worker: …` |
+| Elicitation dialog                                 | posts                                                                                        | posts, titled `Worker: …` |
+| Plan approval                                      | nothing                                                                                      | posts, titled `Worker: …` |
+| Question (`AskUserQuestion`, `request_user_input`) | nothing                                                                                      | nothing                   |
+
+- A top or lead session's questions and plans post nothing because the top session's list already carries them. Permission prompts and elicitation dialogs post because the harness or an MCP server raises them without an announcement, and only the session's pane can answer them.
+- A worker reports by message, so its completions post nothing; it posts only prompts that stop it.
+- A Claude Code completion is silent when its turn holds an `AskUserQuestion` or `ExitPlanMode` call you answered or rejected. A call that failed before reaching you does not count. Codex records a failed `request_user_input` call in the same form as an answered one, so a Codex top or lead session always posts its `Done`, which may repeat a question you just answered. A reply typed to a question asked in plain text looks like a new prompt, so that turn's `Done` still posts.
+- In tmux, the subtitle is `<tmux session>: <window>`. Icon-font glyphs (Unicode private-use characters), which banners cannot render, are removed from the window name; a window named only with them shows the Claude session name, or the tmux session alone. Outside tmux the subtitle stays `<repo> · <task>`.
+- Sounds come from the tier's [sound subset](#tier-sound-subsets) when one is installed.
+
+### Placing sessions
+
+`NOTIFY_TIER=top`, `lead` or `worker` in the environment inherited by Claude Code or Codex CLI places a session directly, for example from a launcher; other values are ignored. Otherwise the first matching rule in `${XDG_CONFIG_HOME:-$HOME/.config}/agent-harness-notify/tiers` decides, and a session that matches none stays untiered. The plugin ships no rules.
+
+Each rule is a line `<tier> <field> <pattern>`. The pattern is the rest of the line, without its surrounding whitespace. Bash `=~` matches it against the field as a POSIX extended regular expression:
+
+| Field     | Matches                                                                                                 |
+| --------- | ------------------------------------------------------------------------------------------------------- |
+| `window`  | the tmux window name                                                                                    |
+| `session` | the tmux session name                                                                                   |
+| `server`  | the tmux server name: the basename of the socket in `$TMUX`, `default` unless `tmux -L` names one       |
+| `name`    | the Claude session name, set with `claude --name` or a rename, read from the transcript; Codex has none |
+| `dir`     | `$CLAUDE_PROJECT_DIR`, or the hook's working directory                                                  |
+
+```text
+# tier    field    pattern
+top       window   ^coordinator$
+worker    dir      ^/Users/sample/projects/[^/]+/[^/]+/[^/]+
+lead      name     ^[[:upper:]][[:upper:][:digit:] /&-]*$
+lead      window   ^conductor$
+```
+
+- Lines that do not start with a tier name, including `#` comment lines, are skipped. Lines with an unknown field or a pattern bash cannot compile are also skipped.
+- A field that is empty or unavailable, such as `window` outside tmux, matches nothing.
+- Write a significant trailing space as `[ ]`, since editors strip trailing whitespace, and prefer classes such as `[[:upper:]]` to ranges such as `[A-Z]`, whose meaning depends on the locale.
+
+To check a tiers file, run the installed plugin's `scripts/notify explain` by its full path in a session's pane without changing directory, for example with `!` at a Claude Code prompt. This gives `dir` rules the same directory as the hooks. It prints the tier, the matching rule, the session name, the subtitle and the sound for each role. It reads the session name from the transcript of `$CLAUDE_CODE_SESSION_ID`, or from a transcript path passed as its argument. It fails, naming the file, when the tiers file or a transcript argument cannot be read. When `$CLAUDE_CODE_SESSION_ID` is set but no readable transcript turns up, it fails, naming the session and the folder searched. The hooks treat an unreadable tiers file as absent.
+
 ## Repository sound set
 
 Set `NOTIFY_SOUND_SET=<prefix>` in the environment inherited by Claude Code or Codex CLI to enable a separately installed sound set. Unset or empty keeps the default sounds. The prefix must match `^[A-Za-z0-9._-]+$`; invalid values are ignored.
@@ -114,6 +171,10 @@ Selection uses POSIX `cksum` on the repository name's bytes without a trailing n
 
 The selected name is passed to `alerter --sound` without an extension. macOS searches `~/Library/Sounds`, then `/Library/Sounds`, then `/System/Library/Sounds`. The plugin counts set files only in `~/Library/Sounds`. System Settings > Notifications > Terminal must allow sounds.
 
+### Tier sound subsets
+
+A [tiered session](#session-tiers) first looks for its tier's subset, `<prefix>-<tier>-<role>-<n>.<ext>`, such as `Chord-worker-permission-0.aiff`, counted the same way. A role without index `0` in the subset falls back to the plain set, then to its built-in sound. In tmux, a tiered session hashes its subtitle, `<tmux session>: <window>`, instead of the repository name, so sessions in one repository can play different variants. Untiered sessions use the plain set and the repository name as described above.
+
 ## Notes and caveats
 
 - Every event launches `alerter` in a detached process, so the harness is never held up. Completion markers are stored under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/`; deleting this cache resets deduplication.
@@ -121,6 +182,8 @@ The selected name is passed to `alerter --sound` without an extension. macOS sea
 - `scripts/notify` parses under macOS `/bin/bash` 3.2, which `#!/usr/bin/env bash` finds when Homebrew is not on `PATH`. A parse failure exits 2, which Claude Code treats as blocking the hook's event, so the test suite parses it with `/bin/bash`. CI runs on Linux, where `/bin/bash` is bash 5, so only local macOS runs check bash 3.2.
 - The transcript-based extractors (pending tool use, the turn's origin, and the last assistant message when a Stop payload lacks the field) stream the transcript JSONL newest line first (`tac`, or `tail -r` on stock macOS) into one `jq` pass that stops at the current turn's prompt; a slash-command invocation starts a turn like a typed prompt. The origin pass reads `turnOrigin`, or `origin.kind` and `isMeta` in older transcripts, from records sharing the turn's `promptId`. It stops at the previous turn's newest record, or at the current turn's prompt without `promptId`s. Time and memory follow the current turn rather than the file: a 20,000-line turn takes under a tenth of a second. A pending call is reduced to the fields its preview reads, so a 50 MB `Write` takes under half a second.
 - A Codex session's source is in the `session_meta` record on its transcript's first line: `cli`, `exec` or a subagent. Resuming a session keeps its original source, so the plugin also reads the command line of the Codex process running the hook. `codex exec`, its alias `e` and `codex review` are headless, and any other Codex command is interactive. `ps` joins arguments with spaces, so the command is certain only when it is the first argument after any plain flags. After an option that may take a value containing spaces, or with a prompt instead of a command, the process's terminal decides. The interactive TUI has a terminal; a run an agent starts does not. A `codex exec` started in a terminal with such options before `exec` therefore posts its banner. A subagent source always ends silently. Otherwise, the transcript's `cli` or `exec` decides only when the parent is not Codex. `codex exec --ephemeral` writes no transcript.
+- A tiered session reads its tmux session and window names with one `tmux` call, removes icon-font glyphs with one `jq` call, and finds its session name with `grep` only when a `name` rule or a glyph-only window needs it, which keeps a large transcript out of `jq`. With no tiers file and no `NOTIFY_TIER`, a session only checks that the file is absent.
+- `alerter` replaces or removes banners by listing the notifications delivered as Terminal, and a later process sees none of them, so banners with the same group do not replace one another and `alerter --remove` has no effect.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.
 
 ## See Also
