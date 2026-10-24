@@ -443,7 +443,7 @@ codex-aspects: the code prompt is N bytes, above the 120000-byte limit for one a
 schema.json
 ```
 
-## Review aspects run read-only, with the model, effort and stdin set per run
+## Review aspects run read-only and offline, with the model, effort and stdin set per run
 
 The helper is given a pipe on stdin, as an agent harness gives it, and each
 run must still see `/dev/null`, never the caller's pipe. Bash already starts a
@@ -458,6 +458,10 @@ $ printf "" | "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope
 --skip-git-repo-check
 --sandbox
 read-only
+--config
+approval_policy="never"
+--config
+web_search="disabled"
 --ephemeral
 --model
 test-model
@@ -477,6 +481,8 @@ stdin: character-device
 ```scrut
 $ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > /dev/null \
 >   && grep -A1 -e '^--model$' -e '^--config$' "${FIXTURE}/log/code.args" | grep -v -e '^--' -e '^--$'
+approval_policy="never"
+web_search="disabled"
 gpt-6.1-sol
 model_reasoning_effort="xhigh"
 model_context_window=872000
@@ -643,10 +649,15 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/simplify" && cd "${FIXTURE}/simplify" \
 >      --reviewed-scope "${FIXTURE}/before.json" --results "${FIXTURE}/simplify-results.json" \
 >      --statuses "${FIXTURE}/simplify-statuses.json" --reviewed-aspect code | jq -r '.[0].status' \
 >   && grep -A1 '^--sandbox$' "${FIXTURE}/log/simplify.args" | tail -1 \
+>   && grep -x -e 'approval_policy="never"' -e 'web_search="disabled"' -e 'sandbox_workspace_write.network_access=false' \
+>      "${FIXTURE}/log/simplify.args" \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/after.json" \
 >   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/before.json" --after "${FIXTURE}/after.json" | jq -c '{changed, outside_scope}'
 ok
 workspace-write
+approval_policy="never"
+web_search="disabled"
+sandbox_workspace_write.network_access=false
 {"changed":["lib.sh"],"outside_scope":[]}
 ```
 

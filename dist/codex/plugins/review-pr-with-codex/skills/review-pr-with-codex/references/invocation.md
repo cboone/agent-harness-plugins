@@ -18,6 +18,8 @@ codex exec \
   --cd <external temporary working directory> \
   --skip-git-repo-check \
   --sandbox read-only \
+  --config 'approval_policy="never"' \
+  --config 'web_search="disabled"' \
   --ephemeral \
   --model <model> \
   --config 'model_reasoning_effort="<effort>"' \
@@ -33,6 +35,9 @@ Each part is there for a reason:
 - **`< /dev/null`.** `codex exec` appends a non-terminal stdin to the prompt. An agent harness's stdin is a pipe that never closes, so without the redirect the run prints `Reading additional input from stdin...` and waits forever. Measured against `codex-cli 0.155.1`, it hung until a timeout stopped it and never created its output file, so the aspect produced nothing at all.
 - **External `--cd` and `--skip-git-repo-check`.** The helper rejects repository-local `TMPDIR` to keep its working directory and prompt artifacts external. This excludes current checkout instructions from initial project-instruction discovery. Global instructions and user configuration remain active. The prompt supplies historical guidance and absolute reads with `git -C`; keep the session directory outside the checkout. `simplify` receives `--add-dir <repository root>` for authorized edits.
 - **`--sandbox read-only`** makes the read-only rule structural. `simplify` alone gets `workspace-write`, and the helper refuses to run it beside any other aspect, without passing the review gate, or when the scope changed after `--scope` was captured. The recheck runs immediately before launch but takes no lock, so a concurrent edit in that window is not prevented.
+- **`--config 'approval_policy="never"'`**, on every run including `simplify`, keeps each run inside its sandbox. Without it, the user's Codex configuration supplies the approval policy. Under `on-request`, a run can request a command outside the sandbox, and an automatic approval reviewer may approve it. With `never`, the request fails and the command stays sandboxed. The sandbox holds only with this setting, so the helper always passes it and accepts no option that removes it.
+- **`--config 'web_search="disabled"'`**, on every run, turns off Codex's built-in web search. It is a model tool that reaches the network without running a command, so neither the sandbox nor the approval policy governs it. Together the two settings keep each read-only run's commands and web search offline, and the helper always passes both. MCP servers in the user's Codex configuration are not covered and can still reach the network.
+- **`--config 'sandbox_workspace_write.network_access=false'`**, on the `simplify` run only, turns off network access in its `workspace-write` sandbox, which the user's configuration could allow. A read-only sandbox has none to turn off.
 - **`--ephemeral`** keeps each run from persisting a session.
 - **`--model`, `--config model_reasoning_effort` and `--config model_context_window`** apply to that run only, so the user's Codex defaults are untouched and never fill in for an omitted option. The helper's defaults are `gpt-6.1-sol`, `xhigh` and `872000`, that model's largest window; it refuses a `--window` that is not a positive whole number.
 - **`--output-schema` is checked before the review starts, and not every keyword survives.** Measured against `codex-cli 0.157.1`, `pattern` and `minimum` are honored, and a `pattern` with lookaround is rejected with `Invalid JSON schema: regex lookaround is not supported` and HTTP 400, which fails the aspect with no output file. After editing the schema, run it through one real invocation rather than trusting that a valid JSON Schema is an acceptable one.

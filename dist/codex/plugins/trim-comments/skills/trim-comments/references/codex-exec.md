@@ -29,6 +29,8 @@ tmp='<codex_tmp>'
 if codex exec \
   --cd "$(git rev-parse --show-toplevel)" \
   --sandbox read-only \
+  --config 'approval_policy="never"' \
+  --config 'web_search="disabled"' \
   --ephemeral \
   --model '<model>' \
   --config 'model_reasoning_effort="<effort>"' \
@@ -48,7 +50,9 @@ A skill that ships an output schema adds `--output-schema <absolute path to the 
 Each part is there for a reason:
 
 - **`--sandbox read-only`** makes the run unable to write, so the skill's read-only rule no longer rests on instructions alone. It also blocks network access; see [What the run cannot reach](#what-the-run-cannot-reach).
-- **`--model` and both `--config` settings** apply to this run only. The skill's settings always win, an omitted one never falls back to the user's interactive Codex configuration, and that configuration stays unchanged.
+- **`--config 'approval_policy="never"'`** keeps the run inside that sandbox. Without it, the user's Codex configuration supplies the approval policy. Under `on-request`, the run can request a command outside the sandbox, and an automatic approval reviewer may approve it. With `never`, the request fails and the command stays sandboxed. The sandbox holds only with this setting; never drop it.
+- **`--config 'web_search="disabled"'`** turns off Codex's built-in web search. It is a model tool that reaches the network without running a command, so neither the sandbox nor the approval policy governs it. Together with the approval setting, it keeps the run's commands and web search offline. MCP servers in the user's Codex configuration are not covered and can still reach the network.
+- **`--model` and the two model `--config` settings** apply to this run only. The skill's settings always win, an omitted one never falls back to the user's interactive Codex configuration, and that configuration stays unchanged.
 - **`--ephemeral`** keeps the run from persisting a session.
 - **`< /dev/null`.** `codex exec` appends a non-terminal stdin to the prompt. An agent harness's stdin is a pipe that never closes, so without the redirect the run waits forever and writes nothing.
 - **The prompt from a file.** The prompt holds paths and arguments with quotes of their own; a file-writing tool takes it as data, so no quoting rule applies.
@@ -73,7 +77,7 @@ Run it in this session. Do not hand it to `codex exec` or to a subagent.
 
 ## What the run cannot reach
 
-The read-only sandbox blocks network access, so a step that calls `gh` or another network service fails inside the run, and the run cannot ask the user anything. Before starting it, the calling session performs any such read or question the skill names, such as finding the base branch, writes the result into the capture directory or the prompt, and names it as data for the step that needs it.
+The read-only sandbox blocks network access and web search is off, so a step that calls `gh` or another network service fails inside the run, and the run cannot ask the user anything. Before starting it, the calling session performs any such read or question the skill names, such as finding the base branch, writes the result into the capture directory or the prompt, and names it as data for the step that needs it.
 
 ## Completion checks
 

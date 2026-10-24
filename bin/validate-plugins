@@ -1043,6 +1043,87 @@ if ! shared_reference_output="$(bin/build-shared-references --check 2>&1)"; then
   fi
 fi
 
+# ─── 23. Scripted codex exec runs stay sandboxed with web search off ────────
+# Every scripted codex exec run must pass approval_policy="never" and
+# web_search="disabled" as --config or -c arguments. Scripted Codex runs in
+# docs/plugin-development.md defines a run.
+
+CODEX_EXEC_START='^[[:space:]]*((if|!)[[:space:]]+)*codex[[:space:]]+exec([[:space:]]|$)'
+readonly CODEX_EXEC_START
+
+# One grep and one awk over all files, since the scrut suite runs the
+# validator dozens of times. Both statuses are checked, so a failed search or
+# scan never passes; grep's exit 1 only means no file matched. The loops read
+# through process substitution: bash 3.2 skips a here-string loop silently
+# when it cannot write the here-string's temporary file.
+codex_exec_files=()
+codex_exec_search_status=0
+codex_exec_list="$(grep -rlIE "${CODEX_EXEC_START}" plugins | LC_ALL=C sort)" \
+  || codex_exec_search_status=$?
+if [[ "${codex_exec_search_status}" -gt 1 ]]; then
+  error "Rule 23 could not search plugins/ for codex exec runs"
+fi
+while IFS= read -r codex_exec_file; do
+  [[ -n "${codex_exec_file}" ]] || continue
+  codex_exec_files+=("${codex_exec_file}")
+done < <(printf '%s\n' "${codex_exec_list}")
+
+if [[ ${#codex_exec_files[@]} -gt 0 ]]; then
+  if ! codex_exec_unpinned="$(
+    awk -v start_re="${CODEX_EXEC_START}" '
+      function finish(  missing) {
+        if (pending && !(approval && offline)) {
+          missing = approval ? "" : "approval_policy=\"never\""
+          if (!offline) {
+            missing = missing (missing == "" ? "" : " and ") "web_search=\"disabled\""
+          }
+          print location "\t" missing
+        }
+        pending = 0
+      }
+
+      FNR == 1 {
+        finish()
+        in_fence = 0
+        markdown = FILENAME ~ /\.md$/
+      }
+
+      markdown && /^[[:space:]]*```/ {
+        finish()
+        in_fence = !in_fence
+        next
+      }
+
+      !pending && (!markdown || in_fence) && $0 ~ start_re {
+        pending = 1
+        approval = 0
+        offline = 0
+        location = FILENAME ":" FNR
+      }
+
+      pending {
+        if ($0 ~ /(^|[[:space:]])(--config|-c)(=|[[:space:]]+).?approval_policy=\\?"never\\?"/) {
+          approval = 1
+        }
+        if ($0 ~ /(^|[[:space:]])(--config|-c)(=|[[:space:]]+).?web_search=\\?"disabled\\?"/) {
+          offline = 1
+        }
+        if ($0 !~ /\\$/) {
+          finish()
+        }
+      }
+
+      END { finish() }
+    ' "${codex_exec_files[@]}"
+  )"; then
+    error "Rule 23 could not scan the codex exec runs it found"
+  fi
+  while IFS=$'\t' read -r codex_exec_location codex_exec_missing; do
+    [[ -n "${codex_exec_location}" ]] || continue
+    error "${codex_exec_location} runs codex exec without ${codex_exec_missing}; pass --config 'approval_policy=\"never\"' and --config 'web_search=\"disabled\"' so it stays sandboxed with web search off"
+  done < <(printf '%s\n' "${codex_exec_unpinned}")
+fi
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then
