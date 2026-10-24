@@ -35,6 +35,10 @@ readonly REVIEW_GUIDES="plugins/set-up-review-config/skills/set-up-review-config
 readonly SHARED_REFERENCE_SOURCE="plugins/publish-report-board/skills/publish-report-board/references/progress-model.md"
 readonly SHARED_REFERENCE_COPY="plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md"
 
+# The rule 23 scenarios drop settings from these two scripted codex exec runs.
+readonly CODEX_ASPECTS="plugins/review-pr-with-codex/scripts/codex-aspects"
+readonly CODEX_INVOCATION="plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md"
+
 # Replaces a SKILL.md frontmatter description, including any folded
 # continuation lines, with a single plain-scalar line.
 function replace_description() {
@@ -162,6 +166,23 @@ function wrap_generator_to_extend_manifest() {
   wrap_generator 'printf "%s\n" "interface:" "  short_description: Prepare a release" >> "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/agents/openai.yaml"'
 }
 
+# Puts a grep or awk wrapper first on PATH that exits 2 when the given test
+# matches its arguments, rule 23's own call, and runs the real tool otherwise.
+function fail_rule23_call() {
+  local tool="${1}" test="${2}" real
+  real="$(command -v "${tool}")"
+  mkdir -p "${FIXTURE_ROOT}/fail-bin"
+  # The expansions belong to the wrapper, so they are written out literally.
+  # shellcheck disable=SC2016
+  printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    "if ${test}; then exit 2; fi" \
+    "exec '${real}' \"\$@\"" \
+    > "${FIXTURE_ROOT}/fail-bin/${tool}"
+  chmod +x "${FIXTURE_ROOT}/fail-bin/${tool}"
+  export PATH="${FIXTURE_ROOT}/fail-bin:${PATH}"
+}
+
 function main() {
   local scenario="${1}"
   FIXTURE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
@@ -267,6 +288,44 @@ function main() {
     extra-manifest-key)
       add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
       wrap_generator_to_extend_manifest
+      ;;
+    # Rule 23 scenarios edit files no shared reference copies, so rule 22
+    # stays quiet. The first drops one setting from each of two runs, and adds
+    # runs whose missing setting sits in the next command, in another approval
+    # value or in the prompt.
+    unpinned-codex-exec)
+      perl -ni -e 'print unless /approval_policy="never"/' "${FIXTURE_ROOT}/${CODEX_ASPECTS}"
+      perl -ni -e 'print unless /web_search="disabled"/' "${FIXTURE_ROOT}/${CODEX_INVOCATION}"
+      printf '%s\n' '' '```bash' \
+        "codex exec --config 'web_search=\"disabled\"' \"Sample prompt\" < /dev/null" \
+        "other-tool --config 'approval_policy=\"never\"'" \
+        "codex exec \\" \
+        "  --config 'approval_policy=\"never\"' \\" \
+        '  "Sample prompt" < /dev/null' \
+        "other-tool --config 'web_search=\"disabled\"'" \
+        "codex exec -c 'approval_policy=\"on-request\"' -c 'web_search=\"disabled\"' \"Sample prompt\" < /dev/null" \
+        'if ! codex exec "Check approval_policy=\"never\" and web_search=\"disabled\"" < /dev/null; then exit 1; fi' \
+        '```' \
+        >> "${FIXTURE_ROOT}/${RELEASE_SKILL}"
+      ;;
+    # Prose and comments that name the command are not runs. Escaped quotes
+    # and --config=value both count.
+    pinned-codex-exec-forms)
+      printf '%s\n' '' 'codex exec runs outside a fence are prose.' '' '```bash' \
+        '# codex exec is named in a comment' \
+        'if ! codex exec -c "approval_policy=\"never\"" -c "web_search=\"disabled\"" "Sample prompt" < /dev/null; then exit 1; fi' \
+        "codex exec --config='approval_policy=\"never\"' --config='web_search=\"disabled\"' \"Sample prompt\" < /dev/null" \
+        '```' \
+        >> "${FIXTURE_ROOT}/${RELEASE_SKILL}"
+      ;;
+    # A search or scan that fails must fail validation, not pass as clean.
+    failed-codex-exec-search)
+      # shellcheck disable=SC2016
+      fail_rule23_call grep '[[ "${1:-}" == "-rlIE" ]]'
+      ;;
+    failed-codex-exec-scan)
+      # shellcheck disable=SC2016
+      fail_rule23_call awk '[[ "${1:-}" == "-v" && "${2:-}" == start_re=* ]]'
       ;;
     # 2 percent of 100,000 is a 2,000-token budget, 850 after the reserve: less
     # than the counted descriptions alone cost.
