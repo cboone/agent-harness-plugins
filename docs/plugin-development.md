@@ -325,6 +325,10 @@ The shared references are:
 
 Write a shared reference for every consumer, and leave rules only one consumer follows in that consumer's own references.
 
+## Scripted Codex runs
+
+A skill or helper that runs `codex exec` passes `--config 'approval_policy="never"'` and `--config 'web_search="disabled"'` alongside its `--sandbox` mode, which together keep the run's commands and web search offline. A `workspace-write` run also passes `--config 'sandbox_workspace_write.network_access=false'`, since the user's configuration can allow network access in that sandbox; rule 23 does not check it. MCP servers in the user's Codex configuration are covered by none of these settings and can still reach the network. Without `approval_policy="never"`, the user's Codex configuration supplies the approval policy. Under `on-request`, a run can request a command outside its sandbox, and an automatic approval reviewer may approve it. Without `web_search="disabled"`, Codex's built-in web search follows the user's configuration. Neither the sandbox nor the approval policy governs this model tool. Rule 23 of `bin/validate-plugins` fails a run that lacks either setting. A run is a line starting with `codex exec`, optionally after any of `if` and `!`, in a shipped file other than Markdown or in a fenced Markdown block, read through its last backslash-continued line; prose and comments that name the command are not runs. A setting counts only as the value of a `--config` or `-c` argument, `approval_policy="never"` or `web_search="disabled"` with its quotes optionally backslash-escaped, so the same text in a prompt does not. The rule reads lines, not shell words, so flag-shaped text inside a quoted prompt, such as `"Review --config 'approval_policy=\"never\"'"`, or in a trailing comment can still satisfy it; it guards against a setting left out, not against text written to imitate one. Write the command name literally: runs built another way, such as through a variable holding the command name, escape the rule.
+
 ## Adding a plugin
 
 1. Create the plugin directory under `plugins/`.
