@@ -126,10 +126,10 @@ $ fresh
 {"v":1,"event":"permission_request","harness":"claude-code","session_id":"s1","session_name":"docs-refresh","tmux":{"socket":"projects","session":"main","window":"editor","window_id":"@3","pane":"%7"},"cwd":"/work","permission_mode":"default","tool":"Edit","subject":"/work/README.md"}
 ```
 
-## Timestamps are UTC ISO 8601 ending in Z, and requests carry an id
+## Timestamps are UTC ISO 8601 with milliseconds, ending in Z, and requests carry an id
 
 ```scrut
-$ events '[(.ts | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")), (.id | type), (.host | type)]'
+$ events '[(.ts | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$")), (.id | type), (.host | type)]'
 [true,"string","string"]
 ```
 
@@ -693,11 +693,13 @@ $ fresh
 > mkdir -p "${ATTENTION_LOG_DIR}"
 > printf '%s\n' \
 >   '{"v":1,"ts":"2020-01-01T00:00:00Z","event":"permission_request","id":"old","session_id":"s1","session_name":"long wait","tool":"Bash"}' \
+>   '{"v":1,"ts":"2020-01-01T00:00:00.500Z","event":"api_error_stop","id":"old-ms","session_id":"s4","error":"overloaded"}' \
 >   '{"v":1,"ts":"2020-01-01T00:00:00Z","event":"permission_request","id":"done","session_id":"s2","tool":"Bash"}' \
 >   '{"v":1,"ts":"2020-01-01T00:00:05Z","event":"cleared","id":"done","session_id":"s2"}' > "${events_file}"
 > hook PermissionRequest '{"tool_name": "Bash", "tool_input": {"command": "new"}}' s3
 > al pending --older-than 03600 | sed 's/, [0-9]*s)$/, AGE)/'
 long wait (permission_request Bash, AGE)
+s4 (api_error_stop overloaded, AGE)
 ```
 
 ## Pending replays the rotated file first

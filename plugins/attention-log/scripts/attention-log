@@ -59,7 +59,8 @@ def shrink:
 | (if $tool != "" then $tool else $in.tool_name end | field(100)) as $tool_name
 | {
     v: 1,
-    ts: (now | floor | todate),
+    ts: ((now * 1000 | floor) as $ms
+      | ($ms / 1000 | floor | todate | rtrimstr("Z")) + "." + ($ms % 1000 + 1000 | tostring | .[1:]) + "Z"),
     event: $event,
     id: ($id | str),
     host: ($host | field(100)),
@@ -111,6 +112,8 @@ readonly REFUSAL_JQ
 # line per state: "<tmux session>: <window>" (or the session's name or id
 # outside tmux), then the event, its tool or error, and its age. A
 # permission_waiting event opens a state only when its id is not already open.
+# Timestamps parse and sort with or without milliseconds; jq's fromdateiso8601
+# rejects a fraction, so it is added back separately.
 IFS= read -r -d '' PENDING_JQ << 'JQ' || true
 reduce (inputs | fromjson? | objects | select(.v == 1 and (.session_id | type) == "string")) as $event ({};
   if $event.event == "cleared" then
@@ -122,8 +125,9 @@ reduce (inputs | fromjson? | objects | select(.v == 1 and (.session_id | type) =
   elif $event.event == "permission_waiting" then .[$event.session_id][$event.id] //= $event
   else . end)
 | [.[] | .[]]
-| map(. + {age: ((now - ((.ts | fromdateiso8601?) // now)) | floor)} | select(.age >= $older))
-| sort_by(.ts)
+| map(. + {at: ((.ts | strings | (sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601?) + ((capture("(?<f>\\.[0-9]+)Z$").f | tonumber) // 0)) // now)})
+| map(. + {age: ((now - .at) | floor)} | select(.age >= $older))
+| sort_by(.at)
 | .[]
 | (if .tmux.session then "\(.tmux.session): \(.tmux.window // "")" else (.session_name // .session_id) end)
   + " (\(.event)\(if (.tool // .error) then " " + (.tool // .error) else "" end), \(.age)s)"

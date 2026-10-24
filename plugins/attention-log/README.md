@@ -50,7 +50,7 @@ Every line has `v`, `ts`, `event`, `host`, `harness` and `session_id`. Other fie
 | Field               | Value                                                                                                                                                                |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `v`                 | `1`                                                                                                                                                                  |
-| `ts`                | UTC, ISO 8601, ending in `Z`                                                                                                                                         |
+| `ts`                | UTC, ISO 8601 with milliseconds, ending in `Z`, such as `2026-10-24T20:26:12.234Z`                                                                                   |
 | `event`             | One of the events above                                                                                                                                              |
 | `id`                | On events that open a state, any unique string; repeated by `permission_waiting` and `cleared`, or `"*"`                                                             |
 | `host`              | The machine's short host name                                                                                                                                        |
@@ -77,7 +77,7 @@ Never recorded: commands, tool output, file contents, environment variables, oth
 ### Example
 
 ```json
-{"v":1,"ts":"2026-10-23T14:02:11Z","event":"permission_request","id":"1792771331-48211-1904427","host":"workstation","harness":"claude-code","session_id":"0b6c1f6e-7d1e-4a9e-9f0c-2f5b8f0a7c3d","session_name":"docs-refresh","tmux":{"socket":"default","session":"docs","window":"refresh","window_id":"@12","pane":"%41"},"cwd":"/home/user/src/docs","permission_mode":"default","tool":"Edit","subject":"/home/user/src/docs/README.md"}
+{"v":1,"ts":"2026-10-23T14:02:11.482Z","event":"permission_request","id":"1792771331-48211-1904427","host":"workstation","harness":"claude-code","session_id":"0b6c1f6e-7d1e-4a9e-9f0c-2f5b8f0a7c3d","session_name":"docs-refresh","tmux":{"socket":"default","session":"docs","window":"refresh","window_id":"@12","pane":"%41"},"cwd":"/home/user/src/docs","permission_mode":"default","tool":"Edit","subject":"/home/user/src/docs/README.md"}
 ```
 
 ## Commands
