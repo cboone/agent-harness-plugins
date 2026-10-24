@@ -86,7 +86,7 @@ codex-aspects run --aspect code --aspect errors ... \
 
 Pass each entry of the Codex `project_doc_fallback_filenames` setting, in order, as a `--guide-name` to every `prompt` and `run` command; the helper does not read Codex configuration, so without them a guide that only has a fallback name is left out of the prompt.
 
-It starts one `codex exec --sandbox read-only` per aspect, waits for all of them, and prints a JSON array with one status per aspect. Exit status 3 means at least one aspect failed; the array still says which. Give the command a generous timeout: each aspect is a full Codex review.
+It starts one `codex exec --sandbox read-only` per aspect with `approval_policy="never"` and `web_search="disabled"` to keep it sandboxed with web search off. It waits for all runs, then prints a JSON array with one status per aspect. Exit status 3 means at least one aspect failed; the array still says which. Give the command a generous timeout: each aspect is a full Codex review.
 
 **On the subagent path**, for each aspect:
 

@@ -999,7 +999,10 @@ function cmd_run() {
   # `< /dev/null` is required: `codex exec` appends a non-terminal stdin to the
   # prompt, and an agent harness's stdin is a pipe that never closes, so the
   # run would wait forever and never write its output file. --ephemeral keeps
-  # each run from persisting a session.
+  # each run from persisting a session. approval_policy="never" stops a run
+  # from asking to leave its sandbox. web_search="disabled" turns off web
+  # search, which no sandbox covers. simplify's writable sandbox also gets
+  # network access off, which the user's configuration could allow.
   # Recapture the scope immediately before the writable launch. Another
   # session can still edit between this check and the launch; nothing here
   # locks the tree.
@@ -1021,13 +1024,15 @@ function cmd_run() {
     extra_args=()
     if [[ "${aspect}" == "simplify" ]]; then
       sandbox="workspace-write"
-      extra_args=(--add-dir "${top_level}")
+      extra_args=(--config 'sandbox_workspace_write.network_access=false' --add-dir "${top_level}")
     fi
 
     codex exec \
       --cd "${TMP_DIR}/work" \
       --skip-git-repo-check \
       --sandbox "${sandbox}" \
+      --config 'approval_policy="never"' \
+      --config 'web_search="disabled"' \
       --ephemeral \
       --model "${model}" \
       --config "model_reasoning_effort=\"${effort}\"" \
