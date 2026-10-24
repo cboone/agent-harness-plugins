@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Records Claude Code permission waits and error stops; registers no Codex CLI hooks yet.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "hooks": "./hooks/codex.hooks.json",
+  "keywords": ["hooks", "logging", "monitoring", "permissions"],
+  "license": "MIT",
+  "name": "attention-log",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "version": "1.0.0"
+}

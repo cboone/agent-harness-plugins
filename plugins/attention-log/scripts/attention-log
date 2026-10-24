@@ -1,0 +1,735 @@
+#!/usr/bin/env bash
+# Records each Claude Code permission wait, API error stop and safeguard refusal
+# stop as one line of an append-only JSON Lines file that watchers read.
+#
+# Hooks run async, print nothing on stdout and exit 0, so none can answer a
+# permission dialog. The event format is a versioned contract that readers parse
+# directly; the plugin README documents it.
+#
+# Must parse under macOS /bin/bash 3.2, what `env bash` finds without Homebrew.
+set -euo pipefail
+
+readonly SCRIPT_NAME="${0##*/}"
+
+STATE_DIR="${ATTENTION_LOG_DIR:-${HOME}/.local/state/attention-log}"
+readonly STATE_DIR
+readonly EVENTS_FILE="${STATE_DIR}/events.jsonl"
+readonly ROTATED_FILE="${EVENTS_FILE}.1"
+readonly ROTATE_LOCK="${STATE_DIR}/rotate.lock"
+readonly SESSIONS_DIR="${STATE_DIR}/sessions"
+
+# Rotation renames the file, never copies and truncates it, so a reader
+# following its inode carries on.
+readonly ROTATE_BYTES=5242880
+
+# Well under 4 KB, so each line stays one write even where a writer's buffer is
+# that small.
+readonly MAX_LINE_BYTES=4000
+
+readonly EVENT_NAMES="permission_request permission_waiting api_error_stop refusal_stop cleared elicitation auto_denied"
+
+# Splits marker lines and jq and tmux output; no field value contains it.
+readonly FIELD_SEP=$'\037'
+
+# Builds one event line from the hook payload on stdin. Unused and empty fields
+# are left out, and free-text fields are dropped in order until the line fits
+# MAX_LINE_BYTES. A subject is only a file tool's path or a web fetch's host.
+# error_text is left out for invalid_request, the error a refusal arrives as.
+# Read with `read -d ''` because bash 3.2 cannot parse this heredoc inside $().
+IFS= read -r -d '' EVENT_JQ << 'JQ' || true
+def str: if type == "string" and length > 0 then . else null end;
+def cut($n): if length <= $n then . elif $n < 1 then "" else .[0:$n - 1] + "…" end;
+def field($n): str | cut($n);
+def host_of:
+  (capture("^[A-Za-z][A-Za-z0-9+.-]*://(?:[^/?#]*@)?(?<h>\\[[^\\]]*\\]|[^/?#:]+)") | .h) // null;
+def subject($tool):
+  (.tool_input | if type == "object" then . else {} end) as $input
+  | ((if $tool == "Read" or $tool == "Write" or $tool == "Edit" or $tool == "MultiEdit" then $input.file_path
+      elif $tool == "NotebookEdit" then $input.notebook_path
+      elif $tool == "Glob" or $tool == "Grep" then $input.path
+      elif $tool == "WebFetch" then $input.url | strings | host_of
+      else null end) | strings | cut(200))
+    // null;
+def fits: tojson | utf8bytelength <= $max;
+def shrink:
+  reduce ("subject", "error_text", "cwd", "session_name", "tmux", "mcp_server") as $key
+    (.; if fits then . else del(.[$key]) end)
+  | select(fits);
+. as $in
+| (if $tool != "" then $tool else $in.tool_name end | field(100)) as $tool_name
+| {
+    v: 1,
+    ts: (now | floor | todate),
+    event: $event,
+    id: ($id | str),
+    host: ($host | field(100)),
+    harness: "claude-code",
+    session_id: ($in.session_id | field(100)),
+    session_name: ($session_name | field(200)),
+    agent_id: ($in.agent_id | field(100)),
+    tmux: (if $pane == "" then null else {
+      socket: ($socket | field(100)),
+      session: ($tmux_session | field(100)),
+      window: ($tmux_window | field(100)),
+      window_id: ($window_id | field(20)),
+      pane: ($pane | field(20))
+    } | with_entries(select(.value != null)) end),
+    cwd: ($in.cwd | field(1000)),
+    permission_mode: ($in.permission_mode | field(40))
+  }
+  + if $event == "permission_request" or $event == "auto_denied" then {
+      tool: $tool_name,
+      mcp_server: ($in.mcp_server | if type == "object" then .name else . end | field(100)),
+      subject: ($in | subject($tool_name))
+    } elif $event == "permission_waiting" then {tool: $tool_name} else {} end
+  + if $event == "permission_waiting" or $event == "elicitation" then
+      {notification_type: ($in.notification_type | field(60))} else {} end
+  + if $event == "api_error_stop" or $event == "refusal_stop" then {error: ($in.error | field(60))} else {} end
+  + if $event == "api_error_stop" and $in.error != "invalid_request" then
+      {error_text: ($in.last_assistant_message | field(300))} else {} end
+| with_entries(select(.value != null and .value != ""))
+| shrink
+JQ
+readonly EVENT_JQ
+
+# Prints "refusal" when a refusal record (a model_refusal_no_fallback system
+# record, or an API-error assistant record that stopped for a refusal) follows
+# the turn's last prompt or ordinary reply. A tool result is not a prompt.
+# Reads record types and metadata only.
+IFS= read -r -d '' REFUSAL_JQ << 'JQ' || true
+reduce (inputs | fromjson? | objects) as $record (false;
+  if $record.type == "assistant" and $record.isApiErrorMessage != true then false
+  elif $record.type == "user" and ($record.message.content | type == "string" or (type == "array" and all(.[]; .type? != "tool_result"))) then false
+  elif $record.type == "system" and $record.subtype == "model_refusal_no_fallback" then true
+  elif $record.type == "assistant" and $record.message.stop_reason == "refusal" then true
+  else . end)
+| if . then "refusal" else empty end
+JQ
+readonly REFUSAL_JQ
+
+# Replays both files into the open states, newest rotation last, and prints one
+# line per state: "<tmux session>: <window>" (or the session's name or id
+# outside tmux), then the event, its tool or error, and its age. A
+# permission_waiting event opens a state only when its id is not already open.
+IFS= read -r -d '' PENDING_JQ << 'JQ' || true
+reduce (inputs | fromjson? | objects | select(.v == 1 and (.session_id | type) == "string")) as $event ({};
+  if $event.event == "cleared" then
+    if $event.id == "*" then del(.[$event.session_id])
+    else .[$event.session_id] |= ((. // {}) | del(.[$event.id | tostring])) end
+  elif ($event.id | type) != "string" then .
+  elif $event.event == "permission_request" or $event.event == "api_error_stop" or $event.event == "refusal_stop" then
+    .[$event.session_id][$event.id] = $event
+  elif $event.event == "permission_waiting" then .[$event.session_id][$event.id] //= $event
+  else . end)
+| [.[] | .[]]
+| map(. + {age: ((now - ((.ts | fromdateiso8601?) // now)) | floor)} | select(.age >= $older))
+| sort_by(.ts)
+| .[]
+| (if .tmux.session then "\(.tmux.session): \(.tmux.window // "")" else (.session_name // .session_id) end)
+  + " (\(.event)\(if (.tool // .error) then " " + (.tool // .error) else "" end), \(.age)s)"
+JQ
+readonly PENDING_JQ
+
+# Set by read_hook_fields from the hook payload.
+HOOK_INPUT=""
+SESSION_ID=""
+TRANSCRIPT_PATH=""
+AGENT_ID=""
+TOOL_NAME=""
+NOTIFICATION_TYPE=""
+ERROR_TYPE=""
+SESSION_TITLE=""
+MARKER_FILE=""
+
+# Set by read_session_name and read_tmux, once per event.
+SESSION_NAME=""
+TMUX_SOCKET=""
+TMUX_SESSION=""
+TMUX_WINDOW=""
+TMUX_WINDOW_ID=""
+TMUX_PANE_ID=""
+
+LOCK_DIR=""
+LOCK_HELD=false
+
+# Set by marker_take_request and marker_newest_wait.
+TAKEN_ID=""
+WAIT_ID=""
+WAIT_TOOL=""
+
+# Set by file_size, file_inode, strip_zeros and scan_events.
+FILE_SIZE=0
+FILE_INODE=""
+DIGITS=""
+SCAN_END=0
+
+function usage() {
+  cat << 'USAGE_TEXT'
+Usage: attention-log <command> [options]
+
+Records Claude Code permission waits and error stops in
+~/.local/state/attention-log/events.jsonl (or $ATTENTION_LOG_DIR/events.jsonl).
+
+Commands:
+  hook <Event>                         Record a hook event; reads its payload on stdin
+  wait [--from <position>] [--events <list>]
+                                       Wait for the next matching line after <position>
+                                       (default: the end of the file), then print the
+                                       line and the position after it, and exit
+  pending [--older-than <seconds>]     List open states as "session: window" lines
+
+A position is <inode>:<offset>, as wait prints it, or a byte offset in the
+current file. Events: permission_request, permission_waiting, api_error_stop,
+refusal_stop, cleared, elicitation, auto_denied. <list> is comma-separated.
+
+Options:
+  -h, --help  Show this help
+USAGE_TEXT
+}
+
+function usage_error() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  echo "Run '${SCRIPT_NAME} --help' for usage." >&2
+  exit 2
+}
+
+# Sets FILE_SIZE to the size of file $1 in bytes, or 0 when it is missing.
+function file_size() {
+  FILE_SIZE="$(wc -c < "${1}" 2> /dev/null)" || FILE_SIZE=0
+  FILE_SIZE="${FILE_SIZE//[!0-9]/}"
+}
+
+# Sets DIGITS to the digit string $1 without its leading zeros, so arithmetic
+# never reads it as octal. Not $((10#...)), which semgrep cannot parse.
+function strip_zeros() {
+  DIGITS="${1#"${1%%[!0]*}"}"
+  DIGITS="${DIGITS:-0}"
+}
+
+# Sets FILE_INODE to the inode number of file $1, or to "" when it is missing.
+function file_inode() {
+  local listing
+  FILE_INODE=""
+  listing="$(ls -di "${1}" 2> /dev/null)" || return 0
+  read -r FILE_INODE _ <<< "${listing}"
+}
+
+# -----------------------------------------------------------------------------
+# Writing events
+# -----------------------------------------------------------------------------
+
+# Renames a full events file to events.jsonl.1 under a lock, so two writers
+# never rename twice and lose the first rotation. A lock left by a stopped
+# writer is taken over once it is a minute old.
+function rotate_events() {
+  if ! mkdir "${ROTATE_LOCK}" 2> /dev/null; then
+    [[ -n "$(find "${ROTATE_LOCK}" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0
+    rmdir "${ROTATE_LOCK}" 2> /dev/null || return 0
+    mkdir "${ROTATE_LOCK}" 2> /dev/null || return 0
+  fi
+  file_size "${EVENTS_FILE}"
+  if ((FILE_SIZE >= ROTATE_BYTES)); then
+    mv -f "${EVENTS_FILE}" "${ROTATED_FILE}" || true
+  fi
+  rmdir "${ROTATE_LOCK}" 2> /dev/null || true
+}
+
+# Appends line $1 in one write: cat reads the here-string, complete before cat
+# starts, in one read, and O_APPEND places the write after every other writer's.
+function append_line() {
+  local line="${1}"
+  file_size "${EVENTS_FILE}"
+  ((FILE_SIZE < ROTATE_BYTES)) || rotate_events
+  cat >> "${EVENTS_FILE}" <<< "${line}"
+}
+
+# Writes event $1 with id $2, built from HOOK_INPUT, the session's name and its
+# tmux place. $3 overrides the payload's tool name, for events whose payload
+# has none.
+function emit_event() {
+  local event="${1}" id="${2:-}" tool="${3:-}" line
+  read_session_name
+  read_tmux
+  line="$(printf '%s' "${HOOK_INPUT}" | jq -c \
+    --arg event "${event}" \
+    --arg id "${id}" \
+    --arg tool "${tool}" \
+    --arg host "${HOSTNAME%%.*}" \
+    --arg session_name "${SESSION_NAME}" \
+    --arg socket "${TMUX_SOCKET}" \
+    --arg tmux_session "${TMUX_SESSION}" \
+    --arg tmux_window "${TMUX_WINDOW}" \
+    --arg window_id "${TMUX_WINDOW_ID}" \
+    --arg pane "${TMUX_PANE_ID}" \
+    --argjson max "${MAX_LINE_BYTES}" \
+    "${EVENT_JQ}")" || return 0
+  [[ -n "${line}" ]] || return 0
+  append_line "${line}"
+}
+
+# -----------------------------------------------------------------------------
+# Session context
+# -----------------------------------------------------------------------------
+
+# Sets the hook fields from HOOK_INPUT, with control characters removed, so
+# they are safe in marker lines and file names.
+function read_hook_fields() {
+  local fields
+  fields="$(printf '%s' "${HOOK_INPUT}" | jq -r --arg sep "${FIELD_SEP}" \
+    '[.session_id, .transcript_path, .agent_id, .tool_name, .notification_type, .error, .session_title]
+      | map(strings // "" | gsub("[\u0000-\u001f]"; ""))
+      | join($sep)' 2> /dev/null)" || return 1
+  IFS="${FIELD_SEP}" read -r SESSION_ID TRANSCRIPT_PATH AGENT_ID TOOL_NAME NOTIFICATION_TYPE ERROR_TYPE SESSION_TITLE \
+    <<< "${fields}" || true
+  if [[ "${SESSION_ID}" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    MARKER_FILE="${SESSIONS_DIR}/${SESSION_ID}.open"
+  else
+    SESSION_ID=""
+  fi
+}
+
+# Sets SESSION_NAME from the transcript's newest agent-name (--name) or
+# custom-title (rename) record, else from the title captured at session start.
+# grep keeps a large transcript out of jq, and the type check drops lines that
+# only quote such a record.
+function read_session_name() {
+  if [[ -f "${TRANSCRIPT_PATH}" ]]; then
+    SESSION_NAME="$(grep -E '"type":"(agent-name|custom-title)"' "${TRANSCRIPT_PATH}" 2> /dev/null \
+      | jq -Rnr 'reduce (inputs | fromjson? | objects) as $record (null;
+          if $record.type == "agent-name" then ($record.agentName | strings) // .
+          elif $record.type == "custom-title" then ($record.customTitle | strings) // .
+          else . end)
+        // empty' 2> /dev/null)" || SESSION_NAME=""
+  fi
+  if [[ -z "${SESSION_NAME}" && -n "${SESSION_ID}" && -f "${SESSIONS_DIR}/${SESSION_ID}.name" ]]; then
+    IFS= read -r SESSION_NAME < "${SESSIONS_DIR}/${SESSION_ID}.name" || true
+  fi
+}
+
+# Sets the tmux fields for $TMUX_PANE, or leaves them empty outside tmux. The
+# socket is the last part of the socket path in $TMUX, which is the name
+# `tmux -L` takes for a server in the default socket directory; a server
+# started with `tmux -S` elsewhere keeps only its file name.
+function read_tmux() {
+  [[ -n "${TMUX:-}" && -n "${TMUX_PANE:-}" ]] || return 0
+  local socket_path="${TMUX%%,*}" names
+  TMUX_SOCKET="${socket_path##*/}"
+  TMUX_PANE_ID="${TMUX_PANE}"
+  names="$(tmux display-message -t "${TMUX_PANE}" -p \
+    "#{session_name}${FIELD_SEP}#{window_name}${FIELD_SEP}#{window_id}" 2> /dev/null)" || return 0
+  [[ "${names}" == *"${FIELD_SEP}"*"${FIELD_SEP}"* ]] || return 0
+  IFS="${FIELD_SEP}" read -r TMUX_SESSION TMUX_WINDOW TMUX_WINDOW_ID <<< "${names}" || true
+}
+
+# Succeeds when the transcript shows that a safeguard refusal ended the turn.
+# The hook can run before the transcript has the turn's last records, so it
+# looks again for a short while before deciding.
+function transcript_shows_refusal() {
+  [[ -f "${TRANSCRIPT_PATH}" ]] || return 1
+  local attempt verdict
+  for attempt in 1 2 3 4 5; do
+    verdict="$(tail -n 20 "${TRANSCRIPT_PATH}" 2> /dev/null | jq -Rnr "${REFUSAL_JQ}" 2> /dev/null)" || verdict=""
+    [[ "${verdict}" != refusal ]] || return 0
+    if ((attempt < 5)); then
+      sleep 0.5
+    fi
+  done
+  return 1
+}
+
+# -----------------------------------------------------------------------------
+# Open-state markers
+# -----------------------------------------------------------------------------
+#
+# MARKER_FILE, sessions/<session id>.open, holds one line per open state: kind
+# (request, waiting or stop), id, agent id and tool, split by FIELD_SEP. Not a
+# tab: read merges runs of whitespace separators, losing an empty agent id.
+# Changes run under the session lock, so a hook that closes a state writes after
+# the hook that opened it.
+
+# Takes the session lock, a directory holding its owner's PID. It is taken over
+# from a stopped owner, or after a minute without a PID; a running owner is
+# waited on for about ten seconds and never overtaken. Fails if not taken.
+function lock_session() {
+  local tries=0 owner
+  LOCK_DIR="${SESSIONS_DIR}/${SESSION_ID}.lock"
+  while ! mkdir "${LOCK_DIR}" 2> /dev/null; do
+    owner=""
+    IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
+    if { [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2> /dev/null; } \
+      || { [[ -z "${owner}" && -n "$(find "${LOCK_DIR}" -maxdepth 0 -mmin +1 2> /dev/null)" ]]; }; then
+      rm -f "${LOCK_DIR}/pid"
+      rmdir "${LOCK_DIR}" 2> /dev/null || true
+    fi
+    ((tries += 1))
+    ((tries <= 100)) || return 1
+    sleep 0.1
+  done
+  printf '%s\n' "$$" > "${LOCK_DIR}/pid"
+  LOCK_HELD=true
+}
+
+# Releases the session lock if this hook still owns it.
+function unlock_session() {
+  local owner=""
+  [[ "${LOCK_HELD}" == true ]] || return 0
+  LOCK_HELD=false
+  IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
+  [[ "${owner}" == "$$" ]] || return 0
+  rm -f "${LOCK_DIR}/pid"
+  rmdir "${LOCK_DIR}" 2> /dev/null || true
+}
+
+# Adds an open state of kind $1 with id $2 for the payload's agent and tool.
+function marker_add() {
+  printf '%s\n' "${1}${FIELD_SEP}${2}${FIELD_SEP}${AGENT_ID}${FIELD_SEP}${TOOL_NAME}" >> "${MARKER_FILE}"
+}
+
+# Removes the oldest open request for the payload's agent and tool and sets
+# TAKEN_ID to its id, or to "" when none matches.
+function marker_take_request() {
+  local kind id agent tool rest=""
+  TAKEN_ID=""
+  [[ -f "${MARKER_FILE}" ]] || return 0
+  while IFS="${FIELD_SEP}" read -r kind id agent tool; do
+    if [[ -z "${TAKEN_ID}" && "${kind}" == request && "${agent}" == "${AGENT_ID}" && "${tool}" == "${TOOL_NAME}" ]]; then
+      TAKEN_ID="${id}"
+    else
+      rest+="${kind}${FIELD_SEP}${id}${FIELD_SEP}${agent}${FIELD_SEP}${tool}"$'\n'
+    fi
+  done < "${MARKER_FILE}"
+  [[ -n "${TAKEN_ID}" ]] || return 0
+  if [[ -n "${rest}" ]]; then
+    printf '%s' "${rest}" > "${MARKER_FILE}.tmp"
+    mv -f "${MARKER_FILE}.tmp" "${MARKER_FILE}"
+  else
+    rm -f "${MARKER_FILE}"
+  fi
+}
+
+# Sets WAIT_ID and WAIT_TOOL to the id and tool of the newest open request or
+# waiting prompt of the payload's agent, or to "" when none is open, so a
+# main-thread prompt never joins a subagent's request.
+function marker_newest_wait() {
+  local kind id agent tool
+  WAIT_ID=""
+  WAIT_TOOL=""
+  [[ -f "${MARKER_FILE}" ]] || return 0
+  while IFS="${FIELD_SEP}" read -r kind id agent tool; do
+    if [[ ("${kind}" == request || "${kind}" == waiting) && "${agent}" == "${AGENT_ID}" ]]; then
+      WAIT_ID="${id}"
+      WAIT_TOOL="${tool}"
+    fi
+  done < "${MARKER_FILE}"
+}
+
+# -----------------------------------------------------------------------------
+# Hook events
+# -----------------------------------------------------------------------------
+
+# Writes event $2 for a new state with an id unique across sessions and hosts,
+# and adds it to the marker as kind $1 while the session lock is held.
+function record_state() {
+  local id
+  id="$(date -u +%s)-$$-${RANDOM}${RANDOM}"
+  [[ "${LOCK_HELD}" != true ]] || marker_add "${1}" "${id}"
+  emit_event "${2}" "${id}"
+}
+
+# Opens a state of marker kind $1 and writes event $2 for it.
+function open_state() {
+  [[ -z "${SESSION_ID}" ]] || lock_session || true
+  record_state "${1}" "${2}"
+  unlock_session
+}
+
+function on_permission_request() {
+  open_state request permission_request
+}
+
+# A permission prompt repeats the id of the newest open request or waiting
+# prompt. With none open, such as a sandbox's network prompt, which raises no
+# PermissionRequest, it opens a state of its own. The marker is read under the
+# session lock, so a tool result that clears the request writes after this.
+function on_notification() {
+  case "${NOTIFICATION_TYPE}" in
+    permission_prompt)
+      if [[ -n "${SESSION_ID}" ]] && lock_session; then
+        marker_newest_wait
+      fi
+      if [[ -n "${WAIT_ID}" ]]; then
+        emit_event permission_waiting "${WAIT_ID}" "${WAIT_TOOL}"
+      else
+        record_state waiting permission_waiting
+      fi
+      unlock_session
+      ;;
+    elicitation_dialog | elicitation_url_dialog)
+      emit_event elicitation
+      ;;
+    *) ;;
+  esac
+}
+
+function on_permission_denied() {
+  emit_event auto_denied
+}
+
+function on_tool_result() {
+  [[ -n "${SESSION_ID}" && -f "${MARKER_FILE}" ]] || return 0
+  lock_session || return 0
+  marker_take_request
+  if [[ -n "${TAKEN_ID}" ]]; then
+    emit_event cleared "${TAKEN_ID}"
+  fi
+  unlock_session
+}
+
+# A safeguard refusal reaches StopFailure as an invalid_request error; the
+# transcript tells it apart from other invalid requests.
+function on_stop_failure() {
+  if [[ "${ERROR_TYPE}" == invalid_request ]] && transcript_shows_refusal; then
+    open_state stop refusal_stop
+  else
+    open_state stop api_error_stop
+  fi
+}
+
+# Closes every open state of the session, since a dismissed dialog can leave
+# no hook behind. An error stop stays open until the next prompt or session
+# end: Stop does not fire for a turn that StopFailure ended.
+function clear_session() {
+  [[ -n "${SESSION_ID}" && -f "${MARKER_FILE}" ]] || return 0
+  lock_session || return 0
+  if [[ -f "${MARKER_FILE}" ]]; then
+    rm -f "${MARKER_FILE}"
+    emit_event cleared "*"
+  fi
+  unlock_session
+}
+
+function on_session_start() {
+  [[ -n "${SESSION_ID}" && -n "${SESSION_TITLE}" ]] || return 0
+  printf '%s\n' "${SESSION_TITLE}" > "${SESSIONS_DIR}/${SESSION_ID}.name"
+}
+
+function on_session_end() {
+  clear_session
+  [[ -z "${SESSION_ID}" ]] || rm -f "${SESSIONS_DIR}/${SESSION_ID}.name"
+}
+
+# Reads the payload and records hook event $1. Whatever happens, prints nothing
+# on stdout and exits 0, so no output can be read as a decision.
+function do_hook() {
+  local hook_event="${1:-}" input_head="" session_pattern='"session_id":"([A-Za-z0-9_-]+)"'
+  exec > /dev/null
+  trap 'unlock_session; exit 0' EXIT
+  # The log holds paths and session names, so only this user may read it.
+  umask 077
+
+  # Tool results and turn boundaries fire constantly. Their payloads begin with
+  # session_id, so the first bytes settle whether the session has an open state
+  # before the rest, which can be a large tool result, is parsed.
+  IFS= read -r -d '' -n 512 input_head || true
+  case "${hook_event}" in
+    PostToolUse | PostToolUseFailure | UserPromptSubmit | Stop)
+      if [[ "${input_head}" =~ ${session_pattern} && ! -f "${SESSIONS_DIR}/${BASH_REMATCH[1]}.open" ]]; then
+        cat > /dev/null
+        return 0
+      fi
+      ;;
+    *) ;;
+  esac
+  HOOK_INPUT="${input_head}$(cat)"
+
+  [[ -d "${SESSIONS_DIR}" ]] || mkdir -p "${SESSIONS_DIR}"
+  if ! command -v jq > /dev/null; then
+    echo "${SCRIPT_NAME}: jq is required and is not on PATH; no event was recorded" >&2
+    return 0
+  fi
+  read_hook_fields || return 0
+
+  case "${hook_event}" in
+    PermissionRequest) on_permission_request ;;
+    Notification) on_notification ;;
+    PermissionDenied) on_permission_denied ;;
+    PostToolUse | PostToolUseFailure) on_tool_result ;;
+    StopFailure) on_stop_failure ;;
+    UserPromptSubmit | Stop) clear_session ;;
+    SessionStart) on_session_start ;;
+    SessionEnd) on_session_end ;;
+    *) ;;
+  esac
+}
+
+# -----------------------------------------------------------------------------
+# Readers
+# -----------------------------------------------------------------------------
+
+# Exits 1 when the state directory exists but cannot be read, so a permission
+# problem is not reported as an empty log. A missing directory is an empty log.
+function check_state_dir() {
+  [[ -e "${STATE_DIR}" ]] || return 0
+  [[ -d "${STATE_DIR}" && -r "${STATE_DIR}" && -x "${STATE_DIR}" ]] && return 0
+  echo "${SCRIPT_NAME}: cannot read ${STATE_DIR}" >&2
+  exit 1
+}
+
+# Scans file $1, which had inode $2, from byte offset $3 for the first complete
+# line whose event is in the space-padded list $4 (any event when $4 is empty).
+# On a match, prints the line and the position after it, <inode>:<offset>, and
+# succeeds. Otherwise sets SCAN_END to the offset to resume from and fails. A
+# rotation during the scan can hand the read the new file, whose bytes do not
+# belong to inode $2, so a scan that ends with a different inode is discarded
+# and SCAN_END stays at $3.
+function scan_events() {
+  local file="${1}" inode="${2}" offset="${3}" wanted="${4}" line found=false event_pattern='"event":"([a-z_]+)"'
+  SCAN_END="${offset}"
+  [[ -f "${file}" ]] || return 1
+  while IFS= read -r line; do
+    offset=$((offset + ${#line} + 1))
+    if [[ -z "${wanted}" ]] \
+      || { [[ "${line}" =~ ${event_pattern} ]] && [[ "${wanted}" == *" ${BASH_REMATCH[1]} "* ]]; }; then
+      found=true
+      break
+    fi
+  done < <(tail -c +"$((offset + 1))" "${file}")
+  file_inode "${file}"
+  [[ "${FILE_INODE}" == "${inode}" ]] || return 1
+  SCAN_END="${offset}"
+  [[ "${found}" == true ]] || return 1
+  printf '%s\n%s:%s\n' "${line}" "${inode}" "${offset}"
+}
+
+# A position names the file by inode, so a rotation since it was printed is
+# noticed however far the new file has grown: the rest of the file it names,
+# now events.jsonl.1, is read first, then the new file from its start. Only one
+# rotation back is kept, so after two the position's file is gone and wait
+# starts the current file from its start. A bare offset refers to whatever
+# file is current when wait starts.
+function do_wait() {
+  local LC_ALL=C inode="" offset="" wanted="" name names=() current
+  local position_pattern='^(([0-9]{1,20}):)?([0-9]{1,15})$'
+  while (($# > 0)); do
+    case "${1}" in
+      --from)
+        [[ "${2:-}" =~ ${position_pattern} ]] || usage_error "--from needs a position, <inode>:<offset> or <offset>"
+        # The inode is compared as text. The offset's 15 digits stay far from
+        # overflow.
+        offset="${BASH_REMATCH[3]}"
+        if [[ -n "${BASH_REMATCH[2]}" ]]; then
+          strip_zeros "${BASH_REMATCH[2]}"
+          inode="${DIGITS}"
+        fi
+        strip_zeros "${offset}"
+        offset="${DIGITS}"
+        shift 2
+        ;;
+      --events)
+        [[ -n "${2:-}" ]] || usage_error "--events needs a comma-separated list"
+        IFS=',' read -r -a names <<< "${2}"
+        for name in ${names[@]+"${names[@]}"}; do
+          [[ " ${EVENT_NAMES} " == *" ${name} "* ]] || usage_error "unknown event '${name}'"
+          wanted+=" ${name}"
+        done
+        shift 2
+        ;;
+      *) usage_error "unknown argument '${1}'" ;;
+    esac
+  done
+  [[ -z "${wanted}" ]] || wanted="${wanted} "
+  check_state_dir
+  # The default position is the end of the current file, with its inode read
+  # on both sides of its size, so a rotation in between is not mistaken for
+  # growth of the new file.
+  while [[ -z "${offset}" ]]; do
+    file_inode "${EVENTS_FILE}"
+    inode="${FILE_INODE}"
+    file_size "${EVENTS_FILE}"
+    file_inode "${EVENTS_FILE}"
+    [[ "${FILE_INODE}" != "${inode}" ]] || offset="${FILE_SIZE}"
+  done
+
+  while true; do
+    check_state_dir
+    file_inode "${EVENTS_FILE}"
+    current="${FILE_INODE}"
+    if [[ -n "${inode}" && "${current}" != "${inode}" ]]; then
+      file_inode "${ROTATED_FILE}"
+      if [[ "${FILE_INODE}" == "${inode}" ]]; then
+        scan_events "${ROTATED_FILE}" "${inode}" "${offset}" "${wanted}" && return 0
+        offset="${SCAN_END}"
+      fi
+      [[ -z "${current}" ]] || offset=0
+    fi
+    if [[ -n "${current}" ]]; then
+      inode="${current}"
+      file_size "${EVENTS_FILE}"
+      ((FILE_SIZE >= offset)) || offset=0
+      if ((FILE_SIZE > offset)); then
+        scan_events "${EVENTS_FILE}" "${inode}" "${offset}" "${wanted}" && return 0
+        offset="${SCAN_END}"
+      fi
+    fi
+    sleep 1
+  done
+}
+
+function do_pending() {
+  local older=0 files=() attempt inode output=""
+  while (($# > 0)); do
+    case "${1}" in
+      --older-than)
+        [[ "${2:-}" =~ ^[0-9]{1,15}$ ]] || usage_error "--older-than needs a number of seconds"
+        strip_zeros "${2}"
+        older="${DIGITS}"
+        shift 2
+        ;;
+      *) usage_error "unknown argument '${1}'" ;;
+    esac
+  done
+  check_state_dir
+  # A rotation between choosing the files and reading them would leave the
+  # rotated file out, so a replay that ends with a different inode runs again.
+  for attempt in 1 2 3; do
+    file_inode "${EVENTS_FILE}"
+    inode="${FILE_INODE}"
+    files=()
+    [[ ! -f "${ROTATED_FILE}" ]] || files+=("${ROTATED_FILE}")
+    [[ ! -f "${EVENTS_FILE}" ]] || files+=("${EVENTS_FILE}")
+    ((${#files[@]} > 0)) || return 0
+    output="$(jq -Rnr --argjson older "${older}" "${PENDING_JQ}" "${files[@]}")"
+    file_inode "${EVENTS_FILE}"
+    [[ "${FILE_INODE}" != "${inode}" ]] || break
+  done
+  [[ -z "${output}" ]] || printf '%s\n' "${output}"
+}
+
+function main() {
+  case "${1:-}" in
+    -h | --help)
+      usage
+      ;;
+    hook)
+      shift
+      do_hook "$@"
+      ;;
+    wait)
+      shift
+      do_wait "$@"
+      ;;
+    pending)
+      shift
+      do_pending "$@"
+      ;;
+    "")
+      usage >&2
+      exit 2
+      ;;
+    *)
+      usage_error "unknown command '${1}'"
+      ;;
+  esac
+}
+
+main "$@"
