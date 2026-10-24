@@ -643,13 +643,14 @@ offset is the first line's byte length
 
 ## After two rotations wait starts the current file from its start
 
-The position's file is gone, so the current file's first event comes next, even though the file is longer than the old offset.
+The position's file is gone, so the current file's first event comes next, even though the file is longer than the old offset. A link held to the first file keeps its inode from being reused for the new one, as ext4 can do once that file is gone.
 
 ```scrut
 $ fresh
 > hook PermissionDenied '{"tool_name": "Bash", "tool_input": {"command": "x"}}'
 > position="$(al wait --from 0 | tail -n 1)"
 > mv "${events_file}" "${events_file}.1"
+> ln "${events_file}.1" "${work}/first-file"
 > hook PermissionDenied '{"tool_name": "Bash", "tool_input": {"command": "y"}}'
 > mv "${events_file}" "${events_file}.1"
 > for n in 1 2 3; do hook Notification '{"notification_type": "elicitation_dialog", "message": "m"}'; done
