@@ -50,14 +50,14 @@ Parses
 ## Help
 
 ```scrut
-$ al --help | head -n 1
+$ al --help | sed -n 1p
 Usage: attention-log <command> [options]
 ```
 
 ## No command is a usage error
 
 ```scrut
-$ al 2>&1 | head -n 1
+$ al 2>&1 | sed -n 1p
 Usage: attention-log <command> [options]
 [2]
 ```
@@ -566,7 +566,7 @@ $ fresh
 > hook PermissionDenied '{"tool_name": "Bash", "tool_input": {"command": "x"}, "reason": "r"}'
 > al wait --events refusal_stop,api_error_stop > "${work}/waited" &
 > waiter=$!
-> (sleep 15 && kill "${waiter}") > /dev/null 2>&1 &
+> (trap 'kill "${nap}" 2> /dev/null; exit 0' TERM; sleep 15 & nap=$!; wait "${nap}"; kill "${waiter}") > /dev/null 2>&1 &
 > guard=$!
 > sleep 1.5
 > hook PermissionRequest '{"tool_name": "Bash", "tool_input": {"command": "a"}}'
@@ -601,7 +601,7 @@ $ position="$(tail -n 1 "${work}/waited")"
 >   hook Notification '{"notification_type": "elicitation_dialog", "message": "m"}'
 > done
 > (($(wc -c < "${events_file}") > ${position#*:})) && echo "new file is past the old offset"
-> al wait --from "${position}" | head -n 1 | jq -c .event
+> al wait --from "${position}" | sed -n 1p | jq -c .event
 new file is past the old offset
 "permission_request"
 ```
@@ -610,7 +610,7 @@ new file is past the old offset
 
 ```scrut
 $ position="$(al wait --from "${position}" --events api_error_stop | tail -n 1)"
-> al wait --from "${position}" | head -n 1 | jq -c .event
+> al wait --from "${position}" | sed -n 1p | jq -c .event
 "elicitation"
 ```
 
@@ -621,7 +621,7 @@ $ fresh
 > hook PermissionDenied '{"tool_name": "Bash", "tool_input": {"command": "x"}}'
 > hook Notification '{"notification_type": "elicitation_dialog", "message": "m"}'
 > first="$(head -n 1 "${events_file}" | LC_ALL=C wc -c | tr -d ' ')"
-> al wait --from "00${first}" | head -n 1 | jq -c .event
+> al wait --from "00${first}" | sed -n 1p | jq -c .event
 "elicitation"
 ```
 
@@ -636,7 +636,7 @@ $ fresh
 > hook PermissionRequest '{"tool_name": "Read", "tool_input": {"file_path": "/work/b"}}'
 > position="$(LC_ALL=en_US.UTF-8 al wait --from 0 | tail -n 1)"
 > [[ "${position#*:}" == "$(head -n 1 "${events_file}" | LC_ALL=C wc -c | tr -d ' ')" ]] && echo "offset is the first line's byte length"
-> LC_ALL=en_US.UTF-8 al wait --from "${position}" | head -n 1 | jq -c .subject
+> LC_ALL=en_US.UTF-8 al wait --from "${position}" | sed -n 1p | jq -c .subject
 offset is the first line's byte length
 "/work/b"
 ```
@@ -666,7 +666,7 @@ position is the end of the current file's first line
 ## Wait rejects unknown events
 
 ```scrut
-$ al wait --events permission_requested 2>&1 | head -n 1
+$ al wait --events permission_requested 2>&1 | sed -n 1p
 attention-log: unknown event 'permission_requested'
 [2]
 ```
@@ -721,7 +721,7 @@ s3 (api_error_stop overloaded, AGE)
 ## Readers reject numbers too large to hold
 
 ```scrut
-$ al pending --older-than 1234567890123456 2>&1 | head -n 1
+$ al pending --older-than 1234567890123456 2>&1 | sed -n 1p
 attention-log: --older-than needs a number of seconds
 [2]
 ```
