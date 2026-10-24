@@ -250,3 +250,5 @@ Every plant still expressible against the final code was planted alone at `2d8a2
 ## CI on the draft PR
 
 The first run passed 31 of 32 checks. "After two rotations wait starts the current file from its start" failed on Linux: ext4 gave the deleted first file's inode to the new `events.jsonl`, so `wait` took the new file for the one its position named and resumed at the old offset, mid-line. APFS does not reuse inodes that way, so the case passed locally. The case now holds a hard link to the first file, keeping its inode allocated, and the README's Known limits list inode reuse after two rotations. A guard that checks the byte before a resumed offset is a newline is a possible follow-up; it is not in this PR.
+
+The second run failed "Readers reject numbers too large to hold" with exit 141: `head -n 1` closed the pipe after the first line, and the reader's second stderr line then stopped on SIGPIPE, which `pipefail` reports. Every such pipe now uses `sed -n 1p`, which reads to the end, and the `wait` case's timeout guard stops its own `sleep` when it is stopped, since the runner reported an orphaned `sleep`. The third run passed all 32 checks.
