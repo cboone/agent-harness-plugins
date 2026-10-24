@@ -228,12 +228,14 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 Hooks are event-driven; they have no slash-command trigger.
 
-| Plugin                                       | What it does                                                                                     |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code or Codex CLI finishes a task or needs your attention. |
+| Plugin                                             | What it does                                                                                                                                                                               |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Attention Log](./plugins/attention-log/README.md) | Records every time a Claude Code session waits on a person for permission, or stops because an API error or a safeguard refusal ended its turn, in one JSON Lines file that watchers read. |
+| [Notify (macOS)](./plugins/notify/README.md)       | Sends macOS notifications when Claude Code or Codex CLI finishes a task or needs your attention.                                                                                           |
 
 **External tools:**
 
+- _Attention Log:_ [`jq`](https://jqlang.github.io/jq/) (required); `tmux` (only inside a tmux session)
 - _Notify:_ [`alerter`](https://github.com/vjeantet/alerter). Install via [Homebrew](https://brew.sh): `brew install vjeantet/tap/alerter`
 
 ## Using with Codex CLI
@@ -292,6 +294,7 @@ Plugin hooks need no feature flag, but Codex runs them only after you review and
 - **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/workmux:start-issue`, `/workmux:create-worktree`, `/monitor-pr:monitor`, `/publish-report-board`, and `/monitor-pr:resolve-copilot-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step. Package-relative helper resolution is [milestone 3][codex-milestone-3].
 - **Installed plugin READMEs have broken links.** An installed plugin's links to this README and to sibling plugins resolve to paths that do not exist in the Codex plugin cache. Read plugin documentation on GitHub until [milestone 3][codex-milestone-3] corrects them.
 - **`notify` covers three Codex events.** On Codex, `notify` wires `Stop` for completion, `UserPromptSubmit` to reset completion deduplication, and `PreToolUse` for the `request_user_input` question tool. `PermissionRequest` is deliberately left unwired: it runs before Codex's automatic approval review decides whether to prompt you, so a notification there would announce decisions that need no response. For approval and plan prompts, enable Codex's built-in terminal notifications as the [`notify` plugin README](./plugins/notify/README.md) describes. Reassessing the other lifecycle events is [milestone 3][codex-milestone-3].
+- **`attention-log` registers no Codex hooks.** It records Claude Code sessions only; its Codex manifest exists because every hook plugin needs one, and Codex events would need their own check before they are wired.
 - **End-to-end verification is partial.** Linux, multiple cached plugin versions, paths containing spaces, restricted destinations, and complete hook payload coverage are not yet verified; that is [milestone 4][codex-milestone-4].
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
 

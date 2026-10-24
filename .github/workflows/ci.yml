@@ -162,6 +162,7 @@ jobs:
         GIT_CONFIG_SYSTEM=/dev/null
         TMUX_STUB_BIN=./tests/fixtures/tmux-stub
         NOTIFY_BIN=./plugins/notify/scripts/notify
+        ATTENTION_LOG_BIN=./plugins/attention-log/scripts/attention-log
         CHECK_NOTIFICATIONS_BIN=./tests/fixtures/check-notifications
         UNIX_SOCKET_FIXTURE_BIN=./tests/fixtures/create-unix-socket
         WORKMUX_STUB_BIN=./tests/fixtures/workmux-stub

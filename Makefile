@@ -7,7 +7,7 @@ SCRUT_TEST_DIR := tests/scrut/
 # This list is maintained by hand: add an entry whenever a launcher script or a
 # fixture under tests/fixtures/ starts reading a new variable, or the suite
 # silently becomes sensitive to the developer's environment again.
-SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
+SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u WORKMUX_LAUNCH_WAIT_SECONDS -u WORKMUX_LAUNCH_TIMEOUT_SECONDS \
 	-u WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS \
 	-u STUB_CAPTURE_TERM -u STUB_CAPTURE_TMUX \
@@ -33,6 +33,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 # reusable scrut workflow.
 SCRUT_ENV := \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
+	ATTENTION_LOG_BIN="$(CURDIR)/plugins/attention-log/scripts/attention-log" \
 	CHECK_NOTIFICATIONS_BIN="$(CURDIR)/tests/fixtures/check-notifications" \
 	CHECK_CROSS_REFERENCES_BIN="$(CURDIR)/bin/check-cross-references" \
 	BUILD_REVIEW_CHECKLISTS_BIN="$(CURDIR)/bin/build-review-checklists" \

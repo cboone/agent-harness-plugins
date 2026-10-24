@@ -51,6 +51,19 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "workflow",
+      "description": "Records every time a Claude Code session waits on a person for permission, or stops because an API error or a safeguard refusal ended its turn, in one JSON Lines file that watchers read.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["hooks", "logging", "monitoring", "permissions"],
+      "license": "MIT",
+      "name": "attention-log",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./plugins/attention-log"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "scaffolding",
       "description": "Assess a repository, determine what scaffolding and setup tools are needed, present a plan, and execute them in the correct order.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
