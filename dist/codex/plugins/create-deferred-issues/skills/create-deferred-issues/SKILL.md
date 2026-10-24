@@ -18,7 +18,7 @@ While working, an agent regularly names a concern and sets it aside: a formatter
 Two rules shape everything below:
 
 - **The proposal is never skipped.** Filing without confirmation would turn every hedge in the session into an issue, which is worse than filing nothing.
-- **Under-propose.** A missed deferral costs the user one manual `/create-issue`. A wrong one costs triage, and erodes trust in every later batch.
+- **Under-propose.** A missed deferral costs the user one manual `/use-git:create-issue`. A wrong one costs triage, and erodes trust in every later batch.
 
 ## Options
 
@@ -228,7 +228,7 @@ gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/revi
 gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/comments --jq '.[] | {id, in_reply_to_id, path, line, body, url: .html_url, author: .user.login, created_at, updated_at}'
 ```
 
-The first returns the PR body. The three API calls return all pages of conversation comments, review bodies, and inline review comments respectively. Preserve comment IDs, reply-to IDs, and timestamps so replies can be associated with the correct finding. A top-level review body, inline comment, or reply is eligible when it states a concrete concern and a decision to defer it. Also inspect review-feedback summaries, such as the one the `resolve-copilot-pr-feedback` skill posts, that carry a Deferred category.
+The first returns the PR body. The three API calls return all pages of conversation comments, review bodies, and inline review comments respectively. Preserve comment IDs, reply-to IDs, and timestamps so replies can be associated with the correct finding. A top-level review body, inline comment, or reply is eligible when it states a concrete concern and a decision to defer it. Also inspect review-feedback summaries, such as the one the `monitor-pr:resolve-copilot-feedback` skill posts, that carry a Deferred category.
 
 #### Documents
 

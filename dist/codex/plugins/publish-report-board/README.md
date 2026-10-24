@@ -32,7 +32,7 @@ Each sync:
 | `backlog-triage` | What to start next, what can run in parallel, and what is blocked                                |
 | `bugs`           | Which of a repository's bugs are critical, which are high priority, and how the rest are triaged |
 
-The backlog board opens with the sync time and six counts, then the issues to start now and why, the lanes of issues that can run in parallel with each lane's capacity and order, a contention matrix of components claimed by more than one issue, and the blocked issues with what frees each one. A blocker can be another issue, a pull request, a branch that has to merge, or an issue in another repository, and a softer "better after" relation keeps an issue out of the picks without blocking it. The board follows the viewer's light or dark theme and reflows to phone width.
+The backlog board opens with the sync time, six counts, and a count of work at each stage, then the work in flight grouped by stage, from a branch with no pull request to a pull request ready to merge, with whose move it is and what to do next, then the issues to start now and why, the lanes of issues that can run in parallel with each lane's capacity and order, a contention matrix of components claimed by more than one issue, and the blocked issues with what frees each one. Stages come from branches, worktrees, pull requests, and labels gathered on each sync, never from guesswork, and flags mark work that has gone quiet, fallen behind, or exists only on one machine. A weak affinity signal favors issues already yours and counts against issues someone else owns. A blocker can be another issue, a pull request, a branch that has to merge, or an issue in another repository, and a softer "better after" relation keeps an issue out of the picks without blocking it. The board follows the viewer's light or dark theme and reflows to phone width.
 
 The bugs board is action first and report second. Above the fold, a row for each critical bug, hurting people on production or open to anyone, and each high priority one, getting worse or still to confirm, leads with the next action and says who is affected; the bugs ready to land or fix follow. Below it sit the bugs that need investigating, a table of lower priority bugs, what was fixed, what is parked, and your triage note. Most of what makes a bug urgent, such as whether it is on production, who it reaches, and how it is known, lives in issue bodies rather than labels, so each sync reads the bugs that changed and caches what it learned; a bundled `bugs-gather` script gathers, scores, and caches deterministically. A committed triage note records your calls, such as escalating a bug or confirming it on production, and every sync applies them before its own rules.
 
@@ -40,9 +40,9 @@ Other board types, such as CI health or release readiness, do not have templates
 
 ## Harness Support
 
-Claude Code publishes boards with its Artifact tool. Codex CLI and OpenCode have no equivalent, so there the skill renders a complete standalone HTML file under `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/`, in a directory named for the host and path of the board's `repoUrl`, and reports its path. Keying on the whole address keeps same-named repositories apart across hosts and across path prefixes on one host. The file opens in any browser, and the next sync compares against it before rendering over it.
+Claude Code publishes boards with its Artifact tool. Codex CLI has no equivalent, so there the skill renders a complete standalone HTML file under `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/`, in a directory named for the host and path of the board's `repoUrl`, and reports its path. Keying on the whole address keeps same-named repositories apart across hosts and across path prefixes on one host. The file opens in any browser, and the next sync compares against it before rendering over it.
 
-The plugin therefore ships unchanged to all three harnesses: only the publish step differs, and the skill chooses it by whether the Artifact tool is present.
+The plugin therefore ships unchanged to both harnesses: only the publish step differs, and the skill chooses it by whether the Artifact tool is present.
 
 ## Usage
 
@@ -63,15 +63,22 @@ The skill drives the bundled script; you can also run it directly.
 | `report-board compare PREVIOUS CURRENT`        | Reports what changed between two syncs                    |
 | `report-board starter [--standalone] PAGE`     | Writes a starter page for a report laid out by hand       |
 
+The backlog board adds `backlog-gather`, beside it:
+
+| Command                                      | What it does                                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `backlog-gather gather REPO GATHER`          | Gathers open issues, their progress from branches, worktrees, pull requests, and labels, and what affinity needs |
+| `backlog-gather finish GATHER ANALYSIS DATA` | Adds progress, affinity, and the claims derived from the analysis's areas, giving the board data                 |
+
 The bugs board adds `bugs-gather`, beside it:
 
-| Command                                            | What it does                                                                                       |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `bugs-gather gather REPO GATHER`                   | Gathers open and recently closed bugs, their fixes, and their ZenHub state, and reports what moved |
-| `bugs-gather reuse REPO GATHER ASSESSMENTS`        | Keeps the cached assessments that still match their bugs and lists the bugs to read                |
-| `bugs-gather score REPO GATHER ASSESSMENTS SCORED` | Applies the triage note and the tier rules and prints the check-in report                          |
-| `bugs-gather draft REPO GATHER SCORED DATA`        | Builds board data from a score, leaving the prose to write                                         |
-| `bugs-gather save REPO GATHER ASSESSMENTS SCORED`  | Stores the cache the next sync starts from                                                         |
+| Command                                            | What it does                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `bugs-gather gather REPO GATHER`                   | Gathers open and recently closed bugs, their fixes, progress, and ZenHub state, and reports what moved |
+| `bugs-gather reuse REPO GATHER ASSESSMENTS`        | Keeps the cached assessments that still match their bugs and lists the bugs to read                    |
+| `bugs-gather score REPO GATHER ASSESSMENTS SCORED` | Applies the triage note and the tier rules and prints the check-in report                              |
+| `bugs-gather draft REPO GATHER SCORED DATA`        | Builds board data from a score, leaving the prose to write                                             |
+| `bugs-gather save REPO GATHER ASSESSMENTS SCORED`  | Stores the cache the next sync starts from                                                             |
 
 ## Recommended Permissions
 
@@ -82,6 +89,7 @@ This skill runs GitHub CLI, git, and bundled-script commands that trigger permis
   "permissions": {
     "allow": [
       "Bash(bash \"*/report-board\" *)",
+      "Bash(bash \"*/backlog-gather\" *)",
       "Bash(bash \"*/bugs-gather\" *)",
       "Bash(test -x *)",
       "Bash(gh repo view *)",

@@ -1,6 +1,6 @@
 # Dependabot PR summaries
 
-Tests for the `dependabot-prs` script that `triage-dependabot-prs` bundles. `summarize` reduces a fetched bundle of open Dependabot PRs, other open PRs, comparisons of each head against its base branch, and Dependabot alerts to the evidence a triage needs.
+Tests for the `dependabot-prs` script that `dependabot:triage-prs` bundles. `summarize` reduces a fetched bundle of open Dependabot PRs, other open PRs, comparisons of each head against its base branch, and Dependabot alerts to the evidence a triage needs.
 
 `summarize` is the seam that makes the parsing testable without GitHub credentials. `fetch` is exercised against a `gh` stub at the end of this file. The fixtures are synthetic bundles modeled on real Dependabot PRs, including the layouts that break naive parsing: grouped bodies repeated per directory, bodies truncated at the size limit, footers removed by a rebase, and titles updated in place.
 

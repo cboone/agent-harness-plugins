@@ -63,6 +63,18 @@
       root.replaceChildren(h("p", { class: "board-message" }, message));
       return;
     }
+    // A board before schema version 2 lacks progress fields, so ask for a sync
+    // rather than draw all work as absent.
+    if (data.schemaVersion !== 2) {
+      root.replaceChildren(
+        h(
+          "p",
+          { class: "board-message" },
+          "This page holds board data from an earlier version of publish-report-board. Sync the board again to draw it.",
+        ),
+      );
+      return;
+    }
 
     const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
     const repoUrl = (data.repoUrl || `https://github.com/${data.repo}`).replace(/\/+$/, "");
@@ -155,6 +167,147 @@
       age.classList.toggle("is-stale", hours >= STALE_AFTER_HOURS);
     }
 
+    // Stages, flags, and affinity. Identical in backlog-triage.html and
+    // bugs.html; change both together. STAGES follows the progress model order.
+    const STAGES = [
+      ["started", "Started"],
+      ["branch", "Branch"],
+      ["draft", "Draft"],
+      ["awaiting-review", "Awaiting review"],
+      ["needs-author", "Needs author"],
+      ["ready-to-merge", "Ready to merge"],
+      ["close-out", "Close-out"],
+    ];
+    const STAGE_LABEL = new Map(STAGES);
+    const FLAG_TEXT = {
+      quiet: ["quiet", "No activity for longer than the quiet period, 7 days by default"],
+      stale: ["stale", "No activity for longer than the stale period, 30 days by default; resume or drop it"],
+      behind: ["behind", "The branch is behind the default branch"],
+      conflict: ["conflict", "The pull request conflicts with its base"],
+      multiple: ["several", "More than one branch or pull request carries this issue"],
+      local: ["local", "The branch exists only on the machine that synced"],
+      "leftover-label": ["label left", "The progress label is still on the issue"],
+    };
+    const MOVE_TEXT = { reviewer: "a reviewer moves next", ci: "CI moves next", nobody: "nobody is asked to review" };
+    const IGNORED_TEXT = {
+      assigned: "assignment",
+      claimed: "claims",
+      filed: "who filed",
+      commented: "comments",
+      active: "active work",
+      recent: "recent work",
+    };
+    const hidden = (text) => h("span", { class: "visually-hidden" }, text);
+
+    function carrierText(carrier) {
+      if (carrier?.pr != null) return `PR #${carrier.pr}`;
+      if (carrier?.branch != null) return carrier.branch;
+      if (carrier?.label != null) return `the ${carrier.label} label`;
+      if (carrier?.pipeline != null) return `the ${carrier.pipeline} pipeline`;
+      return "";
+    }
+
+    // A pull request links to itself, and a branch to its comparison with the
+    // synced branch. A label, a pipeline, or a branch only on the gathering machine stays text.
+    function carrierHref(carrier) {
+      if (carrier?.pr != null) return `${repoUrl}/pull/${carrier.pr}`;
+      if (carrier?.branch != null && carrier.local !== true) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(carrier.branch)}`;
+      return null;
+    }
+
+    function carrierLink(carrier) {
+      const href = carrierHref(carrier);
+      return href ? h("a", { class: "num", href }, carrierText(carrier)) : h("span", null, carrierText(carrier));
+    }
+
+    function stageTag(progress) {
+      const label = STAGE_LABEL.get(progress.stage) ?? progress.stage;
+      const href = carrierHref(progress.carrier);
+      return h(
+        href ? "a" : "span",
+        { class: `stage stage--${progress.stage}`, href, title: `${label}: ${progress.signal}` },
+        [label, hidden(` on ${carrierText(progress.carrier)}`)],
+      );
+    }
+
+    // Only the flags in `only`, when given, so a compact row can show just the
+    // ones that explain a held lane slot.
+    function flagMarks(progress, only) {
+      const shown = (progress.flags ?? []).filter((flag) => !only || only.includes(flag));
+      if (!shown.length) return null;
+      return h(
+        "span",
+        { class: "flags" },
+        shown.map((flag) => {
+          const [text, title] = FLAG_TEXT[flag] ?? [flag, flag];
+          const where = flag === "local" && progress.host ? `, on ${progress.host}` : "";
+          return h("span", { class: `flag flag--${flag}`, title: `${title}${where}` }, [hidden("Flag: "), text]);
+        }),
+      );
+    }
+
+    // Whole days between the last activity and the sync, so the page says the
+    // same thing however long after the sync it is read.
+    function idleDays(progress) {
+      const last = new Date(progress.lastActivity);
+      if (!validTime || Number.isNaN(last.getTime())) return null;
+      return Math.max(0, Math.floor((syncedAt.getTime() - last.getTime()) / 86400000));
+    }
+
+    function nextText(progress) {
+      const move = progress.nextMove === "author" ? "" : MOVE_TEXT[progress.nextMove];
+      const idle = idleDays(progress);
+      return [
+        h("span", { class: "label" }, "Next "),
+        progress.nextAction,
+        move ? ` · ${move}` : "",
+        idle ? ` · idle ${count(idle, "day", "days")}` : "",
+      ];
+    }
+
+    function ownerText(owner) {
+      if (owner === "you") return "You";
+      if (owner === "unknown") return "Claimed, owner unknown";
+      return `@${owner}`;
+    }
+
+    function affinityNote(affinity, tag = "p") {
+      if (!affinity?.owner) return null;
+      const who = ownerText(affinity.owner);
+      const reasons = affinity.reasons ?? [];
+      return h(tag, { class: "affinity" }, [hidden("Affinity: "), who, reasons.length ? ` · ${reasons.join(", ")}` : ""]);
+    }
+
+    // The ignored signal kinds, as a sentence for the footer.
+    function ignoredNote() {
+      const kinds = (data.affinityIgnored ?? []).map((kind) => IGNORED_TEXT[kind] ?? kind);
+      if (!kinds.length) return "";
+      return ` Affinity ignores ${kinds.join(", ")} here, because one owner holds them on nearly every open issue.`;
+    }
+
+    // One link per stage that has work, in model order. `hrefFor` names where
+    // the link goes.
+    function stageStrip(progressList, hrefFor) {
+      const counts = new Map();
+      for (const progress of progressList) counts.set(progress.stage, (counts.get(progress.stage) ?? 0) + 1);
+      const present = STAGES.filter(([key]) => counts.has(key));
+      if (!present.length) return null;
+      return h(
+        "ul",
+        { class: "stage-strip", "aria-label": "Work by stage" },
+        present.map(([key, label]) =>
+          h(
+            "li",
+            null,
+            h("a", { href: hrefFor(key) }, [
+              h("span", { class: `stage stage--${key}` }, label),
+              h("span", { class: "num" }, String(counts.get(key))),
+            ]),
+          ),
+        ),
+      );
+    }
+
     // The assessment as five facts. An unknown field, or evidence from
     // reading code, is unconfirmed.
     const FACTS = [
@@ -192,20 +345,19 @@
       return h("dl", { class: "facts" }, rows);
     }
 
-    // What carries the fix: an open pull request and its state, or what else
-    // marks the work in progress.
-    function carrier(bug) {
-      if (bug.fix) {
-        const state = bug.fix.isDraft
-          ? "draft"
-          : [
-              bug.fix.checks ? `checks ${String(bug.fix.checks).toLowerCase()}` : "no checks",
-              bug.fix.reviewDecision ? String(bug.fix.reviewDecision).toLowerCase().replace(/_/g, " ") : "no review",
-            ].join(" · ");
-        return ["Fix ", pullRef(bug.fix.number), ` · ${state}`];
-      }
-      if (bug.inProgress) return `In progress: ${bug.inProgress}`;
-      return null;
+    // The stage, carrier, and flags, then the next action.
+    function progressLine(progress) {
+      return [
+        h("p", null, [stageTag(progress), " ", carrierLink(progress.carrier), " ", flagMarks(progress)]),
+        h("p", { class: "next-action" }, nextText(progress)),
+      ];
+    }
+
+    // The stage, carrier, flags, and next action on one line, for report rows
+    // that name a bug without its full progress line.
+    function progressBrief(progress) {
+      if (!progress) return null;
+      return h("p", { class: "next-action" }, [stageTag(progress), " ", carrierLink(progress.carrier), " ", flagMarks(progress), " · ", nextText(progress)]);
     }
 
     // The user's own calls and the tracker's signals, beside the facts.
@@ -222,8 +374,7 @@
 
     function rankRow(entry, index, kind) {
       const bug = byNumber.get(entry.item);
-      const fix = carrier(bug);
-      return h("li", { class: kind === "high" ? "rank-row rank-row--tier" : "rank-row" }, [
+      return h("li", { class: kind === "high" ? "rank-row rank-row--tier" : "rank-row", id: `bug-${bug.number}` }, [
         h("p", { class: "rank", "aria-hidden": "true" }, String(index + 1).padStart(2, "0")),
         h("div", { class: "rank-main" }, [
           h("p", { class: "rank-line" }, [
@@ -234,24 +385,41 @@
           ]),
           h("p", { class: "rank-headline" }, prose(entry.action)),
           h("p", { class: "rank-detail" }, prose(entry.impact)),
+          affinityNote(bug.affinity),
         ]),
-        h("div", { class: "rank-side" }, [facts(bug), fix ? h("p", { class: "fix-line" }, fix) : null, calls(entry)]),
+        h("div", { class: "rank-side" }, [
+          facts(bug),
+          bug.progress ? h("div", { class: "progress-line" }, progressLine(bug.progress)) : null,
+          calls(entry),
+        ]),
       ]);
     }
 
+    // Ready to go groups by stage, in model order, with the bugs nothing
+    // carries yet last. A stage group's next line is the stage's next action;
+    // a bug ready to fix shows the next step its reading found.
     const GROUPS = [
-      ["ship", "Fix ready to ship"],
-      ["review", "Fix in review"],
-      ["in-progress", "In progress"],
+      ["ready-to-merge", "Ready to merge"],
+      ["needs-author", "Needs author"],
+      ["awaiting-review", "Awaiting review"],
+      ["draft", "Draft"],
+      ["branch", "Branch"],
+      ["started", "Started"],
+      ["close-out", "Close-out"],
       ["ready-to-fix", "Ready to fix"],
     ];
     function readyItem(entry) {
       const bug = byNumber.get(entry.item);
-      const fix = carrier(bug);
-      return h("div", { class: "ready-item" }, [
+      const progress = bug.progress;
+      return h("div", { class: "ready-item", id: `bug-${bug.number}` }, [
         h("p", { class: "ready-title" }, [ref(bug.number), bug.title]),
-        h("p", { class: "ready-next" }, prose(bug.assessment?.nextStep ?? entry.why)),
-        fix ? h("p", { class: "carrier" }, fix) : null,
+        progress
+          ? [
+              h("p", { class: "carrier" }, [carrierLink(progress.carrier), " ", flagMarks(progress)]),
+              h("p", { class: "next-action" }, nextText(progress)),
+            ]
+          : h("p", { class: "ready-next" }, prose(bug.assessment?.nextStep ?? entry.why)),
+        affinityNote(bug.affinity),
       ]);
     }
     function readyColumns(entries) {
@@ -261,7 +429,10 @@
         GROUPS.filter(([group]) => entries.some((entry) => entry.group === group)).map(([group, label]) => {
           const members = entries.filter((entry) => entry.group === group);
           return h("div", { class: "ready-col" }, [
-            h("p", { class: "ready-col-head label" }, [h("span", null, label), h("span", null, String(members.length))]),
+            h("p", { class: "ready-col-head label" }, [
+              group === "ready-to-fix" ? h("span", null, label) : h("span", { class: `stage stage--${group}` }, label),
+              h("span", null, String(members.length)),
+            ]),
             members.map(readyItem),
           ]);
         }),
@@ -278,6 +449,9 @@
     const readyLimit = data.readyLimit ?? 8;
     const readyTop = ready.slice(0, readyLimit);
     const readyRest = ready.slice(readyLimit);
+    // Every open bug's row, in the order the page draws them, so the stage
+    // strip links each stage to the first row that carries it.
+    const pageOrder = [critical, high, readyTop, investigate, readyRest, lower, parked].flat().map((entry) => entry.item);
 
     // Header
     const header = h("header", { class: "head" }, [
@@ -305,6 +479,10 @@
         h("div", { class: "count" }, [h("dt", null, "Investigate"), h("dd", null, String(investigate.length))]),
         h("div", { class: "count count--open" }, [h("dt", null, "Open bugs"), h("dd", null, String(openBugs.length))]),
       ]),
+      stageStrip(
+        pageOrder.map((n) => byNumber.get(n)?.progress).filter(Boolean),
+        (stage) => `#bug-${pageOrder.find((n) => byNumber.get(n)?.progress?.stage === stage)}`,
+      ),
       h("p", { class: "summary" }, prose(data.summary)),
     ]);
 
@@ -363,9 +541,9 @@
             { class: "ruled" },
             investigate.map((entry) => {
               const bug = byNumber.get(entry.item);
-              return h("li", { class: "report-row" }, [
+              return h("li", { class: "report-row", id: `bug-${bug.number}` }, [
                 ref(bug.number),
-                h("div", null, [h("p", { class: "report-title" }, bug.title), h("p", { class: "report-why" }, entry.why)]),
+                h("div", null, [h("p", { class: "report-title" }, bug.title), h("p", { class: "report-why" }, entry.why), progressBrief(bug.progress)]),
                 h("p", { class: "report-question" }, prose(entry.question)),
               ]);
             }),
@@ -389,9 +567,9 @@
         for (const entry of members) {
           const bug = byNumber.get(entry.item);
           rows.push(
-            h("tr", null, [
+            h("tr", { id: `bug-${bug.number}` }, [
               h("td", null, ref(bug.number)),
-              h("td", null, bug.title),
+              h("td", null, [bug.title, progressBrief(bug.progress)]),
               h("td", { class: "mono" }, bug.assessment?.impact ?? ""),
             ]),
           );
@@ -473,9 +651,9 @@
             { class: "ruled" },
             parked.map((entry) => {
               const bug = byNumber.get(entry.item);
-              return h("li", { class: "report-row" }, [
+              return h("li", { class: "report-row", id: `bug-${bug.number}` }, [
                 ref(bug.number),
-                h("p", { class: "report-title" }, bug.title),
+                h("div", null, [h("p", { class: "report-title" }, bug.title), progressBrief(bug.progress)]),
                 h("p", { class: "report-detail" }, prose(entry.reason)),
               ]);
             }),
@@ -533,7 +711,9 @@
       count(openBugs.length, "open bug", "open bugs"),
       typeof data.sync.openPullRequests === "number" ? `, ${count(data.sync.openPullRequests, "open fix", "open fixes")}` : "",
       (data.sync.extra ?? []).map((fact) => `, ${fact}`),
-      ". GitHub is the source of truth; this page is a snapshot.",
+      ".",
+      ignoredNote(),
+      " GitHub is the source of truth; this page is a snapshot.",
     ]);
 
     refreshAge();

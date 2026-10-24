@@ -35,7 +35,6 @@ jobs:
           bin/validate-json
           bin/validate-plugins
           bin/build-codex-marketplace
-          bin/build-opencode-mirror
           # `git diff` ignores untracked files, so use git status to catch an
           # untracked generated mirror as well.
           drift="$(git status --porcelain dist/ .agents/)"

@@ -32,10 +32,10 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, `publish-report-board`, `resolve-copilot-pr-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
+A skill can ship executable helpers too. `workmux`, `publish-report-board`, `push-notification`, `monitor-pr` and `dependabot` each bundle a `scripts/` directory that the skill body invokes:
 
 ```text
-plugins/create-worktree/
+plugins/workmux/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── README.md
@@ -48,15 +48,13 @@ plugins/create-worktree/
         └── SKILL.md
 ```
 
-`create-worktree` and `address-issue-in-worktree` ship byte-identical copies of all three scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference in a `SKILL.md` body to resolve inside its own plugin, so the scripts cannot be shared across plugins. Three testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
+`review-until-clean` and `review-pr-with-codex` ship byte-identical copies of `review-scope`, guarded by a scrut testcase. `review-pr-with-codex` takes its scope buckets for the reviewers' prompts and compares its content trees to detect lasting changes the read-only aspects made to tracked files and to untracked files outside the ignore rules, so a fix to either behavior belongs in both copies.
 
-`resolve-copilot-pr-feedback` and `monitor-pr` share `resolve-copilot-threads` the same way, guarded by a fourth testcase. `monitor-pr` calls only its read-only `fetch`, `fetch-reviews` and `audit` commands, to see whether Copilot reviewed the current head and what is left open before it decides whether to dispatch to the resolver. Sharing the file is the point: the watch and the resolver read the same review data, so they cannot disagree about what Copilot left.
+A skill refers to each script it ships by its plugin-root path, so `workmux:create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `monitor-pr:resolve-copilot-feedback` and `monitor-pr:monitor` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their shared helper. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
 
-A skill refers to each script it ships by its plugin-root path, so `create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` and `monitor-pr` each name `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads` against their own copy. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
+A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI, where the placeholder is not substituted in skills. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
 
-A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI and OpenCode, where the placeholder is not substituted. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
-
-A hook plugin that targets all three harnesses (Claude Code, Codex CLI, and OpenCode) carries split manifests, harness-specific entry points, and any helper scripts or assets:
+A hook plugin that targets both harnesses (Claude Code and Codex CLI) carries split manifests, harness-specific entry points, and any helper scripts or assets:
 
 ```text
 plugins/notify/
@@ -69,42 +67,39 @@ plugins/notify/
 ├── hooks/
 │   ├── codex.hooks.json
 │   └── hooks.json
-├── opencode/
-│   └── index.ts
 └── scripts/
-    ├── focus-pane
     └── notify
 ```
 
-`hooks/codex.hooks.json` carries only the events Codex understands (a subset of the full Claude Code set in `hooks/hooks.json`). `opencode/index.ts` is the OpenCode TypeScript plugin; `bin/build-opencode-mirror` mirrors it to `dist/opencode/plugins/`. Anything under `assets/` and `scripts/` is bundled with the plugin and reachable from hook commands via `${CLAUDE_PLUGIN_ROOT}`.
+`hooks/codex.hooks.json` carries only the events Codex understands (a subset of the full Claude Code set in `hooks/hooks.json`). Anything under `assets/` and `scripts/` is bundled with the plugin and reachable from hook commands via `${CLAUDE_PLUGIN_ROOT}`.
 
 ## Skill frontmatter
 
-Three harnesses read every canonical `SKILL.md`, and each reads a different part of its frontmatter. Claude Code accepts around twenty fields, OpenCode documents five, and Codex CLI documents two. All three tolerate a field they do not recognize, and only `claude plugin validate --strict` reports one. Rule 21 of `bin/validate-plugins` holds this repository to the fields below, so a misspelling such as `disable-model-invokation` fails validation instead of doing nothing in all three.
+Two harnesses read every canonical `SKILL.md`, and each reads a different part of its frontmatter. Claude Code accepts around twenty fields, and Codex CLI documents two. Both tolerate a field they do not recognize, and only `claude plugin validate --strict` reports one. Rule 21 of `bin/validate-plugins` holds this repository to the fields below, so a misspelling such as `disable-model-invokation` fails validation instead of doing nothing in both.
 
-| Field                      | Claude Code                  | Codex CLI             | OpenCode |
-| -------------------------- | ---------------------------- | --------------------- | -------- |
-| `name`                     | Required                     | Read                  | Read     |
-| `description`              | Required routing description | Read                  | Read     |
-| `license`                  | Read                         | Ignored               | Read     |
-| `compatibility`            | Read                         | Ignored               | Read     |
-| `metadata`                 | Read                         | Read                  | Read     |
-| `allowed-tools`            | Read                         | Ignored               | Ignored  |
-| `disable-model-invocation` | Read                         | Translated, see below | Ignored  |
-| `paths`                    | Read                         | Ignored               | Ignored  |
-| `context`                  | Read                         | Ignored               | Ignored  |
-| `agent`                    | Read                         | Ignored               | Ignored  |
-| `argument-hint`            | Read                         | Ignored               | Ignored  |
+| Field                      | Claude Code                  | Codex CLI             |
+| -------------------------- | ---------------------------- | --------------------- |
+| `name`                     | Required                     | Read                  |
+| `description`              | Required routing description | Read                  |
+| `license`                  | Read                         | Ignored               |
+| `compatibility`            | Read                         | Ignored               |
+| `metadata`                 | Read                         | Read                  |
+| `allowed-tools`            | Read                         | Ignored               |
+| `disable-model-invocation` | Read                         | Translated, see below |
+| `paths`                    | Read                         | Ignored               |
+| `context`                  | Read                         | Ignored               |
+| `agent`                    | Read                         | Ignored               |
+| `argument-hint`            | Read                         | Ignored               |
 
-In that table _Read_ means the harness acts on the field, and _Ignored_ means it accepts the field with no effect anyone has observed. The two rest on different evidence: OpenCode's documentation states outright that unknown fields are ignored and names the five it reads, while for Codex _Ignored_ combines the measurement below with the absence of any handling for those fields in the CLI. Codex's documentation names only `name` and `description` and says nothing about the rest, so treat its _Ignored_ cells as what was observed rather than as a guarantee.
+In that table _Read_ means the harness acts on the field, and _Ignored_ means it accepts the field with no effect anyone has observed. For Codex, _Ignored_ combines the measurement below with the absence of any handling for those fields in the CLI. Codex's documentation names only `name` and `description` and says nothing about the rest, so treat its _Ignored_ cells as what was observed rather than as a guarantee.
 
-Measured against Codex CLI 0.155.1 and OpenCode 1.18.31: a skill carrying every field in that table loads in both, appears in the list of skills offered to the model, and produces no warning and no error. Neither harness rejects an unrecognized field and neither reports one, which is the reason the allowlist exists rather than a linter's opinion.
+Measured against Codex CLI 0.155.1: a skill carrying every field in that table loads, appears in the list of skills offered to the model, and produces no warning and no error. Codex neither rejects an unrecognized field nor reports one, which is the reason the allowlist exists rather than a linter's opinion.
 
-Widening the allowlist means measuring the new field first. Install a skill that carries it under a throwaway `CODEX_HOME` and a throwaway project directory, list what each harness offers the model with `codex debug prompt-input` and `opencode debug skill`, then record the outcome in the table above. A field Claude Code honors can be dropped silently by the other two, which changes what the skill does there without failing anywhere.
+Widening the allowlist means measuring the new field first. Install a skill that carries it under a throwaway `CODEX_HOME` and a throwaway project directory, list what Codex offers the model with `codex debug prompt-input`, then record the outcome in the table above. A field Claude Code honors can be dropped silently by Codex, which changes what the skill does there without failing anywhere.
 
 ### Argument hints
 
-Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr` displays its options. Every skill that accepts arguments should declare one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` rejects any other form of the value, and requires the field only on skills with an `## Options` heading outside fenced code, so a skill that describes its arguments in prose elsewhere, such as `review-plan`, needs the hint added by hand. Codex CLI and OpenCode ignore it, so it passes through both mirrors unchanged.
+Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr:monitor` displays its options. Every skill that accepts arguments should declare one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` rejects any other form of the value, and requires the field only on skills with an `## Options` heading outside fenced code, so a skill that describes its arguments in prose elsewhere, such as `review-plan`, needs the hint added by hand. Codex CLI ignores it, so it passes through the Codex mirror unchanged.
 
 ### Invocation policy
 
@@ -123,8 +118,6 @@ The whole path was confirmed end to end, not just the mechanism: a skill given t
 
 This is the one sanctioned difference between a canonical skill and its Codex copy. Rule 16b of `bin/validate-plugins` reproduces exactly this edit independently of the generator and fails on any other difference, so a further harness-specific transformation has to change that rule on purpose.
 
-OpenCode has no counterpart and ignores the field, so a skill that disables model invocation stays implicitly selectable there. OpenCode gates skills through the `skill` key of its own permission configuration instead, which matches on the skill name and is a user setting rather than something a plugin ships. Because OpenCode ignores every field it does not recognize, `bin/build-opencode-mirror` needs no translation step and stays relative symlinks to the canonical skills.
-
 ## Routing descriptions and catalog summaries
 
 A plugin carries two kinds of description, written for different readers, and each has one owner:
@@ -132,7 +125,7 @@ A plugin carries two kinds of description, written for different readers, and ea
 - **Routing description:** the `description` in a skill's `SKILL.md` frontmatter. Harnesses use it to decide whether a request should activate the skill implicitly, and selectors show it beside the skill's name. Write it for selection.
 - **Catalog summary:** the `description` in `.claude-plugin/marketplace.json`, repeated verbatim in the plugin's manifests, the opening paragraph of its README, and its root README "What it does" cell. Write it for a person browsing the catalog. It needs no routing detail.
 
-Every harness routes on the same description. Claude Code loads the canonical `SKILL.md`, the OpenCode mirror links to it, and `bin/build-codex-marketplace` copies it into `dist/codex/` unchanged. Rule 16b of `bin/validate-plugins` permits one difference between a generated `SKILL.md` and its source, the [invocation policy translation](#invocation-policy), and the description is never it, so change a routing description in the canonical file, never through the generator.
+Every harness routes on the same description. Claude Code loads the canonical `SKILL.md`, and `bin/build-codex-marketplace` copies it into `dist/codex/` unchanged. Rule 16b of `bin/validate-plugins` permits one difference between a generated `SKILL.md` and its source, the [invocation policy translation](#invocation-policy), and the description is never it, so change a routing description in the canonical file, never through the generator.
 
 A routing description:
 
@@ -147,14 +140,14 @@ Rule 17 of `bin/validate-plugins` checks the budget. It renders each generated `
 ```yaml
 description: >-
   Merge the base branch into the current branch, resolve conflicts, and push.
-  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
+  Use for "merge main" or "sync with main"; to rebase, use sync-with-main:rebase.
 ```
 
 Add `agents/openai.yaml` to a canonical skill only for supported interface metadata or an MCP tool dependency; no skill needs one today, and an invocation-policy override belongs in `disable-model-invocation`, which the generator [translates into that manifest](#invocation-policy) for Codex alone. Never set its `interface.short_description`: Codex prints that in place of `description`, silently replacing the routing description. Do not add keys this repository invents to portable plugin manifests or to `agents/openai.yaml`.
 
 ## Cross-harness workflow adapters
 
-Each canonical `SKILL.md` is one workflow shared by Claude Code, Codex CLI, and OpenCode. Write each step against the capability it needs and the restrictions active in the session, not against a harness name: the tools a harness offers vary with its configuration, mode, and installed plugins. Put a harness-specific example beside the shared rule it illustrates instead of forking the workflow into per-harness copies.
+Each canonical `SKILL.md` is one workflow shared by Claude Code and Codex CLI. Write each step against the capability it needs and the restrictions active in the session, not against a harness name: the tools a harness offers vary with its configuration, mode, and installed plugins. Put a harness-specific example beside the shared rule it illustrates instead of forking the workflow into per-harness copies.
 
 New and substantially rewritten skills follow these conventions now. The Git and review chain adopts them in milestone 2 of the [Codex roadmap](plans/todo/2026-09-15-codex-consumption-improvements.md), and the rest of the catalog in milestone 3.
 
@@ -162,11 +155,10 @@ New and substantially rewritten skills follow these conventions now. The Git and
 
 Name the skill, and render how to invoke it only where a person reads the result:
 
-| Harness     | Explicit invocation                                                  |
-| ----------- | -------------------------------------------------------------------- |
-| Claude Code | `/commit`                                                            |
-| Codex CLI   | `$commit`, or choose it from `/skills`                               |
-| OpenCode    | Ask for the `commit` skill; the agent loads it with its `skill` tool |
+| Harness     | Explicit invocation                    |
+| ----------- | -------------------------------------- |
+| Claude Code | `/commit`                              |
+| Codex CLI   | `$commit`, or choose it from `/skills` |
 
 Every harness also activates a skill implicitly when a request matches its routing description.
 
@@ -183,7 +175,7 @@ A `$name` mention in generated prose is text for a person or model to read. It i
 
 ### Skill composition
 
-A parent workflow composes another skill by loading it through the host's skill mechanism, passing its arguments and a continuation block, and resuming from a named step when it returns. Claude Code loads a skill with its `Skill` tool, Codex by reading the `SKILL.md` at the path its skill list advertises, and OpenCode with its `skill` tool.
+A parent workflow composes another skill by loading it through the host's skill mechanism, passing its arguments and a continuation block, and resuming from a named step when it returns. Claude Code loads a skill with its `Skill` tool, and Codex by reading the `SKILL.md` at the path its skill list advertises.
 
 Write every composition reference with the canonical phrase, so validation can tell composition from other mentions:
 
@@ -201,7 +193,7 @@ Declare every skill a workflow composes in a `## Skill dependencies` section of 
 ## Skill dependencies
 
 - **Required:** `lint-and-fix`
-- **Optional:** `review-branch`, `resolve-copilot-pr-feedback`
+- **Optional:** `review-branch`, `monitor-pr:resolve-copilot-feedback`
 ```
 
 Write `None` for an empty category. A skill that composes nothing omits the section.
@@ -277,12 +269,13 @@ Skills name each other and point at files by path, and a stale one fails only in
 
 What gets resolved, and against what:
 
-| Spelling                                                    | Resolved against              |
-| ----------------------------------------------------------- | ----------------------------- |
-| `plugins/…`, `dist/codex/…`, `dist/opencode/…`              | the repository root           |
-| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill |
-| `./references/…`                                            | the skill directory           |
-| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`  |
+| Spelling                                                    | Resolved against                       |
+| ----------------------------------------------------------- | -------------------------------------- |
+| `plugins/…`, `dist/codex/…`                                 | the repository root                    |
+| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill          |
+| `./references/…`                                            | the skill directory                    |
+| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`           |
+| `` `/plugin:skill` `` and a qualified name beside "skill"   | `plugins/plugin/skills/skill/SKILL.md` |
 
 `${CLAUDE_PLUGIN_ROOT}/scripts/…` is left to rule 18, which also checks the executable bit. A bare backticked name is not checked: nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the sentence around it.
 
@@ -299,7 +292,7 @@ The same script checks skill dependencies, which the [Skill dependencies](#skill
 
 - Every composition reference, "Invoke the `NAME` skill" with or without a slash before the name, in a `SKILL.md` or any file under its `references/`, is declared in that skill's `## Skill dependencies` section.
 - The section has exactly one `- **Required:**` line and one `- **Optional:**` line, each holding `None` or backticked skill names separated by commas, and nothing else.
-- Every declared name resolves to a `plugins/*/skills/NAME/SKILL.md`, appears in only one category, and appears only once.
+- Every declared bare name resolves to a `plugins/*/skills/NAME/SKILL.md`; a qualified `plugin:skill` name resolves to `plugins/plugin/skills/skill/SKILL.md`. Each name appears in only one category and only once. Use qualified names for skills in multi-skill plugins so resolution identifies both the plugin and skill. Composition references, dependency declarations and their uses accept the same qualified syntax; invocation references may include a leading slash.
 - Every declared name is used: the skill names it, backticked with or without a leading slash, somewhere outside the section, as a selection list does for each candidate.
 
 Other wording, such as "use the `review-branch` skill instead" or "run `/lint-and-fix` next", is not composition and needs no declaration. The exception is "invoke `NAME`" without the canonical phrase: it reads as composition but escapes the checks above, so it draws a warning when `NAME` is a skill that the owning skill neither declares nor is itself. Rewrite a real composition with the canonical phrase and declare it, and reword a mention that is not one. A warning does not fail validation. An ignore comment does not exempt a dependency finding.
@@ -321,6 +314,17 @@ A checklist is not the guide's essential checklist. It keeps only the rules a re
 
 Derive every rule from the guide. When a guide's rule changes, update its checklist in the same change. A new checklist also needs an entry in `references/guides.md` with its detection and routing rules.
 
+## Shared references
+
+A reference that skills in two plugins read lives in one plugin and is copied into the other, because a skill can read only files its own plugin ships. `bin/build-shared-references`, run by `make build`, keeps the copies byte for byte identical to their sources; its `SHARED_REFERENCES` list names each source and copy. Rule 22 of `bin/validate-plugins` fails when a copy is missing or differs from its source. Edit the source, never the copy, and bump the source's plugin and every copy's plugin forward when the source changes.
+
+The shared references are:
+
+- The progress model: `plugins/publish-report-board/skills/publish-report-board/references/progress-model.md`, copied to `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`.
+- The `codex exec` path: `plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md`, copied to the `references/` directories of `trim-comments` and `trim-text`. Each consumer's `SKILL.md` names its own model, effort, window, prompt additions and fallback.
+
+Write a shared reference for every consumer, and leave rules only one consumer follows in that consumer's own references.
+
 ## Adding a plugin
 
 1. Create the plugin directory under `plugins/`.
@@ -330,7 +334,7 @@ Derive every rule from the guide. When a guide's rule changes, update its checkl
 1. Create a per-plugin `README.md` in the plugin directory.
 1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
 1. If the plugin bundles a script, add scrut coverage under `tests/scrut/` and register any needed binary path in the `SCRUT_ENV` block in the `Makefile` and the matching `scrut-env` list in `.github/workflows/ci.yml`.
-1. Regenerate the bundled review checklists and the Codex and OpenCode mirrors with `make build`, and commit the results.
+1. Regenerate the bundled review checklists and the Codex mirror with `make build`, and commit the results.
 1. If the plugin ships a skill, read the `Codex skill inventory` line that `make validate` prints. Every counted skill's line, name and versioned install path included, shares one Codex discovery budget, so a new skill can push the catalog over it even when its own description is short. Skills withheld from implicit invocation are not charged. If rule 17 fails, tighten the largest routing descriptions its error lists rather than raising the budget; see [Routing descriptions and catalog summaries](#routing-descriptions-and-catalog-summaries).
 1. Run `make test-all` and fix anything it reports before opening a PR.
 
@@ -338,9 +342,9 @@ Derive every rule from the guide. When a guide's rule changes, update its checkl
 
 The root `README.md` lists plugins in a compact 3-column table (Plugin, Trigger, What it does) per category, plus a 2-column table for hooks (Plugin, What it does). External-tool requirements appear below each table as a `**External tools:**` bullet list, one bullet per plugin (or per group of plugins sharing the same requirement).
 
-A `## Contents` section sits between the intro paragraph and `## Install`. It is section-level navigation over the file's H2s: the `Install` and `Skills` bullets name their H3s inline, and the two `Using with` guides share a bullet. It never lists individual plugins, so adding a plugin does not touch it. Update it only when an H2 or a skills category is added, renamed, or removed, and keep every anchor resolvable, because markdownlint's MD051 checks them.
+A `## Contents` section sits between the intro paragraph and `## Install`. It is section-level navigation over the file's H2s: the `Install` and `Skills` bullets name their H3s inline, and the `Using with Codex CLI` guide has a bullet of its own. It never lists individual plugins, so adding a plugin does not touch it. Update it only when an H2 or a skills category is added, renamed, or removed, and keep every anchor resolvable, because markdownlint's MD051 checks them.
 
-Do not rename `## Install`, `## Using with OpenCode`, or `### Codex CLI known limitations`, and do not add a second heading that slugifies to one of those. Every plugin README links to `../../README.md#install`, some also link the other two, and the `markdownlint-rule-relative-links` custom rule fails the build if a target fragment disappears.
+Do not rename `## Install` or `### Codex CLI known limitations`, and do not add a second heading that slugifies to one of those. Every plugin README links to `../../README.md#install` and may also link `#codex-cli-known-limitations`. The `markdownlint-rule-relative-links` custom rule fails the build if a target fragment disappears.
 
 Use the canonical `description` field from `marketplace.json` for the "What it does" column, verbatim, so the README stays a thin mirror of the catalog of record.
 

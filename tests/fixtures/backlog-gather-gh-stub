@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# backlog-gather-gh-stub -- Test stub for the gh calls backlog-gather makes.
+#
+# backlog-gather only calls gh api graphql, passing its query as
+# -F query=@DIR/NAME.graphql. The stub answers each with
+# STUB_GH_DIR/graphql/NAME.json: one response for the repository query, and
+# the array of pages --paginate --slurp returns for the others.
+#
+# STUB_GH_GRAPHQL_FAIL names one query that fails the way gh does on a server
+# error, and STUB_GH_LOG, when set, receives each query name and its
+# variables, one call per line.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function main() {
+  [[ "${1:-} ${2:-}" == "api graphql" ]] || die "unexpected invocation: gh ${*}"
+  shift 2
+
+  local query_name="" arg value
+  local -a variables=()
+  while [[ $# -gt 0 ]]; do
+    arg="${1}"
+    shift
+    case "${arg}" in
+      --paginate | --slurp) ;;
+      -f | -F)
+        [[ $# -gt 0 ]] || die "gh api graphql ${arg} needs a value"
+        value="${1}"
+        shift
+        case "${value}" in
+          query=@*)
+            query_name="${value#query=@}"
+            query_name="${query_name##*/}"
+            query_name="${query_name%.graphql}"
+            ;;
+          *) variables+=("${value}") ;;
+        esac
+        ;;
+      *) die "unexpected gh api graphql argument ${arg}" ;;
+    esac
+  done
+  [[ -n "${query_name}" ]] || die "gh api graphql needs -F query=@FILE"
+
+  if [[ -n "${STUB_GH_LOG:-}" ]]; then
+    printf 'gh api graphql %s %s\n' "${query_name}" "${variables[*]:-}" >> "${STUB_GH_LOG}"
+  fi
+  if [[ "${query_name}" == "${STUB_GH_GRAPHQL_FAIL:-}" ]]; then
+    echo "gh: HTTP 502: Bad Gateway (https://api.github.com/graphql)" >&2
+    exit 1
+  fi
+
+  local file="${STUB_GH_DIR:?STUB_GH_DIR must be set}/graphql/${query_name}.json"
+  [[ -f "${file}" ]] || die "missing stub response ${file}"
+  cat -- "${file}"
+}
+
+main "$@"

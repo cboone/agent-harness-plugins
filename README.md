@@ -1,13 +1,14 @@
 # Claude Code Plugins
 
-A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), and [OpenCode](https://opencode.ai/docs/skills/), from [Christopher Boone](https://cboone.github.io).
+A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), from [Christopher Boone](https://cboone.github.io).
 
 ## Contents
 
 - [Install](#install): [Claude Code](#claude-code), [Codex CLI](#codex-cli), [OpenCode](#opencode)
+- [Moved and removed plugins](#moved-and-removed-plugins)
 - [Skills](#skills): [Git](#git), [Issues and Worktrees](#issues-and-worktrees), [Code Review](#code-review), [Code Quality](#code-quality), [Writing](#writing), [Scaffolding](#scaffolding), [CI and Release](#ci-and-release), [Agents](#agents)
 - [Hooks](#hooks)
-- [Using with Codex CLI](#using-with-codex-cli), [Using with OpenCode](#using-with-opencode)
+- [Using with Codex CLI](#using-with-codex-cli)
 - [License](#license)
 
 ## Install
@@ -35,11 +36,39 @@ See [Using with Codex CLI](#using-with-codex-cli) below for selective installati
 
 ### OpenCode
 
-```bash
-export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"
+OpenCode is no longer supported. The last `dist/opencode/` mirror is available at commit [`41605e95`](https://github.com/cboone/agent-harness-plugins/tree/41605e95bd814e354799722eae2fc9c8d50e2796/dist/opencode).
+
+## Moved and removed plugins
+
+Reinstall the destination plugin and update saved invocations using this mapping. Related workflows share plugins; focused workflows live in their existing hosts. Old plugin registrations are removed. Qualified invocations identify the plugin and skill. Claude Code still resolves the bare names `create-worktree` and `create-issue` to their destination plugins.
+
+| Former plugin or skill        | Install plugin      | Invocation or workflow                 |
+| ----------------------------- | ------------------- | -------------------------------------- |
+| `create-worktree`             | `workmux`           | `/workmux:create-worktree`             |
+| `address-issue-in-worktree`   | `workmux`           | `/workmux:start-issue`                 |
+| `monitor-pr`                  | `monitor-pr`        | `/monitor-pr:monitor`                  |
+| `resolve-copilot-pr-feedback` | `monitor-pr`        | `/monitor-pr:resolve-copilot-feedback` |
+| `merge-main`                  | `sync-with-main`    | `/sync-with-main:merge`                |
+| `rebase-onto-main`            | `sync-with-main`    | `/sync-with-main:rebase`               |
+| `review-dependabot-config`    | `dependabot`        | `/dependabot:review-config`            |
+| `triage-dependabot-prs`       | `dependabot`        | `/dependabot:triage-prs`               |
+| `create-issue`                | `use-git`           | `/use-git:create-issue`                |
+| `add-goreleaser-homebrew`     | `set-up-installers` | GoReleaser mode                        |
+| `write-homebrew-formula`      | `set-up-installers` | Homebrew formula mode                  |
+| `add-cobra-version`           | `scaffold-go-cli`   | Existing CLI version mode              |
+| `check-zsh-scripts`           | `write-zsh-scripts` | Lint workflow                          |
+| `write-lean-tests`            | `write-lean-code`   | Mirrored test-library reference        |
+| `optimize-runner-usage`       | `set-up-ci`         | Runner-usage mode                      |
+| `add-community-files`         | `scaffold-new-repo` | Community-files mode                   |
+
+Install the destination using `/plugin install PLUGIN@agent-harness-plugins` in Claude Code or `codex plugin add PLUGIN@agent-harness-plugins` in Codex CLI, replacing `PLUGIN` with the table's Install plugin value. For example:
+
+```text
+/plugin install workmux@agent-harness-plugins
+codex plugin add workmux@agent-harness-plugins
 ```
 
-See [Using with OpenCode](#using-with-opencode) below for mirror regeneration and known limitations.
+Folded workflows retain requests such as "add a version command", "add community files", "reduce CI costs" and "write a Homebrew formula". They run only the selected mode when updating an existing project. See each destination's README for usage and requirements.
 
 ## Skills
 
@@ -47,57 +76,57 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Git
 
-| Plugin                                                   | Trigger             | What it does                                                                                                                                          |
-| -------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Commit](./plugins/commit/README.md)                     | `/commit`           | Smart, context-aware git commits with conventional commit messages and plan awareness.                                                                |
-| [Merge Main](./plugins/merge-main/README.md)             | `/merge-main`       | Fetch and merge the base branch into the current feature branch with automatic conflict resolution.                                                   |
-| [PR](./plugins/pr/README.md)                             | `/pr`               | Lint, commit, push, and create a pull request in one step with no prompts.                                                                            |
-| [Rebase Onto Main](./plugins/rebase-onto-main/README.md) | `/rebase-onto-main` | Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.                        |
-| [Release](./plugins/release/README.md)                   | `/release`          | Prepare a versioned release: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.                     |
-| [Review Branch](./plugins/review-branch/README.md)       | `/review-branch`    | Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.                        |
-| [Use Git](./plugins/use-git/README.md)                   | `/use-git`          | Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance. |
+| Plugin                                               | Trigger                                           | What it does                                                                                                                      |
+| ---------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| [Commit](./plugins/commit/README.md)                 | `/commit`                                         | Smart, context-aware git commits with conventional commit messages and plan awareness.                                            |
+| [Sync With Main](./plugins/sync-with-main/README.md) | `/sync-with-main:merge`, `/sync-with-main:rebase` | Merge or rebase the base branch into the current branch, resolve conflicts, and push using the selected workflow.                 |
+| [PR](./plugins/pr/README.md)                         | `/pr`                                             | Lint, commit, push, and create a pull request in one step with no prompts.                                                        |
+| [Release](./plugins/release/README.md)               | `/release`                                        | Prepare a versioned release: update release files, create a release commit, tag locally, and optionally publish a GitHub Release. |
+| [Review Branch](./plugins/review-branch/README.md)   | `/review-branch`                                  | Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.    |
+| [Use Git](./plugins/use-git/README.md)               | `/use-git:use-git`, `/use-git:create-issue`       | Apply git and GitHub CLI conventions for tmpfile bodies, signed commits and safe pushes, and create GitHub issues.                |
 
 **External tools:**
 
-- _PR:_ [`gh`](https://cli.github.com/)
-- _Merge Main, Rebase Onto Main, Review Branch:_ [`gh`](https://cli.github.com/) for default-branch detection; each falls back to a local git query if unavailable
+- _PR, Use Git:_ [`gh`](https://cli.github.com/)
+- _Sync With Main, Review Branch:_ [`gh`](https://cli.github.com/) for default-branch detection; each falls back to a local git query if unavailable
 - _Release:_ [`jq`](https://jqlang.org/) for marketplace catalog releases; [`gh`](https://cli.github.com/) optional for GitHub Release creation
 
 ### Issues and Worktrees
 
-| Plugin                                                                     | Trigger                                   | What it does                                                                                                                                               |
-| -------------------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Address Issue](./plugins/address-issue/README.md)                         | `/address-issue <issue>`                  | Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.                                             |
-| [Address Issue in Worktree](./plugins/address-issue-in-worktree/README.md) | `/address-issue-in-worktree <issue>`      | Create a worktree, branch, and tmux window for a GitHub issue, then have the new session run address-issue to plan the work and stop for approval.         |
-| [Create Deferred Issues](./plugins/create-deferred-issues/README.md)       | `/create-deferred-issues`                 | Scan the session, branch, and pull request for concerns set aside as out of scope, propose them as one batch, and file the approved ones as GitHub issues. |
-| [Create Issue](./plugins/create-issue/README.md)                           | `/create-issue`                           | Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.                                                       |
-| [Create Worktree](./plugins/create-worktree/README.md)                     | `/create-worktree <issue-or-description>` | Create a git worktree, branch, and tmux window from an issue number or a task description, with a prompt injected using workmux.                           |
-| [Suggest Next Issue](./plugins/suggest-next-issue/README.md)               | `/suggest-next-issue`                     | Review open GitHub issues and recommend what to work on next with prioritized reasoning.                                                                   |
-| [WTAF](./plugins/wtaf/README.md)                                           | `/wtaf`                                   | Summarize where the conversation, branch, and tasks stand and what comes next, with a thorough mode that also reads the history.                           |
+| Plugin                                                               | Trigger                                                                           | What it does                                                                                                                                               |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Address Issue](./plugins/address-issue/README.md)                   | `/address-issue <issue>`                                                          | Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.                                             |
+| [Workmux](./plugins/workmux/README.md)                               | `/workmux:create-worktree <issue-or-description>`, `/workmux:start-issue <issue>` | Create worktrees, branches and tmux windows with workmux, or launch issue planning in a new session.                                                       |
+| [Create Deferred Issues](./plugins/create-deferred-issues/README.md) | `/create-deferred-issues`                                                         | Scan the session, branch, and pull request for concerns set aside as out of scope, propose them as one batch, and file the approved ones as GitHub issues. |
+| [Suggest Next Issue](./plugins/suggest-next-issue/README.md)         | `/suggest-next-issue`                                                             | Recommend the next open GitHub issue in a focused terminal answer, with reasoning, progress signals and resource constraints.                              |
+| [WTAF](./plugins/wtaf/README.md)                                     | `/wtaf`                                                                           | Summarize where the conversation, branch, and tasks stand and what comes next, with a thorough mode that also reads the history.                           |
 
 **External tools:**
 
-- _Address Issue, Create Deferred Issues, Create Issue, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
-- _Address Issue in Worktree:_ [`gh`](https://cli.github.com/), [`workmux`](https://github.com/raine/workmux), [`jq`](https://jqlang.org/)
-- _Create Worktree:_ [`workmux`](https://github.com/raine/workmux), plus [`gh`](https://cli.github.com/) when given an issue number and [`jq`](https://jqlang.org/) for an issue number or a resource claim
+- _Address Issue, Create Deferred Issues, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
+- _Workmux:_ [`workmux`](https://github.com/raine/workmux), plus [`gh`](https://cli.github.com/) when given an issue number and [`jq`](https://jqlang.org/) for an issue number or a resource claim
 - _WTAF:_ optional [`gh`](https://cli.github.com/) for pull request, issue, and CI state; without it, the summary uses the conversation and local git alone
 
 ### Code Review
 
-| Plugin                                                                         | Trigger                        | What it does                                                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Address Review](./plugins/address-review/README.md)                           | `/address-review <path>`       | Parse a review document for actionable feedback, work through items systematically, and track resolution progress.                                                                                                                                                    |
-| [Review Colleague PR](./plugins/review-colleague-pr/README.md)                 | `/review-colleague-pr`         | Review a colleague's pull request carefully and considerately from a checkout of its branch, and report a brief, read-only assessment in chat: requirements, direction, blockers, follow-ups, and questions for the author.                                           |
-| [Review Plan](./plugins/review-plan/README.md)                                 | `/review-plan [path]`          | Review an implementation plan against the current repository and its explicit dependencies, reporting evidence-backed blockers, required revisions, and optional improvements before work begins. Use when asked to review a plan or assess implementation readiness. |
-| [Review Until Clean](./plugins/review-until-clean/README.md)                   | `/review-until-clean`          | Run a read-only reviewer from another model family over every local change, fix the findings at or above a severity threshold, and repeat until the exact snapshot on disk comes back clean or a round limit stops the loop.                                          |
-| [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                                                                                                                                                                      |
-| [Set-Up Review Config](./plugins/set-up-review-config/README.md)               | `/set-up-review-config`        | Install style-guide review checklists as a Copilot code-review skill, with matching AGENTS.md review rules and a REVIEW.md, so Copilot, Codex, and Claude Code Review apply the same guidance.                                                                        |
+| Plugin                                                           | Trigger                                                       | What it does                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Address Review](./plugins/address-review/README.md)             | `/address-review <path>`                                      | Parse a review document for actionable feedback, work through items systematically, and track resolution progress.                                                                                                                                                    |
+| [Review Anti-Patterns](./plugins/review-anti-patterns/README.md) | `/review-anti-patterns`                                       | Review a branch or a fix diff, read-only, against a checklist of the defect patterns that most often survive local review and surface in later Copilot rounds, such as bypassable sanitizers, parallel paths left behind, and docs that disagree with the code.       |
+| [Review Colleague PR](./plugins/review-colleague-pr/README.md)   | `/review-colleague-pr`                                        | Review a colleague's pull request carefully and considerately from a checkout of its branch, and report a brief, read-only assessment in chat: requirements, direction, blockers, follow-ups, and questions for the author.                                           |
+| [Review Plan](./plugins/review-plan/README.md)                   | `/review-plan [path]`                                         | Review an implementation plan against the current repository and its explicit dependencies, reporting evidence-backed blockers, required revisions, and optional improvements before work begins. Use when asked to review a plan or assess implementation readiness. |
+| [Review PR with Codex](./plugins/review-pr-with-codex/README.md) | `/review-pr-with-codex`                                       | Have Codex review the current branch in focused read-only aspects (code, error handling, tests, comments, types), then merge the findings into one report with an action plan.                                                                                        |
+| [Review Until Clean](./plugins/review-until-clean/README.md)     | `/review-until-clean`                                         | Run a reviewer of your choice (a skill, slash command or CLI) over every local change, fix its findings at or above a severity threshold, and repeat until the exact snapshot on disk comes back clean or a round limit stops the loop.                               |
+| [Monitor Pr](./plugins/monitor-pr/README.md)                     | `/monitor-pr:monitor`, `/monitor-pr:resolve-copilot-feedback` | Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands; resolve Copilot feedback on demand.                           |
+| [Set-Up Review Config](./plugins/set-up-review-config/README.md) | `/set-up-review-config`                                       | Install style-guide review checklists as a Copilot code-review skill, with matching AGENTS.md review rules and a REVIEW.md, so Copilot, Codex, and Claude Code Review apply the same guidance.                                                                        |
 
 **External tools:**
 
+- _Review Anti-Patterns:_ [`gh`](https://cli.github.com/) (optional; finds the default branch when `origin/HEAD` is unset, and reads the open pull request's body)
 - _Review Colleague PR:_ [`gh`](https://cli.github.com/) (required; the skill reads the PR, its linked issues, its reviews, and its CI status over the GitHub API, and writes nothing)
 - _Review Plan:_ [`gh`](https://cli.github.com/) (optional; only for explicitly linked GitHub context)
-- _Review Until Clean:_ [`codex`](https://github.com/openai/codex) or [`claude`](https://code.claude.com/docs/en/overview) (one required, as the reviewer backend; both run read-only and neither is given a fix flag); `jq` (required; the bundled scope helper emits JSON)
+- _Review PR with Codex:_ [`codex`](https://github.com/openai/codex) (required; every aspect runs through Codex, read-only except `simplify`); `jq` (required; the bundled helpers emit and validate JSON)
+- _Review Until Clean:_ a reviewer of your choice (required; any skill, slash command or CLI, installed and authenticated; edits it makes are recorded and, when the round budget allows, reviewed again); `jq` (required; the bundled scope helper emits JSON)
 - _Resolve Copilot PR Feedback:_ [`gh`](https://cli.github.com/) (required; the skill reads review threads over the GitHub API and posts its summary comment)
 - _Set-Up Review Config:_ `git` (required; the skill detects file types with `git ls-files` and pins links with `git ls-remote`); `curl` (optional; checks that the bundled checklists match the marketplace)
 
@@ -106,7 +135,6 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | Plugin                                                                      | Trigger                      | What it does                                                                                                                                                                     |
 | --------------------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Add Scrut CLI Tests](./plugins/add-scrut-cli-tests/README.md)              | `/add-scrut-cli-tests`       | Set up scrut snapshot-based CLI integration testing for a CLI project.                                                                                                           |
-| [Check Zsh Scripts](./plugins/check-zsh-scripts/README.md)                  | `/check-zsh-scripts`         | Check and evaluate zsh scripts using shellcheck, shfmt, shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var, and checkbashisms.                             |
 | [Handle Secrets](./plugins/handle-secrets/README.md)                        | `/handle-secrets`            | Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries.                       |
 | [Lint and Fix](./plugins/lint-and-fix/README.md)                            | `/lint-and-fix`              | Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes.                                                         |
 | [Plant Defects](./plugins/plant-defects/README.md)                          | `/plant-defects`             | Deliberately break code to prove a test can see it: plant the defect an instrument claims to catch, confirm it goes red, and record it so it regresses.                          |
@@ -115,11 +143,10 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Write Bash Scripts](./plugins/write-bash-scripts/README.md)                | `/write-bash-scripts`        | Applies Bash style conventions when creating or editing Bash scripts.                                                                                                            |
 | [Write Go Code](./plugins/write-go-code/README.md)                          | `/write-go-code`             | Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior.                                                                  |
 | [Write LaTeX](./plugins/write-latex/README.md)                              | `/write-latex`               | LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions.                                                                               |
-| [Write Lean Code](./plugins/write-lean-code/README.md)                      | `/write-lean-code`           | Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming.                                                                                  |
-| [Write Lean Tests](./plugins/write-lean-tests/README.md)                    | `/write-lean-tests`          | Conventions for compile-time, example-based Lean 4 API regression tests that mirror a library's public surface.                                                                  |
+| [Write Lean Code](./plugins/write-lean-code/README.md)                      | `/write-lean-code`           | Lean 4 and Mathlib conventions for code, proofs, naming, documentation and compile-time tests that mirror the public library API.                                                |
 | [Write Real-Time Audio Code](./plugins/write-realtime-audio-code/README.md) | `/write-realtime-audio-code` | Write and review real-time audio code: callback safety, bounded cross-thread communication, memory ordering, sample-accurate events, and compatible plugin parameters and state. |
 | [Write Scrut Tests](./plugins/write-scrut-tests/README.md)                  | `/write-scrut-tests`         | Applies scrut test style conventions when creating or editing scrut test files for CLI binaries and zsh plugins.                                                                 |
-| [Write Zsh Scripts](./plugins/write-zsh-scripts/README.md)                  | `/write-zsh-scripts`         | Applies zsh style conventions when creating or editing zsh scripts, configurations, and completions.                                                                             |
+| [Write Zsh Scripts](./plugins/write-zsh-scripts/README.md)                  | `/write-zsh-scripts`         | Zsh scripting conventions for syntax, types, expansion, scope and completions, with a workflow for syntax checks, compilation, linting and formatting.                           |
 
 **External tools:**
 
@@ -129,32 +156,32 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Writing
 
-| Plugin                                                                               | Trigger                           | What it does                                                                                                                                                      |
-| ------------------------------------------------------------------------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Publish Report Board](./plugins/publish-report-board/README.md)                     | `/publish-report-board`           | Publish a recurring analysis, such as backlog triage or bug triage, as a live report board with a stable URL, and re-sync it in place as the source data changes. |
-| [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md)       | `/write-formalization-roadmap`    | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.                                     |
-| [Write Manual Verification Plan](./plugins/write-manual-verification-plan/README.md) | `/write-manual-verification-plan` | Write a numbered, resumable checklist for checks run by hand, where every step says what to do, what you should see, and how to tell nothing from broken.         |
-| [Write Markdown](./plugins/write-markdown/README.md)                                 | `/write-markdown`                 | Applies Markdown style conventions when creating or editing Markdown files.                                                                                       |
-| [Write Math](./plugins/write-math/README.md)                                         | `/write-math`                     | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.                                                              |
-| [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md)                   | `/write-pandoc-markdown`          | Pandoc-flavored Markdown conventions for academic papers with LaTeX output.                                                                                       |
+| Plugin                                                                               | Trigger                           | What it does                                                                                                                                                           |
+| ------------------------------------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Publish Report Board](./plugins/publish-report-board/README.md)                     | `/publish-report-board`           | Publish a recurring analysis, such as backlog triage or bug triage, as a live report board with a stable URL, and re-sync it in place as the source data changes.      |
+| [Trim Text](./plugins/trim-text/README.md)                                           | `/trim-text`                      | Trim and rewrite prose, such as PR and issue bodies and agent instructions, so it leads with what the reader needs and the minimum why, without changing what it says. |
+| [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md)       | `/write-formalization-roadmap`    | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.                                          |
+| [Write Manual Verification Plan](./plugins/write-manual-verification-plan/README.md) | `/write-manual-verification-plan` | Write a numbered, resumable checklist for checks run by hand, where every step says what to do, what you should see, and how to tell nothing from broken.              |
+| [Write Markdown](./plugins/write-markdown/README.md)                                 | `/write-markdown`                 | Applies Markdown style conventions when creating or editing Markdown files.                                                                                            |
+| [Write Math](./plugins/write-math/README.md)                                         | `/write-math`                     | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.                                                                   |
+| [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md)                   | `/write-pandoc-markdown`          | Pandoc-flavored Markdown conventions for academic papers with LaTeX output.                                                                                            |
 
 **External tools:**
 
 - _Publish Report Board:_ [`jq`](https://jqlang.org/) (required; the bundled `report-board` script validates and renders board data with it), [`gh`](https://cli.github.com/) (required for the backlog board, which reads issues, milestones, and pull requests)
+- _Trim Text:_ an authenticated [`gh`](https://cli.github.com/) session, only for PR and issue bodies; `realpath` (GNU coreutils, or macOS 13 and later) for symlinked instruction files
 - _Write Manual Verification Plan:_ an authenticated [`gh`](https://cli.github.com/) session, only when the checklist is kept on an issue rather than in a plan
 
 ### Scaffolding
 
 | Plugin                                                                         | Trigger                        | What it does                                                                                                                                                |
 | ------------------------------------------------------------------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Add Community Files](./plugins/add-community-files/README.md)                 | `/add-community-files`         | Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template.                                               |
 | [Bootstrap Project](./plugins/bootstrap-project/README.md)                     | `/bootstrap-project`           | Assess a repository, determine what scaffolding and setup tools are needed, present a plan, and execute them in the correct order.                          |
 | [Manage Repo Licensing](./plugins/manage-repo-licensing/README.md)             | `/manage-repo-licensing`       | Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository: LICENSES/, NOTICE, REUSE.toml, SPDX headers, and reuse lint cleanliness. |
 | [Refresh Project Scaffolding](./plugins/refresh-project-scaffolding/README.md) | `/refresh-project-scaffolding` | Refresh existing project scaffolding against the latest plugin templates.                                                                                   |
-| [Scaffold Go CLI](./plugins/scaffold-go-cli/README.md)                         | `/scaffold-go-cli`             | Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.                                                        |
 | [Scaffold Go Library](./plugins/scaffold-go-library/README.md)                 | `/scaffold-go-library`         | Scaffold a Go library project with GoReleaser changelog-only releases, golangci-lint, GitHub Actions CI/CD, and Makefile.                                   |
 | [Scaffold Lean Library](./plugins/scaffold-lean-library/README.md)             | `/scaffold-lean-library`       | Scaffold a Lean 4 library project with Mathlib or PFR dependencies, Lake test/lint wiring, GitHub Actions CI, text linting, and agent instructions.         |
-| [Scaffold New Repo](./plugins/scaffold-new-repo/README.md)                     | `/scaffold-new-repo`           | Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.                 |
+| [Scaffold New Repo](./plugins/scaffold-new-repo/README.md)                     | `/scaffold-new-repo`           | Scaffold language-agnostic repository files: LICENSE, README, CHANGELOG, .gitignore, agent config and plans, with optional community files.                 |
 | [Scaffold Rust CLI](./plugins/scaffold-rust-cli/README.md)                     | `/scaffold-rust-cli`           | Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile.                                  |
 | [Scaffold Zig CLI](./plugins/scaffold-zig-cli/README.md)                       | `/scaffold-zig-cli`            | Scaffold a complete Zig CLI project with build.zig, build.zig.zon, cross-compiled releases, GitHub Actions CI/CD, and Makefile.                             |
 
@@ -166,45 +193,44 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### CI and Release
 
-| Plugin                                                                   | Trigger                     | What it does                                                                                                                                                                                                                              |
-| ------------------------------------------------------------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Add Cobra Version](./plugins/add-cobra-version/README.md)               | `/add-cobra-version`        | Add a version subcommand with build metadata (version, commit hash, build date, Go runtime version, optional JSON output) to an existing Cobra-based Go CLI, wiring up ldflags in main.go, the cmd package, GoReleaser, and the Makefile. |
-| [Add GoReleaser Homebrew](./plugins/add-goreleaser-homebrew/README.md)   | `/add-goreleaser-homebrew`  | Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds.                                                                                      |
-| [Monitor PR](./plugins/monitor-pr/README.md)                             | `/monitor-pr`               | Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands.                                   |
-| [Optimize Runner Usage](./plugins/optimize-runner-usage/README.md)       | `/optimize-runner-usage`    | Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows.                                                                                                                                           |
-| [Pin Everything](./plugins/pin-everything/README.md)                     | `/pin-everything`           | Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening.                                            |
-| [Review Dependabot Config](./plugins/review-dependabot-config/README.md) | `/review-dependabot-config` | Review a repository's Dependabot setup (dependabot.yml coverage and validity, grouping, labels, commit messages, and the repository settings and secrets Dependabot depends on), then apply the fixes the user selects.                   |
-| [Set-Up CI](./plugins/set-up-ci/README.md)                               | `/set-up-ci`                | Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.                                                                                                                           |
-| [Set-Up Installers](./plugins/set-up-installers/README.md)               | `/set-up-installers`        | Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.                                                                                                    |
-| [Set-Up Secret Scanning](./plugins/set-up-secret-scanning/README.md)     | `/set-up-secret-scanning`   | Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.                                                                                                                         |
-| [Triage Dependabot PRs](./plugins/triage-dependabot-prs/README.md)       | `/triage-dependabot-prs`    | Triage a repository's open Dependabot pull requests into safe to merge, needs refresh, needs testing, needs work, hold, superseded, or outdated, backed by evidence, then merge, rebase, or close them as the user approves.              |
-| [Upgrade Everything](./plugins/upgrade-everything/README.md)             | `/upgrade-everything`       | Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options.                                                                                   |
-| [Write Homebrew Formula](./plugins/write-homebrew-formula/README.md)     | `/write-homebrew-formula`   | Write or update Homebrew formulae using current Homebrew guidance and cboone/homebrew-tap conventions.                                                                                                                                    |
+| Plugin                                                               | Trigger                                               | What it does                                                                                                                                                                                   |
+| -------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Scaffold Go Cli](./plugins/scaffold-go-cli/README.md)               | `/scaffold-go-cli`                                    | Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions and Homebrew tap support, or add version metadata to an existing Cobra CLI.                                          |
+| [Pin Everything](./plugins/pin-everything/README.md)                 | `/pin-everything`                                     | Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening. |
+| [Dependabot](./plugins/dependabot/README.md)                         | `/dependabot:review-config`, `/dependabot:triage-prs` | Review Dependabot configuration and triage open Dependabot pull requests, applying configuration fixes or PR actions as approved.                                                              |
+| [Set-Up CI](./plugins/set-up-ci/README.md)                           | `/set-up-ci`                                          | Create GitHub Actions CI and matching Makefile targets, or optimize existing workflows with path filters, concurrency groups and job timeouts.                                                 |
+| [Set-Up Secret Scanning](./plugins/set-up-secret-scanning/README.md) | `/set-up-secret-scanning`                             | Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.                                                                              |
+| [Upgrade Everything](./plugins/upgrade-everything/README.md)         | `/upgrade-everything`                                 | Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options.                                        |
+| [Set-Up Installers](./plugins/set-up-installers/README.md)           | `/set-up-installers`                                  | Set up installer and distribution methods for Go, Swift, Rust and Zig projects, configure GoReleaser publishing, and write or update Homebrew formulae.                                        |
 
 **External tools:**
 
-- _Add GoReleaser Homebrew:_ [`gh`](https://cli.github.com/) and [`goreleaser`](https://goreleaser.com/)
 - _Monitor PR:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (both required; the skill reads check, review, and merge state over the GitHub API and pipes paginated review JSON through `jq`)
 - _Pin Everything:_ [`gh`](https://cli.github.com/), [`jq`](https://jqlang.org/); optional [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn or pnpm) and [`reuse`](https://reuse.software/) (only in REUSE-licensed repos)
-- _Review Dependabot Config:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (reads repository settings, labels, alerts, and Dependabot secrets); optional [`uv`](https://docs.astral.sh/uv/) for schema validation with `check-jsonschema`
+- _Dependabot configuration:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (reads repository settings, labels, alerts, and Dependabot secrets); optional [`uv`](https://docs.astral.sh/uv/) for schema validation with `check-jsonschema`
 - _Set-Up Installers:_ [`gh`](https://cli.github.com/) to detect the repository owner and probe for a `homebrew-tap` repo
-- _Triage Dependabot PRs:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (both required; the bundled script reads PRs, comparisons, and alerts over the GitHub API and summarizes them with `jq`)
-- _Write Homebrew Formula:_ [Homebrew](https://brew.sh/) for formula audit, style, install, and test validation
+- _Dependabot PR triage:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (both required; the bundled script reads PRs, comparisons, and alerts over the GitHub API and summarizes them with `jq`)
+- _Set-Up Installers:_ authenticated [`gh`](https://cli.github.com/) for GoReleaser publishing; optional [`goreleaser`](https://goreleaser.com/) for configuration checks; [Homebrew](https://brew.sh/) for formula validation
 
 ### Agents
 
-| Plugin                                                             | Trigger                  | What it does                                                                                                                |
-| ------------------------------------------------------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| [Clean Up Agent Config](./plugins/clean-up-agent-config/README.md) | `/clean-up-agent-config` | Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode. |
-| [Create Plugin](./plugins/create-plugin/README.md)                 | `/create-plugin`         | Guide for creating new plugins in this repository with consistent structure and conventions.                                |
+| Plugin                                                             | Trigger                  | What it does                                                                                                                                             |
+| ------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Clean Up Agent Config](./plugins/clean-up-agent-config/README.md) | `/clean-up-agent-config` | Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, and Copilot.                                        |
+| [Create Plugin](./plugins/create-plugin/README.md)                 | `/create-plugin`         | Guide for creating new plugins in this repository with consistent structure and conventions.                                                             |
+| [Push Notification](./plugins/push-notification/README.md)         | `/push-notification`     | Send push notifications through ntfy when work finishes or needs a decision, on request or from another skill, including from remote and cloud sessions. |
+
+**External tools:**
+
+- _Push Notification:_ [`curl`](https://curl.se/) 7.76.0 or newer, [`jq`](https://jqlang.org/), and an [ntfy](https://ntfy.sh) topic on ntfy.sh or a self-hosted server
 
 ## Hooks
 
 Hooks are event-driven; they have no slash-command trigger.
 
-| Plugin                                       | What it does                                                                                                |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention. |
+| Plugin                                       | What it does                                                                                     |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code or Codex CLI finishes a task or needs your attention. |
 
 **External tools:**
 
@@ -212,7 +238,7 @@ Hooks are event-driven; they have no slash-command trigger.
 
 ## Using with Codex CLI
 
-This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories and copy every `SKILL.md` unchanged, so Codex routes on the same skill descriptions as Claude Code and OpenCode.
+This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories and copy every `SKILL.md` unchanged, so Codex routes on the same skill descriptions as Claude Code.
 
 For per-plugin metadata Codex prefers `.codex-plugin/plugin.json` when present and falls back to `.claude-plugin/plugin.json` otherwise. Hook registration requires a `.codex-plugin/plugin.json` with a non-empty `hooks` path (for example `"hooks": "./hooks/hooks.json"`); this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `PLUGIN_ROOT` to plugin-bundled hook commands, plus `CLAUDE_PLUGIN_ROOT` for compatibility with existing Claude Code plugins.
 
@@ -262,8 +288,8 @@ Plugin hooks need no feature flag, but Codex runs them only after you review and
 ### Codex CLI known limitations
 
 - **Skill invocations are written in Claude Code syntax.** The catalog's triggers, skill prose, and generated worktree prompts write invocations as `/name`. In Codex, use `$name` or `/skills` instead. Correcting them is [milestone 3][codex-milestone-3] of the Codex roadmap.
-- **Workflow chains are written for Claude Code tools.** Skills such as `pr`, `monitor-pr`, and `bootstrap-project` invoke other skills and ask structured questions through Claude Code tool names, so Codex has to translate those steps. Applying the shared adapter conventions is [milestone 2][codex-milestone-2] for the Git and review chain and [milestone 3][codex-milestone-3] for the rest of the catalog.
-- **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/address-issue-in-worktree`, `/create-worktree`, `/monitor-pr`, `/publish-report-board`, and `/resolve-copilot-pr-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step. Package-relative helper resolution is [milestone 3][codex-milestone-3].
+- **Workflow chains are written for Claude Code tools.** Skills such as `pr`, `monitor-pr:monitor`, and `bootstrap-project` invoke other skills and ask structured questions through Claude Code tool names, so Codex has to translate those steps. Applying the shared adapter conventions is [milestone 2][codex-milestone-2] for the Git and review chain and [milestone 3][codex-milestone-3] for the rest of the catalog.
+- **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/workmux:start-issue`, `/workmux:create-worktree`, `/monitor-pr:monitor`, `/publish-report-board`, and `/monitor-pr:resolve-copilot-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step. Package-relative helper resolution is [milestone 3][codex-milestone-3].
 - **Installed plugin READMEs have broken links.** An installed plugin's links to this README and to sibling plugins resolve to paths that do not exist in the Codex plugin cache. Read plugin documentation on GitHub until [milestone 3][codex-milestone-3] corrects them.
 - **`notify` covers three Codex events.** On Codex, `notify` wires `Stop` for completion, `UserPromptSubmit` to reset completion deduplication, and `PreToolUse` for the `request_user_input` question tool. `PermissionRequest` is deliberately left unwired: it runs before Codex's automatic approval review decides whether to prompt you, so a notification there would announce decisions that need no response. For approval and plan prompts, enable Codex's built-in terminal notifications as the [`notify` plugin README](./plugins/notify/README.md) describes. Reassessing the other lifecycle events is [milestone 3][codex-milestone-3].
 - **End-to-end verification is partial.** Linux, multiple cached plugin versions, paths containing spaces, restricted destinations, and complete hook payload coverage are not yet verified; that is [milestone 4][codex-milestone-4].
@@ -272,17 +298,6 @@ Plugin hooks need no feature flag, but Codex runs them only after you review and
 [codex-milestone-2]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-2-prove-the-design-on-the-git-and-review-chain
 [codex-milestone-3]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-3-apply-the-design-across-the-catalog
 [codex-milestone-4]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-4-verify-the-complete-distribution
-
-## Using with OpenCode
-
-This repository also works with the skills and hooks in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
-
-When adding or removing a plugin, regenerate the mirror with `bin/build-opencode-mirror` and commit the result. CI fails if the mirror drifts from the source plugins. Hooks are mirrored to `dist/opencode/plugins/` as TypeScript plugins, sourced from each plugin's `opencode/index.ts`.
-
-### OpenCode known limitations
-
-- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Claude Code substitutes this placeholder in SKILL.md bodies when a skill loads, which is how `/address-issue-in-worktree`, `/create-worktree`, `/monitor-pr`, `/publish-report-board`, and `/resolve-copilot-pr-feedback` name their bundled helper scripts. OpenCode does not substitute it, so the path reaches the agent as a literal string starting with `$`. Each of those five skills carries a documented fallback that locates the script by glob instead, so they stay usable at the cost of an extra search step. For the direct path, run them in Claude Code.
-- **Hook event parity is approximate.** OpenCode maps only completion, permission and error events; it has no question or plan banner, completion deduplication, visibility check or per-session grouping. See each hook's README for the specific mapping.
 
 ## License
 

@@ -20,10 +20,12 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR \
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
 	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT -u CODEX_OTHER_SKILL_RESERVE_TOKENS \
-	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_TOKEN \
+	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS \
-	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_TEST_ZENHUB_TOKEN \
-	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME
+	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
+	-u BACKLOG_GATHER_NOW -u BACKLOG_GATHER_HOST \
+	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME \
+	-u PUSH_NOTIFICATION_BACKEND -u PUSH_NOTIFICATION_CONFIG -u NTFY_SERVER -u NTFY_TOPIC -u NTFY_TOKEN
 
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from
@@ -34,11 +36,11 @@ SCRUT_ENV := \
 	CHECK_NOTIFICATIONS_BIN="$(CURDIR)/tests/fixtures/check-notifications" \
 	CHECK_CROSS_REFERENCES_BIN="$(CURDIR)/bin/check-cross-references" \
 	BUILD_REVIEW_CHECKLISTS_BIN="$(CURDIR)/bin/build-review-checklists" \
+	BUILD_SHARED_REFERENCES_BIN="$(CURDIR)/bin/build-shared-references" \
 	REVIEW_CHECKLIST_FIXTURE_BIN="$(CURDIR)/tests/fixtures/review-checklist-fixture" \
 	BUILD_CODEX_MARKETPLACE_BIN="$(CURDIR)/bin/build-codex-marketplace" \
 	CODEX_TRANSLATION_FIXTURE_BIN="$(CURDIR)/tests/fixtures/codex-translation-fixture" \
-	COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/address-issue-in-worktree/scripts/compose-issue-prompt" \
-	CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/create-worktree/scripts/compose-issue-prompt" \
+	COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/workmux/scripts/compose-issue-prompt" \
 	LIST_SHELL_SCRIPTS_BIN="$(CURDIR)/bin/list-shell-scripts" \
 	MATERIALIZE_CASE_BIN="$(CURDIR)/bin/materialize-case" \
 	VALIDATE_CORPUS_BIN="$(CURDIR)/bin/validate-corpus" \
@@ -51,26 +53,34 @@ SCRUT_ENV := \
 	CROSS_REFERENCE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/cross-reference-fixture" \
 	CATALOG_RELEASE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/catalog-release-fixture" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \
-	CREATE_WORKTREE_LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/create-worktree/scripts/launch-workmux" \
-	ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/address-issue-in-worktree/scripts/launch-workmux" \
-	DEPENDABOT_PRS_BIN="$(CURDIR)/plugins/triage-dependabot-prs/scripts/dependabot-prs" \
+	LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/workmux/scripts/launch-workmux" \
+	DEPENDABOT_PRS_BIN="$(CURDIR)/plugins/dependabot/scripts/dependabot-prs" \
 	DEPENDABOT_PRS_DATA_DIR="$(CURDIR)/tests/data/dependabot-prs" \
 	GH_STUB_BIN="$(CURDIR)/tests/fixtures/gh-stub" \
 	GIT_WORKTREE_STUB_BIN="$(CURDIR)/tests/fixtures/git-worktree-stub" \
-	MANAGE_RESOURCE_CLAIMS_BIN="$(CURDIR)/plugins/address-issue-in-worktree/scripts/manage-resource-claims" \
-	CREATE_WORKTREE_MANAGE_RESOURCE_CLAIMS_BIN="$(CURDIR)/plugins/create-worktree/scripts/manage-resource-claims" \
+	MANAGE_RESOURCE_CLAIMS_BIN="$(CURDIR)/plugins/workmux/scripts/manage-resource-claims" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
+	COPILOT_ROUNDS_REPORT_BIN="$(CURDIR)/bin/copilot-rounds-report" \
+	COPILOT_ROUNDS_REPORT_DATA_DIR="$(CURDIR)/tests/data/copilot-rounds-report" \
 	RECORD_TRAFFIC_BIN="$(CURDIR)/bin/record-traffic" \
 	RECORD_TRAFFIC_DATA_DIR="$(CURDIR)/tests/data/record-traffic" \
 	BUGS_GATHER_BIN="$(CURDIR)/plugins/publish-report-board/scripts/bugs-gather" \
 	BUGS_GATHER_DATA_DIR="$(CURDIR)/tests/data/bugs-gather" \
+	BACKLOG_GATHER_BIN="$(CURDIR)/plugins/publish-report-board/scripts/backlog-gather" \
+	BACKLOG_GATHER_DATA_DIR="$(CURDIR)/tests/data/backlog-gather" \
+	BACKLOG_GATHER_GH_STUB_BIN="$(CURDIR)/tests/fixtures/backlog-gather-gh-stub" \
 	CURL_STUB_BIN="$(CURDIR)/tests/fixtures/curl-stub" \
-	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads" \
-	MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/monitor-pr/scripts/resolve-copilot-threads" \
+	PUSH_NOTIFICATION_BIN="$(CURDIR)/plugins/push-notification/scripts/push-notification" \
+	NTFY_CURL_STUB_BIN="$(CURDIR)/tests/fixtures/ntfy-curl-stub" \
+	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/monitor-pr/scripts/resolve-copilot-threads" \
 	MERGE_FLOW_BIN="$(CURDIR)/plugins/monitor-pr/scripts/merge-flow" \
 	MERGE_FLOW_DATA_DIR="$(CURDIR)/tests/data/merge-flow" \
 	REVIEW_SCOPE_BIN="$(CURDIR)/plugins/review-until-clean/scripts/review-scope" \
+	REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN="$(CURDIR)/plugins/review-pr-with-codex/scripts/review-scope" \
+	CODEX_ASPECTS_BIN="$(CURDIR)/plugins/review-pr-with-codex/scripts/codex-aspects" \
+	CODEX_STUB_BIN="$(CURDIR)/tests/fixtures/codex-stub" \
+	RESULT_CHECK_JQ="$(CURDIR)/plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq" \
 	RUN_SCRUT_DOCUMENTS_BIN="$(CURDIR)/bin/run-scrut-documents" \
 	SCRUT_STUB_BIN="$(CURDIR)/tests/fixtures/scrut-stub" \
 	GIT_CONFIG_GLOBAL=/dev/null \
@@ -95,7 +105,7 @@ help:
 	@echo "  format             Auto-fix Markdown and formatting"
 	@echo "  validate           Validate JSON and plugin structure"
 	@echo "  validate-corpus    Validate the review case corpus (needs REVIEW_CASE_CORPUS_DIR)"
-	@echo "  build              Regenerate bundled review checklists and the Codex and OpenCode mirrors"
+	@echo "  build              Regenerate bundled review checklists and the Codex mirror"
 	@echo "  test-scrut         Run the scrut documents in parallel (SCRUT_JOBS=N to limit)"
 	@echo "  test-scrut-update  Re-record scrut expectations"
 	@echo "  test-all           lint + validate + test-scrut"
@@ -130,11 +140,12 @@ validate:
 validate-corpus:
 	bin/validate-corpus
 
-# The checklists come first: the Codex mirror copies plugins/, copies included.
+# The checklists and shared references come first: the Codex mirror copies
+# plugins/, copies included.
 build:
 	bin/build-review-checklists
+	bin/build-shared-references
 	bin/build-codex-marketplace
-	bin/build-opencode-mirror
 
 test-scrut:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }

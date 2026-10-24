@@ -1,10 +1,11 @@
 # Plugin validator: skills
 
 Tests for the `bin/validate-plugins` rules over skill bodies: the generated
-Codex copies, frontmatter, cross-references and bundled review checklists.
-Every case runs it through `tests/fixtures/validate-plugin-fixture`, which
-validates a disposable copy of the repository after one targeted mutation, so
-each case pays for a full validator run. `validate-plugins-catalog.md` covers
+Codex copies, frontmatter, cross-references, bundled review checklists and
+shared reference copies. Every case runs it through
+`tests/fixtures/validate-plugin-fixture`, which validates a disposable copy of
+the repository after one targeted mutation, so each case pays for a full
+validator run. `validate-plugins-catalog.md` covers
 the catalog rules; the two are separate documents so CI runs them in parallel.
 
 ## Generated Codex skills match their canonical sources
@@ -70,10 +71,10 @@ Codex skill inventory: * (glob)
 
 ## Skill frontmatter fields are on the allowlist
 
-Claude Code accepts around twenty `SKILL.md` frontmatter fields, OpenCode
-documents five and Codex CLI two, and all three tolerate what they do not
-recognize. A misspelled field therefore changes nothing in any harness and
-reports nothing, so rule 21 names the fields this repository ships.
+Claude Code accepts around twenty `SKILL.md` frontmatter fields and Codex CLI
+documents two, and both tolerate what they do not recognize. A misspelled field
+therefore changes nothing in either harness and reports nothing, so rule 21
+names the fields this repository ships.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" unknown-frontmatter-field 2>&1
@@ -83,8 +84,8 @@ Codex skill inventory: * (glob)
 [1]
 ```
 
-A field on the allowlist passes, and reaches Codex and OpenCode unchanged
-because both ignore what they do not recognize.
+A field on the allowlist passes, and reaches Codex unchanged because Codex
+ignores what it does not recognize.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" permitted-frontmatter-field 2>&1
@@ -191,6 +192,31 @@ $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" invalid-review-checklist 2>&1
 Codex skill inventory: * (glob)
 ::error::plugins/write-go-code/skills/write-go-code/references/review-checklist.md has a list item without a bold rule name, which reviewers cite: - plain item
 1 review checklist error(s) found; no copies were written.
+1 plugin validation error(s) found.
+[1]
+```
+
+## Validator rejects stale shared reference copies
+
+`suggest-next-issue` ships a byte-identical copy of the progress model that
+`publish-report-board` owns. Rule 22 compares the copy with its source, so a
+source edited without `make build` and a copy edited by hand both fail. The
+fixture never runs `bin/build-shared-references`, which would repair either.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" stale-shared-reference 2>&1
+Codex skill inventory: * (glob)
+::error::Shared reference copy 'plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md' does not match its source 'plugins/publish-report-board/skills/publish-report-board/references/progress-model.md'; edit the source, not the copy, and run make build
+1 shared reference error(s) found.
+1 plugin validation error(s) found.
+[1]
+```
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" edited-shared-reference-copy 2>&1
+Codex skill inventory: * (glob)
+::error::Shared reference copy 'plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md' does not match its source 'plugins/publish-report-board/skills/publish-report-board/references/progress-model.md'; edit the source, not the copy, and run make build
+1 shared reference error(s) found.
 1 plugin validation error(s) found.
 [1]
 ```

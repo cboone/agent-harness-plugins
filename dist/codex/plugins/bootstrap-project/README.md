@@ -20,8 +20,7 @@ Orchestrates these tools:
 - `set-up-ci`: GitHub Actions CI workflow and Makefile targets
 - `set-up-linters`: linters and formatters
 - `set-up-secret-scanning`: secret scanning workflows
-- `add-goreleaser-homebrew`: GoReleaser and Homebrew tap publishing
-- `set-up-installers`: Homebrew formula
+- `set-up-installers`: GoReleaser with Homebrew tap publishing, or a standalone Homebrew formula
 - `add-scrut-cli-tests`: scrut CLI integration tests
 - `set-up-review-config`: review checklists for Copilot code review, Codex and Claude Code Review
 - `pin-everything` (scoped to `--scope dependabot`): a `.github/dependabot.yml` that keeps the SHA-pinned actions and dependencies the other tools emit up to date
@@ -48,5 +47,5 @@ Orchestrates these tools:
 - [Set-Up Linters](../set-up-linters/README.md): linter and formatter setup only
 - [Set-Up Review Config](../set-up-review-config/README.md): review checklists for automated pull request reviewers only
 - [Pin Everything](../pin-everything/README.md): the full pinning pass, beyond the Dependabot config bootstrap writes
-- [Review Dependabot Config](../review-dependabot-config/README.md): review an existing Dependabot config and its repository settings
+- [Review Dependabot Config](../dependabot/README.md#dependabotreview-config): review an existing Dependabot config and its repository settings
 - [All plugins](../../../../README.md)

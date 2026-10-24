@@ -114,7 +114,7 @@ Thorough review of `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 fai
 ## How It Differs
 
 - [Review Branch](../review-branch/README.md) evaluates your own branch, checks plan compliance when a plan is available, and normally saves a review document. Review Colleague PR evaluates someone else's pull request and saves nothing.
-- [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md) acts on review feedback: it changes code and replies on GitHub. Review Colleague PR only reads.
+- [Resolve Copilot PR Feedback](../monitor-pr/README.md#monitor-prresolve-copilot-feedback) acts on review feedback: it changes code and replies on GitHub. Review Colleague PR only reads.
 
 ## Recommended Permissions
 
@@ -167,5 +167,5 @@ If the selected prior review is not an ancestor of the PR head, or that relation
 ## See Also
 
 - [Review Branch](../review-branch/README.md): review your own branch before opening a PR
-- [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): process Copilot's review comments on your PR
+- [Resolve Copilot PR Feedback](../monitor-pr/README.md#monitor-prresolve-copilot-feedback): process Copilot's review comments on your PR
 - [All plugins](../../README.md)

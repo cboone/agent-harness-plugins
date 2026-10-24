@@ -1,0 +1,170 @@
+```json
+{
+  "status": "success",
+  "reviewed": "b89fff26447e3f9064ce81997f5a9a1620b6106f..working-tree",
+  "complete": true,
+  "findings": [
+    {
+      "title": "Unenforced trust boundary: push detection by remote-tracking refs misses tag pushes and pushes to a URL, so a reviewer that pushes is not ended as failed",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 104,
+      "severity": "important",
+      "detail": "The text says a push updates the remote-tracking ref of what it pushed, \"whichever ref or tag it was\". SKILL.md:183 then promises that a reviewer that pushes ends the run as `failed`, \"detected by the refs steps 4 and 5 compare\". Tags have no remote-tracking refs, so `git push origin <existing-tag>` changes nothing that `git for-each-ref refs/remotes refs/tags` lists. A push to a URL (`git push https://.../repo.git HEAD:main`), or to a remote with no fetch refspec, updates no local ref either. Each of these goes undetected, and the round is recorded as a report round or an edit round, not as `failed`. The boundary needs a statement of what the comparison cannot see (tag pushes, URL pushes, `gh api` writes) and should not claim detection it does not have, or it needs a stronger mechanism.",
+      "evidence": "Reproduced in a scratch repository outside the worktree: the before/after `git for-each-ref --format='%(refname) %(objectname)' refs/remotes refs/tags` output differed only when the tag was created locally. `git push origin v1` produced no diff. `git push <path-to-bare-remote> HEAD:main` produced no diff, although the remote's `main` advanced (remote log showed the new commit)."
+    },
+    {
+      "title": "Unenforced trust boundary: a reviewer that rewrites history is recorded as an edit round, not ended as failed",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 115,
+      "severity": "important",
+      "detail": "SKILL.md:247 says a reviewer that \"rewrites history\" stops the run as `failed`. reviewers.md:62 detects that only from the reviewer's own report or from moved remote refs. reviewers.md:115 tells the agent that a reviewer that commits moves the snapshot, and to record that round's HEAD change as an edit round. Nothing checks that the old HEAD is an ancestor of the new one. A reviewer that runs `git commit --amend`, `git reset --hard HEAD~1` or a rebase and does not mention it moves HEAD exactly as a new commit does, and is handled as an ordinary edit round. The loop then continues and can later report clean over rewritten history. A check such as `git merge-base --is-ancestor <step-1 head> <step-5 head>` would separate the two cases.",
+      "evidence": "Rewrite-related matches across plugins/review-until-clean: SKILL.md:89 (do not pass such an option), SKILL.md:247 (stop with failed), reviewers.md:62 (\"If its report shows it did, or the remote refs moved\"). No ancestry or reflog check exists, and reviewers.md:115 routes every HEAD change to the edit-round path."
+    },
+    {
+      "title": "Parallel paths: the shell-reviewer runner gives no tool timeout and prints its temp path only at the end, so a long review is cut off by the harness and its output is lost",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 66,
+      "severity": "important",
+      "detail": "The reviewer runs in one foreground tool call. `reviewer_tmp` and `reviewer_status` are printed only after the reviewer exits (line 78), and line 89 forbids rerunning to recover them. Claude Code's Bash tool has a default timeout of 120000 ms. A full review CLI such as the README's `coderabbit review --agent --fresh` can run past that. The call is then cut off before the final `printf`, the agent never learns the temporary directory, the stdout and stderr that reviewers.md:173 requires in the ledger cannot be recorded, the directory cannot be removed as line 94 requires, and an editing reviewer can be left partway through its edits. Every such round ends `failed`, so the loop cannot complete with any reviewer that takes longer than the default. Sibling skills handle this: review-pr-with-codex/SKILL.md:86 says \"Give the command a generous timeout\", and address-issue-in-worktree/SKILL.md:368 names `timeout: 150000` for Claude Code's Bash tool. Printing `reviewer_tmp` before the run would also keep the path recoverable.",
+      "evidence": "reviewers.md:66-79 (the one-call wrapper, with the printf last), :89 (\"never run the reviewer again to recover them\"), :94 and :173. A `timeout` grep of plugins/review-until-clean finds only the failure-table rows (reviewers.md:47, stop-rules.md:25) and no instruction to set one."
+    },
+    {
+      "title": "Agent-prose control flow: step 5 never tells the agent to compare the refs recorded in step 4",
+      "file": "plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+      "line": 93,
+      "severity": "nit",
+      "detail": "Step 4 records the refs \"so step 5 can tell whether it pushed or fetched\", and Key Conventions (line 183) says the refs are ones \"steps 4 and 5 compare\". Step 5 itself lists only the snapshot comparison and the four failed-round conditions. It never says to rerun `git for-each-ref` and compare, and it does not list moved refs as a failed round. Step 5 points to stop-rules.md, which also omits the ref check. Only reviewers.md:98 says to compare. An agent working through step 5 in order can skip the check.",
+      "evidence": "SKILL.md:89 and :183 compared with SKILL.md:93-107, where no ref comparison or `failed` condition for moved refs appears."
+    },
+    {
+      "title": "Parallel paths: a concurrent fetch, such as an editor's autofetch, ends the run failed and is blamed on the reviewer, while a concurrent tree edit is treated as benign",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 117,
+      "severity": "nit",
+      "detail": "Line 117 says a change by something other than the reviewer, such as another session, is recorded like the reviewer's own edit and \"costs at most one more round\". The sibling rule at line 104 says any difference in remote-tracking refs \"ends the run as `failed`\", because \"A reviewer has no reason to do either\". An IDE autofetch or another session's `git fetch` during a long review moves `refs/remotes/*`. The run then fails and names the reviewer as having fetched. The text should say that the ref check cannot attribute a move to the reviewer.",
+      "evidence": "reviewers.md:104 (\"any difference ends the run as `failed`, naming the refs that moved\") compared with reviewers.md:117 and stop-rules.md:57 (\"another session in the same worktree\" named as a usual, benign cause)."
+    },
+    {
+      "title": "Agent-prose control flow: the recommended permissions omit `git for-each-ref`, which every round now runs twice",
+      "file": "plugins/review-until-clean/README.md",
+      "line": 102,
+      "severity": "nit",
+      "detail": "This change added the ref comparison (reviewers.md:101, run before and after every reviewer) and `git diff-tree` (reviewers.md:119). The allow list gained `Bash(git diff-tree *)` but not `Bash(git for-each-ref *)`, so each round raises two permission prompts for a read-only command. Line 109 explains the omission of `git add -N` and `git reset` only.",
+      "evidence": "README.md:102 allow list compared with the command at reviewers.md:101."
+    },
+    {
+      "title": "Agent-prose control flow: step 3's untracked-files question has no branch for a run where no one can answer, though the README now describes that run as supported",
+      "file": "plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+      "line": 81,
+      "severity": "nit",
+      "detail": "Before this change, step 3 asked the `git add -N` question only for the Claude backend. The default Codex backend under Claude Code named untracked paths in its prompt and never asked. Now every reviewer gets the question whenever untracked files exist. README.md:93 tells pre-push hook users that a non-interactive run with an explicit `--reviewer` works. Step 2 defines a non-interactive outcome for its own question, but step 3 does not: the text does not say whether to proceed without `git add -N` and record the untracked bucket as not covered. An agent may wait, guess, or touch the index unasked.",
+      "evidence": "SKILL.md:81 and reviewers.md:129 (\"ask once per run ... with a wait for the reply\") compared with SKILL.md:74 (step 2's \"When no one can answer\" rule) and README.md:93."
+    },
+    {
+      "title": "Docs drift: the snapshot table says `git reset` of a tracked ignored file moves the snapshot, but it holds when the file is in HEAD",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md",
+      "line": 41,
+      "severity": "nit",
+      "detail": "`git reset -- <path>` restores the index entry from HEAD, so an ignored file committed earlier stays tracked and the tree is unchanged. Only `git rm --cached`, or a `git reset` of an ignored file that was force-added but never committed, removes it from the index and moves the snapshot. SKILL.md:52 and reviewers.md:115 say this correctly (\"removing one from the index\"). The table row contradicts them and its own first row (\"`git reset` a path: Holds\").",
+      "evidence": "Scratch repository with `ign.txt` ignored, force-added and committed. The digest (index copy, `add --all`, `add --all --renormalize`, `write-tree`) was db811a35 before `git reset -- ign.txt` and db811a35 after it. `git rm --cached ign.txt` changed it to 71abd828. `git reset` of a force-added, uncommitted ignored file returned it to the pre-add tree."
+    },
+    {
+      "title": "Docs drift: an open plan still says review-until-clean has Codex and Claude backends",
+      "file": "docs/plans/todo/2026-10-09-reduce-copilot-rounds-after-pr-opens.md",
+      "line": 54,
+      "severity": "nit",
+      "detail": "The line reads \"`review-until-clean`'s Codex and Claude backends are not used here\". After this change there are no backends. This branch's plan (2026-10-12, line 67) says to fix every other hit for \"backend\" where it is now false, and its verification (line 93) says \"No reference to `backends.md` remains\". docs/plans/todo/2026-09-21-add-review-until-clean-skill.md still references `backends.md` at lines 65, 164, 169, 217, 226 and 237. That plan is a historical record left in todo/, so it is mentioned here only as the reason the line-93 claim does not hold.",
+      "evidence": "`git grep` for 'backends\\.md|Codex backend|Claude backend' outside dist/, .agents/ and docs/reviews/ matches only the two plans."
+    },
+    {
+      "title": "Parallel paths: the failed rounds' findings in this branch's saved ledgers are plain bullets, which address-review queues",
+      "file": "docs/reviews/2026-10-12-feature-611-make-review-loop-reviewer-agnostic-until-clean-2.md",
+      "line": 116,
+      "severity": "nit",
+      "detail": "ledger.md:74 and :98 say plain bullets are actionable for `address-review`, so findings that must not be queued go inside fenced `text` blocks. That rule is written for edit rounds and invalid locations only; ledger.md gives no form for a failed round's partial findings. The -2 ledger (lines 116-120) and the -3 ledger (lines 89-93) record the not-queued findings of failed rounds as `- **F1** ...` bullets. Running `address-review` on either ledger would queue them. Step 7 also reads these ledgers for carried declines.",
+      "evidence": "-2 ledger line 114 \"Findings from the finished aspects, not queued:\", followed by plain bullets at 116-120. Same pattern in the -3 ledger at 87-93. Compare ledger.md:57-74 (the fenced form for edit-round findings)."
+    }
+  ],
+  "unverified": [
+    "Agent skills and prose files: `make validate` (bin/validate-plugins and bin/check-cross-references, covering catalog description match, manifests and cross-references) not run: it executes repository code and --run-checks was off",
+    "Tests the change adds or changes: `make test-scrut` (tests/scrut/review-scope.md help-text snapshot) not run: it executes repository code and --run-checks was off",
+    "Generated mirror drift: `make build` followed by a diff of dist/ and .agents/ not run: it writes files and executes repository code",
+    "Tests that cannot fail: stop-rules.md's 'Proving the rule works' stubs (empty-stdout shell reviewer, error-only skill, editing stub) have no executable harness; settle with the plant-defects skill. Not run: planting a defect is an edit",
+    "Unrun platform configuration: reviewer behavior under a real long-running CLI (for example `coderabbit review --agent --fresh`) against the default Claude Code Bash timeout; not run: needs the reviewer installed and authenticated, and it runs an external review"
+  ],
+  "not_reviewed": [],
+  "excluded": [
+    ".agents/plugins/marketplace.json",
+    "dist/codex/plugins/review-anti-patterns/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-anti-patterns/README.md",
+    "dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-pr-with-codex/README.md",
+    "dist/codex/plugins/review-pr-with-codex/scripts/review-scope",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+    "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-until-clean/README.md",
+    "dist/codex/plugins/review-until-clean/scripts/review-scope",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/backends.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/ledger.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/stop-rules.md"
+  ]
+}
+```
+
+**Scope:** `b89fff26447e3f9064ce81997f5a9a1620b6106f..working-tree`. That is the merge base with `origin/main` (resolved from `origin/HEAD`) through the working tree. It covers 33 commits from `3c867592` to `a979b068`.
+- **Working-tree changes:** none. There were no staged, unstaged or untracked files.
+- **Files reviewed:** 23 of 39 changed files.
+- **`not_reviewed`:** empty.
+- **Pull request:** there is no open PR for `feature/611-make-review-loop-reviewer-agnostic`. `gh pr list --repo github.com/cboone/agent-harness-plugins` returned `[]` with exit 0, so there was no PR body to review.
+- **`excluded`:** 16 files.
+  - `.agents/plugins/marketplace.json` and the 15 changed files under `dist/codex/`.
+  - Reason: the repository's `CLAUDE.md` names `dist/` and `.agents/` as generated paths not to edit.
+- **Saved review ledgers:** the four `docs/reviews/*` ledgers were reviewed as docs. Their "Reviewer reply, verbatim" fenced blocks were treated as quoted data, not as claims the change makes.
+
+**Groups found and items walked:**
+- **Code:** both copies of `review-scope` (byte-identical) and `tests/scrut/review-scope.md`.
+- **Agent prose:** the `review-until-clean` `SKILL.md` and its references, and `review-pr-with-codex/references/invocation.md`.
+- **Docs:** the READMEs, the catalog and manifests, the plan, and the review ledgers.
+- **Items walked:** all thirteen checklist items, each over the groups it applies to.
+  - Code items, over the script, the test and the shell snippets in the prose: Sibling input forms, Boundary arithmetic, Stale writes, Validator gaps, Absent or partial data, Untrusted data in commands, Tests that cannot fail, Crashes instead of reports, Unrun platform configuration, Unenforced trust boundary.
+  - Over every group: Parallel paths and Docs drift.
+  - Over the agent prose: Agent-prose control flow.
+- **Changed `review-scope` lines:** only help text and comments changed. The new claim that "Force-adding an ignored file ... moves it" was checked against the digest logic and against plain git in a scratch repository, and it holds.
+
+**Mechanical checks run (all read-only, none executing repository code):**
+- **`bash -n`, `shellcheck`, `shfmt -d`:** passed on both `review-scope` copies.
+- **`cmp` of the two copies:** identical.
+- **`jq empty`:** passed on `.claude-plugin/marketplace.json` and the three changed `plugin.json` files.
+- **`git for-each-ref` comparison** before and after a tag push and a URL push, in a scratch repository: neither push changed any listed ref. This is the evidence for the first finding.
+- **`git diff-tree -r -z --name-only <tree> <tree>`** on two tree IDs: works as documented.
+- **The shell-reviewer wrapper**, run exactly as written under zsh with stubs: a findings-code reviewer (`|| test $? -eq 1`) gave `reviewer_status=0`, and `printf | false` under pipefail gave `reviewer_status=1`. The status capture works.
+- **Snapshot-digest semantics** for `git reset`, `git rm --cached` and `git add -f` on ignored files: reproduced with plain git in scratch. This is the evidence for the `scope-and-snapshot.md` finding.
+- **`bin/check-cross-references`:** read, not run. It only flags exact `` `/name` `` spans, so the un-exempted `/code-review ultra` in `reviewers.md` is not a reference error.
+- **Unverified:** the five entries in the JSON (`make validate`, `make test-scrut`, `make build` drift, defect planting for the stop-rule stubs, and a real long-running reviewer).
+
+**Session and side effects:**
+- This ran as a general-purpose subagent that could write. Read-only was held by instruction only; it was not sandboxed.
+- `--run-checks` was off, and no repository code was executed.
+- Nothing was written inside the repository. `git status --porcelain --ignored` afterwards showed only the pre-existing ignored `.workmux/`, `.yarn/` and `node_modules/`.
+- Scratch repositories were created only under the assigned `ruc5-agent3/` scratch directory. Two `mktemp -d` directories the wrapper test created under `/var/folders/.../T/` were removed.
+
+**Siblings examined, per finding:**
+1. **Push detection:**
+   - Every claim of the push/fetch boundary: `SKILL.md:89,183,247`, `reviewers.md:62,96-104`, `stop-rules.md:95`.
+   - The kinds of push: tag push, URL push, a remote with no fetch refspec, `push.autoSetupRemote`.
+2. **History rewrite:** `SKILL.md:89,247`, `reviewers.md:62,115`, `README.md:67`, and the commit and HEAD rows of the `scope-and-snapshot.md` table.
+3. **Timeout:**
+   - The completion-signal rows: `reviewers.md:47`, `stop-rules.md:25`, `SKILL.md:100,246`.
+   - Sibling long-run guidance: `review-pr-with-codex/SKILL.md:86`, `address-issue-in-worktree/SKILL.md:368`.
+4. **Step 5 ref comparison:** `SKILL.md` steps 4 and 5 and Key Conventions, `reviewers.md:98`, the `stop-rules.md` failed table.
+5. **Concurrent fetch:** `reviewers.md:104,117`, `stop-rules.md:57`, the last row of the `scope-and-snapshot.md` table.
+6. **Permissions:** every git command the prose runs (`rev-parse`, `merge-base`, `diff`, `diff-tree`, `for-each-ref`, `ls-files`, `add -N`, `reset`) against the `README.md:102` allow list.
+7. **Non-interactive step 3:** the `SKILL.md` step 2 non-interactive rule, the `SKILL.md` step 3 and `reviewers.md:129` questions, and the pre-push section at `README.md:93`.
+8. **Snapshot table:** `SKILL.md:52`, `reviewers.md:115`, `README.md:89`, the `review-scope` help text, `tests/scrut/review-scope.md`, and the `scope-and-snapshot.md` table and prose.
+9. **Stale plans:** every non-generated hit for "backends.md", "Codex backend", "Claude backend" and "model family". Only the two plans remain.
+10. **Ledger bullets:** all four ledgers' non-fenced sections against the `ledger.md` actionable-item rules (lines 57-74 and 98) and the `SKILL.md` step 7 carried-decline reader.
+
+**Result:** the review is complete. It reported 3 Important and 7 Nit findings. It is not a clean result.

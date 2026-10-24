@@ -36,6 +36,6 @@ The skill also activates automatically when the roadmap file is the subject of w
 
 - [Write Math](../write-math/README.md): mathematical prose conventions for the roadmap's exposition
 - [Write Lean Code](../write-lean-code/README.md): library-side conventions when the roadmap targets Lean
-- [Write Lean Tests](../write-lean-tests/README.md): test-side conventions for parallel proof/test landings
+- [Write Lean Tests](../write-lean-code/README.md#additional-workflows): test-side conventions for parallel proof/test landings
 - [Write Pandoc Markdown](../write-pandoc-markdown/README.md): Pandoc Markdown when the roadmap exports to a paper
 - [All plugins](../../README.md)

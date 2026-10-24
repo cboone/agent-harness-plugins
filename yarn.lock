@@ -100,6 +100,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"argparse@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "argparse@npm:3.0.3"
+  checksum: 10c0/8d715f1c4bb0aa14a8b8ee749d6ab6f12d380caba33139d527cac79988af152cfd160f152c3964c76c7ea473f1899bd0989bd1e9cfdba22e68f50b6a4b5c9d0d
+  languageName: node
+  linkType: hard
+
 "braces@npm:^3.0.3":
   version: 3.0.3
   resolution: "braces@npm:3.0.3"
@@ -174,7 +181,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"entities@npm:^8.0.0":
+"entities@npm:^8.0.0, entities@npm:^8.1.0":
   version: 8.1.0
   resolution: "entities@npm:8.1.0"
   checksum: 10c0/da0bf22912c19d2a4707783e1b905d3f6a977e93e0655a8d2c526455eb3996f668f9f2e4c2a07af8d6927d232c41b6e929a7044df0236c7bf6e9c38e070e3719
@@ -347,7 +354,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"linkify-it@npm:^6.0.0":
+"linkify-it@npm:^6.0.0, linkify-it@npm:^6.1.0":
   version: 6.1.0
   resolution: "linkify-it@npm:6.1.0"
   dependencies:
@@ -395,6 +402,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"markdown-it@npm:15.0.3":
+  version: 15.0.3
+  resolution: "markdown-it@npm:15.0.3"
+  dependencies:
+    argparse: "npm:^3.0.3"
+    entities: "npm:^8.1.0"
+    linkify-it: "npm:^6.1.0"
+    mdurl: "npm:^2.1.0"
+    punycode.js: "npm:^2.3.1"
+    uc.micro: "npm:^3.0.0"
+  bin:
+    markdown-it: bin/markdown-it.mjs
+  checksum: 10c0/49e23f7c3b66bceaf4f411854db971eb103db16bdff5643861d5effd2f9b41b64fdeb1d9c43052d3cc7506df4f32ee58d6d5b21631a9abbe53de3c0e30480fd2
+  languageName: node
+  linkType: hard
+
 "markdownlint-cli2-formatter-default@npm:0.0.6":
   version: 0.0.6
   resolution: "markdownlint-cli2-formatter-default@npm:0.0.6"
@@ -423,13 +446,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"markdownlint-rule-relative-links@npm:5.1.3":
-  version: 5.1.3
-  resolution: "markdownlint-rule-relative-links@npm:5.1.3"
+"markdownlint-rule-relative-links@npm:5.1.4":
+  version: 5.1.4
+  resolution: "markdownlint-rule-relative-links@npm:5.1.4"
   dependencies:
-    markdown-it: "npm:15.0.1"
-    mime: "npm:4.1.0"
-  checksum: 10c0/40da58d0ca62ffa9508e3575ff2ce18339e6d1e73e47747b4cf4d407cdb62b1b1b02bc721e694e3d4067053f3d7a5e92db8b8a3db4e927562fdacad81ee44e62
+    markdown-it: "npm:15.0.3"
+    mime: "npm:4.1.1"
+  checksum: 10c0/424cda64bc388a5d1aa8b8496c021300f63e71d41000499c0638c85d1c72f2f7f6cde97279607fd458e7d92f3bf7405049146e0405b5d8364e1ca1a8466d1c02
   languageName: node
   linkType: hard
 
@@ -769,12 +792,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mime@npm:4.1.0":
-  version: 4.1.0
-  resolution: "mime@npm:4.1.0"
+"mime@npm:4.1.1":
+  version: 4.1.1
+  resolution: "mime@npm:4.1.1"
   bin:
     mime: bin/cli.js
-  checksum: 10c0/3b8602e50dff1049aea8bb2d4c65afc55bf7f3eb5c17fd2bcb315b8c8ae225a7553297d424d3621757c24cdba99e930ecdc4108467009cdc7ed55614cd55031d
+  checksum: 10c0/9e3c421cb727a3f51a683ce5ab4ed182559edd6770113386fe6d560b5d83f800944dd79f40b41b9442b4d73201da32d290b07721c0bac42d12425b8e887acb10
   languageName: node
   linkType: hard
 
@@ -807,12 +830,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:3.9.9":
-  version: 3.9.9
-  resolution: "prettier@npm:3.9.9"
+"prettier@npm:3.9.10":
+  version: 3.9.10
+  resolution: "prettier@npm:3.9.10"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10c0/d50ea2537b2ff7dbd5088a214f4d936484e55c665cea2185b477a55b0770be55f3b156a71f63a9a639def6b334667bb327139dc85f2a1041c0a34752cdc74647
+  checksum: 10c0/0b3531593aa6fb36ac6baf629cb058bda472c59a6938774f931fe55283a07c62e6f56e621b043a82d8a3e21fc284c08c34f9e539fc70072635f79b7bae1a1067
   languageName: node
   linkType: hard
 
@@ -843,8 +866,8 @@ __metadata:
   dependencies:
     "@github/markdownlint-github": "npm:0.8.4"
     markdownlint-cli2: "npm:0.23.3"
-    markdownlint-rule-relative-links: "npm:5.1.3"
-    prettier: "npm:3.9.9"
+    markdownlint-rule-relative-links: "npm:5.1.4"
+    prettier: "npm:3.9.10"
   languageName: unknown
   linkType: soft
 

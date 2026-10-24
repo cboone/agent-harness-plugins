@@ -102,7 +102,7 @@ Homebrew formulae don't accept an inline `@version` argument; reproducible insta
 2. Most CI doesn't use Homebrew (Linux runners use apt, ubuntu-latest's preinstalled tooling, or the project's own setup-\* actions).
 3. Pinning Homebrew on macOS dev machines is a workstation concern, not a CI hardening one.
 
-When the consuming project owns its own tap (for example, via `add-goreleaser-homebrew`), the cask `version` field is the pinning surface and falls under that tap's release process.
+When the consuming project owns its own tap (for example, via `set-up-installers`), the cask `version` field is the pinning surface and falls under that tap's release process.
 
 ## User-Facing vs Tool-Install Discriminator
 

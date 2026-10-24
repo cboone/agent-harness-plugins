@@ -14,6 +14,8 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 Stages everything, generates a conventional commit message from the diff, runs project linters to catch issues before pushing, pushes the branch, and opens a PR with an auto-generated title and summary. The title follows the project's own convention when one is enforced in CI (for example, commitlint run against the PR title) or documented in its agent config, and falls back to a house style otherwise. Detects connected GitHub issues from branch names and commit messages, and adds closing references automatically. Publishable issues filed earlier in the session as follow-ups to the branch's work, such as those from [Create Deferred Issues](../create-deferred-issues/README.md), go under a `## Follow-ups` section instead. Private and internal destinations are omitted from public PR bodies, and unknown visibility stops publication until verified. Every filed follow-up is kept out of the closing references, including omitted entries, so merging does not close it. Handles branches with no upstream, skips the commit step when the working tree is clean, and detects when a PR already exists.
 
+When [Trim Text](../trim-text/README.md) is installed, the drafted PR body goes through it before the PR is created, leaving closing references and follow-up sections as drafted. Without it, the draft is used as written.
+
 ## Usage
 
 ```text
@@ -46,4 +48,5 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 - [Commit](../commit/README.md): commit without creating a PR
 - [Review Branch](../review-branch/README.md): summarize branch work before opening a PR
+- [Trim Text](../trim-text/README.md): trims the drafted PR body
 - [All plugins](../../../../README.md)

@@ -1,0 +1,680 @@
+#!/usr/bin/env bash
+# backlog-gather -- Gather the progress and affinity behind a backlog board.
+#
+# Reads a repository's open issues and pull requests from GitHub, and its
+# branches and recent commits from the checkout, and derives each issue's
+# progress and affinity signals. finish adds those fields to the analysis data,
+# so no stage or affinity is written by hand. The GraphQL queries live in
+# backlog-gather-queries/.
+#
+# Usage:
+#   backlog-gather gather REPO OUTPUT
+#   backlog-gather finish GATHER DATA OUTPUT
+#
+# REPO is OWNER/NAME. gather runs inside a checkout whose origin is REPO, after
+# the board's own git fetch, and reads an optional config from
+# ${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/backlog-triage/HOST/OWNER/NAME.json,
+# where HOST is github.com.
+#
+# Exit codes:
+#   0 - Success
+#   1 - Invalid config or data, a failed GitHub or git call, or a file that
+#       could not be read or written
+#   2 - Usage error, or a required tool is missing
+#
+# BACKLOG_GATHER_NOW (ISO 8601 UTC) and BACKLOG_GATHER_HOST override the
+# current time and the host name, for fixed test output.
+set -euo pipefail
+
+# Prints the directory holding this script, following symlinks so the queries
+# are found beside the real script.
+function resolve_script_dir() {
+  local path="${BASH_SOURCE[0]}"
+  local link_dir
+  while [[ -L "${path}" ]]; do
+    link_dir="$(cd -P -- "$(dirname -- "${path}")" && pwd)"
+    path="$(readlink "${path}")"
+    [[ "${path}" == /* ]] || path="${link_dir}/${path}"
+  done
+  cd -P -- "$(dirname -- "${path}")" && pwd
+}
+
+SCRIPT_NAME="${0##*/}"
+readonly SCRIPT_NAME
+SCRIPT_DIR="$(resolve_script_dir)"
+readonly SCRIPT_DIR
+readonly QUERY_DIR="${SCRIPT_DIR}/backlog-gather-queries"
+
+readonly E_INVALID=1
+readonly E_USAGE=2
+
+# The progress model and affinity rules, shared with bugs-gather.
+if [[ ! -r "${SCRIPT_DIR}/progress.jq" ]]; then
+  printf '%s: %s is missing; reinstall publish-report-board\n' "${SCRIPT_NAME}" "${SCRIPT_DIR}/progress.jq" >&2
+  exit "${E_USAGE}"
+fi
+PROGRESS_DEFS="$(< "${SCRIPT_DIR}/progress.jq")"
+readonly PROGRESS_DEFS
+
+readonly GATHER_VERSION=1
+# The host every config path assumes. gh reaches other hosts through GH_HOST,
+# which this script does not support.
+readonly GITHUB_HOST='github.com'
+readonly REPO_PATTERN='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+# A . or .. segment would point the config path outside its directory; GitHub
+# never uses either as a name.
+readonly DOT_SEGMENT_PATTERN='(^|/)\.\.?(/|$)'
+# Separates fields in the git output this script reads; no ref name, date,
+# email, or path holds one.
+readonly FIELD_SEPARATOR=$'\t'
+
+# The scratch directory, removed on exit. Global because the EXIT trap runs
+# after the locals of main are gone.
+TEMP_DIR=""
+# Set by load_config.
+CONFIG=""
+JOB_PIDS=()
+JOB_NAMES=()
+
+# Checks a backlog config and fills in its defaults, emitting {problems,
+# config} with config null on any problem. Takes $repo.
+# The $names in these filters are jq bindings, not shell expansions.
+# shellcheck disable=SC2016
+readonly CONFIG_FILTER='
+def is_text: type == "string" and test("\\S");
+def is_int: type == "number" and . == floor;
+def absent_or(f): . == null or f;
+def check(condition; message): if condition then empty else message end;
+def name_list: type == "array" and all(.[]; is_text);
+# Any other key is a typo that would otherwise be silently ignored.
+def config_keys: ["progressLabels", "claimLabels", "quietDays", "staleDays", "affinityWorkDays", "affinityCommentDays", "uniformityShare", "uniformityMinimum"];
+
+if type != "object" then {problems: ["the config must be a JSON object"], config: null}
+else
+  . as $c
+  | [
+      ($c | keys[] | select(. as $k | config_keys | index($k) | not) | "\(.): not a config key; expected one of \(config_keys | join(", "))"),
+      check($c.progressLabels | absent_or(name_list); "progressLabels: expected a list of label names"),
+      check($c.claimLabels | absent_or(name_list); "claimLabels: expected a list of label names"),
+      (("quietDays", "staleDays", "affinityWorkDays", "affinityCommentDays", "uniformityMinimum") as $k
+       | check($c[$k] | absent_or(is_int and . > 0); "\($k): expected a positive whole number")),
+      check($c.uniformityShare | absent_or(type == "number" and . > 0 and . <= 1); "uniformityShare: expected a number above 0 and at most 1")
+    ] as $shape
+  | if ($shape | length) > 0 then {problems: $shape, config: null}
+    else
+      {
+        repo: $repo,
+        progressLabels: ($c.progressLabels // ["in progress"]),
+        claimLabels: ($c.claimLabels // []),
+        quietDays: ($c.quietDays // 7),
+        staleDays: ($c.staleDays // 30),
+        affinityWorkDays: ($c.affinityWorkDays // 30),
+        affinityCommentDays: ($c.affinityCommentDays // 90),
+        uniformityShare: ($c.uniformityShare // 0.9),
+        uniformityMinimum: ($c.uniformityMinimum // 5)
+      } as $config
+      | [
+          ($config.progressLabels | map(ascii_downcase)) as $progress
+          | ($config.claimLabels[] | select(ascii_downcase as $l | $progress | index($l)) | "claimLabels: \(.) is also a progress label; a label marks work started or claims an issue, not both"),
+          check($config.quietDays < $config.staleDays; "quietDays: expected fewer days than staleDays, \($config.staleDays)")
+        ] as $problems
+      | if ($problems | length) > 0 then {problems: $problems, config: null} else {problems: [], config: $config} end
+    end
+end
+'
+
+# Derives each open issue's progress and affinity inputs. Takes $config, $now,
+# $host, $viewer, $repository, $issues, $pulls, $merged, $branches, $files,
+# $commit, and $version.
+# shellcheck disable=SC2016
+readonly DERIVE_FILTER="${PROGRESS_DEFS}"'
+($now | epoch) as $now_at
+| $repository.nameWithOwner as $repo
+| $repository.defaultBranchRef.name as $default
+| ([$branches[] | . + {remote: (.local | not)}] | join_branches($default)) as $all_branches
+| [$pulls[]
+   | {number, url, headRefName, isDraft, reviewDecision, mergeable, mergeStateStatus,
+      createdAt: (.createdAt | utc), updatedAt: (.updatedAt | utc), author: (.author.login // null),
+      reviewRequests: (.reviewRequests.totalCount // 0),
+      lastReview: (.latestReviews.nodes | as_list | first | .submittedAt // null | utc),
+      checks: ((.commits.nodes | as_list | first | .commit.statusCheckRollup.state) // null),
+      closes: [.closingIssuesReferences.nodes | as_list | .[] | select((.repository.nameWithOwner // "") | same_repo($repo)) | .number]}] as $open_pulls
+| ($config.affinityCommentDays * 86400) as $comment_window
+| [$issues[]
+   | .number as $n
+   | [.labels.nodes | as_list | .[] | .name] as $labels
+   | merged_links($repo) as $merged_links
+   | [$open_pulls[] | select((.closes | index($n)) or (.headRefName | names_issue($n)))] as $prs
+   | [.assignees.nodes | as_list | .[] | .login] as $assignees
+   | {number: $n,
+      title: .title,
+      url: .url,
+      body: (.body // ""),
+      milestone: (.milestone.title // null),
+      labels: $labels,
+      assignees: $assignees,
+      author: (.author.login // "ghost"),
+      createdAt: (.createdAt | utc),
+      updatedAt: (.updatedAt | utc),
+      progress: progress_of({number: $n, labels: $labels, updatedAt: .updatedAt, pipeline: null, pipelineSince: null, prs: $prs, merged: $merged_links};
+                            $all_branches; $config; $now_at; $host),
+      mergedLinks: $merged_links,
+      affinityInputs: {
+        assignees: $assignees,
+        claims: [$labels[] | select(same_text($config.claimLabels)) | "claimed with the \(.) label"],
+        author: (.author.login // "ghost"),
+        commented: any(.comments.nodes | as_list | .[]; (.author.login // null) == $viewer and ($now_at - (.createdAt | epoch)) <= $comment_window)
+      },
+      truncated: [(select(.labels.pageInfo.hasNextPage == true) | "labels"),
+                  (select(.assignees.pageInfo.hasNextPage == true) | "assignees"),
+                  (select(.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests"),
+                  (select(.timelineItems.pageInfo.hasPreviousPage == true) | "cross-references"),
+                  (select(.comments.pageInfo.hasPreviousPage == true) | "comments")]}
+  ] as $derived
+# finish adds active and recent, which need areas.
+| uniformity_ignored([$derived[] | .affinityInputs + {active: [], recent: []}]; $config) as $ignored
+| {
+    version: $version,
+    gatheredAt: $now,
+    repo: $repo,
+    repoUrl: $repository.url,
+    defaultBranch: $default,
+    commit: $commit,
+    viewer: $viewer,
+    host: $host,
+    config: $config,
+    issues: [$derived[] | del(.truncated)],
+    viewerFiles: $files,
+    affinityIgnored: $ignored,
+    warnings: [$derived[] | select(.truncated | length > 0) | "#\(.number): \(.truncated | join(" and "))"]
+  }
+'
+
+# Checks analysis data against a gather. Takes $gather and the data as input;
+# emits one line per problem.
+# shellcheck disable=SC2016
+readonly FINISH_CHECK_FILTER="${PROGRESS_DEFS}"'
+def is_text: type == "string" and test("\\S");
+def is_int: type == "number" and . == floor;
+def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
+
+if type != "object" then "the board data must be a JSON object"
+elif (.issues | type) != "array" then "issues: expected the list of open issues"
+else
+  . as $d
+  | [$d.issues[] | objects | .number | select(is_int)] as $numbers
+  | [$gather.issues[] | .number] as $open
+  | [$d.areas | as_list | .[] | objects | .name | select(is_text)] as $area_names
+  # finish derives these, and would silently overwrite them.
+  | ((("schemaVersion", "affinityIgnored") | . as $k | select($d | has($k)) | "\(.): derived by backlog-gather finish; leave it out of the analysis data"),
+     (select(($d.contention | type) == "object" and ($d.contention | has("claims"))) | "contention.claims: derived from the areas the issues list; leave it out of the analysis data"),
+     # The progress comes from the gathered repository, so the board must name it.
+     (select($d.repo != null and (($d.repo | tostring | same_repo($gather.repo)) | not)) | "repo: \($d.repo) is not the gathered repository, \($gather.repo)"),
+     (select($d.repoUrl != null and (($d.repoUrl | tostring | ascii_downcase | rtrimstr("/")) != ($gather.repoUrl | ascii_downcase))) | "repoUrl: \($d.repoUrl) is not the gathered repository URL, \($gather.repoUrl)"),
+     ($d.issues | to_entries[] | .key as $i | .value
+      | if (type != "object") or ((.number | is_int) | not) then "issues[\($i)]: expected an object with an issue number"
+        else
+          "#\(.number)" as $at
+          | ((("progress", "affinity") as $field | select(has($field)) | "\($at): \($field) is derived by backlog-gather finish; leave it out of the analysis data"),
+             (select(has("inProgress")) | "\($at): inProgress is not a board field; progress, which finish derives, says how far along an issue is"),
+             (if .areas == null then empty
+              elif (.areas | type == "array" and all(.[]; is_text)) | not then "\($at): areas must be a list of area names"
+              else (.areas[] | select(. as $a | $area_names | index($a) | not) | "\($at) lists the area \(.), which is not in areas"),
+                   (.areas | duplicates | "\($at) lists the area \(.) more than once")
+              end))
+        end),
+     (if ($d.areas | type) != "array" then "areas: expected a list of areas, empty when no issue names one"
+      else
+        ($d.areas | to_entries[] | .key as $i | .value
+         | if type != "object" or ((.name | is_text) | not) then "areas[\($i)]: expected an object with a name"
+           else
+             "area \(.name)" as $at
+             | (if (.paths | type == "array" and length > 0 and all(.[]; is_text)) | not then "\($at): paths must be a non-empty list of path patterns" else empty end),
+               (if .query == null or (.query | is_text) then empty else "\($at): query must be text" end)
+           end),
+        ($area_names | duplicates | "areas: \(.) is listed more than once")
+      end),
+     ($numbers | duplicates | "issues: #\(.) appears more than once"),
+     ($open - $numbers | .[] | "#\(.) is open but missing from the board data"),
+     ($numbers - $open | .[] | "#\(.) is in the board data but is not an open issue in the gather"))
+end
+'
+
+# Adds the derived fields to analysis data that passed the check. Takes
+# $gather and the data as input.
+# shellcheck disable=SC2016
+readonly FINISH_FILTER="${PROGRESS_DEFS}"'
+. as $d
+| $gather.config as $config
+| ($d.areas | map({key: .name, value: .}) | from_entries) as $area_by
+| ($gather.issues | map({key: (.number | tostring), value: .}) | from_entries) as $gathered
+# The affinity signals of each issue, with the tiers its areas give it.
+| [$d.issues[]
+   | [.areas | as_list | .[] | $area_by[.]] as $areas
+   | $gathered[.number | tostring].affinityInputs
+     + {number,
+        active: active_reasons($areas; $gather.viewerFiles.active),
+        recent: recent_reasons($areas; $gather.viewerFiles.recent; $config.affinityWorkDays)}] as $held
+| uniformity_ignored($held; $config) as $ignored
+| ($held | map({key: (.number | tostring), value: affinity_of(.; $ignored; $gather.viewer; $config)}) | from_entries) as $affinity
+  # Every area two or more issues list is a claim on it, in the order of the
+  # areas, with its issues in the order of the board.
+| [$d.areas[] | . as $area
+   | [$d.issues[] | select(.areas | as_list | index($area.name)) | .number] as $claimed
+   | select(($claimed | length) >= 2)
+   | {name: $area.name, issues: $claimed} + (if $area.query != null then {query: $area.query} else {} end)] as $claims
+| {schemaVersion: 2}
+  + $d
+  + {issues: [$d.issues[] | . + {progress: $gathered[.number | tostring].progress, affinity: $affinity[.number | tostring]}],
+     affinityIgnored: $ignored}
+  + (if ($claims | length) > 0 or $d.contention != null then {contention: (($d.contention // {}) + {claims: $claims})} else {} end)
+'
+
+function usage() {
+  cat << 'USAGE'
+Usage:
+  backlog-gather gather REPO OUTPUT
+  backlog-gather finish GATHER DATA OUTPUT
+
+REPO is OWNER/NAME. gather runs inside a checkout whose origin is REPO, after
+the board fetches, and reads a config, when one exists, from
+${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/backlog-triage/github.com/OWNER/NAME.json.
+
+gather reads the open issues and pull requests from GitHub, and the branches
+and recent commits from the checkout, and writes each issue's progress stage
+and affinity signals to OUTPUT.
+
+finish adds progress, affinity, the ignored affinity signals, and the
+contention claims derived from areas to the analysis data in DATA, and writes
+the board data to OUTPUT for report-board.
+USAGE
+}
+
+function die() {
+  local exit_code="${1}"
+  shift
+  printf '%s: %s\n' "${SCRIPT_NAME}" "$*" >&2
+  exit "${exit_code}"
+}
+
+function usage_error() {
+  printf '%s: %s\n\n' "${SCRIPT_NAME}" "${1}" >&2
+  usage >&2
+  exit "${E_USAGE}"
+}
+
+function require_tools() {
+  local tool
+  for tool in "$@"; do
+    command -v "${tool}" > /dev/null 2>&1 || die "${E_USAGE}" "${tool} is required but not found"
+  done
+}
+
+function cleanup() {
+  if [[ -n "${TEMP_DIR}" && -d "${TEMP_DIR}" ]]; then
+    rm -rf -- "${TEMP_DIR}"
+  fi
+}
+
+function make_temp_dir() {
+  trap cleanup EXIT
+  TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/backlog-gather.XXXXXX")" || die "${E_INVALID}" "cannot create a temporary directory"
+}
+
+function require_json_file() {
+  local path="${1}"
+  [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
+  jq -e -s 'length == 1 and (.[0] | type == "object")' "${path}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${path} must hold exactly one JSON object"
+}
+
+function require_output_dir() {
+  local directory
+  directory="$(dirname -- "${1}")"
+  [[ -d "${directory}" ]] || die "${E_INVALID}" "directory ${directory} does not exist"
+}
+
+# Sets CONFIG to the normalized config for OWNER/NAME, or the defaults without
+# a file, and exits listing any problems. A global, not output: a command
+# substitution would run it with errexit off, past a failed check.
+function load_config() {
+  local repo="${1}"
+  local path result
+  [[ "${repo}" =~ ${REPO_PATTERN} && ! "${repo}" =~ ${DOT_SEGMENT_PATTERN} ]] \
+    || die "${E_INVALID}" "expected OWNER/NAME, not ${repo}"
+  path="${XDG_CONFIG_HOME:-${HOME}/.config}/report-boards/backlog-triage/${GITHUB_HOST}/${repo}.json"
+  if [[ -f "${path}" ]]; then
+    require_json_file "${path}"
+    result="$(jq -c --arg repo "${repo}" "${CONFIG_FILTER}" "${path}")"
+  else
+    path="the default config"
+    result="$(jq -n -c --arg repo "${repo}" "{} | ${CONFIG_FILTER}")"
+  fi
+  if [[ "$(jq '.problems | length' <<< "${result}")" -gt 0 ]]; then
+    printf '%s: %s is not a valid backlog config:\n' "${SCRIPT_NAME}" "${path}" >&2
+    jq -r '.problems[]' <<< "${result}" | sed 's/^/  - /' >&2
+    exit "${E_INVALID}"
+  fi
+  CONFIG="$(jq -c '.config' <<< "${result}")"
+}
+
+function config_field() {
+  jq -r "${2}" <<< "${1}"
+}
+
+# Prints the current time as ISO 8601 UTC, or BACKLOG_GATHER_NOW when set.
+function utc_now() {
+  printf '%s' "${BACKLOG_GATHER_NOW:-$(date -u '+%Y-%m-%dT%H:%M:%SZ')}"
+}
+
+# Replaces a file in one step, so an interrupted write leaves the previous
+# version in place.
+function write_atomic() {
+  local target="${1}"
+  local source_file="${2}"
+  local target_dir temp_file
+  target_dir="$(dirname -- "${target}")"
+  [[ -d "${target_dir}" ]] || die "${E_INVALID}" "directory ${target_dir} does not exist"
+  temp_file="$(mktemp "${target_dir}/.backlog-gather.XXXXXX")" || die "${E_INVALID}" "cannot write to ${target_dir}"
+  if ! { cat -- "${source_file}" > "${temp_file}" && mv -- "${temp_file}" "${target}"; }; then
+    rm -f -- "${temp_file}"
+    die "${E_INVALID}" "cannot write ${target}"
+  fi
+}
+
+# Starts a command in the background with its output in TEMP_DIR/NAME.json
+# and its errors in TEMP_DIR/NAME.err.
+function start_job() {
+  local name="${1}"
+  shift
+  "$@" > "${TEMP_DIR}/${name}.json" 2> "${TEMP_DIR}/${name}.err" &
+  JOB_PIDS+=("$!")
+  JOB_NAMES+=("${name}")
+}
+
+# Waits for every started job and exits, showing each failure, if any failed.
+function wait_jobs() {
+  local index failed=0
+  for ((index = 0; index < ${#JOB_PIDS[@]}; index++)); do
+    if ! wait "${JOB_PIDS[${index}]}"; then
+      printf '%s: %s failed:\n' "${SCRIPT_NAME}" "${JOB_NAMES[${index}]}" >&2
+      sed 's/^/  /' "${TEMP_DIR}/${JOB_NAMES[${index}]}.err" >&2
+      failed=1
+    fi
+  done
+  JOB_PIDS=()
+  JOB_NAMES=()
+  ((failed == 0)) || exit "${E_INVALID}"
+}
+
+function github_query() {
+  local query="${1}"
+  local repo="${2}"
+  gh api graphql -F "query=@${QUERY_DIR}/${query}.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
+}
+
+function github_pages() {
+  local query="${1}"
+  local repo="${2}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/${query}.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
+}
+
+function github_search() {
+  local search="${1}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/merged.graphql" -f "q=${search}"
+}
+
+# Succeeds when a remote URL is OWNER/NAME on github.com, as
+# https://github.com/OWNER/NAME, ssh://git@github.com/OWNER/NAME, or
+# git@github.com:OWNER/NAME, with or without .git, ignoring case as GitHub
+# does. Any other host or path, such as a lookalike host or a local clone,
+# does not match.
+function remote_matches() {
+  local repo="${1}" url="${2}"
+  url="$(printf '%s' "${url}" | tr '[:upper:]' '[:lower:]')"
+  url="${url%/}"
+  url="${url%.git}"
+  repo="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
+  repo="${repo//./\\.}"
+  [[ "${url}" =~ ^(https://([^/@]+@)?github\.com/|ssh://git@github\.com(:22)?/|git@github\.com:)${repo}$ ]]
+}
+
+# Writes TEMP_DIR/branches.json, one entry per local and origin branch, and
+# TEMP_DIR/active.tsv, the files changed on the viewer's branches.
+function gather_branches() {
+  local default="${1}"
+  local email="${2}"
+  local ref at author name is_local counts behind ahead worktree path
+  local base="refs/remotes/origin/${default}"
+  # Each git listing goes to a file first, so a failed command stops the
+  # gather instead of reading as an empty list.
+  local refs_file="${TEMP_DIR}/refs.tsv" changed_file="${TEMP_DIR}/changed.txt"
+  : > "${TEMP_DIR}/branches.tsv"
+  : > "${TEMP_DIR}/active.tsv"
+  git worktree list --porcelain > "${TEMP_DIR}/worktree-list.txt" || die "${E_INVALID}" "cannot list the worktrees of this checkout"
+  sed -n 's/^branch refs\/heads\///p' "${TEMP_DIR}/worktree-list.txt" > "${TEMP_DIR}/worktrees.txt"
+  git for-each-ref --format="%(refname)${FIELD_SEPARATOR}%(committerdate:iso-strict)${FIELD_SEPARATOR}%(authoremail)" refs/heads refs/remotes/origin > "${refs_file}" \
+    || die "${E_INVALID}" "cannot list the branches of this checkout"
+  while IFS="${FIELD_SEPARATOR}" read -r ref at author; do
+    case "${ref}" in
+      refs/heads/*)
+        name="${ref#refs/heads/}"
+        is_local=true
+        ;;
+      refs/remotes/origin/*)
+        name="${ref#refs/remotes/origin/}"
+        is_local=false
+        ;;
+      *) continue ;;
+    esac
+    [[ "${name}" != "HEAD" && "${name}" != "${default}" ]] || continue
+    counts="$(git rev-list --left-right --count "${base}...${ref}")" || die "${E_INVALID}" "cannot compare ${ref} with ${base}"
+    behind="${counts%%[[:space:]]*}"
+    ahead="${counts##*[[:space:]]}"
+    worktree=false
+    if [[ "${is_local}" == true ]] && grep -qxF -- "${name}" "${TEMP_DIR}/worktrees.txt"; then
+      worktree=true
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${name}" "${is_local}" "${worktree}" "${at}" "${ahead}" "${behind}" >> "${TEMP_DIR}/branches.tsv"
+    # A branch is the viewer's when its last commit is, so a teammate's branch
+    # checked out for review is not.
+    if [[ "${ahead}" -gt 0 && -n "${email}" && "$(printf '%s' "${author}" | tr '[:upper:]' '[:lower:]')" == "<$(printf '%s' "${email}" | tr '[:upper:]' '[:lower:]')>" ]]; then
+      git diff --name-only "${base}...${ref}" > "${changed_file}" || die "${E_INVALID}" "cannot list the files changed on ${ref}"
+      while IFS= read -r path; do
+        [[ -n "${path}" ]] && printf '%s\tbranch %s\n' "${path}" "${name}" >> "${TEMP_DIR}/active.tsv"
+      done < "${changed_file}"
+    fi
+  done < "${refs_file}"
+  jq -R -s 'split("\n") | map(select(length > 0) | split("\t") | {name: .[0], local: (.[1] == "true"), worktree: (.[2] == "true"), at: .[3], ahead: (.[4] | tonumber), behind: (.[5] | tonumber)})' \
+    "${TEMP_DIR}/branches.tsv" > "${TEMP_DIR}/branches.json"
+}
+
+# Writes TEMP_DIR/recent.tsv, the files in the viewer's commits on any local
+# or origin branch since SINCE, as path, commit, and time.
+function gather_commits() {
+  local email="${1}"
+  local since="${2}"
+  local line commit="" at=""
+  : > "${TEMP_DIR}/recent.tsv"
+  [[ -n "${email}" ]] || return 0
+  # Email addresses ignore case; git matches --author with case by default.
+  git log --branches --remotes=origin --no-merges --fixed-strings --regexp-ignore-case --author="${email}" --since="${since}" \
+    --format="%x01%h${FIELD_SEPARATOR}%cI" --name-only > "${TEMP_DIR}/commits.txt" \
+    || die "${E_INVALID}" "cannot read your recent commits in this checkout"
+  while IFS= read -r line; do
+    if [[ "${line}" == $'\x01'* ]]; then
+      line="${line#$'\x01'}"
+      commit="${line%%"${FIELD_SEPARATOR}"*}"
+      at="${line#*"${FIELD_SEPARATOR}"}"
+    elif [[ -n "${line}" ]]; then
+      printf '%s\tcommit %s\t%s\n' "${line}" "${commit}" "${at}" >> "${TEMP_DIR}/recent.tsv"
+    fi
+  done < "${TEMP_DIR}/commits.txt"
+}
+
+function cmd_gather() {
+  [[ $# -eq 2 ]] || usage_error "gather takes a repository and an output path"
+  local repo="${1}"
+  local output_file="${2}"
+  local config now host since viewer default commit email url cut_short
+  require_tools jq gh git
+  load_config "${repo}"
+  config="${CONFIG}"
+  require_output_dir "${output_file}"
+  git rev-parse --is-inside-work-tree > /dev/null 2>&1 || die "${E_INVALID}" "run gather inside a checkout of ${repo}"
+  if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then
+    die "${E_INVALID}" "the origin of this checkout is not ${repo} on github.com"
+  fi
+
+  now="$(utc_now)"
+  since="$(jq -n -r --arg now "${now}" --argjson days "$(config_field "${config}" '.affinityWorkDays')" \
+    '$now | fromdateiso8601 - $days * 86400 | todateiso8601')" \
+    || die "${E_INVALID}" "BACKLOG_GATHER_NOW must be an ISO 8601 UTC time, such as 2026-10-06T12:00:00Z"
+  host="${BACKLOG_GATHER_HOST:-$(hostname -s)}"
+  make_temp_dir
+
+  github_query repository "${repo}" > "${TEMP_DIR}/repository.json" 2> "${TEMP_DIR}/repository.err" || {
+    printf '%s: cannot read the repository %s:\n' "${SCRIPT_NAME}" "${repo}" >&2
+    sed 's/^/  /' "${TEMP_DIR}/repository.err" >&2
+    exit "${E_INVALID}"
+  }
+  jq -e '.data.repository != null and .data.viewer.login != null' "${TEMP_DIR}/repository.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "cannot read the repository ${repo}"
+  [[ "$(jq -r '.data.repository.isArchived' "${TEMP_DIR}/repository.json")" != true ]] \
+    || die "${E_INVALID}" "${repo} is archived; its backlog cannot change, so there is nothing to sync"
+  viewer="$(jq -r '.data.viewer.login' "${TEMP_DIR}/repository.json")"
+  default="$(jq -r '.data.repository.defaultBranchRef.name // empty' "${TEMP_DIR}/repository.json")"
+  [[ -n "${default}" ]] || die "${E_INVALID}" "${repo} has no default branch"
+  commit="$(git rev-parse --verify --quiet "refs/remotes/origin/${default}^{commit}")" \
+    || die "${E_INVALID}" "origin/${default} is missing; run git fetch --prune origin first"
+
+  start_job issues github_pages issues "${repo}"
+  start_job pulls github_pages pulls "${repo}"
+  start_job merged github_search "repo:${repo} is:pr is:merged author:${viewer} merged:>=${since:0:10}"
+
+  email="$(git config user.email || true)"
+  if [[ -z "${email}" ]]; then
+    printf '%s: git user.email is not set here, so no branch or commit in this checkout counts as yours for affinity\n' "${SCRIPT_NAME}" >&2
+  fi
+  gather_branches "${default}" "${email}"
+  gather_commits "${email}" "${since}"
+  wait_jobs
+
+  # Every open issue and pull request must arrive, or one would vanish from
+  # the board without a word.
+  jq -e 'all(.[]; .data.repository.issues.nodes | type == "array")' "${TEMP_DIR}/issues.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the open issues came back without a list, so the board cannot be trusted"
+  # A progress label, linked pull request or cross-reference past the cut
+  # would read as no progress.
+  cut_short="$(jq -r '[.[] | .data.repository.issues.nodes[]
+    | [(select(.labels.pageInfo.hasNextPage == true) | "labels"),
+       (select(.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests"),
+       (select(.timelineItems.pageInfo.hasPreviousPage == true) | "cross-references")] as $cut
+    | select($cut | length > 0) | "#\(.number) (\($cut | join(" and ")))"] | join(", ")' "${TEMP_DIR}/issues.json")"
+  [[ -z "${cut_short}" ]] \
+    || die "${E_INVALID}" "GitHub cut short the lists of ${cut_short}, so progress could be missing; the board cannot be trusted"
+  jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
+  cut_short="$(jq -r '[.[] | .data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.pageInfo.hasNextPage == true) | "#\(.number)"] | join(", ")' "${TEMP_DIR}/pulls.json")"
+  [[ -z "${cut_short}" ]] \
+    || die "${E_INVALID}" "pull requests ${cut_short} close more than 100 issues, so an issue past the cut would read as unstarted; the board cannot be trusted"
+  jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/merged.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the search for your merged pull requests came back without a result count"
+  # GitHub search stops at 1000 results and then reports no further page.
+  jq -e '([.[] | .data.search.nodes | length] | add // 0) >= (.[0].data.search.issueCount // 0)' "${TEMP_DIR}/merged.json" > /dev/null \
+    || die "${E_INVALID}" "the search for your merged pull requests was cut short, so the areas you worked in would be missing some files"
+
+  # The viewer's files: active from open branches and pull requests, recent
+  # from commits and merged pull requests.
+  jq -n -R --arg viewer "${viewer}" --slurpfile pulls "${TEMP_DIR}/pulls.json" --slurpfile merged "${TEMP_DIR}/merged.json" \
+    --rawfile active "${TEMP_DIR}/active.tsv" --rawfile recent "${TEMP_DIR}/recent.tsv" "${PROGRESS_DEFS}"'
+    def rows($text): $text | split("\n") | map(select(length > 0) | split("\t"));
+    {
+      active: ([rows($active)[] | {path: .[0], via: .[1]}]
+               + [$pulls[0][] | .data.repository.pullRequests.nodes[] | select(.author.login == $viewer) | .number as $n | .files.nodes | as_list | .[] | {path, via: "pull request #\($n)"}])
+              | unique_by([.path, .via]),
+      recent: ([rows($recent)[] | {path: .[0], via: .[1], at: (.[2] | utc)}]
+               + [$merged[0][] | .data.search.nodes[] | select(.__typename == "PullRequest") | .number as $n | .mergedAt as $at | .files.nodes | as_list | .[] | {path, via: "pull request #\($n)", at: ($at | utc)}])
+              | unique_by([.path, .via, .at])
+    }' > "${TEMP_DIR}/files.json"
+
+  jq -n --argjson config "${config}" --arg now "${now}" --arg host "${host}" --arg viewer "${viewer}" \
+    --arg commit "${commit}" --argjson version "${GATHER_VERSION}" \
+    --slurpfile repository "${TEMP_DIR}/repository.json" \
+    --slurpfile issues "${TEMP_DIR}/issues.json" \
+    --slurpfile pulls "${TEMP_DIR}/pulls.json" \
+    --slurpfile merged "${TEMP_DIR}/merged.json" \
+    --slurpfile branches "${TEMP_DIR}/branches.json" \
+    --slurpfile files "${TEMP_DIR}/files.json" \
+    "\$repository[0].data.repository as \$repository
+     | [\$issues[0][] | .data.repository.issues.nodes[]] as \$issues
+     | [\$pulls[0][] | .data.repository.pullRequests.nodes[]] as \$pulls
+     | [\$merged[0][] | .data.search.nodes[]] as \$merged
+     | \$branches[0] as \$branches
+     | \$files[0] as \$files
+     | ${DERIVE_FILTER}" > "${TEMP_DIR}/gather.json"
+  write_atomic "${output_file}" "${TEMP_DIR}/gather.json"
+
+  cut_short="$(jq -r '.warnings[] | "  - \(.)"' "${output_file}")"
+  if [[ -n "${cut_short}" ]]; then
+    printf '%s: GitHub cut these lists short, so an item past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
+  fi
+  cut_short="$(jq -r -n --slurpfile pulls "${TEMP_DIR}/pulls.json" --slurpfile merged "${TEMP_DIR}/merged.json" '
+    ($pulls[0][] | .data.repository.pullRequests.nodes[]), ($merged[0][] | .data.search.nodes[])
+    | select(.files.pageInfo.hasNextPage == true) | "  - pull request #\(.number)"')"
+  if [[ -n "${cut_short}" ]]; then
+    printf '%s: these pull requests change more than 100 files, so affinity reads only the first 100:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
+  fi
+
+  jq -r "${PROGRESS_DEFS}"'
+    [.issues[] | .progress | select(. != null)] as $all
+    | [stage_order[] as $s | ([$all[] | select(.stage == $s)] | length) as $n | select($n > 0) | "\($n) \($s)"] as $by_stage
+    | ([$all[] | .flags[]] | group_by(.) | map("\(length) \(.[0])")) as $flags
+    | "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(plural(.issues | length; "open issue"; "open issues")); \(if ($by_stage | length) > 0 then $by_stage | join(", ") else "nothing in progress" end)",
+      "Flags: \(if ($flags | length) > 0 then $flags | join(", ") else "none" end)",
+      "Affinity signals ignored for uniformity: \(if (.affinityIgnored | length) > 0 then .affinityIgnored | join(", ") else "none" end)"
+  ' "${output_file}"
+}
+
+function cmd_finish() {
+  [[ $# -eq 3 ]] || usage_error "finish takes a gather file, the analysis data, and an output path"
+  local gather_file="${1}" data_file="${2}" output_file="${3}" problems
+  require_tools jq
+  require_json_file "${gather_file}"
+  require_json_file "${data_file}"
+  jq -e --argjson version "${GATHER_VERSION}" '.version == $version and (.issues | type == "array") and (.viewerFiles | type == "object")' "${gather_file}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${gather_file} is not a backlog-gather gather"
+  require_output_dir "${output_file}"
+  make_temp_dir
+
+  problems="$(jq -r --slurpfile gather "${gather_file}" "\$gather[0] as \$gather | ${FINISH_CHECK_FILTER}" "${data_file}")"
+  if [[ -n "${problems}" ]]; then
+    printf '%s: %s does not fit the gather:\n' "${SCRIPT_NAME}" "${data_file}" >&2
+    printf '%s\n' "${problems}" | sed 's/^/  - /' >&2
+    exit "${E_INVALID}"
+  fi
+  jq --slurpfile gather "${gather_file}" "\$gather[0] as \$gather | ${FINISH_FILTER}" "${data_file}" > "${TEMP_DIR}/board.json"
+  write_atomic "${output_file}" "${TEMP_DIR}/board.json"
+  jq -r "${PROGRESS_DEFS}"'
+    [.issues[] | .affinity.owner] as $owners
+    | "\(plural(.issues | length; "issue"; "issues")): \([$owners[] | select(. == "you")] | length) yours, \([$owners[] | select(. != null and . != "you" and . != "unknown")] | length) owned by others, \([$owners[] | select(. == "unknown")] | length) claimed by no one known; \(plural(.contention.claims // [] | length; "claim"; "claims")) derived from areas"
+  ' "${output_file}"
+}
+
+function main() {
+  local command="${1:-}"
+  [[ $# -gt 0 ]] && shift
+
+  case "${command}" in
+    -h | --help | help)
+      usage
+      return 0
+      ;;
+    "") usage_error "a command is required" ;;
+    gather) cmd_gather "$@" ;;
+    finish) cmd_finish "$@" ;;
+    *) usage_error "unknown command: ${command}" ;;
+  esac
+}
+
+main "$@"

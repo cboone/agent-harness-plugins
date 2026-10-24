@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Send push notifications through ntfy when work finishes or needs a decision, on request or from another skill, including from remote and cloud sessions.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["notifications", "ntfy", "push", "remote-sessions"],
+  "license": "MIT",
+  "name": "push-notification",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

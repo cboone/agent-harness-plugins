@@ -5,8 +5,9 @@
 set -euo pipefail
 
 # Transcript helpers append one Claude Code record to the file in $1.
+# Appends a prompt, with the extra fields in optional JSON $2.
 function transcript_prompt() {
-  jq -nc '{type: "user", message: {content: "Sample prompt"}}' >> "${1}"
+  jq -nc --argjson extra "${2:-"{}"}" '{type: "user", message: {content: "Sample prompt"}} + $extra' >> "${1}"
 }
 
 # Appends a tool_use with id $2, name $3 and JSON input $4.
@@ -15,15 +16,32 @@ function transcript_tool_use() {
     '{type: "assistant", message: {content: [{type: "tool_use", id: $id, name: $name, input: $input}]}}' >> "${1}"
 }
 
-# Appends the tool_result answering tool_use id $2.
+# Appends the tool_result answering tool_use id $2, with the extra fields in
+# optional JSON $3.
 function transcript_result() {
-  jq -nc --arg id "${2}" \
-    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: $id, content: "ok"}]}}' >> "${1}"
+  jq -nc --arg id "${2}" --argjson extra "${3:-"{}"}" \
+    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: $id, content: "ok"}]}} + $extra' >> "${1}"
 }
 
 # Appends assistant text $2.
 function transcript_text() {
   jq -nc --arg text "${2}" '{type: "assistant", message: {content: [{type: "text", text: $text}]}}' >> "${1}"
+}
+
+# Appends a turn whose prompt and tool result share promptId $2, with the extra
+# fields in JSON $3 on the prompt.
+function transcript_turn() {
+  # Sample promptIds are plain tokens, so they need no JSON escaping.
+  local id_field="{\"promptId\":\"${2}\"}"
+  transcript_prompt "${1}" "$(jq -nc --argjson id "${id_field}" --argjson extra "${3}" '$id + $extra')"
+  transcript_tool_use "${1}" "tool-${2}" Bash '{"command":"make"}'
+  transcript_result "${1}" "tool-${2}" "${id_field}"
+  transcript_text "${1}" "Completed sample"
+}
+
+# Writes to $1 a Codex transcript whose session source is JSON $2.
+function codex_transcript() {
+  jq -nc --argjson source "${2}" '{type: "session_meta", payload: {source: $source}}' > "${1}"
 }
 
 # Writes to $1 a turn whose pending tool use is $2 with input $3.
@@ -51,9 +69,9 @@ function not_running() {
   ! kill -0 "${1}" 2> /dev/null
 }
 
-# Sets HELD_PID to a held alerter stub's PID other than $1; fails if none.
+# Sets HELD_PID to the held alerter stub's PID; fails if none.
 function find_held_pid() {
-  HELD_PID="$(pgrep -f -- "${NOTIFY_TEST_STUB} --title" | grep -vx "${1:-none}" | head -n 1)" || true
+  HELD_PID="$(pgrep -f -- "${NOTIFY_TEST_STUB} --title" | head -n 1)" || true
   [[ -n "${HELD_PID}" ]]
 }
 
@@ -62,12 +80,284 @@ function wait_for_alerts() {
   poll 150 alert_count_is "${1}" || true
 }
 
-# Starts a new turn in session $1 and fires its completion alert.
-function next_turn() {
-  local payload="{\"session_id\":\"${1}\"}"
-  printf '%s' "${payload}" | "${NOTIFY_BIN:?}" codex-turn-start
-  printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
-  wait_for_alerts 2
+# Tier scenarios run the notifier under /bin/bash, which is bash 3.2 on macOS.
+
+function write_tiers() {
+  mkdir -p "${XDG_CONFIG_HOME}/agent-harness-notify"
+  printf '%s\n' "$@" > "${XDG_CONFIG_HOME}/agent-harness-notify/tiers"
+}
+
+function explain() {
+  /bin/bash "${NOTIFY_BIN:?}" explain "$@"
+}
+
+# Runs notify event $2 with JSON payload $3; the alerter stub logs label $1.
+# The notifier runs through TIER_NOTIFY, a path under the scenario's directory,
+# so its detached processes carry that path on their command lines.
+function tier_event() {
+  printf '%s' "${3}" | NOTIFY_TEST_EVENT="${1}" /bin/bash "${TIER_NOTIFY:?}" "${2}"
+}
+
+# Runs Stop event $2 labeled $1 for transcript $3, as session $1.
+function tier_stop() {
+  tier_event "${1}" "${2}" "$(jq -nc --arg id "${1}" --arg path "${3}" \
+    '{session_id: $id, transcript_path: $path, last_assistant_message: "Completed sample"}')"
+}
+
+function no_detached_notifier() {
+  ! pgrep -f -- "${TIER_NOTIFY}" > /dev/null
+}
+
+# Prints each label's alert as "label: title | subtitle | sound", or
+# "label: none", once every detached notifier has finished.
+function print_alerts() {
+  local label line
+  poll 300 no_detached_notifier || return 1
+  for label in "$@"; do
+    line="$(jq -r --arg label "${label}" '
+      index("--test-event") as $i
+      | select($i != null and .[$i + 1] == $label)
+      | "\(.[index("--title") + 1]) | \(.[index("--subtitle") + 1]) | \(.[index("--sound") + 1])"' "${NOTIFY_TEST_LOG}")"
+    printf '%s: %s\n' "${label}" "${line:-none}"
+  done
+}
+
+# Fires one event of each kind, naming transcripts from prefix $1, and prints
+# what each posted.
+function tier_policy() {
+  write_transcript "${1}-bash.jsonl" Bash '{"command":"make test"}'
+  write_transcript "${1}-plan.jsonl" ExitPlanMode '{"plan":"# Split the parser"}'
+  tier_event stop cc-stop '{"session_id":"stop","last_assistant_message":"Completed sample"}'
+  tier_event permission cc-permission "$(jq -nc --arg path "${1}-bash.jsonl" \
+    '{session_id: "permission", transcript_path: $path, message: "Claude needs your permission"}')"
+  tier_event plan cc-permission "$(jq -nc --arg path "${1}-plan.jsonl" \
+    '{session_id: "plan", transcript_path: $path, message: "Claude Code needs your approval for the plan"}')"
+  tier_event question cc-question '{"session_id":"question","tool_input":{"questions":[{"question":"Choose a branch?"}]}}'
+  tier_event elicit cc-elicit '{"session_id":"elicit","message":"Sign in to the sample server"}'
+  tier_event codex-question codex-question '{"session_id":"codex-question","tool_input":{"questions":[{"question":"Choose a branch?"}]}}'
+  tier_event codex-stop codex-stop '{"session_id":"codex-stop","last_assistant_message":"Completed sample"}'
+  print_alerts stop permission plan question elicit codex-question codex-stop
+}
+
+# Writes to $1 a Claude Code turn in which the person answered a $2 call.
+function answered_turn() {
+  transcript_prompt "${1}"
+  transcript_tool_use "${1}" asked "${2}" '{}'
+  transcript_result "${1}" asked
+  transcript_text "${1}" "Completed sample"
+}
+
+# Writes to $1 a Claude Code turn whose $2 call ended in an error result with
+# text $3.
+function errored_turn() {
+  transcript_prompt "${1}"
+  transcript_tool_use "${1}" asked "${2}" '{}'
+  jq -nc --arg text "${3}" \
+    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: "asked", is_error: true, content: $text}]}}' >> "${1}"
+  transcript_text "${1}" "Completed sample"
+}
+
+# Writes to $1 a Codex session whose current turn answered a question.
+function codex_answered_turn() {
+  codex_transcript "${1}" '"cli"'
+  {
+    jq -nc '{type: "event_msg", payload: {type: "task_started"}}'
+    jq -nc '{type: "response_item", payload: {type: "function_call", name: "request_user_input", call_id: "asked", arguments: "{}"}}'
+    jq -nc '{type: "response_item", payload: {type: "function_call_output", call_id: "asked", output: "Yes"}}'
+  } >> "${1}"
+}
+
+# Installs empty stop, permission and attention sounds, indices 0 to 4, in
+# directory $1 for each remaining stem, such as Chord or Chord-worker.
+function install_sounds() {
+  local sound_dir="${1}" stem role index
+  shift
+  mkdir -p "${sound_dir}"
+  for stem in "$@"; do
+    for role in stop permission attention; do
+      for index in 0 1 2 3 4; do
+        : > "${sound_dir}/${stem}-${role}-${index}.aiff"
+      done
+    done
+  done
+}
+
+function tier_scenario() {
+  local scenario="${1}" dir="${2}"
+  : > "${NOTIFY_TEST_LOG}"
+  # Links the plugin into the scenario's directory, keeping its assets beside
+  # the script.
+  ln -s "$(cd "$(dirname "${NOTIFY_BIN:?}")/.." && pwd)" "${dir}/plugin"
+  TIER_NOTIFY="${dir}/plugin/scripts/notify"
+  export NOTIFY_TEST_SESSION=atlas NOTIFY_TEST_WINDOW="w 42-fix-parser"
+  case "${scenario}" in
+    tier-worker)
+      export NOTIFY_TIER=worker
+      tier_policy "${dir}/policy"
+      ;;
+    tier-lead)
+      export NOTIFY_TIER=lead NOTIFY_TEST_WINDOW=conductor
+      tier_policy "${dir}/policy"
+      ;;
+    tier-top)
+      export NOTIFY_TIER=top NOTIFY_TEST_SESSION=hub NOTIFY_TEST_WINDOW=coordinator
+      tier_policy "${dir}/policy"
+      ;;
+    tier-unmatched)
+      write_tiers 'lead window ^conductor$'
+      tier_policy "${dir}/policy"
+      ;;
+    tier-answered)
+      export NOTIFY_TIER=lead NOTIFY_TEST_WINDOW=conductor
+      answered_turn "${dir}/question.jsonl" AskUserQuestion
+      answered_turn "${dir}/plan.jsonl" ExitPlanMode
+      errored_turn "${dir}/rejected.jsonl" AskUserQuestion "The user doesn't want to proceed with this tool use. The tool use was rejected."
+      errored_turn "${dir}/failed.jsonl" AskUserQuestion "<tool_use_error>InputValidationError: sample</tool_use_error>"
+      transcript_prompt "${dir}/tool.jsonl"
+      transcript_tool_use "${dir}/tool.jsonl" tool-1 Bash '{"command":"make"}'
+      transcript_result "${dir}/tool.jsonl" tool-1
+      transcript_text "${dir}/tool.jsonl" "Completed sample"
+      answered_turn "${dir}/earlier.jsonl" AskUserQuestion
+      transcript_prompt "${dir}/earlier.jsonl"
+      transcript_text "${dir}/earlier.jsonl" "Completed sample"
+      codex_answered_turn "${dir}/codex.jsonl"
+      tier_stop question cc-stop "${dir}/question.jsonl"
+      tier_stop plan cc-stop "${dir}/plan.jsonl"
+      tier_stop rejected cc-stop "${dir}/rejected.jsonl"
+      tier_stop failed cc-stop "${dir}/failed.jsonl"
+      tier_stop tool cc-stop "${dir}/tool.jsonl"
+      tier_stop earlier cc-stop "${dir}/earlier.jsonl"
+      tier_stop codex codex-stop "${dir}/codex.jsonl"
+      (
+        unset NOTIFY_TIER
+        tier_stop untiered cc-stop "${dir}/question.jsonl"
+      )
+      print_alerts question plan rejected failed tool earlier codex untiered
+      ;;
+    tier-rules-order)
+      write_tiers '# tier field pattern' '' 'bogus window ^w' 'worker color ^w' 'worker window [' \
+        'worker window ^w[ ]' 'lead window ^w'
+      explain
+      ;;
+    tier-rules-session)
+      write_tiers 'lead session ^atlas$'
+      explain
+      ;;
+    tier-rules-server)
+      write_tiers 'lead server ^notify-test-server$'
+      explain
+      ;;
+    tier-rules-name)
+      jq -nc '{type: "agent-name", agentName: "MONITOR"}' > "${dir}/named.jsonl"
+      # Adds quoted records to catch name lookups that inspect only trailing matches.
+      local quoted
+      quoted="$(jq -nc '{type: "user", agentName: "QUOTED", message: {content: "Sample prompt"}, note: {type: "agent-name"}}')"
+      for _ in {1..150}; do printf '%s\n' "${quoted}"; done >> "${dir}/named.jsonl"
+      write_tiers 'lead name ^[[:upper:]]+$'
+      explain "${dir}/named.jsonl"
+      ;;
+    tier-rules-custom-title)
+      jq -nc '{type: "custom-title", customTitle: "Sample Title"}' > "${dir}/titled.jsonl"
+      write_tiers 'lead name ^Sample[ ]'
+      explain "${dir}/titled.jsonl"
+      ;;
+    tier-rules-renamed)
+      jq -nc '{type: "agent-name", agentName: "OLD NAME"}' > "${dir}/renamed.jsonl"
+      jq -nc '{type: "custom-title", customTitle: "Renamed Title"}' >> "${dir}/renamed.jsonl"
+      write_tiers 'worker name ^OLD' 'lead name ^Renamed'
+      explain "${dir}/renamed.jsonl"
+      ;;
+    tier-name-hook)
+      local glyph=$'\xef\x91\xa9'
+      export NOTIFY_TEST_WINDOW="${glyph}"
+      write_tiers 'lead name ^[[:upper:]]+$'
+      jq -nc '{type: "agent-name", agentName: "ATLAS"}' > "${dir}/named.jsonl"
+      write_transcript "${dir}/named.jsonl" Bash '{"command":"make test"}'
+      tier_event permission cc-permission "$(jq -nc --arg path "${dir}/named.jsonl" \
+        '{session_id: "permission", transcript_path: $path, message: "Claude needs your permission"}')"
+      tier_event question cc-question "$(jq -nc --arg path "${dir}/named.jsonl" \
+        '{session_id: "question", transcript_path: $path, tool_input: {questions: [{question: "Choose a branch?"}]}}')"
+      print_alerts permission question
+      ;;
+    tier-explain-lookup)
+      write_tiers 'lead name ^LOOKUP$'
+      mkdir -p "${dir}/claude/projects/sample-project" "${dir}/home/.claude/projects/sample-project"
+      jq -nc '{type: "agent-name", agentName: "LOOKUP"}' > "${dir}/claude/projects/sample-project/sample-session.jsonl"
+      cp "${dir}/claude/projects/sample-project/sample-session.jsonl" "${dir}/home/.claude/projects/sample-project/"
+      CLAUDE_CODE_SESSION_ID=sample-session CLAUDE_CONFIG_DIR="${dir}/claude" explain | grep -E '^(tier|name):'
+      CLAUDE_CODE_SESSION_ID=sample-session HOME="${dir}/home" explain | grep -E '^(tier|name):'
+      ;;
+    tier-explain-errors)
+      local status=0
+      explain "${dir}/missing.jsonl" > "${dir}/explain.out" 2>&1 || status=$?
+      sed "s|${dir}|<dir>|g" "${dir}/explain.out"
+      echo "exit ${status}"
+      mkdir -p "${dir}/claude/projects/sample-project"
+      jq -nc '{type: "agent-name", agentName: "LOOKUP"}' > "${dir}/claude/projects/sample-project/unreadable.jsonl"
+      chmod 000 "${dir}/claude/projects/sample-project/unreadable.jsonl"
+      for session in absent unreadable 'bad/../id'; do
+        status=0
+        CLAUDE_CODE_SESSION_ID="${session}" CLAUDE_CONFIG_DIR="${dir}/claude" explain > "${dir}/explain.out" 2>&1 || status=$?
+        sed "s|${dir}|<dir>|g" "${dir}/explain.out"
+        echo "exit ${status}"
+      done
+      status=0
+      mkdir -p "${XDG_CONFIG_HOME}/agent-harness-notify/tiers"
+      status=0
+      explain > "${dir}/explain.out" 2>&1 || status=$?
+      sed "s|${dir}|<dir>|g" "${dir}/explain.out"
+      echo "exit ${status}"
+      ;;
+    tier-rules-dir)
+      write_tiers 'top dir /sample-repo$' 'worker dir /worktrees/'
+      explain
+      CLAUDE_PROJECT_DIR=/tmp/sample/worktrees/42 explain
+      ;;
+    tier-rules-env)
+      write_tiers 'worker window ^w[ ]'
+      NOTIFY_TIER=top explain
+      NOTIFY_TIER=boss explain
+      ;;
+    tier-rules-none)
+      write_tiers 'lead window ^conductor$' 'lead name ^'
+      explain
+      ;;
+    tier-rules-missing) explain ;;
+    tier-rules-multibyte)
+      export NOTIFY_TEST_WINDOW="λ 42-fix-parser"
+      write_tiers 'lead window ^♮$' 'worker window ^λ[ ]'
+      explain
+      LC_ALL=C explain
+      ;;
+    tier-place-glyph)
+      local glyph=$'\xef\x91\xa9'
+      export NOTIFY_TIER=lead NOTIFY_TEST_SESSION=hub NOTIFY_TEST_WINDOW="${glyph}"
+      jq -nc '{type: "agent-name", agentName: "MONITOR"}' > "${dir}/named.jsonl"
+      explain "${dir}/named.jsonl"
+      explain
+      NOTIFY_TEST_WINDOW="${glyph} BOARDS" explain
+      ;;
+    tier-place-outside-tmux)
+      export NOTIFY_TIER=lead
+      unset TMUX TMUX_PANE
+      explain
+      ;;
+    tier-sounds)
+      export HOME="${dir}/home" NOTIFY_SOUND_SET=Chord
+      install_sounds "${HOME}/Library/Sounds" Chord Chord-worker
+      NOTIFY_TIER=worker explain | grep sounds
+      NOTIFY_TIER=lead explain | grep sounds
+      explain | grep sounds
+      rm "${HOME}/Library/Sounds/Chord-worker-stop-0.aiff"
+      NOTIFY_TIER=worker explain | grep sounds
+      unset NOTIFY_SOUND_SET
+      NOTIFY_TIER=worker explain | grep sounds
+      ;;
+    *)
+      echo "Unknown tier scenario: ${scenario}" >&2
+      return 1
+      ;;
+  esac
 }
 
 function main() {
@@ -84,34 +374,44 @@ function main() {
   mkdir "${test_dir}/bin"
   export NOTIFY_TEST_LOG="${test_dir}/alerts"
   NOTIFY_TEST_STUB="${test_dir}/bin/alerter"
-  export NOTIFY_TEST_TMUX_LOG="${test_dir}/tmux"
   export NOTIFY_TEST_FRONT="com.example.background"
   export NOTIFY_TEST_VISIBLE="%99|attached,focused,UTF-8"
-  export NOTIFY_TEST_CLICK=""
   export NOTIFY_TEST_TITLE="✳ Sample task"
   export PATH="${test_dir}/bin:${PATH}"
-  export XDG_CACHE_HOME="${test_dir}/cache"
+  export XDG_CACHE_HOME="${test_dir}/cache" XDG_CONFIG_HOME="${test_dir}/config"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
-  # Keeps a developer's NOTIFY_WAIT_LIMIT out of the scenarios.
-  unset NOTIFY_WAIT_LIMIT
+  # Keeps inherited notify settings, session identity and terminal out of the
+  # scenarios.
+  unset NOTIFY_WAIT_LIMIT NOTIFY_SOUND_SET NOTIFY_TIER CLAUDE_PROJECT_DIR CLAUDE_CODE_SESSION_ID \
+    CLAUDE_CONFIG_DIR __CFBundleIdentifier
 
   # The stub logs SIGTERM, which makes the real alerter remove its banner.
   # The trap is set before the call is logged, since scenarios wait for that log.
-  # NOTIFY_TEST_HOLD keeps the stub waiting like an unanswered banner.
+  # NOTIFY_TEST_HOLD keeps the stub waiting like an unanswered banner, and
+  # NOTIFY_TEST_EVENT labels the call for the tier scenarios.
   printf '%s\n' '#!/usr/bin/env bash' \
     'trap '\''echo TERM >> "${NOTIFY_TEST_LOG}.signals"; exit 143'\'' TERM' \
-    'jq -nc --args '\''$ARGS.positional'\'' -- "$@" >> "${NOTIFY_TEST_LOG}"' \
+    'jq -nc --args '\''$ARGS.positional'\'' -- "$@" ${NOTIFY_TEST_EVENT:+--test-event "${NOTIFY_TEST_EVENT}"} >> "${NOTIFY_TEST_LOG}"' \
     'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then for _ in {1..300}; do sleep 0.1; done; fi' \
-    'printf "%s" "${NOTIFY_TEST_CLICK}"' > "${test_dir}/bin/alerter"
+    > "${test_dir}/bin/alerter"
+  # display-message answers the pane title query (#T) and otherwise the
+  # session and window names; show-environment fails without
+  # NOTIFY_TEST_GLOBAL_TERM, like a variable the server lacks.
   printf '%s\n' '#!/usr/bin/env bash' \
-    'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
     'case "$1" in' \
-    'display-message) if [[ "$*" == *pane_id* ]]; then printf '\''$3|@12|%%7\\n'\''; else printf "%s\\n" "${NOTIFY_TEST_TITLE}"; fi ;;' \
+    'display-message)' \
+    '  if [[ "$5" == "#T" ]]; then printf "%s\\n" "${NOTIFY_TEST_TITLE}"' \
+    '  else printf "%s\\037%s\\n" "${NOTIFY_TEST_SESSION:-sample-session}" "${NOTIFY_TEST_WINDOW:-sample-window}"; fi ;;' \
     'list-clients) printf "%s\\n" "${NOTIFY_TEST_VISIBLE}" ;;' \
+    'show-environment) [[ -n "${NOTIFY_TEST_GLOBAL_TERM:-}" ]] && printf "TERM_PROGRAM=%s\\n" "${NOTIFY_TEST_GLOBAL_TERM}" ;;' \
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
-  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript"
+  # Stubs the parent's terminal and command line; the default has no terminal,
+  # like an agent-run command.
+  printf '%s\n' '#!/usr/bin/env bash' \
+    'printf "%s %s\\n" "${NOTIFY_TEST_TTY:-??}" "${NOTIFY_TEST_PARENT:-bash check-notifications}"' > "${test_dir}/bin/ps"
+  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript" "${test_dir}/bin/ps"
 
   # Subtitles name the repository and fall back to the branch suffix. An empty
   # template keeps a personal init.templateDir out of the sample repository.
@@ -120,6 +420,64 @@ function main() {
   cd "${repo}"
   # The logical path; mktemp leaves a doubled slash when TMPDIR ends in /.
   repo="${PWD}"
+
+  if [[ "${scenario}" == sound-* ]]; then
+    local fixture_home="${test_dir}/home" sound_dir prefix=Chord
+    : > "${NOTIFY_TEST_LOG}"
+    sound_dir="${fixture_home}/Library/Sounds"
+    install_sounds "${sound_dir}" "${prefix}"
+    export NOTIFY_SOUND_SET="${prefix}"
+    case "${scenario}" in
+      sound-unset) unset NOTIFY_SOUND_SET ;;
+      sound-empty) export NOTIFY_SOUND_SET="" ;;
+      sound-invalid) export NOTIFY_SOUND_SET='../Chord' ;;
+      sound-gap) rm "${sound_dir}/Chord-stop-2.aiff" ;;
+      sound-missing) rm "${sound_dir}"/Chord-permission-*.aiff ;;
+      sound-zero) rm "${sound_dir}/Chord-stop-0.aiff" ;;
+      sound-counts) rm "${sound_dir}/Chord-permission-3.aiff" ;;
+      sound-extensions)
+        mv "${sound_dir}/Chord-stop-4.aiff" "${sound_dir}/Chord-stop-4.wav"
+        mv "${sound_dir}/Chord-attention-4.aiff" "${sound_dir}/Chord-attention-4.caf"
+        : > "${sound_dir}/Chord-permission-0.wav"
+        ;;
+      sound-other)
+        git init -q --template= -b sample "${test_dir}/another-repo"
+        cd "${test_dir}/another-repo"
+        ;;
+      sound-outside)
+        mkdir "${test_dir}/outside-repo"
+        cd "${test_dir}/outside-repo"
+        ;;
+      sound-worktree)
+        git -c user.name=Sample -c user.email=sample@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m sample
+        git worktree add -q -b sample "${test_dir}/worktree-folder"
+        cd "${test_dir}/worktree-folder"
+        ;;
+      sound-full) ;;
+      *)
+        echo "Unknown sound scenario: ${scenario}" >&2
+        return 1
+        ;;
+    esac
+    local event calls=0 sound_transcript="${test_dir}/sound-transcript.jsonl"
+    write_transcript "${sound_transcript}" ExitPlanMode '{"plan":"# Sample plan"}'
+    for event in cc-stop codex-stop cc-permission cc-question codex-question cc-elicit cc-permission; do
+      calls=$((calls + 1))
+      local sound_payload
+      sound_payload="$(jq -nc --arg session "sound-${calls}" \
+        --arg transcript "$(if [[ "${calls}" -eq 7 ]]; then printf '%s' "${sound_transcript}"; fi)" \
+        --arg message "$(if [[ "${calls}" -eq 7 ]]; then printf '%s' 'Claude Code needs your approval for the plan'; fi)" \
+        '{session_id: $session, message: $message, transcript_path: $transcript}')"
+      printf '%s' "${sound_payload}" | HOME="${fixture_home}" /bin/bash "${NOTIFY_BIN}" "${event}"
+      poll 150 alert_count_is "${calls}" || return 1
+    done
+    jq -r '.[index("--sound") + 1]' "${NOTIFY_TEST_LOG}"
+    return
+  fi
+  if [[ "${scenario}" == tier-* ]]; then
+    tier_scenario "${scenario}" "${test_dir}"
+    return
+  fi
 
   local payload='{"session_id":"session-one","last_assistant_message":"Completed sample"}'
   local action="codex-stop" transcript="${test_dir}/transcript.jsonl" message=""
@@ -355,14 +713,97 @@ function main() {
       write_transcript "${transcript}" ExitPlanMode '{"plan":""}'
       ;;
     visible) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8" ;;
+    # tmux 3.2 and later set TERM_PROGRAM=tmux in every pane.
+    quiet-visible-tmux-bundle)
+      export TERM_PROGRAM=tmux __CFBundleIdentifier=com.apple.Terminal
+      export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8"
+      ;;
+    quiet-visible-tmux-global)
+      export TERM_PROGRAM=tmux NOTIFY_TEST_GLOBAL_TERM=Apple_Terminal
+      export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8"
+      ;;
+    tmux-unknown-terminal)
+      export TERM_PROGRAM=tmux
+      export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8"
+      ;;
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
     subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
-    click) export NOTIFY_TEST_CLICK="@CONTENTCLICKED" ;;
-    duplicate | replace | other-session) export NOTIFY_TEST_HOLD=1 ;;
-    watchdog) export NOTIFY_TEST_HOLD=1 NOTIFY_WAIT_LIMIT=2 ;;
+    codex-cli) codex_transcript "${transcript}" '"cli"' ;;
+    quiet-codex-exec) codex_transcript "${transcript}" '"exec"' ;;
+    quiet-codex-subagent) codex_transcript "${transcript}" '{"subagent":{"other":"guardian"}}' ;;
+    quiet-codex-exec-resume)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex -c model=sample exec resume sample-session"
+      ;;
+    quiet-codex-exec-alias)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="/opt/sample/bin/codex e Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
+    quiet-codex-spaced-value)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex --cd /tmp/sample project exec resume sample-session"
+      ;;
+    # --ephemeral writes no transcript, so the payload's path does not exist.
+    quiet-codex-exec-ephemeral) export NOTIFY_TEST_PARENT="codex exec --ephemeral --cd /tmp/sample Sample prompt" ;;
+    quiet-codex-review)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex review"
+      ;;
+    codex-spaced-value-terminal)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex --cd /tmp/sample exec" NOTIFY_TEST_TTY=ttys001
+      ;;
+    quiet-codex-exec-terminal)
+      codex_transcript "${transcript}" '"cli"'
+      export NOTIFY_TEST_PARENT="codex exec Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
+    codex-terminal-prompt)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
+    codex-interactive-resume)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex resume sample-session"
+      ;;
+    codex-option-value)
+      codex_transcript "${transcript}" '"exec"'
+      export NOTIFY_TEST_PARENT="codex --model exec Sample prompt" NOTIFY_TEST_TTY=ttys001
+      ;;
+    turn-human) transcript_turn "${transcript}" p1 '{"turnOrigin":"human","origin":{"kind":"human"}}' ;;
+    turn-human-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"human"}}' ;;
+    turn-untagged) transcript_turn "${transcript}" p1 '{}' ;;
+    turn-without-prompt-id)
+      transcript_turn "${transcript}" p1 '{"turnOrigin":"task_notification"}'
+      transcript_prompt "${transcript}"
+      transcript_text "${transcript}" "Completed sample"
+      ;;
+    quiet-turn-task) transcript_turn "${transcript}" p1 '{"turnOrigin":"task_notification","origin":{"kind":"task-notification"}}' ;;
+    quiet-turn-peer) transcript_turn "${transcript}" p1 '{"turnOrigin":"peer","origin":{"kind":"peer"},"isMeta":true}' ;;
+    quiet-turn-scheduled) transcript_turn "${transcript}" p1 '{"turnOrigin":"scheduled","isMeta":true}' ;;
+    quiet-turn-sdk) transcript_turn "${transcript}" p1 '{"turnOrigin":"sdk"}' ;;
+    quiet-turn-legacy) transcript_turn "${transcript}" p1 '{"origin":{"kind":"task-notification"}}' ;;
+    quiet-turn-meta) transcript_turn "${transcript}" p1 '{"isMeta":true}' ;;
+    quiet-turn-compacted)
+      transcript_turn "${transcript}" p1 '{"isMeta":true}'
+      transcript_prompt "${transcript}" '{"promptId":"p1","isCompactSummary":true}'
+      ;;
+    quiet-turn-after-human)
+      transcript_turn "${transcript}" p1 '{"turnOrigin":"human"}'
+      transcript_turn "${transcript}" p2 '{"turnOrigin":"task_notification"}'
+      ;;
+    delivery | delivery-leading-zero)
+      export NOTIFY_TEST_HOLD=1
+      # A leading zero fails validation, so the default grace period applies.
+      [[ "${scenario}" == delivery ]] || export NOTIFY_WAIT_LIMIT=09
+      local started="${SECONDS}"
+      ;;
     *) ;;
   esac
+  if [[ "${scenario}" =~ ^(quiet-)?(codex|turn)- ]]; then
+    [[ ! "${scenario}" =~ ^(quiet-)?turn- ]] || action="cc-stop"
+    payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: "Completed sample"}')"
+  fi
   if [[ "${action}" == cc-permission ]]; then
     payload="$(jq -nc --arg path "${transcript}" --arg message "${message}" \
       '{session_id: "session-one", transcript_path: $path} + (if $message == "" then {} else {message: $message} end)')"
@@ -371,36 +812,28 @@ function main() {
   # Polls for up to 3 seconds for the detached alerter stub to log its call.
   local count=0
   case "${scenario}" in
-    visible | subagent | permission-question) ;;
+    visible | subagent | permission-question | quiet-*) ;;
     *)
       while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
         sleep 0.02
         count=$((count + 1))
       done
-      [[ -s "${NOTIFY_TEST_LOG}" ]]
+      [[ -s "${NOTIFY_TEST_LOG}" ]] || exit 1
       ;;
   esac
-  # `|| exit 1` on held-alerter assertions: a failing [[ ]] does not trigger errexit in bash 3.2.
-  local first=""
-  if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then
-    poll 150 find_held_pid || exit 1
-    first="${HELD_PID}"
-  fi
   case "${scenario}" in
     duplicate)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
       # Polls for up to 3 seconds for a detached duplicate before asserting none came.
       wait_for_alerts 2
       alert_count_is 1 || exit 1
-      # A skipped duplicate leaves the waiting alerter alone.
-      kill -0 "${first}" || exit 1
       echo "One completion alert per turn"
       ;;
     reset | claude-reset)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action%-stop}-turn-start"
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
       wait_for_alerts 2
-      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]]
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]] || exit 1
       echo "Next user prompt allows another completion"
       ;;
     groups)
@@ -409,41 +842,23 @@ function main() {
       [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
       echo "Separate sessions retain separate banners"
       ;;
-    replace)
-      next_turn session-one
-      poll 150 find_held_pid "${first}" || exit 1
-      poll 150 not_running "${first}" || exit 1
+    delivery | delivery-leading-zero)
+      # `|| exit 1` throughout: a failing [[ ]] does not trigger errexit in bash 3.2.
+      poll 150 find_held_pid || exit 1
+      # The default grace period is 2 seconds; allow 6 under parallel load.
+      poll 300 not_running "${HELD_PID}" || exit 1
+      # Two 1-second sleeps precede the stop, so whole-second SECONDS shows at least 2.
+      [[ $((SECONDS - started)) -ge 2 ]] || exit 1
       # SIGTERM would make the real alerter remove its banner.
       [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
-      echo "A new alert stops the session's waiting alerter without SIGTERM"
+      [[ "$(jq -r '.[index("--timeout") + 1]' "${NOTIFY_TEST_LOG}")" == 86400 ]] || exit 1
+      echo "Alerter stops after the grace period without SIGTERM"
       ;;
-    other-session)
-      next_turn session-two
-      poll 150 find_held_pid "${first}" || exit 1
-      kill -0 "${first}" || exit 1
-      echo "Other sessions keep their waiting alerters"
-      ;;
-    watchdog)
-      # NOTIFY_WAIT_LIMIT is 2 seconds; allow 6 under parallel load.
-      poll 300 not_running "${first}" || exit 1
-      [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
-      echo "The watchdog stops a waiting alerter without SIGTERM"
-      ;;
-    visible | subagent | permission-question)
+    visible | subagent | permission-question | quiet-*)
       # Gives a detached alerter time to appear before asserting none did.
       sleep 0.2
-      [[ ! -e "${NOTIFY_TEST_LOG}" ]]
+      [[ ! -e "${NOTIFY_TEST_LOG}" ]] || exit 1
       echo "No alert"
-      ;;
-    click)
-      count=0
-      while ! grep -qF 'select-pane -t %7' "${NOTIFY_TEST_TMUX_LOG}" && [[ "${count}" -lt 150 ]]; do
-        sleep 0.02
-        count=$((count + 1))
-      done
-      grep -qF 'switch-client -t $3 ; select-window -t @12 ; select-pane -t %7' "${NOTIFY_TEST_TMUX_LOG}"
-      grep -qF 'display-message -t %7 -p' "${NOTIFY_TEST_TMUX_LOG}"
-      echo "Click targets captured session, window and pane on originating server"
       ;;
     *) jq -r '.[index("--title") + 1], .[index("--subtitle") + 1], .[index("--message") + 1], .[index("--sound") + 1], (.[index("--app-icon") + 1] | split("/") | last)' "${NOTIFY_TEST_LOG}" ;;
   esac

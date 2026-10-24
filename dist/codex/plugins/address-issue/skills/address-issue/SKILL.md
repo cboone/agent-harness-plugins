@@ -3,7 +3,7 @@ name: address-issue
 description: >-
   Plan and implement a GitHub issue on the current branch, stopping for approval
   first. Use for "address issue #42" or "fix issue #42"; for a new worktree, use
-  address-issue-in-worktree.
+  workmux:start-issue.
 argument-hint: "<issue-number...|description> [--dry-run|--no-approval] [--no-commit] [--commit-per-change]"
 ---
 
@@ -15,7 +15,7 @@ Fetch a GitHub issue, plan the work, stop for approval, then execute changes and
 
 The user may provide these options inline:
 
-- **--dry-run**: Fetch and analyze the issue, present the plan, but do not make changes
+- **--dry-run**: Fetch and analyze the issue, present the plan, but do not change files or GitHub state, including assignments and labels
 - **--no-approval**: Skip the approval stop in step 6 and go straight from the plan to execution
 - **--no-commit**: Make changes but do not commit them
 - **--commit-per-change**: Commit after each logical change instead of grouping at the end
@@ -24,15 +24,15 @@ The user may provide these options inline:
 
 ## Several Issues
 
-Several issue numbers, as in `/address-issue 42 57`, are one combined piece of work: one plan, one approval gate, and one set of changes on the current branch. `address-issue-in-worktree` chains into this form when it opens one worktree for several issues. Every step below applies to each issue, as follows:
+Several issue numbers, as in `/address-issue 42 57`, share one plan and one approval gate. Step 6 may propose separate PRs and must identify which changes belong on the current branch. `workmux:start-issue` chains into this form when it opens one worktree for several issues. Every step below applies to each issue, as follows:
 
 - **Step 1:** fetch every issue by number. Several issues are always given as numbers; descriptive text names one issue and follows the single-issue workflow.
 - **Step 2:** check each issue's state. Ask about every closed issue at once, and drop any the user declines.
-- **Step 3:** self-assign and label each open issue, recording the result for each one.
+- **Step 3:** unless `--dry-run` was specified, self-assign and label each open issue, recording the result for each one.
 - **Step 4:** show every issue's context, one block per issue.
 - **Step 5:** classify each issue and extract its sub-tasks, keeping track of which issue each sub-task came from.
 - **Step 6:** collect every issue's requirements into one plan, headed `## Plan for Issues #42, #57`, that says which change serves which issue. There is one approval gate for the whole plan, not one per issue.
-- **Step 8:** each commit references every issue its change addresses, as in `feat: add dark mode toggle (#42, #57)`, and together the commits reference every issue in the combined work. The commit prefix follows the classification of the issue or issues the commit addresses.
+- **Step 8:** each commit references every issue its change addresses, as in `feat: add dark mode toggle (#42, #57)`, and together the commits reference every issue addressed on the current branch. The commit prefix follows the classification of the issue or issues the commit addresses.
 - **Steps 9 to 11:** report the status of every issue, including which are marked in progress and which sub-tasks remain for each.
 
 `--dry-run`, `--no-approval`, `--no-commit` and `--commit-per-change` apply to the one combined plan, exactly as they do for one issue.
@@ -67,7 +67,9 @@ If the issue is closed, warn the user and ask whether to proceed. Do not proceed
 
 ### 3. Mark Issue In Progress
 
-If the issue is open, signal that work is starting. Skip this step for closed issues.
+**If `--dry-run` was specified, skip this entire step.** Do not self-assign, create a label or add a label. Record that status marking was skipped, then continue to step 4.
+
+Otherwise, if the issue is open, signal that work is starting. Skip this step for closed issues.
 
 **Self-assign:**
 
@@ -139,12 +141,14 @@ If there are no task list items, treat the entire issue as a single task.
 
 **If your harness provides plan mode** (Claude Code) and neither flag was given: call `EnterPlanMode` before exploring, keep the exploration read-only, then call `ExitPlanMode` with the plan below and wait for the approval result.
 
-**Otherwise** (Codex CLI, OpenCode, or any harness without those tools): present the plan below, then stop and wait for the user to confirm, adjust, or reject it.
+**Otherwise** (Codex CLI, or any harness without those tools): present the plan below, then stop and wait for the user to confirm, adjust, or reject it.
 
 Enter plan mode here rather than at step 1. Steps 1 and 4 are read-only, but step 3 writes to GitHub, and plan mode would block it.
 
 1. Explore the codebase to understand the relevant areas
 1. Identify the files that need to be created, modified, or deleted
+1. When the plan changes independent areas, propose separate PRs, naming each PR's scope and dependencies. Put sanitizers, parsers, validators and security boundaries in their own PR, together with the tests, consumers and documentation required for that change. Identify the changes to execute on the current branch and leave the other PRs as planned follow-ups; one approval gate still covers the plan.
+1. For input checks, prefer an allowlist of exact known-good forms or a structural parse that removes the whole class over a blocklist or an ad hoc regex patched one input form at a time. Use the `review-anti-patterns` skill's Sibling input forms and Validator gaps questions to assess the design; reference its checklist rather than copying it into the plan.
 1. Present a plan to the user:
 
 ```text
@@ -168,13 +172,13 @@ Enter plan mode here rather than at step 1. Steps 1 and 4 are read-only, but ste
 
 ### 7. Execute the Changes
 
-Work through each planned change, announcing progress:
+Work through each planned change assigned to the current branch, announcing progress. Keep changes assigned to separate PRs as follow-ups:
 
 ```text
 ### Change 1 of N: Modify src/auth.go
 ```
 
-If sub-tasks were extracted from the issue body, work through each sub-task in order.
+If sub-tasks were extracted from the issue body, work through those assigned to the current branch in order.
 
 ### 8. Commit the Changes
 

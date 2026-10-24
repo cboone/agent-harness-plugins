@@ -1,0 +1,54 @@
+# One page of open pull requests by every author; gh api graphql --paginate
+# supplies $endCursor. A connection, not search, which stops at 1000 results.
+query ($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(states: OPEN, first: 25, after: $endCursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        number
+        title
+        url
+        state
+        isDraft
+        createdAt
+        updatedAt
+        mergedAt
+        mergeable
+        mergeStateStatus
+        headRefName
+        reviewDecision
+        reviewRequests(first: 1) {
+          totalCount
+        }
+        latestReviews(last: 1) {
+          nodes {
+            submittedAt
+          }
+        }
+        author {
+          login
+        }
+        commits(last: 1) {
+          nodes {
+            commit {
+              statusCheckRollup {
+                state
+              }
+            }
+          }
+        }
+        files(first: 100) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            path
+          }
+        }
+      }
+    }
+  }
+}

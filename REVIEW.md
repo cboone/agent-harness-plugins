@@ -53,7 +53,7 @@ On later reviews of the same pull request, post Important findings only and do n
 ## Do not report
 
 - Anything these CI checks already report: `markdownlint-cli2`, `prettier`, `shellcheck`, `shfmt`, `actionlint`, `bin/validate-json`, `bin/validate-plugins`, the `make build` generated-mirror drift check, `scrut`.
-- Changes in these paths: `yarn.lock`, `dist/`, `.agents/`, `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/`, `docs/plans/done/`, `.github/skills/code-review/*.md` except `SKILL.md`.
+- Changes in these paths: `yarn.lock`, `dist/`, `.agents/`, `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/`, `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`, `plugins/trim-comments/skills/trim-comments/references/codex-exec.md`, `plugins/trim-text/skills/trim-text/references/codex-exec.md`, `docs/plans/done/`, `.github/skills/code-review/*.md` except `SKILL.md`.
 - Anything a checklist's Do not flag section excludes.
 
 Rules outside this block take precedence over it.

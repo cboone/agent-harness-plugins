@@ -15,11 +15,8 @@
     "extends": ".markdownlint.jsonc",
   },
 
-  // dist/ holds the generated Codex and OpenCode mirrors. Linting them reports
-  // every finding a second time, and dist/opencode/skills/* are symlinks back
-  // into plugins/, so fast-glob followed them and linted each source file three
-  // times over. A finding there is also unfixable in place: the only remedy is
-  // to edit the source and rebuild.
+  // Skips the generated Codex mirror: its findings duplicate the source's and
+  // are fixed there.
   "ignores": [".workmux/", "**/node_modules/**", "dist/"],
 
   // markdownlint-rule-force-align-table-columns was removed here. It supplied

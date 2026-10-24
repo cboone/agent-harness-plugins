@@ -140,7 +140,11 @@
             },
             "authorAssociation": "MEMBER",
             "assignees": {
-              "nodes": []
+              "nodes": [
+                {
+                  "login": "bob"
+                }
+              ]
             },
             "labels": {
               "nodes": [
@@ -294,6 +298,24 @@
                         }
                       }
                     ]
+                  },
+                  "createdAt": "2026-10-09T10:00:00Z",
+                  "updatedAt": "2026-10-14T15:00:00Z",
+                  "mergeable": "MERGEABLE",
+                  "mergeStateStatus": "CLEAN",
+                  "headRefName": "16-election-day",
+                  "reviewRequests": {
+                    "totalCount": 0
+                  },
+                  "latestReviews": {
+                    "nodes": [
+                      {
+                        "submittedAt": "2026-10-14T16:00:00Z"
+                      }
+                    ]
+                  },
+                  "repository": {
+                    "nameWithOwner": "acme/widgets"
                   }
                 }
               ]
@@ -352,7 +374,11 @@
             },
             "authorAssociation": "MEMBER",
             "assignees": {
-              "nodes": []
+              "nodes": [
+                {
+                  "login": "alice"
+                }
+              ]
             },
             "labels": {
               "nodes": [
@@ -730,6 +756,20 @@
                         }
                       }
                     ]
+                  },
+                  "createdAt": "2026-10-12T10:00:00Z",
+                  "updatedAt": "2026-10-13T10:00:00Z",
+                  "mergeable": "MERGEABLE",
+                  "mergeStateStatus": "DRAFT",
+                  "headRefName": "27-callback-draft",
+                  "reviewRequests": {
+                    "totalCount": 0
+                  },
+                  "latestReviews": {
+                    "nodes": []
+                  },
+                  "repository": {
+                    "nameWithOwner": "acme/widgets"
                   }
                 }
               ]
@@ -791,6 +831,20 @@
                         }
                       }
                     ]
+                  },
+                  "createdAt": "2026-10-11T10:00:00Z",
+                  "updatedAt": "2026-10-12T10:00:00Z",
+                  "mergeable": "MERGEABLE",
+                  "mergeStateStatus": "UNSTABLE",
+                  "headRefName": "28-debounce-profile",
+                  "reviewRequests": {
+                    "totalCount": 1
+                  },
+                  "latestReviews": {
+                    "nodes": []
+                  },
+                  "repository": {
+                    "nameWithOwner": "acme/widgets"
                   }
                 }
               ]
