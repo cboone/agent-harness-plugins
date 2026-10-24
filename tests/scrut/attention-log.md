@@ -755,6 +755,21 @@ exit 0 stdout 0
 attention-log: jq is required and is not on PATH; no event was recorded
 ```
 
+## Pending orders states within one second by their milliseconds
+
+The later state comes first in the file, so only the fraction can put it second.
+
+```scrut
+$ fresh
+> mkdir -p "${ATTENTION_LOG_DIR}"
+> printf '%s\n' \
+>   '{"v":1,"ts":"2020-01-01T00:00:00.900Z","event":"permission_request","id":"late","session_id":"late","tool":"Write"}' \
+>   '{"v":1,"ts":"2020-01-01T00:00:00.100Z","event":"permission_request","id":"early","session_id":"early","tool":"Read"}' > "${events_file}"
+> al pending | sed 's/, [0-9]*s)$/, AGE)/'
+early (permission_request Read, AGE)
+late (permission_request Write, AGE)
+```
+
 ## Pending with no file prints nothing
 
 ```scrut
