@@ -246,3 +246,7 @@ Installed 1.4.3. Prettier (`yarn format`, which skips `docs/plans/done/` through
 ## Final plant run
 
 Every plant still expressible against the final code was planted alone at `2d8a2eed`, the document run, and the file restored from git: P3 to P23, P25, P26b, P28 to P44 and P46 to P49, 46 in all. Each was caught by the case its row names; most were also caught by others. P49 is new: a prompt with no request open writes `permission_waiting` without opening a state, and the case "A permission prompt with no request opens its own state" fails. P1, P2 and P24 guarded the removed masking code. P27 stays uncovered locally, since jq 1.8.2 accepts leading zeros. Rows nothing covers, since they depend on process timing: a tool result before its request's marker, a rotation during a reader's read, two hooks taking over one stopped lock, and the refusal check's retry window beyond the one delayed-transcript case.
+
+## CI on the draft PR
+
+The first run passed 31 of 32 checks. "After two rotations wait starts the current file from its start" failed on Linux: ext4 gave the deleted first file's inode to the new `events.jsonl`, so `wait` took the new file for the one its position named and resumed at the old offset, mid-line. APFS does not reuse inodes that way, so the case passed locally. The case now holds a hard link to the first file, keeping its inode allocated, and the README's Known limits list inode reuse after two rotations. A guard that checks the byte before a resumed offset is a newline is a possible follow-up; it is not in this PR.

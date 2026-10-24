@@ -112,6 +112,7 @@ Besides the event files, `~/.local/state/attention-log/sessions/` holds a small 
 - **A lock left by a stopped hook.** A hook that stopped while holding its session's lock leaves it to the next hook, which takes it over. Two hooks that take it over at the same instant can both change the session's open states, losing or misordering one change; the session's next prompt clears what that leaves.
 - **MCP dialogs open no state.** `elicitation` events carry no `id`, so `pending` does not list an open MCP dialog.
 - **Sessions that end without `SessionEnd`.** A session that stops without its `SessionEnd` hook leaves its open states in `pending` until the events that opened them rotate out, and leaves its files in `sessions/`.
+- **Inodes reused after two rotations.** A position names its file by inode, and a file system such as ext4 can give a deleted file's inode to the next new file. After two rotations, a `wait` given a position from the deleted file can then take the new file for it and resume at the old offset.
 - **States older than two rotations.** `pending` replays only `events.jsonl` and `events.jsonl.1`, so a state whose opening event has rotated out of both, such as a session left stopped on an API error, drops out of the listing without being cleared.
 
 ## See Also
