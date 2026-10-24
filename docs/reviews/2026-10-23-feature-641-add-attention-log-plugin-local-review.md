@@ -252,3 +252,15 @@ Every plant still expressible against the final code was planted alone at `2d8a2
 The first run passed 31 of 32 checks. "After two rotations wait starts the current file from its start" failed on Linux: ext4 gave the deleted first file's inode to the new `events.jsonl`, so `wait` took the new file for the one its position named and resumed at the old offset, mid-line. APFS does not reuse inodes that way, so the case passed locally. The case now holds a hard link to the first file, keeping its inode allocated, and the README's Known limits list inode reuse after two rotations. A guard that checks the byte before a resumed offset is a newline is a possible follow-up; it is not in this PR.
 
 The second run failed "Readers reject numbers too large to hold" with exit 141: `head -n 1` closed the pipe after the first line, and the reader's second stderr line then stopped on SIGPIPE, which `pipefail` reports. Every such pipe now uses `sed -n 1p`, which reads to the end, and the `wait` case's timeout guard stops its own `sleep` when it is stopped, since the runner reported an orphaned `sleep`. The third run passed all 32 checks.
+
+## Milliseconds in `ts`, after the draft PR
+
+The maintainer asked for `ts` with milliseconds before review: UTC ISO 8601 with three fractional digits ending in `Z`, from jq's `now`. jq's `fromdateiso8601` rejects a fraction, so `pending` parses the whole seconds and adds the fraction back, then ages and sorts states by that time; sorting the `ts` text put `00.500Z` before `00Z`, which the existing age case caught. Planted, each restored from git, all caught: whole seconds (P50), the fraction not stripped before parsing (P51), sorting by the `ts` text (P52), and the fraction dropped from the parsed time (P53).
+
+As a small change outside security, it took one `review-pr-with-codex` round in place of steps 1 to 4: 5 aspects at `xhigh`, scoped to the change since `9563e597`, all succeeded, and the tree check found no lasting changes.
+
+| #   | Finding                                                                                                 | Reviewer label | Our severity | Decision                                          |
+| --- | ------------------------------------------------------------------------------------------------------- | -------------- | ------------ | ------------------------------------------------- |
+| 1   | No test catches the fraction being dropped, since the age case's fixture is far past its cutoff (tests) | suggestion     | Nit          | Fixed: a case orders two states within one second |
+
+No Important or Critical finding, so no further round.
