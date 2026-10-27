@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify codex-stop",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/notify\" codex-stop",
             "type": "command"
           }
         ]
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify codex-turn-start"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/notify\" codex-turn-start"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify codex-question"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/notify\" codex-question"
           }
         ]
       }
