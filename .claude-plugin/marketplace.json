@@ -597,6 +597,19 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "agents",
+      "description": "Send answerable asks, review attachments, and follow-ups through Plannotator Inbox.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["inbox", "plannotator", "review"],
+      "license": "MIT",
+      "name": "use-plannotator",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./plugins/use-plannotator"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "issues-and-worktrees",
       "description": "Create worktrees, branches and tmux windows with workmux, or launch issue planning in a new session.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
