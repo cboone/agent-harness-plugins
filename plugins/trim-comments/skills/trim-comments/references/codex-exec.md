@@ -90,7 +90,7 @@ A run is finished only when every check passes, in this order. The first failure
 
 Do not repair a reply that fails, and do not read it as prose instead: its content is unknown. Record the status and the last lines of `<codex_tmp>/log` in the report, then take the skill's fallback. An unauthenticated `codex` fails at check 1; report it as an authentication problem and do not try to authenticate.
 
-Remove the capture directory once the reply and the log are reported.
+Remove the capture directory once the reply and the log are reported, using only the exact path `mktemp` printed for this run. Never remove capture directories by a pattern, such as `codex-exec.*`, because other sessions share the same temporary directory. If the recorded path is lost, leave the directory in place.
 
 ## Reporting
 
