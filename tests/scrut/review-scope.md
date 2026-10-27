@@ -32,12 +32,13 @@ changes, and untracked files.
 
 The snapshot covers HEAD, the base tip and merge base, disk content, index
 content and bucket membership. Staging, unstaging and intent-to-add move it.
-The separate tree identifier measures disk content only.
+The separate tree identifier measures content as Git would store it; byte
+changes removed by Git's normalization do not move it.
 
 Options:
   --base <ref>  Take the merge base with this ref instead of with the default
                 branch; committed changes are those from the merge base to HEAD
-  --schema      Print the JSON Schema for reviewer findings and exit
+  --schema      Print review-until-clean's findings schema and exit
   -h, --help    Show this help
 ```
 
@@ -710,4 +711,32 @@ $ cd "${work}" && mkdir internal-tmp \
 >   && TMPDIR="${work}/internal-tmp" "${REVIEW_SCOPE_BIN}" --base base 2>&1
 review-scope: TMPDIR must point outside the working tree
 [1]
+```
+
+## Fatal merge-base errors retain Git's diagnostic for either base source
+
+The committed function stub passes every other Git operation through and is
+exported only inside this subshell. Each invocation verifies its resolution.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . && git checkout -q -b main \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init --allow-empty \
+>   && ( function git() { \
+>          if [[ "${1:-}" == merge-base ]]; then echo 'fatal: sample object read failure' >&2; return 128; fi; \
+>          command git "$@"; \
+>        }; export -f git; \
+>        for mode in inferred explicit; do \
+>          [[ "$(type -t git)" == function ]] || exit 1; \
+>          args=(); [[ "${mode}" == explicit ]] && args=(--base main); \
+>          code=0; "${REVIEW_SCOPE_BIN}" ${args[@]+"${args[@]}"} > out 2> err || code=$?; \
+>          test ! -s out || exit 1; \
+>          printf '%s exit=%s\n' "${mode}" "${code}"; cat err; \
+>        done )
+inferred exit=128
+fatal: sample object read failure
+review-scope: git merge-base '*' '*' failed (exit 128) (glob)
+explicit exit=128
+fatal: sample object read failure
+review-scope: git merge-base '*' '*' failed (exit 128) (glob)
 ```

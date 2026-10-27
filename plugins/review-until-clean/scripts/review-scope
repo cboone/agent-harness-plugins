@@ -35,12 +35,13 @@ changes, and untracked files.
 
 The snapshot covers HEAD, the base tip and merge base, disk content, index
 content and bucket membership. Staging, unstaging and intent-to-add move it.
-The separate tree identifier measures disk content only.
+The separate tree identifier measures content as Git would store it; byte
+changes removed by Git's normalization do not move it.
 
 Options:
   --base <ref>  Take the merge base with this ref instead of with the default
                 branch; committed changes are those from the merge base to HEAD
-  --schema      Print the JSON Schema for reviewer findings and exit
+  --schema      Print review-until-clean's findings schema and exit
   -h, --help    Show this help
 USAGETEXT
 }
@@ -50,7 +51,10 @@ function die() {
   exit "${2:-1}"
 }
 
-# The reviewer's output contract. Every property is required and no extra ones
+# review-until-clean's output contract; its references/reviewers.md and
+# references/ledger.md define the backend and ledger rules. Other users, such
+# as review-pr-with-codex, define their own output contracts.
+# Every property is required and no extra ones
 # are allowed, because structured-output implementations reject the looser
 # forms. A reviewer that cannot take a schema has its reply transcribed into
 # this shape by the host, and that transcription is never the evidence that the
@@ -58,7 +62,7 @@ function die() {
 #
 # `file` is constrained rather than left as a bare string because it names a
 # path the fixer will edit. An absolute path, a `~` path or a `../` escape from
-# reviewer output would otherwise validate, reach the ledger, and point
+# reviewer output would otherwise validate, reach review-until-clean's ledger, and point
 # `address-review` outside the repository, which is prompt injection reaching a
 # write. The pattern permits any relative path whose segments are not `.` or
 # `..`, and rejects a leading `/`, `~` or backslash.
@@ -347,26 +351,22 @@ function main() {
       || die "base ref '${base_ref}' does not resolve to a commit"
     base_tip="${base_sha}"
 
-    # A base that shares no history with HEAD has no merge base, and git says
-    # so with exit 1 and no output. Swallowing that leaves the committed bucket
-    # empty, which reads as "no committed changes" and would let a branch full
-    # of unreviewed commits report an empty scope.
-    #
-    # An explicit --base fails loudly: the caller named that ref, so the answer
-    # is wrong rather than merely unavailable. An inferred candidate is instead
-    # reported through base_unrelated, which keeps the ref visible and tells the
-    # caller the committed bucket is not covered. Clearing it silently would
-    # narrow the scope with nothing to show for it, and failing would leave a
-    # branch with genuinely unrelated history no way to run at all.
-    if ! merge_base="$(git merge-base "${base_sha}" "${head}" 2> /dev/null)"; then
+    # Treat merge-base exit 1 as unrelated history; other failures stop collection.
+    # Reject an unrelated explicit --base; report an inferred one as base_unrelated
+    # so an empty bucket cannot imply committed coverage.
+    if merge_base="$(git merge-base "${base_sha}" "${head}")"; then
+      committed_covered="true"
+    else
+      local merge_status=$?
+      if [[ "${merge_status}" -ne 1 ]]; then
+        die "git merge-base '${base_sha}' '${head}' failed (exit ${merge_status})" "${merge_status}"
+      fi
       merge_base=""
       if [[ -n "${requested_base}" ]]; then
         die "base ref '${requested_base}' shares no history with HEAD, so the committed part of the scope cannot be computed"
       fi
       base_unrelated="true"
       base_sha=""
-    else
-      committed_covered="true"
     fi
   fi
 
@@ -389,10 +389,9 @@ function main() {
   # never moved. That is a clean result over unread code, which is the one
   # outcome this script exists to make impossible.
   #
-  # Bracketing the buckets closes it. Equal trees before and after mean nothing
-  # on disk changed while the scope was being read, so the buckets and the
-  # snapshot describe one state. Unequal trees mean they may not, and that is
-  # reported rather than guessed at: the caller reruns against a settled tree.
+  # Bracketing detects unequal end states, not edits or index changes that are
+  # reversed between reads. A consistent scope assumes the repository holds
+  # still throughout collection; rerun against a settled tree when it differs.
   local tree digest index_before
   index_before="$(index_digest "${TMP_DIR}/index-before.records")"
   tree="$(working_tree_digest "${TMP_DIR}/index")"
@@ -451,12 +450,9 @@ function main() {
       committed: $committed[0], staged: $staged[0], unstaged: $unstaged[0], untracked: $untracked[0]}' \
     | git hash-object --stdin)"
 
-  # An independent cross-check on the digest. The buckets and the tree come
-  # from different git commands and have to agree: if anything is staged,
-  # unstaged or untracked, the working tree differs from HEAD, so its tree
-  # object must differ from HEAD's. When they match anyway, the digest is
-  # describing HEAD rather than what is on disk, whatever the cause, and the
-  # snapshot would freeze. Catching it here turns that into a loud failure.
+  # The tree must differ from HEAD's when worktree_vs_head or untracked paths
+  # differ. Staged and unstaged changes alone can cancel out on disk, so those
+  # buckets cannot establish this premise.
   #
   # The committed bucket is deliberately excluded: a branch with commits ahead
   # of its base and a clean working tree legitimately has HEAD's own tree.
