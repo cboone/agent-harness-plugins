@@ -58,7 +58,7 @@ An aspect whose run failed, timed out, or returned nothing or something unparsea
 ## Requirements
 
 - [`codex`](https://github.com/openai/codex), authenticated. Install via Homebrew: `brew install codex`. Codex CLI subagents require the `multi_agent` feature.
-- `git`, `ps`, `pgrep` and [`jq`](https://jqlang.org/). Process inspection verifies cancelled descendants stopped; a sandbox denial means incomplete cancellation. Helpers emit and validate JSON with `jq`.
+- `git`, `ps` and [`jq`](https://jqlang.org/). Process inspection verifies cancelled descendants stopped; a sandbox denial means incomplete cancellation. Helpers emit and validate JSON with `jq`.
 
 ## Usage
 
