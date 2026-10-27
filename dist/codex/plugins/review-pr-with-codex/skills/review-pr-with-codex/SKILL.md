@@ -18,7 +18,7 @@ Run several focused Codex reviews of the current branch, one per aspect, and mer
 - **Aspects**: `code`, `errors`, `tests`, `comments`, `types`, `simplify`, or `all` (the default). Omitted arguments and `all` select applicable review aspects only. Explicit `simplify` alongside at least one review aspect authorizes edits; `all simplify` reviews then simplifies
 - **--base `<ref>`**: take the merge base with this ref instead of with the default branch
 - **--model `<model>`**: Codex model for every aspect; default `gpt-6.1-sol`
-- **--effort `<level>`**: Codex reasoning effort for every aspect; default `xhigh`
+- **--effort `<level>`**: Codex reasoning effort for every aspect; default `high`
 - **--window `<tokens>`**: Codex context window (`model_context_window`) for every aspect, a positive whole number; default `872000`, the default model's largest; set it too when `--model` names another model
 
 Set the model, effort and window on each run. Never use the user's Codex settings for an omitted option or change those settings.

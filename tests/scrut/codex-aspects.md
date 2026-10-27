@@ -452,7 +452,7 @@ explicitly as well, so the guarantee does not rest on that default alone.
 
 ```scrut
 $ printf "" | "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" \
->   --model test-model --effort high --window 1000 > /dev/null && cat "${FIXTURE}/log/code.args"
+>   --model test-model --effort xhigh --window 1000 > /dev/null && cat "${FIXTURE}/log/code.args"
 --cd
 <path>
 --skip-git-repo-check
@@ -466,7 +466,7 @@ web_search="disabled"
 --model
 test-model
 --config
-model_reasoning_effort="high"
+model_reasoning_effort="xhigh"
 --config
 model_context_window=1000
 --output-schema
@@ -484,7 +484,7 @@ $ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out
 approval_policy="never"
 web_search="disabled"
 gpt-6.1-sol
-model_reasoning_effort="xhigh"
+model_reasoning_effort="high"
 model_context_window=872000
 ```
 

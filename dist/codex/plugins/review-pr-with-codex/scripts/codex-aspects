@@ -18,7 +18,7 @@ KNOWN_ASPECTS=(code errors tests comments types simplify)
 readonly KNOWN_ASPECTS
 
 DEFAULT_MODEL="gpt-6.1-sol"
-DEFAULT_EFFORT="xhigh"
+DEFAULT_EFFORT="high"
 # The model's largest model_context_window; Codex otherwise uses its own default.
 DEFAULT_WINDOW=872000
 readonly DEFAULT_MODEL DEFAULT_EFFORT DEFAULT_WINDOW
@@ -176,7 +176,7 @@ Options:
   --out-dir <dir>   Existing directory outside the working tree for prompts,
                     outputs and logs
   --model <model>   Codex model; default gpt-6.1-sol
-  --effort <level>  Codex reasoning effort; default xhigh
+  --effort <level>  Codex reasoning effort; default high
   --window <tokens> Codex model_context_window; default 872000
   --guide-name <name>  Additional instruction fallback name, repeatable
   --reviewed-scope <file>  Scope the review aspects read; simplify only
