@@ -484,7 +484,7 @@ $ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out
 approval_policy="never"
 web_search="disabled"
 gpt-6.1-sol
-model_reasoning_effort="xhigh"
+model_reasoning_effort="high"
 model_context_window=872000
 ```
 

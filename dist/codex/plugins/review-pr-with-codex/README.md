@@ -72,7 +72,7 @@ An aspect whose run failed, timed out, or returned nothing or something unparsea
 | `all`               | Every aspect that applies to the change; the default                                                                            |
 | `--base <ref>`      | Take the merge base with this ref instead of with the default branch                                                            |
 | `--model <model>`   | Codex model for every aspect; default `gpt-6.1-sol`                                                                             |
-| `--effort <level>`  | Codex reasoning effort for every aspect; default `xhigh`                                                                        |
+| `--effort <level>`  | Codex reasoning effort for every aspect; default `high`                                                                         |
 | `--window <tokens>` | Codex context window (`model_context_window`) for every aspect; default `872000`; set it too when `--model` names another model |
 
 Each `codex exec` run sets the model, effort and window. Omitted options never use or change personal Codex defaults. Reviews started in Codex use subagents, which keep session settings where the harness cannot override them. The report names the settings applied.
