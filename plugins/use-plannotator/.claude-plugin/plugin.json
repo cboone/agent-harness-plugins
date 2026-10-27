@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Send answerable asks, review attachments, and follow-ups through Plannotator Inbox.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["inbox", "plannotator", "review"],
+  "license": "MIT",
+  "name": "use-plannotator",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
