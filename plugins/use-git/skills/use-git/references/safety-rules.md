@@ -1,6 +1,6 @@
 # Safety Rules
 
-Conventions that prevent data loss, protect shared repositories, and keep Claude Code running smoothly.
+Conventions that prevent data loss and protect shared repositories.
 
 ## GPG Sign Every Commit
 

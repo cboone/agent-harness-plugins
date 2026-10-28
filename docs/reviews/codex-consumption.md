@@ -173,6 +173,81 @@ Codex budgets 8,000 characters instead when it cannot resolve the model's contex
 
 Revisit these constants when the reference model, the enabled share, or the skills installed from other sources change, and record the change here.
 
+### Milestone 2 additions
+
+Captured 2026-09-21 for the Git and review chain, at `0ac1ba69`. Each item is marked **observed** where a command produced it here, **documented** where it comes from a shipped help text or rendered instruction, or **upstream source** where it comes from Codex's own code or docs. Items step 1 has not yet measured are listed at the end rather than guessed at.
+
+#### Harness versions
+
+**Observed.** Codex CLI `0.155.1`, Claude Code `2.1.278`, OpenCode `1.18.31`. The Codex and Claude versions match the milestone 1 baseline; OpenCode's was not recorded then.
+
+#### Skill roots are aliased, and the table resolves them absolutely
+
+**Observed.** `codex debug prompt-input` renders the skill list with aliased roots, and the roots table gives absolute paths rather than a `$CODEX_HOME` placeholder:
+
+```text
+### Skill roots
+- `r0` = `/Users/ctm/.codex/skills/.system`
+- `r1` = `/Users/ctm/.codex/plugins/cache/agent-harness-plugins`
+- `r2` = `/Users/ctm/.codex/plugins/cache/openai-bundled`
+- `r3` = `/Users/ctm/.codex/plugins/cache/openai-primary-runtime`
+- `r4` = `/Users/ctm/.codex/plugins/cache/openai-primary-runtime/spreadsheets/26.909.12148/skills`
+- `r5` = `<repo>/.agents/skills`
+```
+
+Two changes from the milestone 1 baseline, which recorded `r0` and `r1` alone. Codex now installs its own bundled plugin roots (`r2` through `r4`), and it reads the repository's own `.agents/skills` as a root (`r5`). Six roots share the budget rather than two.
+
+This settles the bundled-helper recipe. An entry's path is `r1/<plugin>/<version>/skills/<skill>/SKILL.md`, so the plugin root remains two levels above the `SKILL.md` directory, but the advertised path is not a filesystem path until the alias is substituted. Because the table is absolute, substitution is a plain string replacement with no `$CODEX_HOME` resolution.
+
+#### Skill names appear in both forms, and which one depends on the root
+
+**Observed.** Plugin skills render qualified, as `commit:commit`, `lint-and-fix:lint-and-fix` and `spreadsheets:excel-live-control`, the last showing that the skill name need not match its plugin. Codex's own system skills render bare, as `imagegen` and `skill-creator`. A skill under the repository's `.agents/skills` also renders **bare**: `check-versions`, not `check-versions:check-versions`.
+
+Preflight matching therefore has to accept both forms, and the bare form is not exclusive to Codex's bundled skills. This repository's own OpenCode mirror surface produces it too.
+
+#### `request_user_input` is unavailable in default mode
+
+**Observed.** `codex features list` includes a flag named for exactly this question:
+
+```text
+default_mode_request_user_input          under development  false
+```
+
+It is under development and disabled, so at `0.155.1` the structured-question tool is not offered outside Plan mode. The chain's question sites fall to the adapter's plain-text fallback in an ordinary Codex session. This flag is new since the milestone 1 feature table.
+
+#### Codex CLI has no scheduler
+
+**Observed.** Nothing in `codex --help` or `codex features list` schedules future work. Continuation is operator-driven in all three available forms: `codex resume` for an interactive session, `codex exec resume [SESSION_ID|--last] [PROMPT]` for an `exec` session, and `codex queue` to queue a message for an existing session.
+
+This retires the middle option in `monitor-pr`'s landed step 2. "Codex with scheduled tasks" cites ChatGPT's in-chat automations, which is the ChatGPT application surface and not this CLI, so the CLI has a scheduler-backed path in neither name nor fact. Step 7 collapses that option rather than preserving it, leaving the capability table's two real paths: a scheduler where the session offers one, and bounded foreground polling otherwise.
+
+#### `codex exec` supports resume and JSONL events
+
+**Documented**, from `codex exec --help` and `codex exec resume --help`. `codex exec resume` takes a session id or thread name, or `--last` for the most recent, plus a prompt to send after resuming. `codex exec --json` prints events to stdout as JSONL, and `-o, --output-last-message <FILE>` writes the agent's final message to a file, which gives `bin/codex-eval` a parse target that does not depend on the event schema.
+
+Three flags matter to the evaluation tiers and were not in the milestone 1 baseline: `--approve-for-me` routes approval requests through automatic review using the `workspace-write` sandbox, `--add-dir <DIR>` adds writable roots beside the workspace, and `--worktree` runs the session in a managed Git worktree.
+
+#### The default sandbox writes to `$TMPDIR`, and escalation is a documented protocol
+
+**Documented**, from the permissions instructions that `codex debug prompt-input` renders. Under the default `workspace-write` mode Codex states that it permits reading any file and editing within `cwd` and the writable roots, that editing elsewhere requires approval, and that **network access is enabled**. The writable roots it listed were the working directory, `/private/tmp`, and the per-user `T` directory that `$TMPDIR` names.
+
+That answers the tmpfile question for the chain: `"${TMPDIR:-/tmp}"` lands inside a writable root under Codex's default configuration, as it does under the Claude Code sandbox after PR #489.
+
+Escalation is explicit rather than implicit. A command that needs to run outside the sandbox is re-issued with `sandbox_permissions: "require_escalated"` and a `justification`, and may suggest a `prefix_rule` that the user can persist across sessions. The rendered guidance gives `["gh", "pr", "check"]` among its examples of a well-scoped prefix, and bans overly broad ones. Rules are matched per command segment, split at pipes, logical operators, separators and subshell boundaries, and a segment using redirection, substitution, environment-variable assignment or a wildcard is **not** matched against rules at all.
+
+This answers milestone 3's pre-approval question in principle: the chain's `git` and `gh` commands can be pre-approved by prefix, but only in their plain form. Any chain step that pipes, redirects or substitutes falls outside the rule mechanism and prompts regardless.
+
+#### Still to measure
+
+These step 1 items need a live model run, an interactive session, or an OpenCode session, and none of them is guessed at above:
+
+- Codex CLI's foreground command timeout, and what happens to a long `sleep`, which sizes `monitor-pr`'s foreground waits.
+- Whether `.git` is writable under the default `workspace-write` mode. The worktree is a writable root, which suggests it is, but the milestone 1 smoke checks observed `codex exec -s workspace-write` failing to write `.git/index.lock`, so the two readings have to be reconciled by test rather than by inference.
+- The interactive on-request approval flow for a commit and a push, and the least-privileged unattended configuration that permits them against a local bare remote. `--approve-for-me` is the new candidate to test first, ahead of the bypass flag.
+- Whether inline options after a `$skill` mention reach the skill unchanged.
+- The `codex exec --json` event shape that `bin/codex-eval` parses.
+- How OpenCode names plugin skills in its advertised list, and how it reports a loaded skill's location through the symlinked mirror.
+
 ## Milestone 1 verification
 
 Run on 2026-09-19 at `d1693ba7`, the milestone branch head carrying every implementation change, with Codex CLI `0.155.1` on macOS.
@@ -463,6 +538,19 @@ Use controlled fixtures for GitHub effects. Record CLI and model versions, confi
 ### Completion criteria
 
 A user following the Codex guide can install the intended plugins, discover and invoke them, and complete the evaluated workflows without translating Claude instructions manually. Claude behavior remains covered, and unsupported cases receive accurate explanations.
+
+## Milestone 2 adoption and local verification
+
+The October adoption follows the [refreshed chain plan](../plans/todo/2026-09-19-finish-codex-compatibility-milestone-2.md), against `main` at `5c1ad075`. September findings below remain historical observations; their old skill names and host limits are not current capability claims. The resolver moved to `monitor-pr:resolve-copilot-feedback`, and merge/rebase moved to `sync-with-main`. OpenCode support was removed separately.
+
+The [living local assessment](../../tests/data/git-review-chain-evals/assessment.md) records the selected Tier B coverage, configuration, actual invocations and limitations. Codex CLI `0.164.0` completed an ordinary signed commit and local bare-remote push in the configured full-access fixture. That observation replaces the blanket signing restriction for this environment; it does not establish what every sandbox permits.
+
+- Findings 3 and 10: chain invocation hints, composition and parent-return contracts now name capabilities and loaded skill locations. Catalog-wide migration remains milestone 3.
+- Finding 6: the selected activation cases measure a limited set of chain requests; catalog-wide selection accuracy remains unmeasured.
+- Findings 11 and 12: chain questions, file operations, waits, host restrictions and signing now follow available capabilities without reducing Claude requirements. Interactive approvals and Claude parity remain unmeasured by the local Codex smoke cases.
+- Finding 13: PR publication and monitor repair paths preflight required children. Resolver fixing preflights remain before edits; preceding read-only collection remains permitted. Availability means an unambiguous advertised identity, not a file found in a cache.
+- Finding 14: both monitor skills derive shared helpers from the loaded package. Deterministic tests cover competing versions, a symlink and spaces. Other helpers remain outside this milestone.
+- Finding 20: new contract/preflight checks and local smoke evidence supplement existing validation. A helper-selection mutation and disabled contract check each made the new suite fail; both were restored and the seven cases passed. Live GitHub, full installed-plugin lifecycle, interactive parity and the platform matrix remain explicit limits.
 
 ## Evidence, limitations, and follow-through
 

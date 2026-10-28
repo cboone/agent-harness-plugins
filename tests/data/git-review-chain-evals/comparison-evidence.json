@@ -1,0 +1,1433 @@
+[
+  {
+    "directory": "activation-commit",
+    "record": {
+      "stage": "before",
+      "id": "activation-commit",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "0a9a258e54ab528154368af65b2451ceb2271c4d",
+      "after": "24eab25f3107b6cde41eb35d2766d645dcb46682",
+      "status": "?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Committed staged changes as `24eab25` (`chore: update sample fixture`) using `git commit -S`.\n\nUntracked fixture files remain unchanged. Body trim: nothing to trim. No network or `gh` operations used.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; cat .agents/skills/commit-commit/SKILL.md .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git log --oneline -10'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --cached --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"rg --files --hidden -g 'AGENTS.md' -g 'CLAUDE.md' -g '*commitlint*' -g 'package.json' -g '*commit-msg' -g '\"'!node_modules'\"' -g '\"'!.git/objects/**'\"'; git config --get core.hooksPath\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc 'git commit -S -m \"$(cat << '\"'EOF'\nchore: update sample fixture\nEOF\n)\\\"\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 144339,
+      "cached_input_tokens": 126976,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 396,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "activation-monitor",
+    "record": {
+      "stage": "before",
+      "id": "activation-monitor",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "bb6b5e445ed7a6ac8dc012854bc8a2ac7e7e9e9b",
+      "after": "bb6b5e445ed7a6ac8dc012854bc8a2ac7e7e9e9b",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Stopped: `command -v gh` returned `/opt/homebrew/bin/gh`, not the permitted fixture stub. No `gh` operation ran, and PR 1 was not monitored.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; command -v gh; cat .agents/skills/monitor-pr-monitor/SKILL.md; cat .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 55842,
+      "cached_input_tokens": 36608,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 142,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "activation-monitor-replacement",
+    "record": {
+      "stage": "before",
+      "id": "activation-monitor",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "2b846eba9637381bef212c8b84862343e98e3cfa",
+      "after": "2b846eba9637381bef212c8b84862343e98e3cfa",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "PR 1 is open, non-draft, and mergeable (`CLEAN`). No checks are configured. No Copilot review exists; reviews remain paused under your instructions.\n\nCompleted the single observation tick with `--no-fix`. No fixture files changed, reviews requested, or merge actions taken.\n\n**monitor-pr:monitor checkpoint**\n\n```text\nRepository: fixture/sample\nPR: https://fixture.invalid/fixture/sample/pull/1\nBranches: feature/sample → main\nHead: sample\nDependabot: false\nAxes: checks clean; Copilot missing; mergeability clean; PR open\nReview decision: NONE (informational)\nMechanism: foreground; ticks completed: 1/1\nInterval: adaptive; none scheduled because Copilot reviews are paused\nOptions: rounds 10; triage-after 5; confirm-clean false; no-fix true\nRounds completed: 0; earlier reviews: 0; counted IDs: []\nLatest review ID/SHA: none\nFeedback probe: not applicable without a current-head review\nAudit/null-ID/classification failure counts: 0/0/0\nReview requests, classifications, processed feedback: []\nQuiet counters: 0; notice retries: []\nRepair attempts: {}; push retry: none\nConfirmation: []; Dependabot rebase requests: []\nMerge policy: unread; method/approval requirement: unknown\nMerge phase: none; READY_HEAD: none; awaited decision: none\nMerge watch/task: none; post-merge handling: not run\nScheduled work: none\n```\n\nResume in this conversation:\n\n```text\n/monitor-pr:monitor 1 --ticks 1 --rounds 10 --triage-after 5 --no-fix\n```",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'command -v gh'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/monitor-pr-monitor/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '170,330p' .agents/skills/monitor-pr-monitor/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/use-git-use-git/SKILL.md; git remote -v; ls -a'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '136,171p' .agents/skills/monitor-pr-monitor/SKILL.md; cat .agents/skills/monitor-pr-monitor/references/checkpoint.md; rg --files .agents | head -60\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'if [ \"$(command -v gh)\" = \"<scratch>/before/activation-monitor-replacement/bin/gh\" ]; then gh pr view 1 --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit; else exit 1; fi'",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc 'cat ../bin/gh; cat review-result.json; cat Makefile; find .agents -maxdepth 4 -type f'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'if [ \"$(command -v gh)\" != \"<scratch>/before/activation-monitor-replacement/bin/gh\" ]; then exit 1; fi\nexport EVAL_GH_LOG=\"$(mktemp /tmp/activation-monitor-gh.XXXXXX)\"\ngh pr view 1 --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit\nif [ \"$(command -v gh)\" != \"<scratch>/before/activation-monitor-replacement/bin/gh\" ]; then exit 1; fi\ngh api --paginate --slurp repos/fixture/sample/pulls/1/reviews'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 227441,
+      "cached_input_tokens": 185472,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1175,
+      "reasoning_output_tokens": 62
+    }
+  },
+  {
+    "directory": "activation-negative",
+    "record": {
+      "stage": "before",
+      "id": "activation-negative",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "af9be31575c3cbb22f19549f794429bd77206214",
+      "after": "af9be31575c3cbb22f19549f794429bd77206214",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "`git rebase` reapplies commits from the current branch onto a different base commit, usually the latest commit on another branch.\n\nFor example, rebasing a feature branch onto `main` places the feature’s commits after the current `main` history. It creates new commits with new IDs because their parent history changes. Conflicts can require manual resolution.\n\nRebase produces a linear history, but rewriting commits already shared with others can disrupt their work.\n\nNo commands were run and nothing was changed.",
+    "commands": [],
+    "usage": {
+      "input_tokens": 24569,
+      "cached_input_tokens": 13184,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 103,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "continuation-lint",
+    "record": {
+      "stage": "before",
+      "id": "continuation-lint",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "f75aae966a5af7461b3f7e0c55cd29b02242e08d",
+      "after": "7e8df5e16f8255a45b0667c2bdb087fbf700e26c",
+      "status": "?? .agents/\n?? parent-result.txt\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Lint status: success\nCommit: `7e8df5e16f8255a45b0667c2bdb087fbf700e26c`\nUnresolved or skipped: none\nCheck-only by project policy: none\nCaller resume target: write parent-result.txt\n\n`make lint` passed twice. Wrote the SHA to `parent-result.txt`. No push performed. Commit body trim skipped; skill unavailable.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/lint-and-fix-lint-and-fix/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '135,245p' .agents/skills/lint-and-fix-lint-and-fix/SKILL.md\ncat .agents/skills/use-git-use-git/SKILL.md\npwd\nrg --files -g '\"'! .git'\"' -g 'AGENTS.md' -g 'CLAUDE.md' -g 'package.json' -g '*lint*' -g '*format*' -g '.github/workflows/*' -g 'Makefile'\ngit remote -v\ngit status --short\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '112,138p' .agents/skills/lint-and-fix-lint-and-fix/SKILL.md\nls -la\ncat Makefile\n git ls-files\nfind .. -name AGENTS.md -o -name CLAUDE.md\n git --no-pager diff --cached --no-ext-diff --no-color\n git --no-pager diff --no-ext-diff --no-color\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/commit-commit/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'make lint'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git log --oneline -5\ngit config --get core.hooksPath\nls .git/hooks'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'make lint'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"git commit -S -m 'chore: record validated fixture change' -m 'Ran make lint and repeated it for final verification. No manual lint fixes were needed.'\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short\ngit rev-parse HEAD'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git rev-parse HEAD > parent-result.txt\ncat parent-result.txt'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 367081,
+      "cached_input_tokens": 327680,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 885,
+      "reasoning_output_tokens": 48
+    }
+  },
+  {
+    "directory": "continuation-merge",
+    "record": {
+      "stage": "before",
+      "id": "continuation-merge",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "6deb1ec6a932aa0571e31a6fb88a4c06d553a9c8",
+      "after": "6deb1ec6a932aa0571e31a6fb88a4c06d553a9c8",
+      "status": "MM sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Parent `fixture-parent`: **needs-decision**.\n\n`sync-with-main:merge --base main` stopped before fetching or merging. `sample.txt` has both staged and unstaged changes; `.agents/` and `review-result.json` are untracked.\n\nThe [merge skill](.agents/skills/sync-with-main-merge/SKILL.md) requires choosing **stash**, **commit first**, or **abort**. No choice was supplied, so the decision returns to the parent. Repository data remains unchanged.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/sync-with-main-merge/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git branch --show-current'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 79596,
+      "cached_input_tokens": 65024,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 273,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "helper-cache",
+    "record": {
+      "stage": "before",
+      "id": "helper-cache",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "84de4d3b60b748410a61063a987d13086198dfc2",
+      "after": "84de4d3b60b748410a61063a987d13086198dfc2",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback", "lint-and-fix", "review-anti-patterns"],
+      "readOnly": false
+    },
+    "reply": "Workflow incomplete. The installed skill’s bundled helper was used; all three reads failed the stub authentication check. The final summary attempt exited 75: `unsupported operation; no network or write performed`.\n\nFixture data and cache were preserved. No network, credentials, or other models were used.\n\nThe intended summary is preserved below:\n\n## Copilot Feedback Summary\n\nStatus: Failed  \nHead SHA: `sample`\n\n### Failure Details\n\nThe helper’s `fetch`, `fetch-reviews`, and `audit` commands each failed with:\n\n```text\nError: Not authenticated with GitHub. Run: gh auth login\n```\n\nNo feedback was read or resolved. No repository files were changed. Existing staged and untracked fixture data was preserved.\n\nReviews read: none.\n\n### Remaining Required Action\n\n- Provide a local stub authentication response that permits the bundled helper to run, then retry the three reads. Real authentication and credentials remain prohibited.\n- Enable the stub’s final-summary operation.\n\nCounts: 3 workflow failures.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'command -v gh'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"pwd; git remote -v; git status --short; rg --files -g '*resolve-copilot-threads*' -g 'AGENTS.md' -g '*SKILL.md' .agents; ls -l .agents/skills/monitor-pr-resolve-copilot-feedback; sed -n '295,540p' .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"cd .agents/skills/monitor-pr-resolve-copilot-feedback && pwd -P; ls -l ../../scripts/resolve-copilot-threads; test -x ../../scripts/resolve-copilot-threads; sed -n '1,85p' ../../scripts/resolve-copilot-threads\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc '[[ \"$(command -v gh)\" == \"<scratch>/before/helper-cache/bin/gh\" ]] || exit 1\n gh pr view 1 --repo fixture/sample --json headRefOid\n gh api user --jq .login\n gh api --paginate repos/fixture/sample/issues/1/comments --jq '\"'.[] | select(.user.login == \\\"fixture-user\\\" and (.body | startswith(\\\"## Copilot Feedback Summary\\\"))) | {created_at, body}'\n bash \\\"<scratch>/before/helper-cache/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\\\" fetch fixture sample 1\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc '[[ \"$(command -v gh)\" == \"<scratch>/before/helper-cache/bin/gh\" ]] || exit 1\nbash \"<scratch>/before/helper-cache/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\" fetch-reviews fixture sample 1 --head sample\nbash \"<scratch>/before/helper-cache/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\" audit fixture sample 1'",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc 'mktemp /tmp/copilot-summary-XXXXXX'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc '[[ \"$(command -v gh)\" == \"<scratch>/before/helper-cache/bin/gh\" ]] || exit 1\ngh pr comment 1 --repo fixture/sample --body-file /tmp/copilot-summary-hAONqy'",
+        "exit": 75
+      },
+      {
+        "command": "/bin/zsh -lc 'rm /tmp/copilot-summary-hAONqy'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 383256,
+      "cached_input_tokens": 354304,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1414,
+      "reasoning_output_tokens": 37
+    }
+  },
+  {
+    "directory": "host-2",
+    "record": {
+      "stage": "before",
+      "id": "host-2",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "20f37dc36afa1239249e82bc438fca8cad25e699",
+      "after": "3df1f973c45e8d856d80ca7489bbdc9df3b49468",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "All requested operations exited `0`: create `probe.txt`, stage it, signed commit, local push, and TMPDIR marker creation/write.\n\nCommit: `3df1f97` on `feature/sample`.\n\nActual writable destinations:\n\n- Repository: `<scratch>/before/host-2/work`\n- Local origin: `<scratch>/before/host-2/origin.git`\n- Marker: `/var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T/local-host-probe.QO1sD9UB`\n\nOnly `probe.txt` entered the commit. Existing staged and untracked fixture data remained unchanged. No gh, network, skills, credentials, or permission changes were used.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc \"pwd; git remote -v; git status --short; git branch --show-current; printf 'TMPDIR=%s\\\\n' \\\"\"'$TMPDIR\"'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"if test -e probe.txt; then printf 'probe.txt already exists; stopping\\\\n'; exit 1; fi\nprintf 'Local fixture host probe\\\\n' > probe.txt\nprobe_exit=\"'$?\nprintf '\"'create probe.txt exit=%s\\\\n' \\\"\"'$probe_exit\"\nif test \"$probe_exit\" -ne 0; then exit \"$probe_exit\"; fi\ngit add -- probe.txt\nstage_exit=$?\nprintf '\"'git add exit=%s\\\\n' \\\"\"'$stage_exit\"\nif test \"$stage_exit\" -ne 0; then exit \"$stage_exit\"; fi\ngit commit -S --only -m '\"'test: add local host probe' -- probe.txt\ncommit_exit=\"'$?\nprintf '\"'git commit exit=%s\\\\n' \\\"\"'$commit_exit\"\nexit \"$commit_exit\"'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git push origin HEAD:refs/heads/feature/sample\npush_exit=$?\nprintf '\"'git push exit=%s\\\\n' \\\"\"'$push_exit\"\nmarker_path=$(mktemp \"${TMPDIR%/}/local-host-probe.XXXXXXXX\")\nmarker_exit=$?\nprintf '\"'TMPDIR marker create exit=%s path=%s\\\\n' \\\"\"'$marker_exit\" \"$marker_path\"\nif test \"$marker_exit\" -eq 0; then\n  printf '\"'Local fixture TMPDIR probe\\\\n' > \\\"\"'$marker_path\"\n  printf '\"'TMPDIR marker write exit=%s\\\\n' \\\"\"'$?\"\nfi\ngit status --short\ngit show --format=oneline --stat HEAD'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 100637,
+      "cached_input_tokens": 76672,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 711,
+      "reasoning_output_tokens": 28
+    }
+  },
+  {
+    "directory": "host-3",
+    "record": {
+      "stage": "before",
+      "id": "host-3",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "d1a433863256ccf44ffaf1335473b33b515e40e6",
+      "after": "d1a433863256ccf44ffaf1335473b33b515e40e6",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "{\n  \"inline_option_text\": \"--check --no-push\",\n  \"meaning\": {\n    \"--check\": \"Run checks and report issues without fixing. Stop after reporting results; skip committing and pushing.\",\n    \"--no-push\": \"Normally commit fixes but leave pushing to the caller or user.\",\n    \"combined\": \"--check prevents fixes, commits, and pushes, so --no-push adds no further effect.\"\n  },\n  \"advertised_path_resolution\": {\n    \"skill\": \"lint-and-fix:lint-and-fix\",\n    \"advertised_path\": \"r5/lint-and-fix-lint-and-fix/SKILL.md\",\n    \"resolution\": \"Expanded r5 using the provided skill roots table.\",\n    \"resolved_path\": \"<scratch>/before/host-3/work/.agents/skills/lint-and-fix-lint-and-fix/SKILL.md\"\n  },\n  \"actions\": \"Read the advertised skill only. No linting, modifications, delegation, network, MCP services, gh operations, credential access, or installations.\"\n}",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat <scratch>/before/host-3/work/.agents/skills/lint-and-fix-lint-and-fix/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '115,245p' <scratch>/before/host-3/work/.agents/skills/lint-and-fix-lint-and-fix/SKILL.md\"",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 89190,
+      "cached_input_tokens": 68096,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 499,
+      "reasoning_output_tokens": 19
+    }
+  },
+  {
+    "directory": "host-4",
+    "record": {
+      "stage": "before",
+      "id": "host-4",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "1e4e9af949fb8d80e6c51cef65a3a8503919dd82",
+      "after": "1e4e9af949fb8d80e6c51cef65a3a8503919dd82",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "{\n  \"observed_tool_declarations\": {\n    \"question\": [\n      \"functions.request_user_input: Plan-mode only\",\n      \"functions.request_user_input_async: asynchronous questions\"\n    ],\n    \"wait\": [\n      \"functions.wait: resumes a running exec cell\",\n      \"clock.sleep: interruptible pause\",\n      \"collaboration.wait_agent: waits for agent updates\"\n    ],\n    \"foreground_command\": [\n      \"functions.exec exposes tools.exec_command\",\n      \"functions.exec exposes tools.write_stdin\"\n    ],\n    \"scheduling\": \"No dedicated scheduling tool is declared. functions.exec declares setTimeout and clearTimeout helpers.\"\n  },\n  \"tested_behavior\": {\n    \"command\": \"sleep 0.05\",\n    \"execution\": \"foreground\",\n    \"completed\": true,\n    \"exit_code\": 0,\n    \"output\": \"\"\n  },\n  \"untested_behavior\": [\n    \"Question tools\",\n    \"Dedicated wait tools\",\n    \"Scheduling helpers\"\n  ],\n  \"constraints\": {\n    \"questions_asked\": false,\n    \"work_scheduled\": false,\n    \"delegation_used\": false,\n    \"network_or_mcp_used\": false,\n    \"gh_used\": false,\n    \"dependencies_installed\": false,\n    \"fixture_data_modified\": false\n  }\n}",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'sleep 0.05'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 47265,
+      "cached_input_tokens": 36608,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 352,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "partial-monitor",
+    "record": {
+      "stage": "before",
+      "id": "partial-monitor",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "08301132761ab9b586a47c28cdfb1d1bfa1ed13c",
+      "after": "08301132761ab9b586a47c28cdfb1d1bfa1ed13c",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:monitor"],
+      "readOnly": false
+    },
+    "reply": "Stopped: `command -v gh` returned `/opt/homebrew/bin/gh`, not the required fixture stub. No `gh` operation ran, and no files changed.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; command -v gh; git remote -v; cat .agents/skills/monitor-pr-monitor/SKILL.md'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 56908,
+      "cached_input_tokens": 37120,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 138,
+      "reasoning_output_tokens": 10
+    }
+  },
+  {
+    "directory": "partial-monitor-replacement",
+    "record": {
+      "stage": "before",
+      "id": "partial-monitor",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "34da67498382d3866b87ee5cab30a1a9399a5105",
+      "after": "34da67498382d3866b87ee5cab30a1a9399a5105",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:monitor"],
+      "readOnly": false
+    },
+    "reply": "PR 1 completed one foreground tick. No checks are configured, so no repair was required. The PR is open, non-draft, and `MERGEABLE` / `CLEAN`. Copilot review is absent; requests remain paused by your instructions. This is a resumable checkpoint, not a readiness verdict.\n\n```text\nmonitor-pr:monitor checkpoint\nIdentity: fixture/sample PR 1\nURL: https://fixture.invalid/fixture/sample/pull/1\nBranches: feature/sample -> main; head: sample; Dependabot: false\nOptions: ticks=1, rounds=10, triage-after=5,\n  confirm-clean=false, no-fix=false, interval=adaptive\nAxes: checks=clean (none), Copilot=missing,\n  mergeability=clean, PR state=OPEN\nSnapshot: checks=[], latest review=null, review SHA=null,\n  feedback probe=not run (no current-head review),\n  open threads=unknown, audit items=unknown,\n  audit/probe/classification failure counters=0,\n  draft=false, mergeable=MERGEABLE, mergeStateStatus=CLEAN,\n  reviewDecision=NONE (informational)\nPacing: foreground; ticks=1/1; interval=none (Copilot paused)\nRounds: 0/10; earlier reviews=0; counted review IDs=[]\nReview requests: []; quiet counters=0; notice retries=[]\nProcessed feedback: classifications={}, resolver outcomes={},\n  Reviews read=[], processed audit items=[]\nRepair attempts: {}; remote-moved retry=none\nConfirmation: count=0, IDs=[], timestamps=[], head=null\nDependabot rebase: requested heads=[], current=null,\n  quiet ticks=0, reply=null\nMerge policy: not evaluated; method=null; confirmation=false;\n  approval requirement=unknown\nMerge watch: phase=none, READY_HEAD=null, awaited=null,\n  task=none, failures=0, mergedReads=0, started=null,\n  post-merge handling=false, merge commit=null\nScheduled work: none\n```\n\nResume in this conversation:\n\n```text\n/monitor-pr:monitor 1 --ticks 1 --rounds 10 --triage-after 5\n```\n\nFixture data and staged changes were preserved. Only the verified local `gh` stub ran; its log is `../monitor-gh.log`.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'command -v gh'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/monitor-pr-monitor/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '175,340p' .agents/skills/monitor-pr-monitor/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"git remote -v; git status --short; rg --files -g AGENTS.md -g '*SKILL.md' -g '*checkpoint*' -g '*feedback*' -g '*lint*' .agents\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc \"ls -la; find .agents -type f; sed -n '150,175p' .agents/skills/monitor-pr-monitor/SKILL.md; cat .agents/skills/monitor-pr-monitor/references/checkpoint.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'if [ \"$(command -v gh)\" != <scratch>/before/partial-monitor-replacement/bin/gh ]; then exit 1; fi\ngh pr view 1 --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit'",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc 'cat ../bin/gh; cat Makefile; cat review-result.json; git diff --cached; ls -la ..; ls -la .agents/skills/monitor-pr-monitor'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"ls -la '.agents/skills/monitor-pr-monitor/../../scripts'; sed -n '135,155p' .agents/skills/monitor-pr-monitor/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'if [ \"$(command -v gh)\" != <scratch>/before/partial-monitor-replacement/bin/gh ]; then exit 1; fi\nexport EVAL_GH_LOG=\"$PWD/../monitor-gh.log\"\ngh pr view 1 --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit\ngh api --paginate --slurp repos/fixture/sample/pulls/1/reviews'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 220419,
+      "cached_input_tokens": 171008,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1272,
+      "reasoning_output_tokens": 46
+    }
+  },
+  {
+    "directory": "partial-pr",
+    "record": {
+      "stage": "before",
+      "id": "partial-pr",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "553323e4c27e8c9ea4e0bd1457f85a9b480e6473",
+      "after": "553323e4c27e8c9ea4e0bd1457f85a9b480e6473",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["pr"],
+      "readOnly": false
+    },
+    "reply": "Stopped: `command -v gh` returned `/opt/homebrew/bin/gh`, not the permitted fixture stub. No `gh` operation ran, and no files, commits, pushes, or PRs were created.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/pr-pr/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v\n git status --short\n command -v gh'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 54091,
+      "cached_input_tokens": 37120,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 146,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "partial-pr-replacement",
+    "record": {
+      "stage": "before",
+      "id": "partial-pr",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "38134a4ed8bfe6f7f7f76a136e8e544ea9c97f3e",
+      "after": "38134a4ed8bfe6f7f7f76a136e8e544ea9c97f3e",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["pr"],
+      "readOnly": false
+    },
+    "reply": "The advertised [PR skill](.agents/skills/pr-pr/SKILL.md) requires `lint-and-fix`, which is unavailable among the advertised local skills. The skill instructions require stopping when a necessary skill is missing.\n\nThe `gh` path matched the permitted stub. No `gh` operations, commits, pushes, or file changes were made; fixture data remains intact.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; git status --short; git remote -v; command -v gh; cat .agents/skills/pr-pr/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '180,350p' .agents/skills/pr-pr/SKILL.md; rg --files .agents; git diff --cached; git log -5 --oneline; cat review-result.json; ls -a\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"ls -la .agents/skills; cat Makefile; sed -n '150,185p' .agents/skills/pr-pr/SKILL.md; git branch --show-current; git ls-files\"",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 121473,
+      "cached_input_tokens": 100096,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 393,
+      "reasoning_output_tokens": 83
+    }
+  },
+  {
+    "directory": "partial-resolver",
+    "record": {
+      "stage": "before",
+      "id": "partial-resolver",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "a6c62a7893825e9ade8e5e00aee0df5278aae277",
+      "after": "a6c62a7893825e9ade8e5e00aee0df5278aae277",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Stopped: `command -v gh` returned `/opt/homebrew/bin/gh`, not the required fixture stub:\n\n```text\n<scratch>/before/partial-resolver/bin/gh\n```\n\nRead the advertised skill and local remotes. No `gh` operation ran, no network was used, and no files changed. Feedback processing remains incomplete.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; command -v gh; git remote -v; cat .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 57630,
+      "cached_input_tokens": 37120,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 211,
+      "reasoning_output_tokens": 14
+    }
+  },
+  {
+    "directory": "partial-resolver-replacement",
+    "record": {
+      "stage": "before",
+      "id": "partial-resolver",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "0ce2704b13979a23f604f3a272c2955380c14ffd",
+      "after": "0ce2704b13979a23f604f3a272c2955380c14ffd",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "The workflow is incomplete. Fixture files were preserved; no commits, pushes, or thread resolutions occurred. Only the verified local `gh` stub was used.\n\n| Source | Thread ID | Finding | Category | Action taken | Status |\n| --- | --- | --- | --- | --- | --- |\n| Thread | FIXTURE_THREAD | `sample.txt:1` | Valid | Preserved staged change; processing blocked | Pending |\n\nThe required summary post failed with exit 75: `fixture gh: unsupported operation; no network or write performed`.\n\nThe exact intended summary is preserved in [copilot-summary-LzE1GL](/tmp/copilot-summary-LzE1GL):\n\n```markdown\n## Copilot Feedback Summary\n\nStatus: Failed\nHead SHA: `sample` (invalid fixture head value)\n\n| Source | Finding | Category | Outcome | Disposition |\n| --- | --- | --- | --- | --- |\n| Thread | `sample.txt:1` | Valid | Pending | Staged text remains unchanged; dependency and checkout preconditions prevent edits. |\n\nReviews read: none.\n\n### Failure Details\n\n- Required advertised skills `lint-and-fix` and `review-anti-patterns` are unavailable. Skill install commands are `codex plugin add lint-and-fix@agent-harness-plugins` and `codex plugin add review-anti-patterns@agent-harness-plugins`; installation is prohibited for this evaluation.\n- Existing checkout state: staged `sample.txt`, untracked `.agents/` and `review-result.json`. No fixture files were changed.\n- Local HEAD is `0ce2704b13979a23f604f3a272c2955380c14ffd`, which differs from the fixture PR head `sample`.\n- `fetch-reviews` failed: `Error: Invalid --head value 'sample'. Expected the full 40-character commit SHA.` No reviews were read.\n- The stub returned `[]` for the authenticated login, so prior summary authorship could not be established. The PR comments read returned `[]`.\n- Audit succeeded and reported no uncovered items. The thread fetch found one unresolved Copilot thread.\n\n### Remaining Required Action\n\n- Supply valid fixture PR head and account responses, the required advertised skills, and an isolated clean checkout before processing the pending finding.\n- Preserve existing fixture changes; do not push or resolve the pending thread until its handling is complete.\n\nCounts: 1 fetched, 1 pending, 5 workflow failures.\n```",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'command -v gh\ncat .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '310,490p' .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md\nrg --files -g 'AGENTS.md' -g '*resolve-copilot*' -g '*SKILL.md' -g 'README*'\ngit status --short\ngit remote -v\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"find .agents -type f\nsed -n '270,312p' .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md\nsed -n '1,100p' .agents/skills/monitor-pr-resolve-copilot-feedback/scripts/resolve-copilot-threads\ngit rev-parse HEAD\ncommand -v gh\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"ls -la .agents/skills\nls -la .agents/skills/monitor-pr-resolve-copilot-feedback\nrg --files ../ -g '*resolve-copilot-threads*' -g '*SKILL.md' -g 'gh'\ncommand -v gh\n gh pr view 1 --repo fixture/sample --json headRefOid\n gh api user --jq .login\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc \"cat ../bin/gh\ncat '../cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads'\nls -la ..\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"mktemp /tmp/copilot-eval-gh-log.XXXXXX\ntest -x '../cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads'\ngit diff --cached -- sample.txt\ncat sample.txt\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"export EVAL_GH_LOG=/tmp/copilot-eval-gh-log.FLMtvH\nexpected='<scratch>/before/partial-resolver-replacement/bin/gh'\n[[ \\\"\"'$(command -v gh)\" == \"$expected\" ]] || exit 1\ngh pr view 1 --repo fixture/sample --json headRefOid\n[[ \"$(command -v gh)\" == \"$expected\" ]] || exit 1\ngh api user --jq .login\n[[ \"$(command -v gh)\" == \"$expected\" ]] || exit 1\ngh api --paginate repos/fixture/sample/issues/1/comments\n[[ \"$(command -v gh)\" == \"$expected\" ]] || exit 1\nbash \"<scratch>/before/partial-resolver-replacement/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\" fetch fixture sample 1\n[[ \"$(command -v gh)\" == \"$expected\" ]] || exit 1\nbash \"<scratch>/before/partial-resolver-replacement/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\" fetch-reviews fixture sample 1 --head sample\n[[ \"$(command -v gh)\" == \"$expected\" ]] || exit 1\nbash \"<scratch>/before/partial-resolver-replacement/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\" audit fixture sample 1'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'mktemp -u /tmp/copilot-summary-XXXXXX'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'export EVAL_GH_LOG=/tmp/copilot-eval-gh-log.FLMtvH\n[[ \"$(command -v gh)\" == '\"'<scratch>/before/partial-resolver-replacement/bin/gh' ]] || exit 1\ngh pr comment 1 --repo fixture/sample --body-file /tmp/copilot-summary-LzE1GL\"",
+        "exit": 75
+      }
+    ],
+    "usage": {
+      "input_tokens": 463781,
+      "cached_input_tokens": 428160,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2259,
+      "reasoning_output_tokens": 148
+    }
+  },
+  {
+    "directory": "restriction-read-only",
+    "record": {
+      "stage": "before",
+      "id": "restriction-read-only",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "c1ac29452deb967f8a744cc4803a18937641e37b",
+      "after": "c1ac29452deb967f8a744cc4803a18937641e37b",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": true
+    },
+    "reply": "No commit created: the active read-only restriction prevents Git writes.\n\nThe staged change is only `sample.txt`, replacing `base` with `staged change`. Suggested message: `chore: update sample fixture`.\n\nFixture data remains unchanged. No gh, network, credentials, delegation, or permission expansion used.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/commit-commit/SKILL.md .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git log --oneline -10'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --cached --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 85674,
+      "cached_input_tokens": 50816,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 244,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "restriction-unavailable",
+    "record": {
+      "stage": "before",
+      "id": "restriction-unavailable",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "c98a69a669ae5c8699b9851a4e5ea73bfb8bb7cf",
+      "after": "c98a69a669ae5c8699b9851a4e5ea73bfb8bb7cf",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Lint status: failure\nCommit: none\nUnresolved or skipped: `make lint` exited 2 because `fixture-unavailable-linter` is unavailable.\nCheck-only by project policy: none\nCaller resume target: report\n\nStopped as instructed. No files changed, dependencies installed, commits created, or pushes made.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/lint-and-fix-lint-and-fix/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"pwd; rg --files --hidden -g '\"'!'\"\\\\.git/**' -g '\"'!'\"\\\\.agents/skills/**'; cat .agents/skills/use-git-use-git/SKILL.md; sed -n '130,235p' .agents/skills/lint-and-fix-lint-and-fix/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"cat Makefile; find . -name AGENTS.md -o -name CLAUDE.md -o -name package.json -o -name '*.yml' -o -name '*.yaml'\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --porcelain'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'make lint'",
+        "exit": 2
+      }
+    ],
+    "usage": {
+      "input_tokens": 160524,
+      "cached_input_tokens": 138112,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 467,
+      "reasoning_output_tokens": 18
+    }
+  },
+  {
+    "directory": "review-result-failure",
+    "record": {
+      "stage": "before",
+      "id": "review-result-failure",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "379109c02a8444f13fcbcdb29aa6e8de56028e7a",
+      "after": "379109c02a8444f13fcbcdb29aa6e8de56028e7a",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["review-pr-with-codex"],
+      "readOnly": false
+    },
+    "reply": "No. `review-result.json` records `status: \"failed\"`, exit status `1`, and an empty reply.\n\nThe skill’s completion contract says failed or empty results must be reported as failed, never clean. This is incomplete review evidence, not a completed review with zero findings.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; git remote -v; cat .agents/skills/review-pr-with-codex-review-pr-with-codex/SKILL.md; cat review-result.json'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 52025,
+      "cached_input_tokens": 37120,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 150,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "activation-commit",
+    "record": {
+      "stage": "after",
+      "id": "activation-commit",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "2f2a0747ad9607e8472a518870895843bcb365fd",
+      "after": "5a8b23df6fca306975d0910e0876b9080766bb20",
+      "status": "?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Status: success.\n\nCommitted staged changes as `5a8b23d`, `chore: update sample fixture`, using `git commit -S`.\n\nStaged whitespace check passed. Untracked fixture files remain untouched. No network or `gh` used. Body trim: nothing to trim. Caller resume target: none.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/commit-commit/SKILL.md .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"rg --files --hidden -g AGENTS.md -g CLAUDE.md -g '*commitlint*' -g package.json -g '\"'!node_modules'\"' -g '\"'!.git'\"'\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git config --get core.hooksPath'",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git log --oneline -10'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --cached --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'if test -f .git/hooks/commit-msg; then cat .git/hooks/commit-msg; fi\ngit diff --cached --check'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git commit -S -m \"$(cat << '\"'EOF'\nchore: update sample fixture\nEOF\n)\\\"\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 178804,
+      "cached_input_tokens": 160384,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 427,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "activation-monitor",
+    "record": {
+      "stage": "after",
+      "id": "activation-monitor",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "670c42072930ca1761e84ec73bc6d0c4b0ac1e73",
+      "after": "670c42072930ca1761e84ec73bc6d0c4b0ac1e73",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "PR 1 reached the one-tick limit. Readiness remains unresolved.\n\n| Axis | State |\n| --- | --- |\n| Checks | Clean; no checks configured |\n| Copilot | Paused by policy; no review observed |\n| Mergeability | `MERGEABLE`, `CLEAN` |\n| PR state | `OPEN`, not draft |\n\nNo fixes, review requests, merges, or repository changes were made.\n\n```text\nmonitor-pr:monitor checkpoint\nIdentity: fixture/sample, PR 1\nURL: https://fixture.invalid/fixture/sample/pull/1\nBranches: feature/sample -> main\nHead: sample\nDependabot: false\nOptions: ticks=1, rounds=10, triage-after=5,\n  confirm-clean=false, no-fix=true, interval=adaptive\nSnapshot: checks=[], Copilot=paused by policy,\n  latest review ID/SHA=null, feedback probes=not applicable,\n  mergeable=MERGEABLE, mergeStateStatus=CLEAN,\n  state=OPEN, draft=false, reviewDecision=NONE\nProbe failure counters: audit=0, null review=0, body read=0\nPacing: foreground, 1 tick completed;\n  no wait selected because Copilot is paused\nRounds: 0/10; earlier-review count=not evaluated under pause\nCounted review IDs: []\nReview requests: []; quiet counters=0; notice retries=[]\nProcessed feedback: classifications={}, resolver outcomes={},\n  reviews read=[], audit items=[]\nRepair attempts: {}; remote-moved retry=none\nConfirmation: count=0, review IDs=[], timestamps=[], head=none\nDependabot rebase: requested heads=[], current=none,\n  quiet ticks=0, reply=none\nMerge policy: not evaluated; method=none; approval=unknown\nMerge watch: phase=none, READY_HEAD=none, awaited=none,\n  task=none, failures=0, mergedReads=0, started=none,\n  post-merge handling=false, merge commit=none\nScheduled work: none\n```\n\nResume in this conversation:\n\n```text\n/monitor-pr:monitor 1 --ticks 1 --rounds 10 --triage-after 5 --no-fix\n```",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/monitor-pr-monitor/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'command -v gh'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '115,310p' .agents/skills/monitor-pr-monitor/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '85,116p' .agents/skills/monitor-pr-monitor/SKILL.md\ncat .agents/skills/monitor-pr-monitor/references/checkpoint.md\nrealpath .agents/skills/monitor-pr-monitor/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'if [ \"$(command -v gh)\" != \"<scratch>/after/activation-monitor/bin/gh\" ]; then exit 1; fi\ngh pr view 1 --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'if [ \"$(command -v gh)\" != \"<scratch>/after/activation-monitor/bin/gh\" ]; then exit 1; fi\ngh api --paginate --slurp repos/fixture/sample/pulls/1/reviews | jq '\"'[.[][] | select((.user.login? // \\\"\\\") as \"'$login | ($login | type) == \"string\" and ([\"copilot-pull-request-reviewer\", \"copilot-pull-request-reviewer[bot]\", \"copilot\", \"github-copilot[bot]\"] | any(. == ($login | ascii_downcase))))] | last | {id, commit_id, submitted_at, state}'\"'\"",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 213813,
+      "cached_input_tokens": 185856,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1097,
+      "reasoning_output_tokens": 10
+    }
+  },
+  {
+    "directory": "activation-negative",
+    "record": {
+      "stage": "after",
+      "id": "activation-negative",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "8e72bbcce5ef271eba7323e491a8ddc4f23abc57",
+      "after": "8e72bbcce5ef271eba7323e491a8ddc4f23abc57",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "`git rebase` reapplies commits onto a different base commit. For example, rebasing a feature branch onto `main` places the feature’s commits after the latest commits on `main`, producing a linear history.\n\nReapplied commits get new commit IDs because their ancestry changes. Conflicts can pause the operation for resolution. Since rebase rewrites history, using it on shared commits requires coordination.\n\nNo commands were run and nothing was changed.",
+    "commands": [],
+    "usage": {
+      "input_tokens": 23503,
+      "cached_input_tokens": 13184,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 94,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "continuation-lint",
+    "record": {
+      "stage": "after",
+      "id": "continuation-lint",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "c739655c83cb79957aacba0f83663bef84f07fa6",
+      "after": "0e9c77936630d3692d814bd1db72b37c572d49ff",
+      "status": "?? .agents/\n?? parent-result.txt\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Status: success  \nLint status: success  \nCommit: `0e9c77936630d3692d814bd1db72b37c572d49ff`  \nUnresolved or skipped: none  \nCheck-only by project policy: none  \nCaller resume target: write `parent-result.txt`\n\n`make lint` passed twice. Signed commit created and SHA written to `parent-result.txt`. No push performed.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; cat .agents/skills/lint-and-fix-lint-and-fix/SKILL.md; cat .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/lint-and-fix-lint-and-fix/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"git remote -v\n git status --porcelain\n rg --files --hidden -g '\"'!.git'\"' -g '\"'!.agents/**'\"'\n cat AGENTS.md\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc \"cat Makefile\n git --no-pager diff --cached --no-ext-diff --no-color\n git --no-pager diff --no-ext-diff --no-color\n ls -la\n sed -n '210,255p' .agents/skills/lint-and-fix-lint-and-fix/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'make lint'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'make lint'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"git commit -S -m 'style: apply staged fixture change' -m 'Run make lint and repeat it for final verification; both checks pass. No manual lint fixes were needed.'\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git rev-parse HEAD\n git status --porcelain'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"printf '%s\\\\n' '0e9c77936630d3692d814bd1db72b37c572d49ff' > parent-result.txt\ncat parent-result.txt\"",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 358052,
+      "cached_input_tokens": 326528,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 712,
+      "reasoning_output_tokens": 17
+    }
+  },
+  {
+    "directory": "continuation-merge",
+    "record": {
+      "stage": "after",
+      "id": "continuation-merge",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "dee3bc611b67712b0bedda0ae95179894d23ade8",
+      "after": "dee3bc611b67712b0bedda0ae95179894d23ade8",
+      "status": "MM sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Status: needs-decision\n\nOutputs: Applied `sync-with-main:merge --base main` preflight. Branch: `feature/sample`.\n\nDecision for `fixture-parent`: Stash changes, commit first (staged or all changes), or abort?\n\nPreserved state: `sample.txt` has staged and unstaged changes; `.agents/` and `review-result.json` are untracked. No files changed.\n\nUnresolved or skipped: Fetch, merge and push await the decision. No `gh` operation ran.\n\nCurrent HEAD: `dee3bc611b67712b0bedda0ae95179894d23ade8`\n\nCaller resume target: `fixture-parent`, report merge result.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/sync-with-main-merge/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git branch --show-current'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git rev-parse HEAD'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 78203,
+      "cached_input_tokens": 63744,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 321,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "helper-cache",
+    "record": {
+      "stage": "after",
+      "id": "helper-cache",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "7af88e8ad2083dca6201fad97d520c4f9915b6ff",
+      "after": "7af88e8ad2083dca6201fad97d520c4f9915b6ff",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback", "lint-and-fix", "review-anti-patterns"],
+      "readOnly": false
+    },
+    "reply": "Status: failure.\n\nVerified `gh` is the permitted stub and resolved the helper from the installed skill’s physical location, preserving the version and path with spaces.\n\nThe helper’s `fetch fixture sample 1` exited 1:\n\n```text\nError: Not authenticated with GitHub. Run: gh auth login\n```\n\nStopped without accessing credentials or attempting login. Feedback collection, resolution and the required summary remain incomplete. No files or cache contents were changed.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'command -v gh'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'skill_file=\"$PWD/.agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md\"\nresolved_skill=\"$(realpath -- \"$skill_file\")\" || exit 1\nplugin_root=\"$(cd -- \"$(dirname -- \"$resolved_skill\")/../..\" && pwd -P)\" || exit 1\nhelper=\"$plugin_root/scripts/resolve-copilot-threads\"\ntest -x \"$helper\" || exit 1\nprintf '\"'%s\\\\n' \\\"\"'$resolved_skill\" \"$helper\"\ngit remote -v\nsed -n '\"'320,430p' \\\"\"'$resolved_skill\"'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'test \"$(command -v gh)\" = '\"'<scratch>/after/helper-cache/bin/gh' || exit 1\ngh pr view 1 --repo fixture/sample --json headRefOid\ngh api user --jq .login\nbash \\\"<scratch>/after/helper-cache/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\\\" fetch fixture sample 1\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '1,110p' \\\"<scratch>/after/helper-cache/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\\\"\ngit status --porcelain\"",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 170806,
+      "cached_input_tokens": 145280,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 709,
+      "reasoning_output_tokens": 98
+    }
+  },
+  {
+    "directory": "partial-monitor",
+    "record": {
+      "stage": "after",
+      "id": "partial-monitor",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "407d626363580e5353147d097be7f7b94eaedc43",
+      "after": "407d626363580e5353147d097be7f7b94eaedc43",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:monitor"],
+      "readOnly": false
+    },
+    "reply": "Status: unavailable.\n\nPR 1 is open and mergeable (`CLEAN`), with no checks configured. Review decision: none. Copilot is paused by policy.\n\nThe advertised skills lack three required dependencies: `lint-and-fix`, `sync-with-main:merge`, and `monitor-pr:resolve-copilot-feedback`. The monitor skill requires stopping before repair or scheduling when these are missing.\n\nNo files changed, tools installed, or network accessed. `--no-fix` is available for observation only.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'command -v gh\ncat .agents/skills/monitor-pr-monitor/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '145,365p' .agents/skills/monitor-pr-monitor/SKILL.md\nrg --files .agents\n git remote -v\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'if [ \"$(command -v gh)\" != <scratch>/after/partial-monitor/bin/gh ]; then exit 1; fi\ngh pr view 1 --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 136039,
+      "cached_input_tokens": 109312,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 417,
+      "reasoning_output_tokens": 32
+    }
+  },
+  {
+    "directory": "partial-pr",
+    "record": {
+      "stage": "after",
+      "id": "partial-pr",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "2fa175ce127550f01b96fe1f102dbc96fe3c245d",
+      "after": "2fa175ce127550f01b96fe1f102dbc96fe3c245d",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["pr"],
+      "readOnly": false
+    },
+    "reply": "Status: unavailable\n\nThe PR skill requires `lint-and-fix`, which is absent from the advertised skills, and explicitly stops before committing, pushing, or creating a PR.\n\nNo files changed, no `gh` operations ran, and fixture data was preserved. The permitted `gh` stub path was confirmed.\n\nThe skill suggests `codex plugin add lint-and-fix@agent-harness-plugins`; it was not run because installations are prohibited.\n\nCaller resume target: none.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/pr-pr/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short; git remote -v; command -v gh'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 53105,
+      "cached_input_tokens": 26368,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 215,
+      "reasoning_output_tokens": 15
+    }
+  },
+  {
+    "directory": "partial-resolver",
+    "record": {
+      "stage": "after",
+      "id": "partial-resolver",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "df15e0a360aad08e44acd9f7065d05f59f4ee170",
+      "after": "df15e0a360aad08e44acd9f7065d05f59f4ee170",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Status: unavailable. Domain outcome: Failed.\n\nThe advertised skill’s preflight blocked edits because `lint-and-fix` and `review-anti-patterns` are unavailable and the checkout contains existing changes. Fixture data was preserved. No commits, pushes, replies, or resolutions occurred.\n\n| Source | Thread ID | Finding | Category | Action taken | Status |\n| --- | --- | --- | --- | --- | --- |\n| Thread | `FIXTURE_THREAD` | `sample.txt:1` | Valid | Preserved existing staged change; preflight blocked edits | Pending |\n\nThread fetch and audit succeeded. Review-body fetching failed because fixture `headRefOid` is `sample`, not a full SHA. The verified stub rejected the required summary post with exit 75: `unsupported operation; no network or write performed`.\n\nThe exact intended summary is preserved in [copilot-summary-Yf4uL2](/var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T/copilot-summary-Yf4uL2), available to open in VSCodium.\n\nUnresolved or skipped: the correction, required validation, push, thread resolution, and final summary posting.\n\nCaller resume target: none supplied.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; command -v gh; git remote -v; cat .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'skill_file=\"$PWD/.agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md\"\nresolved_skill=\"$(realpath -- \"$skill_file\")\" || exit 1\nplugin_root=\"$(cd -- \"$(dirname -- \"$resolved_skill\")/../..\" && pwd -P)\" || exit 1\nhelper=\"${plugin_root}/scripts/resolve-copilot-threads\"\nprintf '\"'%s\\\\n' \\\"\"'$resolved_skill\" \"$helper\"\ntest -x \"$helper\"\nprintf '\"'helper_check=%s\\\\n' \\\"\"'$?\"\nrg --files -g AGENTS.md -g '\"'*SKILL.md' -g '*resolve-copilot*' .agents\n git status --short\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"sed -n '300,560p' .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md\nls -l '.agents/skills'\ncat review-result.json\ncat sample.txt\nsed -n '1,90p' '../cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads'\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"expected='<scratch>/after/partial-resolver/bin/gh'\n[[ \\\"\"'$(command -v gh)\" == \"$expected\" ]] || exit 1\ngh pr view 1 --repo fixture/sample --json headRefOid\n[[ \"$(command -v gh)\" == \"$expected\" ]] || exit 1\ngh api user --jq .login\n[[ \"$(command -v gh)\" == \"$expected\" ]] || exit 1\ngh api --paginate repos/fixture/sample/issues/1/comments --jq '\"'.[] | select(.user.login == \\\"fixture-user\\\" and (.body | startswith(\\\"## Copilot Feedback Summary\\\"))) | {created_at, body}'\n[[ \\\"\"'$(command -v gh)\" == \"$expected\" ]] || exit 1\nbash \"$PWD/../cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\" fetch fixture sample 1'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"expected='<scratch>/after/partial-resolver/bin/gh'\n[[ \\\"\"'$(command -v gh)\" == \"$expected\" ]] || exit 1\nbash \"$PWD/../cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\" fetch-reviews fixture sample 1 --head sample\n[[ \"$(command -v gh)\" == \"$expected\" ]] || exit 1\nbash \"$PWD/../cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads\" audit fixture sample 1\ngit rev-parse HEAD\ngit status --porcelain\nsed -n '\"'275,302p' .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'mktemp -u \"${TMPDIR:-/tmp}/copilot-summary-XXXXXX\"'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"expected='<scratch>/after/partial-resolver/bin/gh'\n[[ \\\"\"'$(command -v gh)\" == \"$expected\" ]] || exit 1\ngh pr comment 1 --repo fixture/sample --body-file /var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T/copilot-summary-Yf4uL2'",
+        "exit": 75
+      }
+    ],
+    "usage": {
+      "input_tokens": 343113,
+      "cached_input_tokens": 312832,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1974,
+      "reasoning_output_tokens": 117
+    }
+  },
+  {
+    "directory": "restriction-read-only",
+    "record": {
+      "stage": "after",
+      "id": "restriction-read-only",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "f9d3696108f61373ee41b42a43df9581b2d8673d",
+      "after": "f9d3696108f61373ee41b42a43df9581b2d8673d",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": true
+    },
+    "reply": "Status: failure, blocked by read-only restriction.\n\nInspected the staged change in `sample.txt`. No commit attempted; staged and untracked files remain unchanged.\n\nBlocked command: `git commit -S -m \"chore: update sample fixture\"`\n\nNo `gh`, network, credentials, or delegation used. Body trim: nothing to trim. Caller resume target: none.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/commit-commit/SKILL.md .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager log --oneline -10'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-optional-locks status --short'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --cached --no-ext-diff --no-color'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 87096,
+      "cached_input_tokens": 67712,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 263,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "directory": "restriction-unavailable",
+    "record": {
+      "stage": "after",
+      "id": "restriction-unavailable",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "799081fce670b35d574ebb25399c170a7904cb63",
+      "after": "799081fce670b35d574ebb25399c170a7904cb63",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Status: failure\nLint status: failure\nCommit: none\nUnresolved or skipped: `make lint` exited 2 because `fixture-unavailable-linter` is unavailable.\nCheck-only by project policy: none\nCaller resume target: report\n\nStopped as instructed. Fixture data and existing changes were preserved. No installation, network, gh, commit, or push occurred.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/lint-and-fix-lint-and-fix/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"cat .agents/skills/use-git-use-git/SKILL.md; sed -n '140,235p' .agents/skills/lint-and-fix-lint-and-fix/SKILL.md; pwd; rg --files -g '\"'!'\"\\\\.agents/**' -g '\"'!node_modules/**'\"' -g '\"'!*lock*'\"' -g '.*' -g '*' | head -60\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --porcelain'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"cat Makefile; rg --files --hidden -g 'AGENTS.md' -g 'CLAUDE.md' -g 'package.json' -g '*lint*' -g '*prettier*' -g '.github/workflows/*' -g '\"'!.git/**'\"' -g '\"'!.agents/**'\"'\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc 'make lint'",
+        "exit": 2
+      }
+    ],
+    "usage": {
+      "input_tokens": 155497,
+      "cached_input_tokens": 133888,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 499,
+      "reasoning_output_tokens": 13
+    }
+  },
+  {
+    "directory": "review-result-failure",
+    "record": {
+      "stage": "after",
+      "id": "review-result-failure",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "e87807765d3868928668fabb2dc0b54f58a0f8bd",
+      "after": "e87807765d3868928668fabb2dc0b54f58a0f8bd",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["review-pr-with-codex"],
+      "readOnly": false
+    },
+    "reply": "No. `review-result.json` records a failed reviewer run: `exit_status: 1`, `status: \"failed\"`, and an empty `reply`.\n\nThe skill’s completion contract requires failed or empty aspects to be reported as failed, never clean. This is **incomplete review evidence**, not completed clean evidence. No new review was launched, and no fixture data was changed.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; git remote -v; cat .agents/skills/review-pr-with-codex-review-pr-with-codex/SKILL.md; cat review-result.json'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 49897,
+      "cached_input_tokens": 36096,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 174,
+      "reasoning_output_tokens": 0
+    }
+  }
+]

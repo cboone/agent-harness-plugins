@@ -155,3 +155,24 @@ documentation commits. Require `git diff --quiet` against the backup before
 pushing. The worker checkpoint and TOOLING handoff hold the resulting head,
 exact-tree comparison result, PR URL and final CI result; no post-tidy source
 edit is authorized by this protocol.
+
+## Authorized base sync after publication
+
+TOOLING authorized merging `origin/main` into the published branch with a merge
+commit, preserving both sides and bumping conflicting plugin versions above
+main. No rebase, amend or force push. Main at the merge is
+`78386666cdce00aa7efd09eff6cc9252335f034d`, including Codex compatibility milestone
+2 and the existing resource-claims race work.
+
+Only version fields conflicted in canonical sources: `review-branch` main
+`1.3.0` becomes `1.3.1`; `sync-with-main` main `1.1.0` becomes `1.1.1`.
+`use-git` also becomes `1.3.5` above main's `1.3.4`, since both branches used the
+same prior patch. Other plugin bumps remain forward. Both sides' other changes
+merged automatically; fallback instructions and the new capability/continuation
+sections are retained. Generated conflicts are resolved by `make build`.
+
+The earlier exact-tree tidy proof covers the published pre-merge head. This
+merge adds main's changes and the version reconciliation; pushed history stays
+intact. Validation and CI completion for this sync are recorded in the worker
+checkpoint and TOOLING handoff after the requested checks finish. Review counts
+remain one Nit, two Important and one Critical-only; no new review loop starts.

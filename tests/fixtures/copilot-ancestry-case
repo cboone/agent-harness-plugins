@@ -15,6 +15,8 @@ function make_commit() {
 
 function main() {
   local helper="${1:?helper required}" mode="${2:?mode required}" tree base fix head unrelated result case_exit fixture_dir
+  local watch_policy="${3:-}" blocked=false
+  local helper_args=()
   fixture_dir="$(cd "$(dirname "$0")" && pwd)"
   CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/copilot-ancestry.XXXXXX")"
   trap 'rm -r "${CASE_DIR}"' EXIT
@@ -66,6 +68,7 @@ function main() {
       fi
       ;;
     ancestry-error)
+      touch "${CASE_DIR}/bin/fail-ancestry"
       command -v git > "${CASE_DIR}/bin/real-git"
       cp "${fixture_dir}/copilot-ancestry-git-stub" "${CASE_DIR}/bin/git"
       hash -r
@@ -82,14 +85,29 @@ function main() {
       ;;
   esac
 
+  if [[ -n "${watch_policy}" ]]; then
+    helper_args=(--watch-state "${watch_policy}")
+    if ! jq -e '.policy.allowedActions | any(. == "read-axis")' "${watch_policy}" > /dev/null; then
+      blocked=true
+      command -v git > "${CASE_DIR}/bin/real-git"
+      cp "${fixture_dir}/copilot-ancestry-git-stub" "${CASE_DIR}/bin/git"
+      hash -r
+      [[ "$(command -v git)" == "${CASE_DIR}/bin/git" ]] || return 1
+    fi
+  fi
+
   set +e
-  bash "${helper}" verify-fix o r 7 "${head}" "${fix}" > "${CASE_DIR}/out" 2> "${CASE_DIR}/err"
+  bash "${helper}" ${helper_args[@]+"${helper_args[@]}"} verify-fix o r 7 "${head}" "${fix}" > "${CASE_DIR}/out" 2> "${CASE_DIR}/err"
   case_exit=$?
   set -e
   result="$(cat "${CASE_DIR}/out")"
   printf 'result=%s; exit=%s\n' "${result:-none}" "${case_exit}"
   if [[ "${case_exit}" -ne 0 ]]; then
     sed -n 's/^Error: /Error: /p' "${CASE_DIR}/err"
+  fi
+  if [[ "${blocked}" == true ]]; then
+    [[ ! -e "${CASE_DIR}/bin/git-calls" && ! -e "${CASE_DIR}/bin/gh-calls" ]] || return 1
+    printf '%s\n' 'blocked before Git and GitHub authentication or reads'
   fi
   if [[ "${mode}" == missing || "${mode}" == shallow-endpoints ]]; then
     git cat-file -e "${fix}^{commit}"

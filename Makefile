@@ -17,11 +17,13 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u STUB_GIT_WORKTREE_PORCELAIN_FILE -u STUB_WORKMUX_EXIT -u STUB_WORKMUX_SKIP_WORKTREE \
 	-u STUB_WORKMUX_SLEEP -u STUB_WORKMUX_RELEASE_FIFO \
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
-	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR \
+	-u TZDIR -u WORKTREE_RESOURCES_FILE -u CLAIMS_INTERRUPT_CONTROL -u REVIEW_CHECKLISTS_DIR \
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
 	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT -u CODEX_OTHER_SKILL_RESERVE_TOKENS \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS \
+	-u CHAIN_CODEX_STUB_MODE \
+	-u EVAL_GH_AUTH -u EVAL_GH_LOG \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
 	-u BACKLOG_GATHER_NOW -u BACKLOG_GATHER_HOST \
 	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME \
@@ -55,6 +57,8 @@ SCRUT_ENV := \
 	COPILOT_REPLY_CASE_BIN="$(CURDIR)/tests/fixtures/copilot-reply-case" \
 	COPILOT_GH_DATA_DIR="$(CURDIR)/tests/data/copilot-gh" \
 	CROSS_REFERENCE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/cross-reference-fixture" \
+	CHAIN_HELPER_FIXTURE_BIN="$(CURDIR)/tests/fixtures/chain-helper-fixture" \
+	CHAIN_CODEX_STUB_BIN="$(CURDIR)/tests/fixtures/chain-codex-stub" \
 	CATALOG_RELEASE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/catalog-release-fixture" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \
 	LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/workmux/scripts/launch-workmux" \
@@ -63,6 +67,8 @@ SCRUT_ENV := \
 	GH_STUB_BIN="$(CURDIR)/tests/fixtures/gh-stub" \
 	GIT_WORKTREE_STUB_BIN="$(CURDIR)/tests/fixtures/git-worktree-stub" \
 	MANAGE_RESOURCE_CLAIMS_BIN="$(CURDIR)/plugins/workmux/scripts/manage-resource-claims" \
+	RESOURCE_CLAIMS_INTERLEAVE_BIN="$(CURDIR)/tests/fixtures/resource-claims-interleave" \
+	RESOURCE_CLAIMS_INTERLEAVE_STUB_BIN="$(CURDIR)/tests/fixtures/resource-claims-interleave-stub" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
 	COPILOT_ROUNDS_REPORT_BIN="$(CURDIR)/bin/copilot-rounds-report" \

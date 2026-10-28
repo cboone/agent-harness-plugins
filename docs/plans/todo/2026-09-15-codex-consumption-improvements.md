@@ -13,7 +13,7 @@ Use shared workflows with harness-specific adapters. Preserve each harness’s c
 ## Support policy
 
 - Target the current stable Codex CLI on macOS and Linux.
-- Give Claude and Codex equal support while preserving OpenCode functionality.
+- Give Claude and Codex equal support. OpenCode support was removed after this roadmap's initial baseline.
 - Treat desktop, IDE, and cloud differences as documented secondary considerations.
 - Prioritize the Git and review workflow chain.
 - Use deterministic CI checks and real-Codex evaluations for releases and selected changes.
@@ -27,6 +27,8 @@ Use shared workflows with harness-specific adapters. Preserve each harness’s c
 
 ## Milestone 2: Prove the design on the Git and review chain
 
+Current scope and evidence: [refreshed plan](2026-09-19-finish-codex-compatibility-milestone-2.md) and [local assessment](../../../tests/data/git-review-chain-evals/assessment.md). Tier B is a bounded local comparison, not live GitHub or interactive Claude parity proof. The current layout uses `sync-with-main:merge`, `sync-with-main:rebase`, `monitor-pr:monitor` and `monitor-pr:resolve-copilot-feedback`.
+
 - [ ] Apply the design to commit, linting, PR creation, branch review, review resolution, and Copilot-feedback handling.
 - [ ] Preserve options, existing authorization, parent continuation, and accurate failure reporting.
 - [ ] Verify explicit invocation, natural-language activation, partial installations, and package-relative helper resolution.
@@ -39,14 +41,14 @@ Use shared workflows with harness-specific adapters. Preserve each harness’s c
 - [ ] Correct Codex configuration examples and downstream scaffolding guidance.
 - [ ] Update monitoring and notification behavior against available capabilities.
 - [ ] Improve conditional reference loading and update plugin-authoring guidance.
-- [ ] Add regression coverage with each change and preserve OpenCode behavior.
+- [ ] Add regression coverage with each change and preserve Claude and Codex behavior.
 
 ## Milestone 4: Verify the complete distribution
 
 - [ ] Run package and configuration checks on macOS and Linux.
 - [ ] Cover multiple cached versions, symlinks, paths containing spaces, missing dependencies, and restricted destinations.
 - [ ] Verify hook trust and payload handling, prompt transport, activation, and workflow continuation.
-- [ ] Check Claude behavior and OpenCode functionality.
+- [ ] Check Claude and Codex behavior across the supported distribution.
 - [ ] Record evaluation versions, results, limitations, and any deliberately deferred work.
 - [ ] Complete repository validation, version checks, and generated-mirror checks.
 

@@ -52,6 +52,7 @@ Commands:
   reply-and-resolve <thread_id> [--body-file <path>]   Reply and resolve
 
 Options:
+  --watch-state <file>    Guard a monitor invocation before auth, API reads or mutations
   -h, --help    Show this help
 
 The reply and reply-and-resolve commands read the reply body from --body-file
@@ -846,7 +847,24 @@ function do_reply_and_resolve() {
   do_resolve "${thread_id}"
 }
 
+function require_watch_action() {
+  local state_file="${1}" action="${2}" helper_dir result
+  [[ -f "${state_file}" ]] || die "watch state is unavailable"
+  helper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+  result="$(bash "${helper_dir}/merge-flow" gate "${action}" < "${state_file}")" || die "invalid watch policy"
+  if ! jq -e '.allowed == true' > /dev/null <<< "${result}"; then
+    die "watch policy blocks ${action} ($(jq -r '.status' <<< "${result}"))"
+  fi
+}
+
 function main() {
+  local watch_state="" action
+  if [[ "${1:-}" == --watch-state ]]; then
+    [[ $# -ge 2 ]] || die "--watch-state needs a path"
+    watch_state="${2}"
+    [[ -n "${watch_state}" ]] || die "watch state path must not be empty"
+    shift 2
+  fi
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
     exit 0
@@ -855,6 +873,19 @@ function main() {
   local command="${1:-}"
   if [[ $# -gt 0 ]]; then
     shift
+  fi
+
+  if [[ -n "${watch_state}" ]]; then
+    case "${command}" in
+      fetch | fetch-reviews | audit | parse-reviews | parse-audit) action=read-review ;;
+      verify-fix) action=read-axis ;;
+      resolve | reply | reply-and-resolve) action=process-review ;;
+      *) die "unknown watch command: ${command}" ;;
+    esac
+    require_watch_action "${watch_state}" "${action}"
+    if [[ "${action}" == read-review ]]; then
+      require_watch_action "${watch_state}" classify-review
+    fi
   fi
 
   # Validate command before checking dependencies so that missing/unknown

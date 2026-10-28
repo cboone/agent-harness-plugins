@@ -87,3 +87,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - [Address Issue in Worktree](../workmux/README.md#workmuxstart-issue): Start working on an existing issue in an isolated worktree
 - [Suggest Next Issue](../suggest-next-issue/README.md): Get recommendations on which issue to tackle next
 - [All plugins](../../../../README.md)
+
+## Codex invocation
+
+Invoke `$use-git:use-git` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.
