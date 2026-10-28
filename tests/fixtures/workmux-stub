@@ -16,10 +16,16 @@ function main() {
   local branch=""
   local prompt_file=""
   local base_branch=""
+  local config_file="" agent=""
   local open_if_exists="false"
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
+      --config | --agent)
+        [[ $# -ge 2 ]] || die "${1} requires a value"
+        if [[ "${1}" == --config ]]; then config_file="${2}"; else agent="${2}"; fi
+        shift 2
+        ;;
       --open-if-exists)
         open_if_exists="true"
         shift
@@ -89,6 +95,8 @@ function main() {
   fi
 
   printf 'branch: %s\n' "${branch}"
+  if [[ -n "${config_file}" ]]; then printf 'config: %s\n' "${config_file}"; fi
+  if [[ -n "${agent}" ]]; then printf 'agent: %s\n' "${agent}"; fi
   printf 'open-if-exists: %s\n' "${open_if_exists}"
   if [[ "${STUB_CAPTURE_TERM:-}" == "1" ]]; then
     printf 'term: %s\n' "${TERM:-<unset>}"
