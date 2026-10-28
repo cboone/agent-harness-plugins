@@ -82,10 +82,14 @@ Where a project declares its resources under an "exclusive resources" heading in
 | `--fan-out`                 | With several issues, create one worktree per issue; `--each` and `--separate` are aliases |
 | `--no-issue`                | Force description handling, even if the argument looks like an issue number               |
 | `--base <branch>`           | Base the worktree on a specific branch instead of the repository's default                |
+| `--config <file>`           | Use a readable alternate workmux config for each destination                              |
+| `--agent <name>`            | Select the destination agent name or command                                              |
 | `--resource <name>`         | Claim a named exclusive resource, reporting the holder first if one holds it already      |
 | `--release-resource <name>` | Release a claim and stop, creating nothing                                                |
 | `--branch <name>`           | Use this exact branch name and skip generation                                            |
 | `--list-resources`          | Report every claim and stop, creating nothing                                             |
+
+Without either flag, the destination uses the global workmux agent, subject to repository config, regardless of the invoking agent. A live run with workmux `0.1.277` showed that `--config` replaces `.workmux.yaml` and still merges global config: an agent-only profile omitted repository hooks, copies and symlinks. A complete profile inside the repository applied its own hook and file operations; an identical external profile omitted files whose sources existed only in the repository. Include needed settings and verify file source paths and provisioned files, or use `--agent` to retain repository setup. These options apply to both skills, including combined and fan-out launches.
 
 ### Recommended Permissions
 
@@ -160,6 +164,8 @@ Provide an issue number, several issue numbers, or descriptive text to search fo
 | Option              | Description                                                                             |
 | ------------------- | --------------------------------------------------------------------------------------- |
 | `--no-approval`     | Pass `--no-approval` through, so the new session plans and executes without stopping    |
+| `--config <file>`   | Use a readable alternate workmux config for each destination                            |
+| `--agent <name>`    | Select the destination agent name or command                                            |
 | `--resource <name>` | Claim a named exclusive resource, reporting the holder first if one holds it already    |
 | `--fan-out`         | With several issues, open one worktree per issue; `--each` and `--separate` are aliases |
 

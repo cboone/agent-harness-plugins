@@ -4,7 +4,7 @@ description: >-
   Create a worktree, branch, and tmux window with workmux for an issue or task.
   Use for "create worktree" or "spin up a worktree", or to list or release
   resource claims; to plan an issue there, use workmux:start-issue.
-argument-hint: "<issue-number...|description> [--issue <n>...|--no-issue] [--branch <name>] [--base <branch>] [--resource <name>] [--fan-out|--each|--separate] | --list-resources | --release-resource <name>"
+argument-hint: "<issue-number...|description> [--issue <n>...|--no-issue] [--branch <name>] [--base <branch>] [--config <file>] [--agent <name>] [--resource <name>] [--fan-out|--each|--separate] | --list-resources | --release-resource <name>"
 ---
 
 # Create Worktree
@@ -21,10 +21,21 @@ The user may provide these options inline:
 - **--no-issue**: Force description handling, even if the argument looks like an issue number
 - **--branch `<name>`**: Use this exact branch name and skip generation, for a name that does not look like one
 - **--base `<branch>`**: Base the worktree on a specific branch instead of the repository's default branch
+- **--config `<file>`**: Pass a readable alternate workmux config to every launcher invocation that creates or opens a worktree
+- **--agent `<name>`**: Pass a nonempty destination agent name or command to every launcher invocation that creates or opens a worktree
 - **--resource `<name>`**: Claim a named exclusive resource for the new worktree, and report the holder first if one holds it already
 - **--release-resource `<name>`**: Release a claim and stop, creating nothing
 - **--list-resources**: Report every claim and stop, creating nothing
 - **--fan-out**: With several issue numbers, create one worktree, branch and tmux window per issue instead of one for all of them. `--each` and `--separate` are aliases with identical behavior; treat all three as the same fan-out mode before checking how it combines with other options
+
+Without either flag, the new window runs the global workmux agent, subject to repository configuration, regardless of the invoking agent. Forward supplied flags as separate quoted arguments to `launch-workmux` in every launch path, including combined and fan-out modes. Omit them from `--resolve-issue-branch` preflight calls. Both flags may be supplied.
+
+A live headless run with installed workmux `0.1.277` showed that `--config` replaces the repository's `.workmux.yaml` while merging global config. An agent-only profile omitted the repository's post-create hook, copied file and symlink; the global post-create hook ran instead. A profile with its own hook and file operations applied those entries. Include needed repository settings in the alternate config, or use `--agent` to select an agent while retaining repository hooks and file operations. In the same probe, an identical complete profile stored outside the repository ran its hook but omitted copies and symlinks whose sources existed only in the repository. Keep the profile in the repository, or verify its file source paths and the provisioned files when storing it elsewhere.
+
+```bash
+printf '%s\n' 'Task prompt' |
+  bash "SCRIPTS_DIR/launch-workmux" "BRANCH" --base "BASE_BRANCH" --config "PROFILE_FILE" --agent "AGENT"
+```
 
 ## Several Issues
 
