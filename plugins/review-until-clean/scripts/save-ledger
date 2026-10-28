@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Save one run under an exclusively reserved name, retaining the source.
+set -euo pipefail
+
+function failed() {
+  local reason="${1}" diagnostic="${2}" result="${3}"
+  printf 'save-ledger: %s\n' "${reason}" >&2
+  [[ -z "${diagnostic}" ]] || printf '%s\n' "${diagnostic}" >&2
+  exit "${result}"
+}
+
+function main() {
+  if [[ $# -ne 3 || -z "${3}" || "${3}" == */* || "${3}" == . || "${3}" == .. ]]; then
+    echo 'Usage: save-ledger <temporary-ledger> <destination-directory> <stem>' >&2
+    exit 2
+  fi
+  local source="${1}" directory="${2}" stem="${3}" dest diagnostic n=1
+  [[ -f "${source}" && -r "${source}" ]] \
+    || failed 'temporary ledger is missing or unreadable' '' 1
+  diagnostic="$(mkdir -p "${directory}" 2>&1)" \
+    || failed "cannot create ${directory}; temporary ledger retained at ${source}" "${diagnostic}" "$?"
+  dest="${directory}/${stem}.md"
+  until diagnostic="$(
+    (
+      set -C
+      : > "${dest}"
+    ) 2>&1
+  )"; do
+    [[ -e "${dest}" || -L "${dest}" ]] \
+      || failed "cannot reserve ${dest}; temporary ledger retained at ${source}" "${diagnostic}" 1
+    n=$((n + 1))
+    dest="${directory}/${stem}-${n}.md"
+  done
+  # Overwrite only this run's reserved file.
+  diagnostic="$(cat "${source}" 2>&1 > "${dest}")" \
+    || failed "cannot write ${dest}; temporary ledger retained at ${source}" "${diagnostic}" "$?"
+  printf '%s\n' "${dest}"
+}
+
+main "$@"

@@ -42,6 +42,12 @@ A reviewer whose output is prose has to be transcribed into findings, and that i
 
 Judge emptiness on **what the reviewer returned**, before any transcription. A crashed reviewer and a clean reviewer both transcribe to `"findings": []`, so a transcription can never distinguish them; only the raw reply and the exit status can. Transcribing a missing, empty, or error-only reply into an empty findings list is the one move that turns a failure into a clean result.
 
+### Executable completion gate
+
+Step 5 calls the bundled `check-completion` on the raw reply. It fails on a non-zero status, a missing or unreadable file, empty or whitespace-only content, and JSON that does not parse as exactly one value. Its passing status is only `Reviewer completion: passed`, never `clean`: schema, semantic completion, edit mode and snapshot checks still follow. `tests/scrut/review-completion.md` drives this gate with the committed stub backend and checks the terminal `failed` status without calling a real reviewer.
+
+Both helpers keep verdicts on stdout and failure reasons on stderr. A tool failure prints the helper's one-line reason before the tool's original stderr. `check-completion` prints only its failed status on stdout; `save-ledger` returns non-zero and prints no destination on failure. Handle expected filename collisions by choosing another name. The regression guard rejects discarded stderr in every helper and stub added by this change.
+
 ### Proving the rule works
 
 This is an absence claim, so it has a bad default answer: a loop that never checks will report clean forever. Check it the way `plant-defects` checks any instrument, by making the failure happen on purpose. Do it for every kind of reviewer, because each fails silently in its own way:
