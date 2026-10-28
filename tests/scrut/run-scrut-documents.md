@@ -26,8 +26,8 @@ Usage: run-scrut-documents [PATH]
 Run every scrut document under PATH, one scrut process per document and up
 to SCRUT_JOBS at a time, then print each document's output in order and
 name every failing document. PATH may be a directory or a single document,
-and defaults to tests/scrut/. When PATH holds only one document, it runs in
-the foreground with live output.
+and defaults to tests/scrut/. A single document buffers its output until
+scrut finishes.
 
 Options:
   --list      Print the documents that would run, one per line, and exit
@@ -151,6 +151,110 @@ Result: 1 document(s) with 1 testcase(s): 0 succeeded, 1 failed and 0 skipped
 [50]
 ```
 
+## Reject an unterminated fence and a document without testcases
+
+Both documents make scrut exit zero. Neither may count as passed.
+The directory form exercises the parallel worker, including its closing summary.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs && fence=$'\x60\x60\x60' \
+>   && printf '# Broken\n\n%sscrut\n$ echo a\na\n' "${fence}" > docs/broken.md \
+>   && printf '# Empty\n' > docs/empty.md \
+>   && SCRUT_JOBS=2 "${RUN_SCRUT_DOCUMENTS_BIN}" docs | grep -v '^finished '; exit "${PIPESTATUS[0]}"
+Running 2 scrut documents, 2 at a time
+
+==> docs/broken.md: FAILED, exit 1 (*s) (glob)
+Result: 0 document(s) with 0 testcase(s): 0 succeeded, 0 failed and 0 skipped
+run-scrut-documents: docs/broken.md: zero testcases (document may be unparseable)
+
+==> docs/empty.md: FAILED, exit 1 (*s) (glob)
+Result: 0 document(s) with 0 testcase(s): 0 succeeded, 0 failed and 0 skipped
+run-scrut-documents: docs/empty.md: zero testcases (document may be unparseable)
+
+2 of 2 scrut documents failed:
+  docs/broken.md
+  docs/empty.md
+[1]
+```
+
+## Reject zero testcases for a single document
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && touch empty.md \
+>   && "${RUN_SCRUT_DOCUMENTS_BIN}" empty.md 2>&1
+Result: 0 document(s) with 0 testcase(s): 0 succeeded, 0 failed and 0 skipped
+run-scrut-documents: empty.md: zero testcases (document may be unparseable)
+[1]
+```
+
+## Reject missing and unrecognized summaries and preserve stderr
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub docs \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
+>   && touch docs/missing.md docs/unrecognized.md \
+>   && "${RUN_SCRUT_DOCUMENTS_BIN}" docs 2>&1 | grep -v '^finished '; exit "${PIPESTATUS[0]}"
+Running 2 scrut documents, * at a time (glob)
+
+==> docs/missing.md: FAILED, exit 1 (*s) (glob)
+stub stderr
+run-scrut-documents: docs/missing.md: missing, unrecognized or inconsistent scrut summary
+
+==> docs/unrecognized.md: FAILED, exit 1 (*s) (glob)
+Result: surprise
+stub stderr
+run-scrut-documents: docs/unrecognized.md: missing, unrecognized or inconsistent scrut summary
+
+2 of 2 scrut documents failed:
+  docs/missing.md
+  docs/unrecognized.md
+[1]
+```
+
+## Reject missing summaries for a single document
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] && touch missing.md \
+>   && "${RUN_SCRUT_DOCUMENTS_BIN}" missing.md 2>&1
+stub stderr
+run-scrut-documents: missing.md: missing, unrecognized or inconsistent scrut summary
+[1]
+```
+
+## Reject duplicate or inconsistent summaries
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
+>   && for name in duplicate inconsistent unrecognized; do touch "${name}.md"; "${RUN_SCRUT_DOCUMENTS_BIN}" "${name}.md"; echo "exit: $?"; done
+Result: 1 document(s) with 1 testcase(s): 1 succeeded, 0 failed and 0 skipped
+Result: surprise
+run-scrut-documents: duplicate.md: missing, unrecognized or inconsistent scrut summary
+exit: 1
+Result: 1 document(s) with 2 testcase(s): 1 succeeded, 0 failed and 0 skipped
+run-scrut-documents: inconsistent.md: missing, unrecognized or inconsistent scrut summary
+exit: 1
+Result: surprise
+stub stderr
+run-scrut-documents: unrecognized.md: missing, unrecognized or inconsistent scrut summary
+exit: 1
+```
+
+## Preserve a failing tool's stderr and status
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] && touch error.md \
+>   && "${RUN_SCRUT_DOCUMENTS_BIN}" error.md 2>&1
+stub tool error
+[7]
+```
+
 ## Report documents that never ran when xargs stops early
 
 The stub stops the worker for `b-kill.md`, so xargs starts no further
@@ -189,6 +293,26 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs
 >   && sleep 0.5 && still_running=0 && while read -r pid; do kill -0 "${pid}" 2> /dev/null && still_running=$((still_running + 1)); done < pids; echo "still running: ${still_running}" \
 >   && ls -A tmp && echo "temp cleanup: yes"
 exit: 143
+still running: 0
+temp cleanup: yes
+```
+
+## Preserve diagnostics and stop single-document descendants on SIGTERM
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub tmp \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && touch slow.md \
+>   && export PATH="${dir}/stub:${PATH}" && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
+>   && { STUB_SCRUT_PIDS="${dir}/pids" STUB_SCRUT_CHILD_PIDS="${dir}/children" TMPDIR="${dir}/tmp" "${RUN_SCRUT_DOCUMENTS_BIN}" slow.md > output 2>&1 & } \
+>   && runner=$! \
+>   && for ((attempt = 0; attempt < 100; attempt++)); do [[ -s children ]] && break; sleep 0.1; done \
+>   && kill -TERM "${runner}"; status=0; wait "${runner}" || status=$?; echo "exit: ${status}" \
+>   && cat output && sleep 0.5 && still_running=0 \
+>   && for record in pids children; do read -r pid < "${record}"; if kill -0 "${pid}" 2> /dev/null; then still_running=$((still_running + 1)); kill -TERM "${pid}"; fi; done \
+>   && echo "still running: ${still_running}" && ls -A tmp && echo 'temp cleanup: yes'
+exit: 143
+run-scrut-documents: slow.md: interrupted (exit 143)
+stub diagnostics before waiting
 still running: 0
 temp cleanup: yes
 ```

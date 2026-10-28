@@ -22,7 +22,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
 	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT -u CODEX_OTHER_SKILL_RESERVE_TOKENS \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
-	-u STUB_SCRUT_PIDS \
+	-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \
 	-u CHAIN_CODEX_STUB_MODE \
 	-u EVAL_GH_AUTH -u EVAL_GH_LOG \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
@@ -30,10 +30,8 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME \
 	-u PUSH_NOTIFICATION_BACKEND -u PUSH_NOTIFICATION_CONFIG -u NTFY_SERVER -u NTFY_TOPIC -u NTFY_TOKEN
 
-# Every scrut test resolves the script or fixture it exercises through one of
-# these variables. Defining them once keeps the test and update targets from
-# drifting apart, and .github/workflows/ci.yml passes the same list to the
-# reusable scrut workflow.
+# Share script and fixture paths between the test and update targets.
+# CI registers the same paths in .github/workflows/ci.yml.
 SCRUT_ENV := \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
 	ATTENTION_LOG_BIN="$(CURDIR)/plugins/attention-log/scripts/attention-log" \
@@ -177,5 +175,6 @@ test-scrut:
 test-scrut-update:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
 	env $(SCRUT_UNSET) $(SCRUT_ENV) scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"
+	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut-documents "$(SCRUT_TEST_DIR)"
 
 test-all: lint validate test-scrut

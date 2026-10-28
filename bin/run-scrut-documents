@@ -17,9 +17,9 @@
 #   1 - At least one document failed, or the run was cut short
 #   2 - Usage error, a missing path, a listing error, no documents found, or
 #       scrut not installed
-# With exactly one document, scrut runs in this script's place and its own
-# exit status is returned unchanged. A run stopped by SIGINT, SIGTERM or SIGHUP
-# exits 128 plus the signal number.
+# With exactly one document, a nonzero scrut exit status is returned unchanged.
+# Zero exits also require a recognized summary with at least one testcase.
+# A run stopped by SIGINT, SIGTERM or SIGHUP exits 128 plus the signal number.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -36,6 +36,7 @@ readonly E_USAGE=2
 LOG_DIR=""
 WORKER_PGID=""
 PROGRESS_PID=""
+SINGLE_DOCUMENT=""
 
 function usage() {
   printf '%s\n' \
@@ -45,8 +46,8 @@ function usage() {
     "Run every scrut document under PATH, one scrut process per document and up" \
     "to SCRUT_JOBS at a time, then print each document's output in order and" \
     "name every failing document. PATH may be a directory or a single document," \
-    "and defaults to ${DEFAULT_PATH}. When PATH holds only one document, it runs in" \
-    "the foreground with live output." \
+    "and defaults to ${DEFAULT_PATH}. A single document buffers its output until" \
+    "scrut finishes." \
     "" \
     "Options:" \
     "  --list      Print the documents that would run, one per line, and exit" \
@@ -74,13 +75,25 @@ function cleanup() {
 # CONT wakes a stopped group so it acts on the TERM.
 function stop_workers() {
   local exit_status="$1"
-  local pgid="${WORKER_PGID:-${!:-}}"
+  local pgid="${WORKER_PGID:-}"
+  if [[ -z "${pgid}" ]]; then
+    pgid="${!:-}"
+  fi
   if [[ -n "${pgid}" ]]; then
     kill -TERM -- "-${pgid}" 2> /dev/null || true
     kill -CONT -- "-${pgid}" 2> /dev/null || true
   fi
   if [[ -n "${PROGRESS_PID}" ]]; then
     kill -TERM "${PROGRESS_PID}" 2> /dev/null || true
+  fi
+  if [[ -n "${SINGLE_DOCUMENT}" ]]; then
+    if [[ -n "${WORKER_PGID}" ]]; then
+      wait "${WORKER_PGID}" || true
+    fi
+    printf 'run-scrut-documents: %s: interrupted (exit %s)\n' "${SINGLE_DOCUMENT}" "${exit_status}" >&2
+    if [[ -f "${LOG_DIR}/single.log" ]]; then
+      cat "${LOG_DIR}/single.log" >&2 || true
+    fi
   fi
   exit "${exit_status}"
 }
@@ -109,6 +122,26 @@ function default_jobs() {
   fi
 }
 
+function check_summary() {
+  local document="$1"
+  local log="$2"
+  awk -v document="${document}" '
+    /^Result:/ { summaries++ }
+    /^Result: [0-9]+ document\(s\) with [0-9]+ testcase\(s\): [0-9]+ succeeded, [0-9]+ failed and [0-9]+ skipped$/ {
+      recognized++
+      documents = $2; cases = $5; succeeded = $7; failed = $9; skipped = $12
+      valid = (documents == 1 && cases > 0 && failed == 0 && cases == succeeded + failed + skipped)
+      zero = (cases == 0)
+    }
+    END {
+      if (summaries == 1 && recognized == 1 && valid) exit 0
+      reason = (summaries == 1 && recognized == 1 && zero) ? "zero testcases (document may be unparseable)" : "missing, unrecognized or inconsistent scrut summary"
+      printf "run-scrut-documents: %s: %s\n", document, reason
+      exit 1
+    }
+  ' "${log}"
+}
+
 # Records scrut's status in a file and returns 0: xargs keeps only one status
 # for the whole run, and stops starting documents after an exit of 255.
 function run_document() {
@@ -116,9 +149,14 @@ function run_document() {
   local document="$2"
   local log="${RUN_SCRUT_LOG_DIR}/${index}.log"
   local status=0
+  local reason
   local started="${SECONDS}"
 
   scrut --shell bash test "${document}" > "${log}" 2>&1 < /dev/null || status=$?
+  if ((status == 0)) && ! reason="$(check_summary "${document}" "${log}")"; then
+    printf '%s\n' "${reason}" >> "${log}"
+    status=1
+  fi
 
   local elapsed=$((SECONDS - started))
   printf '%s\n' "${status}" > "${RUN_SCRUT_LOG_DIR}/${index}.status"
@@ -139,7 +177,7 @@ function run_parallel() {
 
   LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/run-scrut-documents.XXXXXX")"
   export RUN_SCRUT_LOG_DIR="${LOG_DIR}"
-  export -f run_document
+  export -f run_document check_summary
 
   local i
   for ((i = 0; i < count; i++)); do
@@ -271,15 +309,26 @@ function main() {
     exit "${E_USAGE}"
   fi
 
-  # One document runs in the foreground, keeping scrut's live output and status.
-  if ((${#documents[@]} == 1)); then
-    exec scrut --shell bash test "${documents[0]}"
-  fi
-
   trap cleanup EXIT
   trap 'stop_workers 129' HUP
   trap 'stop_workers 130' INT
   trap 'stop_workers 143' TERM
+  if ((${#documents[@]} == 1)); then
+    LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/run-scrut-documents.XXXXXX")"
+    local status=0
+    SINGLE_DOCUMENT="${documents[0]}"
+    set -m
+    scrut --shell bash test "${documents[0]}" > "${LOG_DIR}/single.log" 2>&1 &
+    WORKER_PGID=$!
+    set +m
+    wait "${WORKER_PGID}" || status=$?
+    WORKER_PGID=""
+    cat "${LOG_DIR}/single.log"
+    if ((status == 0)); then
+      check_summary "${documents[0]}" "${LOG_DIR}/single.log" || status=1
+    fi
+    return "${status}"
+  fi
   run_parallel "${jobs}" "${documents[@]}"
 }
 
