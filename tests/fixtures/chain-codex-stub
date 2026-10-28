@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# chain-codex-stub -- Exercise capture handling without invoking a model.
+set -euo pipefail
+
+function main() {
+  local reply=""
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --output-last-message)
+        reply="${2}"
+        shift 2
+        ;;
+      *) shift ;;
+    esac
+  done
+  [[ -n "${reply}" ]] || return 2
+  if [[ "${CHAIN_CODEX_STUB_MODE:-ok}" == ok ]]; then
+    printf '%s\n' 'Local stub reply' > "${reply}"
+  fi
+  printf '%s\n' '{"type":"turn.completed"}'
+}
+
+main "$@"

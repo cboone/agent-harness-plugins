@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# git-review-gh-stub -- Local-only responses for the Git chain evaluation.
+set -euo pipefail
+
+function main() {
+  printf '%s\n' "$*" >> "${EVAL_GH_LOG:?}"
+  case "${1:-} ${2:-}" in
+    'auth status')
+      [[ "${EVAL_GH_AUTH:-yes}" == yes ]]
+      ;;
+    'repo view')
+      printf '%s\n' '{"isArchived":false,"isFork":false,"parent":null,"defaultBranchRef":{"name":"main"},"visibility":"PRIVATE","nameWithOwner":"fixture/sample"}'
+      ;;
+    'pr view')
+      printf '%s\n' '{"number":1,"url":"https://fixture.invalid/fixture/sample/pull/1","author":{"login":"fixture"},"headRefName":"feature/sample","headRefOid":"sample","baseRefName":"main","isDraft":false,"state":"OPEN","mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","reviewDecision":"","statusCheckRollup":[],"mergeCommit":null,"body":"Local evaluation"}'
+      ;;
+    'api graphql')
+      if [[ "$*" == *mutation* ]]; then
+        printf '%s\n' 'fixture gh: mutation refused' >&2
+        return 75
+      fi
+      printf '%s\n' '[{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[{"id":"FIXTURE_THREAD","path":"sample.txt","line":1,"isResolved":false,"isOutdated":false,"comments":{"nodes":[{"author":{"login":"copilot"},"body":"[important] Replace the staged text with corrected text in sample.txt.","databaseId":1,"url":"https://fixture.invalid/discussion_r1"}]}}]}}}}}]'
+      ;;
+    api\ *) printf '%s\n' '[]' ;;
+    *)
+      printf '%s\n' 'fixture gh: unsupported operation; no network or write performed' >&2
+      return 75
+      ;;
+  esac
+}
+
+main "$@"

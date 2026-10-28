@@ -376,3 +376,16 @@ $ repo="${work}/panes/repo" && mkdir -p "${repo}" && git_quiet -C "${repo}" init
 >   && (cd "${repo}" && PATH="${work}/bin:${PATH}" STUB_TMUX_PANES="${panes}" "${MERGE_FLOW_BIN}" panes) | jq -c --arg root "${work}/panes/" '[.[] | [.pane, (.worktree | ltrimstr($root))]]'
 [["%1","repo"],["%2","repo"],["%3","repo__worktrees/topic"]]
 ```
+
+## Sync: a permissive watch fast-forwards the base branch
+
+The guarded command runs against the local repository fixture, including its real fetch and fast-forward.
+
+```scrut
+$ dir="$(clone)" && state="$(mktemp "${work}/policy.XXXXXX")" \
+>   && printf '%s\n' '{"restrictions":{"noFix":false,"copilotPaused":false}}' | "${MERGE_FLOW_BIN}" prepare > "${state}" \
+>   && (cd "${dir}" && "${MERGE_FLOW_BIN}" --watch-state "${state}" sync acme widgets main "${merge_sha}") | jq -c '{synced,reason}' \
+>   && test "$(git -C "${dir}" rev-parse main)" = "${merge_sha}" && echo moved
+{"synced":true,"reason":null}
+moved
+```

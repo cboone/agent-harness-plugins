@@ -124,6 +124,8 @@ jobs:
         COPILOT_REPLY_CASE_BIN=./tests/fixtures/copilot-reply-case
         COPILOT_GH_DATA_DIR=./tests/data/copilot-gh
         CROSS_REFERENCE_FIXTURE_BIN=./tests/fixtures/cross-reference-fixture
+        CHAIN_HELPER_FIXTURE_BIN=./tests/fixtures/chain-helper-fixture
+        CHAIN_CODEX_STUB_BIN=./tests/fixtures/chain-codex-stub
         CATALOG_RELEASE_FIXTURE_BIN=./tests/fixtures/catalog-release-fixture
         VALIDATE_PLUGIN_FIXTURE_BIN=./tests/fixtures/validate-plugin-fixture
         LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts

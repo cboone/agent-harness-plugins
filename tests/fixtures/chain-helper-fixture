@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# chain-helper-fixture -- Exercise the shipped package-relative recipe.
+set -euo pipefail
+
+function main() {
+  local source="${1:?source SKILL.md required}" root recipe skill_file helper=""
+  root="$(mktemp -d "${TMPDIR:-/tmp}/chain-helper.XXXXXX")"
+  mkdir -p "${root}/cache with spaces/monitor-pr/current/skills/monitor" \
+    "${root}/cache with spaces/monitor-pr/current/scripts" \
+    "${root}/cache with spaces/monitor-pr/old/scripts" "${root}/links"
+  cp "${source}" "${root}/cache with spaces/monitor-pr/current/skills/monitor/SKILL.md"
+  printf '#!/bin/sh\nprintf "%%s\\n" current\n' > "${root}/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads"
+  printf '#!/bin/sh\nprintf "%%s\\n" old\n' > "${root}/cache with spaces/monitor-pr/old/scripts/resolve-copilot-threads"
+  chmod +x "${root}/cache with spaces/monitor-pr/"{current,old}/scripts/resolve-copilot-threads
+  cp "${root}/cache with spaces/monitor-pr/current/scripts/resolve-copilot-threads" "${root}/cache with spaces/monitor-pr/current/scripts/merge-flow"
+  ln -s "${root}/cache with spaces/monitor-pr/current/skills/monitor" "${root}/links/skill"
+  recipe="$(awk '/# package-relative-helper/ { reading=1; next } reading && /^```/ { exit } reading { print }' "${source}")"
+  [[ -n "${recipe}" ]] || {
+    echo 'missing helper recipe' >&2
+    return 1
+  }
+  # shellcheck disable=SC2034 # Consumed by the extracted recipe through eval.
+  skill_file="${root}/links/skill/SKILL.md"
+  # Run the recipe extracted from the source under test.
+  eval "${recipe}"
+  "${helper}"
+}
+
+main "$@"
