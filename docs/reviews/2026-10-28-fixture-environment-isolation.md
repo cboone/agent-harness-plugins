@@ -640,3 +640,31 @@ planting the original three-backtick-only parser accepts it, which fails the
 existing expected-exit assertion. Restoring the guard restores rejection.
 Evidence: the directory recorded in `fence-plant.path` under the validation
 root. This keeps the fence regression meaningful after formatting.
+
+## Checked runner integration
+
+The corrected hostile full run passed all 42 documents and 1657 cases, with
+zero failures or skips. Its caller and config checksums were unchanged:
+`full-caller-integration.SgKCjS/` and `test-all-integration-final.log` under the
+validation root. The superseded run containing the known stale-name failure
+was stopped by its recorded runner PID; its checksum comparison also passed.
+
+During validation, main advanced again to `5a5a4cf5` through the Scrut-summary
+fix. A merge preview confirmed conflicts, making another signed main merge
+necessary for the ready PR. Commit `ecbc3e02` keeps the shared Make environment
+registry and reset wrapper, and retains main's summary checks, checked
+single-document worker and post-update validation. No pushed history changed.
+The guard passed, all 25 runner cases passed and mirror generation was clean.
+
+The renewed disposable-clone baseline scan against `5a5a4cf5` again reported
+zero findings. The runner's inherited parser span is now 87:14–87:16; its entire
+`stop_workers` function at 83–106 is byte-identical to baseline 76–99. Validator
+spans remain 749:3–749:84, 762:3–763:4, 782:38–782:39, 782:79–782:102 and
+782:103–782:104; its entire inventory-budget section 513–795 remains identical
+to baseline 510–792. No changed or added line intersects any raw or expanded
+span. Evidence: `2026-10-28-fixture-environment-semgrep-integration2-spans.json`
+in this directory; raw scan output and the checker are under the validation
+root with the `integration2` suffix. The owned scan clone was removed.
+
+A fresh hostile full suite runs against this merged tree. Review counts remain
+unchanged; both completed loops ended clean at Important. Copilot stays paused.
