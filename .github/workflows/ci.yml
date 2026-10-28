@@ -157,6 +157,8 @@ jobs:
         PUSH_NOTIFICATION_BIN=./plugins/push-notification/scripts/push-notification
         NTFY_CURL_STUB_BIN=./tests/fixtures/ntfy-curl-stub
         RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads
+        MONITOR_SKILL_FILE=./plugins/monitor-pr/skills/monitor/SKILL.md
+        WATCH_CHANGES_STUB_BIN=./tests/fixtures/watch-changes-stub
         MERGE_FLOW_BIN=./plugins/monitor-pr/scripts/merge-flow
         MERGE_FLOW_DATA_DIR=./tests/data/merge-flow
         REVIEW_COMPLETION_BIN=./plugins/review-until-clean/scripts/check-completion

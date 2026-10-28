@@ -75,15 +75,15 @@ Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops r
 
 #### Pacing and harness support
 
-Intervals adapt to the phase: shorter while checks are actively running, longer while waiting on Copilot, longest when nothing is moving. The only budget on the repair loop is Copilot rounds. The repair loop ends at readiness, an escalation, or an exhausted round budget; after readiness, the merge watch ends at the merge, a close, an escalation, or after 24 hours with the PR still open. You can interrupt either at any point.
+Intervals adapt to the phase: shorter while checks are actively running, longer while waiting on Copilot, longest when nothing is moving. Copilot rounds bound the repair loop; each background change watch also has a 24-hour lifetime. The repair loop ends at readiness, an escalation, an exhausted round budget, or a background-watch expiry; after readiness, the merge watch ends at the merge, a close, an escalation, or after 24 hours with the PR still open. You can interrupt either at any point.
 
-On Claude Code the skill paces itself with the harness scheduler, which returns control between ticks and keeps the transcript small. `/loop /monitor-pr:monitor` is the recommended invocation there. If scheduling is unavailable or rejected, it uses the bounded foreground loop.
+On Claude Code, run `/monitor-pr:monitor` once. A background `merge-flow watch-changes` command polls internally and resumes the conversation when checks complete or fail, a Copilot review arrives at the head, the head changes, the PR merges or closes, or known mergeability changes. Unchanged polls stay silent. The task ID and baseline are retained in watch state. Existing quiet-tick decisions use a bounded poll count; failed reads and the 24-hour lifetime are bounded by the same loop as the merge watch. When background completion is unavailable, `ScheduleWakeup`, conversation-resume tasks and bounded foreground polling remain fallbacks.
 
 On Codex surfaces that offer scheduled tasks, the skill schedules the next tick in the current conversation, cancels that task once the watch reaches a terminal state or needs a decision, and at readiness replaces it with a task that watches for the merge. This is the preferred Codex path because every scheduled run is an actual continuation, not a request for the agent to remember to continue after replying.
 
 Codex CLI does not expose that scheduler. It runs a foreground poll loop instead: after each wait, the same active turn takes a new snapshot and dispatches it. This loop also applies when task creation fails on a scheduled surface. The default `--ticks 3` ends each foreground invocation with a resumable checkpoint, never a readiness claim. Run the reported command in the same conversation to restore options, counters, and action guards; to resume elsewhere, paste the complete checkpoint before the command and verify the repository and branch. Only the per-invocation tick count resets. See [Checkpoint and Resume](skills/monitor/references/checkpoint.md). Use `--ticks unlimited` only when keeping the foreground session active is appropriate.
 
-Quiet ticks print a single line and are collapsed by the harness where it supports that. Only a real state change prints the full table.
+On fallback paths, quiet ticks print a single line and are collapsed by the harness where it supports that. Only a real state change prints the full table.
 
 ### Usage
 
