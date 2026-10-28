@@ -34,9 +34,14 @@ $ function setup_claims() {
 >   second=$!
 >   wait "${first}" || first_status=$?
 >   wait "${second}" || second_status=$?
->   if [[ "${first_status}" -ne 0 || "${second_status}" -ne 0 ]]; then
+>   if [[ "${first_status}" -ne 0 || "${second_status}" -ne 0 ]] || ! jq -e '[.claims[].resource] | sort == ["logic", "simulator"]' "${claim_file}" > /dev/null; then
 >     printf 'claim writer exit statuses: logic=%s simulator=%s\n' "${first_status}" "${second_status}"
->     cat "${stub_dir}/first.log" "${stub_dir}/second.log"
+>     echo 'logic writer output:'
+>     cat "${stub_dir}/first.log"
+>     echo 'simulator writer output:'
+>     cat "${stub_dir}/second.log"
+>     echo 'final claim file:'
+>     cat "${claim_file}"
 >     return 1
 >   fi
 > }

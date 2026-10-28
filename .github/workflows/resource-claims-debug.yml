@@ -1,0 +1,58 @@
+name: Resource claims diagnostics
+
+on:
+  push:
+    branches: [fix/656-resource-claims-cause]
+
+permissions:
+  contents: read
+
+jobs:
+  stress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Stress unchanged writer with full traces
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          export REPO_ROOT="${PWD}"
+          export TMPDIR=/dev/shm
+          mkdir "${root}/bin"
+          cp tests/fixtures/git-worktree-stub "${root}/bin/git"
+          export PATH="${root}/bin:${PATH}"
+          export STUB_GIT_WORKTREE_PORCELAIN=$'worktree /repo/wt-live\nHEAD aaa\nbranch refs/heads/main\n\n'
+          lost=0
+          errors=0
+          for ((pair=0; pair<100; pair++)); do
+            export WORKTREE_RESOURCES_FILE="${root}/${pair}/.claude/claims.json"
+            first_status=0
+            second_status=0
+            bash -x plugins/workmux/scripts/manage-resource-claims claim logic \
+              --worktree /repo/wt-live --branch feature/a > "${root}/first.log" 2>&1 &
+            first=$!
+            bash -x plugins/workmux/scripts/manage-resource-claims claim simulator \
+              --worktree /repo/wt-live --branch feature/b > "${root}/second.log" 2>&1 &
+            second=$!
+            wait "${first}" || first_status=$?
+            wait "${second}" || second_status=$?
+            if ((first_status != 0 || second_status != 0)); then
+              errors=$((errors + 1))
+            fi
+            if ! jq -e '[.claims[].resource] | sort == ["logic", "simulator"]' \
+              "${WORKTREE_RESOURCES_FILE}" > /dev/null; then
+              lost=$((lost + 1))
+              printf 'pair=%s logic=%s simulator=%s\n' "${pair}" "${first_status}" "${second_status}"
+              cat "${root}/first.log" "${root}/second.log" "${WORKTREE_RESOURCES_FILE}"
+            fi
+          done
+          printf 'pairs=100 lost=%s writer_error_pairs=%s\n' "${lost}" "${errors}"
+          ((lost == 0 && errors == 0))
