@@ -668,3 +668,24 @@ root with the `integration2` suffix. The owned scan clone was removed.
 
 A fresh hostile full suite runs against this merged tree. Review counts remain
 unchanged; both completed loops ended clean at Important. Copilot stays paused.
+
+## Final merged validation
+
+The hostile full run against the checked-runner merge passed all 42 documents
+and 1664 cases, with zero failures and skips. Both `make test-all` and the
+caller/config checksum comparison returned zero. Caller evidence is
+`/tmp/540-validation.k7vCzE/full-caller-integration2.nc7vKI/`. Full output:
+`/tmp/540-validation.k7vCzE/test-all-integration2.log`; the fresh caller path is
+recorded in `full-caller-integration2.path` in that validation directory.
+
+The nested-fence parser plant was also run through a real Scrut assertion:
+control exit 0, original-parser plant exit 50, restored control exit 0. Logs:
+`scrut-control.log`, `scrut-plant.log`, `scrut-restored.log` in the directory
+recorded by `fence-plant.path`.
+
+Incoming guidance now consistently describes the shared Make environment
+registry, including plugin-development and review instructions. These are
+repository guidance changes, not plugin content changes. Final version checks
+against `5a5a4cf5` are all clear: 60 manifests, two matching dual manifests,
+complete catalog coverage and no required bump. The largest repository
+instruction chain is 10067 bytes, below 32768. Mirror generation is clean.
