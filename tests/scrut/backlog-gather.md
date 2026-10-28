@@ -16,6 +16,10 @@ at fixed dates, a branch that was never pushed, and a worktree. `backlog` takes
 settings (`NAME=value`) first, then the command. The gather time is fixed at
 2026-10-15T16:00:00Z and the host at `devbox`.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ function backlog() {
 >   local -a settings=()

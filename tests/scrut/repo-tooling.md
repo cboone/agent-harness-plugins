@@ -11,6 +11,10 @@ publication shell steps against isolated Git history with custom local source
 directories. It also interprets the check and publication step conditions, so an
 incorrect condition cannot hide a missing recovery attempt.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ "${CATALOG_RELEASE_FIXTURE_BIN}" first-release
 changed=true target=current

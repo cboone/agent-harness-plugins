@@ -5,6 +5,10 @@
 The example templates keep each status's marker, verdict, full head and read-review
 ids, with the table inside details.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ````scrut
 $ awk '
 > /^### 9\. Post PR Summary Comment$/ {section=1}

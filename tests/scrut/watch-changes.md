@@ -6,6 +6,10 @@ Each sequence row holds PR metadata and paginated review responses. No command
 can fall through to real GitHub. The sleep fixture records the chosen cadence.
 
 ```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
+```scrut {fail_fast: true}
 $ test "$("${WATCH_CHANGES_STUB_BIN}" --stub-check)" = watch-changes-offline-stub \
 >   && work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && mkdir "${work}/bin" && ln -s "${WATCH_CHANGES_STUB_BIN}" "${work}/bin/gh" \

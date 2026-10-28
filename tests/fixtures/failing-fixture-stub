@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Emit a known child failure to test fixture diagnostics.
+set -euo pipefail
+
+echo 'deliberate fixture failure' >&2
+exit 7

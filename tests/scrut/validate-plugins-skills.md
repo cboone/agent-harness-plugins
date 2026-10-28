@@ -15,6 +15,10 @@ routing descriptions, as `bin/build-codex-marketplace` once did for every
 skill, would pass it. Rule 16b compares each generated `SKILL.md` with its
 canonical source directly.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" rewriting-generator 2>&1
 ::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' differs from its canonical source 'plugins/release/skills/release/SKILL.md'; the generator copies SKILL.md files unchanged unless disable-model-invocation is translated

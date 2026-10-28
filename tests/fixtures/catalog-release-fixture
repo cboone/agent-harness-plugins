@@ -2,6 +2,12 @@
 # Exercises release workflow shell steps against isolated sample Git history.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+
 function extract_step() {
   local name="${1}" field="${2}" workflow="${3}"
   awk -v name="${name}" -v field="${field}" '
@@ -167,7 +173,7 @@ function main() {
       tag_exists="$(sed -n 's/^tag_exists=//p' "${GITHUB_OUTPUT}")"
       condition="$(extract_step 'Create and push annotated tag' if "${workflow}")"
       if step_enabled "${condition}" "${changed}" "${tag_exists}"; then
-        TAG="${tag}" bash -e -o pipefail "${root}/tag"
+        capture_child - --stdout - -- env TAG="${tag}" bash -e -o pipefail "${root}/tag"
       fi
       condition="$(extract_step 'Create GitHub Release' if "${workflow}")"
       if step_enabled "${condition}" "${changed}" "${release_exists}"; then

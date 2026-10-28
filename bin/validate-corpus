@@ -25,6 +25,12 @@
 #   2 - Usage error, a missing tool, or a corpus that is not a git repository
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/capture-child.bash"
+
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
@@ -215,10 +221,8 @@ function require_tools() {
   command -v yq > /dev/null 2>&1 \
     || die "yq is required: https://github.com/mikefarah/yq" "${E_USAGE}"
 
-  # python-yq takes jq's flags and would misread -o=json. Checking the banner
-  # rather than the behavior keeps the failure legible instead of surfacing as a
-  # parse error on the first case.
-  yq_version="$(yq --version 2>&1 || true)"
+  # Check the banner to reject python-yq, which misreads -o=json.
+  capture_child yq_version -- yq --version || true
   case "${yq_version}" in
     *mikefarah*) ;;
     *) die "yq must be mikefarah yq v4, not ${yq_version}" "${E_USAGE}" ;;
@@ -430,7 +434,7 @@ function check_case() {
   local case_id="${2}"
   local case_dir="${corpus}/cases/${case_id}"
   local json_path="${WORK_DIR}/${case_id}.json"
-  local base_sha head_sha problems yq_error structural_ok="yes"
+  local base_sha head_sha problems structural_ok="yes"
 
   if [[ ! "${case_id}" =~ ${CASE_ID_PATTERN} ]]; then
     error "${case_id}: case ID is not of the form NNN-repo-slug"
@@ -454,21 +458,19 @@ function check_case() {
     structural_ok="no"
   fi
 
-  # yq's own message names the line, and it is the only thing that does, so it
-  # is carried into the finding. Reporting every failure as invalid YAML would
-  # also blame the file for an unwritable scratch directory.
-  if ! yq_error="$(yq -o=json '.' "${case_dir}/defects.yaml" 2>&1 > "${json_path}")"; then
-    error "${case_id}: could not read defects.yaml: ${yq_error//$'\n'/ }"
+  # Keep diagnostics that identify parse locations or an unwritable scratch directory.
+  if ! capture_child - --stdout "${json_path}" --error-prefix "::error::${case_id}: could not read defects.yaml: " -- yq -o=json '.' "${case_dir}/defects.yaml"; then
+    errors=$((errors + 1))
     return 0
   fi
 
-  if ! problems="$(jq -r \
+  if ! capture_child problems --error-prefix "::error::${case_id}: the schema filter could not be applied: " -- jq -r \
     --arg case_id "${case_id}" \
     --argjson sources "${SOURCES_JSON}" \
     --argjson classes "${CLASSES_JSON}" \
     --argjson severities "${SEVERITIES_JSON}" \
-    "${STRUCTURE_FILTER}" < "${json_path}" 2>&1)"; then
-    error "${case_id}: the schema filter could not be applied: ${problems//$'\n'/ }"
+    "${STRUCTURE_FILTER}" < "${json_path}"; then
+    errors=$((errors + 1))
     return 0
   fi
 

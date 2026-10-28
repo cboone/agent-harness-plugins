@@ -2,6 +2,10 @@
 
 ## An absent symbolic target reports not found
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && git init -q --template= . && git checkout -qb feature \

@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+# Check Git environment resets in tests and repository tooling.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
+
+function main() {
+  local root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}" file scripts documents workflows first_line
+  local -a files=(Makefile)
+  cd "${root}"
+  scripts="$(find bin tests/fixtures plugins -type f ! -name '*.md' ! -name '*.json' ! -name '*.yaml' ! -name '*.yml' | sort)"
+  [[ -n "${scripts}" ]] || {
+    echo 'No shell scripts found' >&2
+    return 1
+  }
+  while IFS= read -r file; do
+    [[ -r "${file}" ]] || {
+      echo "Cannot read ${file}" >&2
+      return 1
+    }
+    first_line=''
+    IFS= read -r first_line < "${file}" || true
+    case "${file}:${first_line}" in
+      *.bash:* | *.sh:* | *.py:* | *.pl:* | *.rb:* | *:'#!'*) files+=("${file}") ;;
+      *) ;;
+    esac
+  done <<< "${scripts}"
+  [[ ${#files[@]} -gt 1 ]] || {
+    echo 'No shell scripts found' >&2
+    return 1
+  }
+  documents="$(bin/run-scrut-documents --list)"
+  [[ -n "${documents}" ]] || {
+    echo 'No Scrut documents found' >&2
+    return 1
+  }
+  while IFS= read -r file; do
+    files+=("${file}")
+  done <<< "${documents}"
+  workflows="$(find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)"
+  while IFS= read -r file; do
+    files+=("${file}")
+  done <<< "${workflows}"
+
+  # Trace direct and indirect Git consumers; each caller must reset its own environment.
+  awk '
+    function git_call(text) {
+      return text ~ /(^|[^[:alnum:]_-])git([^[:alnum:]_-]|$)/
+    }
+    function references(text, target) {
+      if (target ~ /[.]md$/) return 0
+      return text ~ ("(^|[^[:alnum:]_-])" name[target] "([[:space:]\"\047;|&)]|$)") \
+        || (alias[target] != "" && index(text, alias[target]))
+    }
+    function raw_scrut(text) {
+      return text ~ /(^|[;|&({])[\t ]*(exec[\t ]+|env[\t ]+[^;|&]*[\t ])?([^\t ;|&]*\/)?scrut[\t ]+/
+    }
+    FILENAME == "Makefile" {
+      if ($0 ~ /^SCRUT_ENV[\t ]*[:+?]?=/) fixture_environment = 1
+      fixture_line = $0
+      sub(/^SCRUT_ENV[\t ]*[:+?]?=/, "", fixture_line)
+      if (fixture_environment && fixture_line ~ /(^|[\t ])GIT_[A-Z0-9_]*=/) invalid_namespace[FILENAME] = 1
+      if (fixture_environment && $0 !~ /\\$/) fixture_environment = 0
+      if ($0 ~ /^[[:alnum:]_-]+:/) {
+        goal = $0
+        sub(/:.*/, "", goal)
+      }
+      if (goal == "test-scrut" && $0 ~ /^\tenv .*bin\/run-scrut-documents /) make_test = 1
+      if (goal == "test-scrut-update" && $0 ~ /^\tenv .*bin\/run-scrut --shell bash update /) make_update = 1
+      if ($0 ~ /^test-all:.*test-scrut/) make_all = 1
+      if (raw_scrut($0)) invalid_scrut[FILENAME] = 1
+      if ($0 ~ /^[\t ]*[A-Z_]+="\$\(CURDIR\)\//) {
+        variable = $0
+        sub(/^[\t ]*/, "", variable)
+        sub(/=.*/, "", variable)
+        path = $0
+        sub(/^[^=]*="\$\(CURDIR\)\//, "", path)
+        sub(/".*/, "", path)
+        alias[path] = variable
+      }
+      next
+    }
+    FILENAME ~ /^.github\/workflows\// {
+      if (FILENAME == ".github/workflows/ci.yml") {
+        if ($0 ~ /^  test-scrut:/) ci_job = 1
+        else if ($0 ~ /^  [[:alnum:]_-]+:/) ci_job = 0
+        if (ci_job && $0 ~ /^[\t ]*run: make test-scrut SCRUT_TEST_DIR=/) ci_wrapper = 1
+      }
+      text = $0
+      sub(/^[\t ]*run:[\t ]*/, "", text)
+      if (text !~ /^[\t ]*#/ && raw_scrut(text)) invalid_scrut[FILENAME] = 1
+      if (text ~ /^[\t ]*uses: .*run-scrut-tests[.]ya?ml/) invalid_scrut[FILENAME] = 1
+      next
+    }
+    FNR == 1 {
+      paths[FILENAME] = 1
+      name[FILENAME] = FILENAME
+      sub(/^.*\//, "", name[FILENAME])
+      document = FILENAME ~ /[.](md|markdown|scrut)$/ ? 1 : FILENAME ~ /[.](t|cram)$/ ? 2 : 0
+      block = 0
+    }
+    document == 1 && /^```+scrut/ {
+      block = 1
+      fence = $0
+      sub(/[^`].*$/, "", fence)
+      fence_length = length(fence)
+      next
+    }
+    document == 1 && /^```/ {
+      fence = $0
+      sub(/[^`].*$/, "", fence)
+      if (length(fence) >= fence_length) block = 0
+      next
+    }
+    document && ((document == 1 && !block) || $0 !~ /^[\t ]*[$>] /) { next }
+    {
+      text = $0
+      if (document) sub(/^[\t ]*[$>] /, "", text)
+      if (text ~ /^[\t ]*#/ || text ~ /^[\t ]*$/) next
+      if (FILENAME ~ /^(tests\/fixtures\/|bin\/validate-|bin\/lib\/)/ && FILENAME != "bin/lib/capture-child.bash") {
+        capture_text = text
+        gsub(/>[\t ]*\/dev\/null[\t ]+2>&1/, "", capture_text)
+        gsub(/2>>?[\t ]*\/dev\/null/, "", capture_text)
+        gsub(/&>>?[\t ]*\/dev\/null/, "", capture_text)
+        if (capture_text ~ /2>&1|2>[\t ]*[^&\t ]|&>/) invalid_capture[FILENAME] = 1
+      }
+      if (FILENAME != "bin/run-scrut" && raw_scrut(text)) invalid_scrut[FILENAME] = 1
+      if (text ~ /^set -euo pipefail[\t ]*$/) next
+      if (!entry[FILENAME]) entry[FILENAME] = FNR
+      if (text ~ /(^|[\t ;&])(source|[.])[\t ]+.*git-environment[.]bash/) {
+        if (!reset[FILENAME]) reset[FILENAME] = FNR
+        next
+      }
+      content[FILENAME] = content[FILENAME] "\n" text
+      if (git_call(text)) consumer[FILENAME] = 1
+      if (FILENAME == "bin/run-scrut") consumer[FILENAME] = 1
+    }
+    END {
+      for (file in invalid_namespace) {
+        print file ": fixture variables must stay outside the GIT_* namespace"
+        errors++
+      }
+      for (file in invalid_capture) {
+        print file ": use capture_child for retained diagnostics"
+        errors++
+      }
+      if (!make_test || !make_update || !make_all) invalid_scrut["Makefile"] = 1
+      if (!ci_wrapper) invalid_scrut[".github/workflows/ci.yml"] = 1
+      for (file in invalid_scrut) {
+        print file ": run Scrut through bin/run-scrut"
+        errors++
+      }
+      do {
+        changed = 0
+        for (file in paths) {
+          if (consumer[file]) continue
+          for (target in consumer) {
+            if (consumer[target] && file != target && references(content[file], target)) {
+              consumer[file] = 1
+              changed = 1
+              break
+            }
+          }
+        }
+      } while (changed)
+      for (file in consumer) {
+        if (!consumer[file]) continue
+        if (file ~ /^plugins\// || file == "bin/lib/git-environment.bash") continue
+        if (!reset[file] || reset[file] != entry[file]) {
+          print file ": source bin/lib/git-environment.bash before Git consumers"
+          errors++
+        }
+      }
+      if (errors) exit 1
+      print "All Git consumers reset their fixture environment."
+    }
+  ' "${files[@]}"
+}
+
+main "$@"

@@ -10,7 +10,7 @@
 #
 # CI builds its matrix from `--list`, so local runs and CI cover the same
 # documents. The scrut environment comes from the caller, the Makefile's
-# `env $(SCRUT_UNSET) $(SCRUT_ENV)`.
+# `env $(SCRUT_UNSET) $(SCRUT_ENV)`. Each Scrut process starts through run-scrut.
 #
 # Exit codes:
 #   0 - Every document passed, or --list printed the documents
@@ -21,6 +21,13 @@
 # Zero exits also require a recognized summary with at least one testcase.
 # A run stopped by SIGINT, SIGTERM or SIGHUP exits 128 plus the signal number.
 set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
+
+RUN_SCRUT_WRAPPER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/run-scrut"
+readonly RUN_SCRUT_WRAPPER
+export RUN_SCRUT_WRAPPER
 
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
@@ -152,7 +159,7 @@ function run_document() {
   local reason
   local started="${SECONDS}"
 
-  scrut --shell bash test "${document}" > "${log}" 2>&1 < /dev/null || status=$?
+  "${RUN_SCRUT_WRAPPER}" --shell bash test "${document}" > "${log}" 2>&1 < /dev/null || status=$?
   if ((status == 0)) && ! reason="$(check_summary "${document}" "${log}")"; then
     printf '%s\n' "${reason}" >> "${log}"
     status=1
@@ -318,7 +325,7 @@ function main() {
     local status=0
     SINGLE_DOCUMENT="${documents[0]}"
     set -m
-    scrut --shell bash test "${documents[0]}" > "${LOG_DIR}/single.log" 2>&1 &
+    "${RUN_SCRUT_WRAPPER}" --shell bash test "${documents[0]}" > "${LOG_DIR}/single.log" 2>&1 &
     WORKER_PGID=$!
     set +m
     wait "${WORKER_PGID}" || status=$?

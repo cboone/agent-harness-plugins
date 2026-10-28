@@ -2,6 +2,12 @@
 # Test verify-fix with local histories and missing or unrelated upstreams.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+
 CASE_DIR=""
 
 function make_commit() {
@@ -13,8 +19,14 @@ function make_commit() {
   fi
 }
 
+function report_case_result() {
+  local result
+  result="$(cat "${CASE_DIR}/out")" || return 2
+  printf 'result=%s; exit=%s\n' "${result:-none}" "${1}"
+}
+
 function main() {
-  local helper="${1:?helper required}" mode="${2:?mode required}" tree base fix head unrelated result case_exit fixture_dir
+  local helper="${1:?helper required}" mode="${2:?mode required}" tree base fix head unrelated fixture_dir
   local watch_policy="${3:-}" blocked=false
   local helper_args=()
   fixture_dir="$(cd "$(dirname "$0")" && pwd)"
@@ -96,15 +108,8 @@ function main() {
     fi
   fi
 
-  set +e
-  bash "${helper}" ${helper_args[@]+"${helper_args[@]}"} verify-fix o r 7 "${head}" "${fix}" > "${CASE_DIR}/out" 2> "${CASE_DIR}/err"
-  case_exit=$?
-  set -e
-  result="$(cat "${CASE_DIR}/out")"
-  printf 'result=%s; exit=%s\n' "${result:-none}" "${case_exit}"
-  if [[ "${case_exit}" -ne 0 ]]; then
-    sed -n 's/^Error: /Error: /p' "${CASE_DIR}/err"
-  fi
+  capture_child - --stdout "${CASE_DIR}/out" --on-complete report_case_result --error-stdout-prefix 'Error: ' -- \
+    bash "${helper}" ${helper_args[@]+"${helper_args[@]}"} verify-fix o r 7 "${head}" "${fix}" || :
   if [[ "${blocked}" == true ]]; then
     [[ ! -e "${CASE_DIR}/bin/git-calls" && ! -e "${CASE_DIR}/bin/gh-calls" ]] || return 1
     printf '%s\n' 'blocked before Git and GitHub authentication or reads'

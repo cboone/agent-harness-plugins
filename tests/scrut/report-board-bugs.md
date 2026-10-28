@@ -7,6 +7,10 @@ for `acme/widgets`, 20 open and 2 recently closed, synced at
 2026-10-15T16:00:00Z in America/New_York. Each case changes one thing with
 `jq` and checks the message.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ function board_with() {
 >   local out

@@ -4,6 +4,10 @@ These cases call the shipped, side-effect-free `merge-flow dispatch` command. No
 
 ## Pending observations retry without a running check and stop at two ticks
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ state="$(printf '%s\n' '{"snapshot":{"state":"OPEN"},"restrictions":{"noFix":false,"copilotPaused":false},"candidates":[],"observations":[{"name":"mergeability","pending":true,"diagnostic":"mergeability UNKNOWN"}],"runningPermittedCheck":false}' | "${MERGE_FLOW_BIN}" prepare)" && first="$(printf '%s\n' "${state}" | "${MERGE_FLOW_BIN}" lifecycle 2>/dev/null | "${MERGE_FLOW_BIN}" dispatch)" && printf '%s\n' "${first}" | jq -c '{action:.route.action, retry:.route.retry, terminal, observationFailures}' && counts="$(printf '%s\n' "${first}" | jq -c .observationFailures)" && printf '%s\n' "${state}" | jq --argjson counts "${counts}" '.observationFailures=$counts' | "${MERGE_FLOW_BIN}" lifecycle 2>/dev/null | "${MERGE_FLOW_BIN}" dispatch | jq -c '{route, wait, terminal, status, diagnostics}'
 {"action":"read-axis","retry":true,"terminal":false,"observationFailures":{"audit":0,"mergeability":1,"review-body":0,"review-id":0,"review-metadata":0,"snapshot":0,"threads":0,"triage":0}}
@@ -233,7 +237,7 @@ reply-and-resolve blocked before auth
 ## A blocked metadata axis cannot justify a running-check wait
 
 ```scrut
-$ work="$(mktemp -d "${TMPDIR:-/tmp}/blocked-merge.XXXXXX")" && mkdir "${work}/bin" && cp "${GH_STUB_BIN}" "${work}/bin/gh" && cp "${GIT_WORKTREE_STUB_BIN}" "${work}/bin/git" && chmod +x "${work}/bin/gh" "${work}/bin/git" && test "$(PATH="${work}/bin:${PATH}" command -v gh)" = "${work}/bin/gh" && test "$(PATH="${work}/bin:${PATH}" command -v git)" = "${work}/bin/git" && printf '%s\n' '{"snapshot":{"state":"OPEN"},"restrictions":{"noFix":true,"copilotPaused":false}}' | "${MERGE_FLOW_BIN}" prepare > "${work}/state.json" && for command in policy watch sync panes; do case "${command}" in policy|watch) action=merge ;; sync) action=sync ;; panes) action=post-merge ;; esac; result="$(PATH="${work}/bin:${PATH}" STUB_GH_LOG="${work}/gh.log" "${MERGE_FLOW_BIN}" --watch-state "${work}/state.json" "${command}" < /dev/null 2>&1)"; status=$?; test "${status}" = 1 && test "${result}" = "merge-flow: watch policy blocks ${action} (unavailable)" && test ! -e "${work}/gh.log" || exit 1; printf '%s blocked before work\n' "${command}"; done
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/blocked-merge.XXXXXX")" && mkdir "${work}/bin" && cp "${GH_STUB_BIN}" "${work}/bin/gh" && cp "${WORKTREE_GIT_STUB_BIN}" "${work}/bin/git" && chmod +x "${work}/bin/gh" "${work}/bin/git" && test "$(PATH="${work}/bin:${PATH}" command -v gh)" = "${work}/bin/gh" && test "$(PATH="${work}/bin:${PATH}" command -v git)" = "${work}/bin/git" && printf '%s\n' '{"snapshot":{"state":"OPEN"},"restrictions":{"noFix":true,"copilotPaused":false}}' | "${MERGE_FLOW_BIN}" prepare > "${work}/state.json" && for command in policy watch sync panes; do case "${command}" in policy|watch) action=merge ;; sync) action=sync ;; panes) action=post-merge ;; esac; result="$(PATH="${work}/bin:${PATH}" STUB_GH_LOG="${work}/gh.log" "${MERGE_FLOW_BIN}" --watch-state "${work}/state.json" "${command}" < /dev/null 2>&1)"; status=$?; test "${status}" = 1 && test "${result}" = "merge-flow: watch policy blocks ${action} (unavailable)" && test ! -e "${work}/gh.log" || exit 1; printf '%s blocked before work\n' "${command}"; done
 policy blocked before work
 watch blocked before work
 sync blocked before work

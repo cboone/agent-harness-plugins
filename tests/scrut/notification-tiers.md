@@ -4,6 +4,10 @@ Each scenario runs the notifier under `/bin/bash` with a fixture `XDG_CONFIG_HOM
 
 ## Worker posts only permission, plan and elicitation prompts
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" tier-worker
 stop: none

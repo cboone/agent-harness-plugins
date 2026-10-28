@@ -2,6 +2,9 @@
 # Execute the skill's consistency-sweep block with local command stubs.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
 CASE_DIR=""
 
 function main() {

@@ -7,6 +7,10 @@ Tests for the `merge-flow` script that `monitor-pr:monitor` bundles for its merg
 `flow` runs the script with the stub `gh` first on `PATH`, answering from `stub_dir` when a case sets it. `watch` takes a response sequence name and polls with no delay. `clone` builds a fresh local clone of a bare `acme/widgets` remote, set back one commit so that the remote's newest commit stands for a merge the clone has not fetched yet, and prints its path. `shared` is one such clone for the cases that stop before changing anything.
 
 ```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
+```scrut {fail_fast: true}
 $ work="$(cd -P "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && pwd)" \
 >   && mkdir "${work}/bin" && ln -s "${GH_STUB_BIN}" "${work}/bin/gh" \
 >   && function flow() { PATH="${work}/bin:${PATH}" STUB_GH_DIR="${stub_dir:-${MERGE_FLOW_DATA_DIR}}" "${MERGE_FLOW_BIN}" "$@"; } \

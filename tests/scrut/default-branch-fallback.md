@@ -6,6 +6,10 @@ Execute the fallback line from each canonical source in a repository with an
 origin but no remote HEAD. Pipeline status is deliberately not protected by
 pipefail, as a skill consumer may run it that way.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && git -C "${work}" init -q --template= \
