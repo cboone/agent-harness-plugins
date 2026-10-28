@@ -226,7 +226,7 @@ Then find the merge base:
 git merge-base "$remote/$base" HEAD
 ```
 
-If `<remote>/<base>` does not exist, try the local `<base>` branch. A local branch can be behind its remote, which moves the merge base back and pulls other people's commits into scope, so say in the report when the local branch was used. If neither works, treat it as not found and see "Error Handling".
+Verify `<remote>/<base>` resolves to a commit. If it does not, treat the base as not found and ask for it rather than using a potentially stale local branch. See "Error Handling".
 
 Collect the changed files. Both commands print paths from the repository root, from any working directory; `--no-relative` keeps a `diff.relative` setting from limiting the first to the current directory:
 

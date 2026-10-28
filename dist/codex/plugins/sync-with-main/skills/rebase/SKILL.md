@@ -43,11 +43,13 @@ git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "no u
 
 If `--base <branch>` was specified, use that value instead of the detected default branch.
 
-**If `gh` is not available**, fall back to detecting the default branch with:
+**If `gh` is unavailable or its query fails**, detect the default branch with:
 
 ```bash
-git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+git symbolic-ref --quiet --short refs/remotes/origin/HEAD
 ```
+
+Strip the `origin/` prefix from successful output. Treat empty output, a failed command, or `HEAD` as not found. Without an explicit `--base`, if neither query finds a base, ask for it and stop rather than guessing. Fetch the selected base in step 3 before validating its remote-tracking commit; never substitute a local branch.
 
 **If the current branch is the default branch itself**, warn the user that rebasing the base branch onto itself is a no-op and stop.
 
@@ -75,10 +77,11 @@ Record this as `<pre-rebase-head>`. Then:
 
 ```bash
 git fetch origin <default-branch>
+git rev-parse --verify --quiet origin/<default-branch>^{commit}
 git rebase origin/<default-branch>
 ```
 
-Where `<default-branch>` is the detected or overridden base branch name.
+Where `<default-branch>` is the detected or overridden base branch name. Stop if fetching or commit validation fails; run the merge or rebase only after both succeed.
 
 ### 4. Handle Rebase Result
 

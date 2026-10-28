@@ -57,12 +57,12 @@ Detect the base branch in this order, stopping at the first that answers:
 
    ```bash
    gh repo view "$host/$current_repo" --json defaultBranchRef --jq .defaultBranchRef.name
-   git rev-parse --abbrev-ref "$fetch_remote/HEAD"
+   git symbolic-ref --quiet --short "refs/remotes/$fetch_remote/HEAD"
    ```
 
-   The second prints `<remote>/<name>`; strip the remote prefix to get the branch name.
+   The second prints `<remote>/<name>`; strip the remote prefix to get the branch name. Treat empty output, a failed command, or `HEAD` as not found.
 
-1. `main`, `master`, and `develop`, in that order, saying which one was assumed.
+If neither source finds a base, ask for it and stop rather than guessing. After resolving `base_ref` below, verify it resolves to a commit before comparing. When a remote-tracking base is expected, do not substitute a potentially stale local branch.
 
 Name the base used, and its source, in the summary when it is not the default branch. `$current_repo` is this checkout's own `OWNER/REPO`, the fork in a fork; take it from `$fetch_remote`'s fetch path in the filtered remote list above, since a bare `gh` command can resolve to the upstream.
 

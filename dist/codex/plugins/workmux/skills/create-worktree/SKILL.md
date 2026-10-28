@@ -250,13 +250,15 @@ In the examples below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launc
 gh repo view --json defaultBranchRef -q '.defaultBranchRef.name'
 ```
 
-**If `gh` is not available**, fall back to:
+**If `gh` is unavailable or its query fails**, fall back to:
 
 ```bash
-git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+git symbolic-ref --quiet --short refs/remotes/origin/HEAD
 ```
 
-If the user passed `--base BRANCH`, use that instead. If both detection methods fail, tell the user which branch `workmux` would default to and ask before proceeding.
+Strip the `origin/` prefix from successful output. Treat empty output, a failed command, or `HEAD` as not found. For an automatically detected name, verify `origin/<base>` resolves to a commit and pass that remote-tracking ref as `BASE_BRANCH`; never substitute a potentially stale local branch. If neither query finds a valid base, ask for one and stop rather than guessing.
+
+When the user supplied a base, skip default-branch detection and use that exact ref as `BASE_BRANCH` after verifying it resolves to a commit. An explicit local base is allowed; it is not a fallback.
 
 Then launch the worktree.
 
