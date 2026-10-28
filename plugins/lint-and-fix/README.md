@@ -63,3 +63,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - [Write Go Code](../write-go-code/README.md): Go-specific style enforcement
 - [Write Markdown](../write-markdown/README.md): Markdown-specific style enforcement
 - [All plugins](../../README.md)
+
+## Codex invocation
+
+Invoke `$lint-and-fix` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.

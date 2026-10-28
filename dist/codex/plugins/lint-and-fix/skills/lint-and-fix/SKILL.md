@@ -43,15 +43,24 @@ Honor this block as part of the `lint-and-fix` invocation.
 - A tool recorded as `check-only (no safe check command)` **is** skipped required lint work, because nothing ran and the tree was never checked. Report `Lint status: failure` and list the tool under `Unresolved or skipped` with the reason. It must never reach the parent as success: an unrun tool and a tool that ran clean are opposite results, and a parent such as `pr` would otherwise push a tree no one checked.
 - That mode has two sources, and only one of them is policy. Step 2 assigns it when a project rule downgrades a tool and no verified check command exists, and step 4a assigns it when **--check** would otherwise take a write-mode fallback. Name only the first on the `Check-only by project policy` line, since the second is a limit of the user's own dry run and attributing it to the project misreports where the constraint came from. Both still count as skipped required lint work under `Unresolved or skipped`, which is what governs the parent.
 
+Map successful lint work to `Status: success`, a clean no-change result to `no-op`, and failed or skipped required work to `failure`. A question without an answer returns `needs-decision` to the parent without asking independently. A host restriction is a failure, never `no-tools`. Existing `Lint status` values remain unchanged.
+
 Final output for a parent invocation must include:
 
 ```text
+Status: <success|no-op|failure|unavailable|needs-decision>
 Lint status: <success|no-tools|failure>
 Commit: <none|commit SHA>
 Unresolved or skipped: <none|summary>
 Check-only by project policy: <none|tool list>
 Caller resume target: <target from continuation block>
 ```
+
+## Capabilities and authority
+
+Use the tools this session actually offers. For a question, use a structured question tool when available in the active mode; otherwise present numbered choices and wait. In a noninteractive run, report the unresolved question and preserved state instead of choosing an answer. Tool names such as Write, Read, Glob and AskUserQuestion below are examples: perform the same file or question operation with the host's supported mechanism. Write a body file completely before issuing the command that reads it; never batch those dependent operations.
+
+Prior user authorization carries through the workflow; add no confirmation merely because the harness differs. Host approvals, active Plan or read-only mode, writable roots and network policy still apply. Stop before a prohibited write or any step dependent on a blocked operation, preserve state, and report the exact command and restriction. Never bypass controls or claim an unrun step completed. Separate completed, skipped, blocked and failed work in the result. For invocation hints, render the named skill with the running harness's form: slash invocation in Claude Code, dollar mention or the skills selector in Codex. A mention is not a tool call; load composed skills from their advertised locations.
 
 ## Workflow
 

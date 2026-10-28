@@ -3,7 +3,8 @@
 set -euo pipefail
 
 function main() {
-  if [[ "${1:-}" == merge-base ]]; then
+  printf '%s\n' "$*" >> "$(dirname "$0")/git-calls"
+  if [[ -e "$(dirname "$0")/fail-ancestry" && "${1:-}" == merge-base ]]; then
     printf '%s\n' 'sample ancestry read error' >&2
     exit 128
   fi

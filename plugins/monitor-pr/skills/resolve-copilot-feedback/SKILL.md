@@ -46,7 +46,17 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" fetch OWNER REPO PR
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
-**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/monitor-pr/**/scripts/resolve-copilot-threads`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
+If the plugin-root placeholder was not substituted, use the physical location of this loaded skill, never a cache-wide search. Expand any advertised skill-root alias first and set `skill_file` to that absolute `SKILL.md` path. Resolve symlinks before moving up from `skills/NAME/` to the plugin root:
+
+```bash
+# package-relative-helper
+resolved_skill="$(realpath -- "${skill_file}")" || exit 1
+plugin_root="$(cd -- "$(dirname -- "${resolved_skill}")/../.." && pwd -P)" || exit 1
+helper="${plugin_root}/scripts/resolve-copilot-threads"
+test -x "${helper}" || exit 1
+```
+
+Use the resulting quoted absolute helper path for this session. If path resolution or the executable check fails, stop and report the unavailable helper; do not select another installed version. When `realpath` is unavailable, the host's file tools may resolve the same symlink chain explicitly; if they cannot, report the limitation.
 
 The examples below abbreviate that path to just `resolve-copilot-threads` for readability. They are not literal commands: expand the abbreviation when you run one, so every invocation is `bash`, then the **double-quoted** absolute path, then the arguments shown.
 
@@ -156,6 +166,32 @@ Reserve for repo-wide conventions that apply to all file types:
 
 - **Required:** `lint-and-fix`, `review-anti-patterns`
 - **Optional:** None
+
+## Capabilities and authority
+
+Use the tools this session actually offers. For a question, use a structured question tool when available in the active mode; otherwise present numbered choices and wait. In a noninteractive run, report the unresolved question and preserved state instead of choosing an answer. Tool names such as Write, Read, Glob and AskUserQuestion below are examples: perform the same file or question operation with the host's supported mechanism. Write a body file completely before issuing the command that reads it; never batch those dependent operations.
+
+Prior user authorization carries through the workflow; add no confirmation merely because the harness differs. Host approvals, active Plan or read-only mode, writable roots and network policy still apply. Stop before a prohibited write or any step dependent on a blocked operation, preserve state, and report the exact command and restriction. Never bypass controls or claim an unrun step completed. Separate completed, skipped, blocked and failed work in the result. For invocation hints, render the named skill with the running harness's form: slash invocation in Claude Code, dollar mention or the skills selector in Codex. A mention is not a tool call; load composed skills from their advertised locations.
+
+## Parent Continuation Contract
+
+Honor a supplied parent continuation block and its resume target. On success, return control to the parent without asking whether to continue. When a decision has no supplied answer, do not ask independently or guess: return `Status: needs-decision`, the question, available choices and preserved state. The parent asks or stops, then invokes this skill with an answer. For an in-progress merge or rebase, list conflicts and the applicable abort command; do not abort or discard work merely to return a result.
+
+Return `Status: <success|no-op|failure|unavailable|needs-decision>`, `Outputs`, `Unresolved or skipped` and `Caller resume target`. A no-op is successful only when no required work was skipped. Preserve any domain-specific status lines below. A host block or failed required check is failure, a missing required skill is unavailable, and unresolved choices are needs-decision. Standalone invocations retain their existing questions and reporting.
+
+For a parent, keep `Completed`, `No unresolved Copilot feedback`, `Partial` and `Failed` as domain outcomes. Map the first two to success or no-op only when every required step, including the terminal summary, completed; map Partial and Failed to failure. Return unsupplied user decisions as needs-decision without resolving their threads.
+
+## Watch policy context
+
+When a monitor parent supplies `WATCH_STATE_FILE`, retain that path for the entire child invocation. Before any API/body read or cached-body processing consult `merge-flow gate read-review` on that state, and consult `classify-review` before classifying. Before fixes, replies, resolutions, summary/body writes or publication consult `process-review`. Every bundled helper invocation in this context uses `--watch-state WATCH_STATE_FILE` before its command; never omit it to obtain standalone behavior. A blocked/malformed/missing policy stops before dependent work and returns the restriction to the parent, without posting a summary that policy forbids. A policy change returns control to the parent for fresh step 1 preparation. Standalone invocations retain their existing workflow and approval requirements.
+
+At child entry, check `process-review` before gathering context or posting anything:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" gate process-review < WATCH_STATE_FILE
+```
+
+Use the same physical loaded-package root as the feedback helper when the placeholder is literal. Continue only for `allowed: true`; this does not replace the more specific read/classification gates or grant approval.
 
 ## Core Workflow
 
@@ -310,6 +346,8 @@ bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file TMPFILE
 Write the body using [Reply Templates](#reply-templates); follow [step 4](#4-handle-each-category) for eligibility and retries.
 
 ### 4. Handle Each Category
+
+Confirm that the `lint-and-fix` skill is available. Confirm that the `review-anti-patterns` skill is available. Apply these fixing preflights before the first edit, with the missing-skill handling below; they do not prohibit the preceding read-only collection.
 
 Before the first edit, confirm that the required `lint-and-fix` and `review-anti-patterns` skills are available. If either is missing, record a workflow-level failure naming it and its install command (`/plugin install NAME@agent-harness-plugins` in Claude Code or `codex plugin add NAME@agent-harness-plugins` in Codex), and go to step 9 before changing anything. Do the same, naming what is there, when `git status --porcelain` prints anything or `git rev-parse HEAD` differs from `HEAD_SHA`: `lint-and-fix` commits every modified file and step 8 pushes every local commit, so work already in the tree or on the branch would be published as this run's. Then record `git rev-parse HEAD` as `FIX_BASE`. Steps 5 to 7 run only when **the run has changed files**: `git diff --quiet FIX_BASE --` exits nonzero or `git status --porcelain` prints anything. The run commits as it goes, so a clean working tree alone does not mean nothing changed. When nothing changed, go straight to step 8.
 

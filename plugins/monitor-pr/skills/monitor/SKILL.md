@@ -17,6 +17,8 @@ Watch a pull request until it is ready to merge, fixing what can be fixed and pa
 
 This skill starts where `pr` stops. It is not a passive observer: it repairs failing checks, syncs a stale branch, and drives Copilot feedback to resolution. It is also not a continue-at-all-costs skill. When a decision is genuinely the user's, it stops and asks.
 
+Execution begins at step 1 policy preparation before any axis read, classification or action. This applies to every section and example, including Dependabot overrides, error handling, restored phases and callback events. Those sections describe candidate behavior; the one prepared policy governs entry to all of it.
+
 ## Options
 
 The user may provide these options inline:
@@ -65,16 +67,76 @@ A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to 
 - **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one, and never wait for one. A missing review, a review against an older head (which every `@dependabot rebase` produces), or a current-head review classified `notice` leaves the Copilot axis not applicable: report it as `n/a (Dependabot)` and treat the axis as clean. A notice belongs with the missing review because it is one: Copilot reviewed nothing at that head, and since this path never requests a review, no retry can replace it, so holding the axis open would wait forever. Only a Copilot review at the current head matters. Run the step 3 feedback probe and classification here exactly as anywhere else: they are reads, so nothing about this path pushes. Because this path never invokes `monitor-pr:resolve-copilot-feedback`, whose fixes would be pushes, read the classified body in full yourself and list every concern it states, wherever it states it. When the probe reports open threads or audit items, the body states any concern, or the classification is `unclear`, report the thread locations, the concerns quoted with the review URL, or the audit item links, and escalate. When none of these holds, the review is clean and the axis is clean.
 - **Step 8, the terminal report**: say the PR is a Dependabot PR. The merge policy, merge offer, and post-merge steps apply as for any other PR.
 
-Under `--no-fix`, report the rebase request that would have been posted instead of posting it.
+The stored sync gate also applies to a Dependabot rebase request; blocked requests produce would-do reports.
 
 ## Skill dependencies
 
 - **Required:** `lint-and-fix`, `sync-with-main:merge`, `monitor-pr:resolve-copilot-feedback`
 - **Optional:** `create-deferred-issues`
 
+## Capabilities and authority
+
+Use the tools this session actually offers. For a question, use a structured question tool when available in the active mode; otherwise present numbered choices and wait. In a noninteractive run, report the unresolved question and preserved state instead of choosing an answer. Tool names such as Write, Read, Glob and AskUserQuestion below are examples: perform the same file or question operation with the host's supported mechanism. Write a body file completely before issuing the command that reads it; never batch those dependent operations.
+
+Prior user authorization carries through the workflow; add no confirmation merely because the harness differs. Host approvals, active Plan or read-only mode, writable roots and network policy still apply. Stop before a prohibited write or any step dependent on a blocked operation, preserve state, and report the exact command and restriction. Never bypass controls or claim an unrun step completed. Separate completed, skipped, blocked and failed work in the result. For invocation hints, render the named skill with the running harness's form: slash invocation in Claude Code, dollar mention or the skills selector in Codex. A mention is not a tool call; load composed skills from their advertised locations.
+
+## Parent Continuation Contract
+
+Honor a supplied parent continuation block and its resume target. On success, return control to the parent without asking whether to continue. When a decision has no supplied answer, do not ask independently or guess: return `Status: needs-decision`, the question, available choices and preserved state. The parent asks or stops, then invokes this skill with an answer. For an in-progress merge or rebase, list conflicts and the applicable abort command; do not abort or discard work merely to return a result.
+
+Return `Status: <success|no-op|failure|unavailable|needs-decision>`, `Outputs`, `Unresolved or skipped` and `Caller resume target`. A no-op is successful only when no required work was skipped. Preserve any domain-specific status lines below. A host block or failed required check is failure, a missing required skill is unavailable, and unresolved choices are needs-decision. Standalone invocations retain their existing questions and reporting.
+
 ## Workflow
 
 ### 1. Resolve the PR
+
+#### Resolve policy before any axis work
+
+Every entry starts here: a new invocation, scheduler wake, changed option, restored checkpoint or merge-watch event. Restore options and metadata without reading review bodies, retain all action guards, then resolve the active restrictions **once** for this entry through `merge-flow prepare`. Do not resume directly at an axis read or merge phase. If restrictions change during the entry, return here before further work.
+
+Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you. If the plugin-root placeholder was not substituted, use the physical location of this loaded skill, never a cache-wide search. Expand any advertised skill-root alias first and set `skill_file` to that absolute `SKILL.md` path. Resolve symlinks before moving up from `skills/NAME/` to the plugin root:
+
+```bash
+# package-relative-helper
+resolved_skill="$(realpath -- "${skill_file}")" || exit 1
+plugin_root="$(cd -- "$(dirname -- "${resolved_skill}")/../.." && pwd -P)" || exit 1
+helper="${plugin_root}/scripts/resolve-copilot-threads"
+test -x "${helper}" || exit 1
+policy_helper="${plugin_root}/scripts/merge-flow"
+test -x "${policy_helper}" || exit 1
+```
+
+Use the resulting quoted absolute helper path for this session. If path resolution or the executable check fails, stop and report the unavailable helper; do not select another installed version. When `realpath` is unavailable, the host's file tools may resolve the same symlink chain explicitly; if they cannot, report the limitation.
+
+Write raw watch metadata with a `restrictions` object containing current `noFix` and `copilotPaused` booleans plus a `blockedActions` array for additional host or workflow restrictions. These values come from current instructions and effective options, never cached permission values. Also carry `triageAfter` (a nonnegative integer or `"never"`) and `earlierReviewCount` (the known count or null, never an invented zero). Resolve and store the returned `policy` in watch state before any axis read:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" prepare < RAW_STATE_JSON > WATCH_STATE_JSON
+```
+
+`RAW_STATE_JSON` and `WATCH_STATE_JSON` are paths to non-secret state files written with the host's permitted file tools. A blocked write, unavailable helper or invalid policy stops before axis work. Policy preparation and validation are pure local operations. A permitted gate means the restrictions do not prohibit an action; it does not grant missing user approval.
+
+Every entry point below consults this **same** resolved policy, using `merge-flow gate ACTION < WATCH_STATE_JSON`. Continue only when its JSON `allowed` field is true; false or a failed/malformed result is never permission. Record blocked work as would-do data. Policy-limited termination and scheduler cancellation remain as step 4 defines. Do not reinterpret raw flags or hand-edit the stored permissions.
+
+| Entry                                                                          | Gate                                              |
+| ------------------------------------------------------------------------------ | ------------------------------------------------- |
+| PR/check/run metadata and logs                                                 | `read-axis`                                       |
+| Review bodies, thread data, audits and stored body reads                       | `read-review`                                     |
+| Numeric earlier-review counting                                                | `triage-review`, through the triage command below |
+| Review classification/reclassification, including cached bodies and Dependabot | `classify-review`                                 |
+| Sync child or Dependabot rebase request; repairs/publication                   | `sync`; `repair`                                  |
+| Resolver child and feedback mutations                                          | `process-review`                                  |
+| Review requests, waiting, confirming                                           | `request-review`, `wait-review`, `confirm-review` |
+| Readiness policy, offers, ready/merge calls and merge watches                  | `merge`                                           |
+| Post-merge work, base sync and peer messages                                   | `post-merge`, with `sync`/`notify` prerequisites  |
+| Deferred-issue batch or its approval handoff                                   | `file-deferred`, preserving mandatory approval    |
+| Reporting and permitted non-review escalation                                  | `report`, `escalate`                              |
+
+The feedback helper also consults `classify-review` because its filters inspect review/comment content. All monitor invocations of bundled scripts must carry `--watch-state WATCH_STATE_JSON` before their command. The scripts enforce the shared gate before dependency/auth checks, API/body reads, writes or mutations. The resolver child receives `WATCH_STATE_FILE` with this same path and carries it into its helper calls. Never omit the state to obtain standalone behavior during a watch. Only pure `prepare`, `gate`, `triage`, `lifecycle`, `dispatch` and `observation-kinds` read their state from stdin instead.
+
+#### Resolve the opening snapshot
+
+Require `read-axis` before the following metadata-only lookup. A review metadata projection may expose identity, URL, SHA and state, but not body text when `read-review` is blocked.
 
 If the user supplied a PR number, use it. Otherwise derive the PR from the current branch. Take the opening snapshot with one call:
 
@@ -82,25 +144,39 @@ If the user supplied a PR number, use it. Otherwise derive the PR from the curre
 gh pr view <number-or-omitted> --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit
 ```
 
+If the opening or later PR metadata read fails, submit `{name:"snapshot",pending:true,diagnostic:"<actual stderr>"}` to `merge-flow dispatch` with the prepared policy before lifecycle resolution. This registry kind is terminal: the common handler returns immediate `Status: failure`, names the failed read and supplies no lifecycle, route or wait. Stop and cancel scheduling. Never reuse stale metadata or invent OPEN. Without that explicit failed-read observation, missing or invalid lifecycle remains an input error.
+
+Store the fresh metadata object as `snapshot` in watch state, then run `merge-flow lifecycle` once for that snapshot before any candidate collection, triage or feedback probe. Retain the returned `lifecycle` for the tick. A MERGED result proceeds only to post-merge candidate handling; CLOSED proceeds with no work. Neither enters OPEN-only triage, body probes, repairs or review handling. A terminal event is not downgraded to OPEN by a stale metadata read.
+
 Record `OWNER`, `REPO`, and `PR_NUMBER`. The `monitor-pr:resolve-copilot-feedback` skill needs all three and does not document how to derive them, so pass them explicitly when invoking it.
 
-If this conversation contains a foreground checkpoint for that same repository and PR, treat the invocation as a continuation: restore its options and watch state using [Checkpoint and Resume](./references/checkpoint.md) before dispatching the opening snapshot. Resume at step 3 with fresh GitHub state. Do not initialize a new watch or reset its action guards merely because the user reran the command.
+If this conversation contains a foreground checkpoint for that same repository and PR, treat the invocation as a continuation: restore its options and watch state using [Checkpoint and Resume](./references/checkpoint.md) before dispatching the opening snapshot. Resolve the policy above first, then resume at step 3 with fresh GitHub state. Do not initialize a new watch or reset its action guards merely because the user reran the command.
 
 Also record whether `author.login` is `app/dependabot`, which switches on the rules in [Dependabot PRs](#dependabot-prs).
 
 **If the branch has no PR**, report that and stop, pointing the user at `/pr`.
 
-When `--triage-after` is a number and the watch state holds no earlier-review count, including after a resume that changed it from `never`, count the PR's earlier Copilot reviews now: read every Copilot review body with one `fetch-reviews` call, as step 3 shows, classify each as step 3 does, and record the count of those classified `review` with their ids in the watch state.
+Before numeric triage counting, run `merge-flow triage < WATCH_STATE_JSON`. A `paused` result records triage as paused, leaves an unknown count unknown, and performs no body read, classification or counting. An `unavailable` result likewise skips the work with its restriction reported. A `not-needed` result reuses existing metadata. Only `needsRead: true` permits the batch: consult `read-review` and `classify-review`, fetch earlier reviews with the guarded helper, classify them and record the count/ids. This includes a resume changing `--triage-after` from `never` to a number. Do not infer zero from a blocked batch.
+
+Before scheduling, syncing or repairing, unless `--no-fix` or the Dependabot path excludes those actions, confirm that the `lint-and-fix`, `sync-with-main:merge` and `monitor-pr:resolve-copilot-feedback` skills are available in the advertised list. Accept bare or plugin-qualified identities only when they identify the intended skill unambiguously. If a required skill is missing, stop with `Status: unavailable`, name it and its install command (`/plugin install PLUGIN@agent-harness-plugins` or `codex plugin add PLUGIN@agent-harness-plugins`). Mention `--no-fix` as an available mode, but never switch to it silently.
+
+The prepared policy represents higher-priority review pauses. When review gates return paused, report any metadata-observed arrival and mark the axis `paused by policy`, not clean. A skipped triage/probe/classification is intentional policy state, not a failed or empty review.
+
+For paths that can fix: Confirm that the `lint-and-fix` skill is available. Confirm that the `sync-with-main:merge` skill is available. Confirm that the `monitor-pr:resolve-copilot-feedback` skill is available. These checks share the exclusions and missing-skill stop above.
 
 ### 2. Establish the Wait Mechanism
 
+Prepare the mechanism choice here, but do not arm a scheduler or start a wait until step 4's shared dispatch filter permits work or waiting. The acceptance checks below apply when dispatch permits arming. A policy-limited terminal result cancels any restored scheduler instead.
+
 Choose exactly one mechanism and name it on the first tick:
 
-1. **Claude Code**: Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small. Select this mechanism only when the tool is available and accepts the wakeup.
-1. **Codex with scheduled tasks**: Create a task that resumes this conversation after the selected interval. Select this mechanism only after successful task creation, and retain its task ID for updates and cancellation. Its prompt must say to resume this `monitor-pr:monitor` watch at step 3, retain the recorded PR identity, options, counters, and action guards, and stop the task on escalation, on a terminal report, or at readiness, where step 8c replaces it. Use the watch-state fields in [Checkpoint and Resume](./references/checkpoint.md). On each nonterminal tick, schedule or update the next wakeup using the selected interval. A scheduled task is a new tick, not a delayed final response.
-1. **Foreground, including Codex CLI and scheduler fallbacks**: When no scheduler is available, or scheduling is rejected or fails, announce the fallback and run a foreground polling loop. If replacing an existing scheduled watch, cancel its pending task or wakeup first; if cancellation fails, escalate rather than start a second loop. A blocking `sleep` by itself is not a continuation mechanism: after every sleep, take the step 3 snapshot and dispatch it in the same active turn. Do not print a terminal response merely because a tick is waiting. Stop only on a terminal condition, an escalation, or the `--ticks` foreground limit.
+1. **Accepted wake-up tool**: Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small. Select this mechanism only when the tool is available and accepts the wakeup.
+1. **Conversation-resume scheduler**: Create a task that resumes this conversation after the selected interval. Select this mechanism only after successful task creation, and retain its task ID for updates and cancellation. Its prompt must say to enter step 1 policy preparation with the retained watch state, then resume this `monitor-pr:monitor` watch at step 3, retain the recorded PR identity, options, counters, and action guards, and stop the task on escalation, on a terminal report, or at readiness, where step 8c replaces it. Use the watch-state fields in [Checkpoint and Resume](./references/checkpoint.md). On each nonterminal tick, schedule or update the next wakeup using the selected interval. A scheduled task is a new tick, not a delayed final response.
+1. **Interruptible foreground polling**: When no scheduler is available, or scheduling is rejected or fails, announce the fallback and run a foreground polling loop. If replacing an existing scheduled watch, cancel its pending task or wakeup first; if cancellation fails, escalate rather than start a second loop. A blocking `sleep` by itself is not a continuation mechanism: after every sleep, take the step 3 snapshot and dispatch it in the same active turn. Do not print a terminal response merely because a tick is waiting. Stop only on a terminal condition, an escalation, or the `--ticks` foreground limit.
 
 The default `--ticks 3` bounds every foreground loop, including scheduler fallbacks. Count one tick for each step 3 snapshot and its step 4 dispatch, including the opening snapshot. Finish the dispatch before applying the limit; escalation and the step 8 transition at readiness take precedence over a checkpoint. At the limit, checkpoint before the next wait, following [Checkpoint and Resume](./references/checkpoint.md): include the PR URL, current head SHA, all four axes, complete watch state, selected interval, and the exact `/monitor-pr:monitor` invocation with the original options. Report a **resumable checkpoint**, not a readiness verdict. `--ticks unlimited` removes this foreground limit, but the user may still interrupt the active session. Never claim that a blocking wait will resume after the agent has returned a final response.
+
+Use an interruptible wait when offered. Otherwise bound each shell wait by the observed host command timeout, retain the running command handle and resume dispatch in the same turn. Never infer a scheduler or command timeout from the harness name.
 
 Adaptive intervals by phase, unless `--interval` overrides them:
 
@@ -116,11 +192,15 @@ During the repair loop on scheduler-backed surfaces there is no wall-clock cap o
 
 ### 3. Take a State Snapshot
 
-Re-run the `gh pr view` call from step 1, and probe Copilot's latest review:
+On the first tick, reuse step 1's opening metadata and lifecycle. On later ticks, consult `read-axis` before re-running the metadata-only `gh pr view` call and latest-review projection. Consult `read-review` before any feedback/body probe and `classify-review` before entering classification below. A blocked probe is recorded as paused/unavailable, without incrementing failure counters, inventing an empty result or entering a review route. These gates also apply to cached bodies and Dependabot observations.
+
+After each fresh metadata read, store `snapshot`, run `merge-flow lifecycle` once and retain its result. Terminal lifecycles skip all OPEN-only observations below and proceed to step 4. Rebuild observation outcomes from this tick, never cached results.
+
+The latest-review command projects metadata only:
 
 ```bash
 gh api --paginate --slurp repos/OWNER/REPO/pulls/PR_NUMBER/reviews |
-  jq '[.[][] | select((.user.login? // "") as $login | ($login | type) == "string" and (["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == ($login | ascii_downcase))))] | last | {id, commit_id, submitted_at, state}'
+  jq '[.[][] | select((.user.login? // "") as $login | ($login | type) == "string" and (["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == ($login | ascii_downcase))))] | last | {id, url: .html_url, commit_id, submitted_at, state}'
 ```
 
 Three details in that command are load-bearing:
@@ -140,46 +220,46 @@ The metadata above says a review exists and which commit it ran against. It says
 This plugin ships its own copy of that script. Invoke it via `bash` followed by the quoted path:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" fetch OWNER REPO PR_NUMBER |
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" --watch-state WATCH_STATE_JSON fetch OWNER REPO PR_NUMBER |
   jq -c '{openThreads: length, locations: [.[].location]}'
 ```
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" fetch-reviews OWNER REPO PR_NUMBER |
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" --watch-state WATCH_STATE_JSON fetch-reviews OWNER REPO PR_NUMBER |
   jq -c --argjson review_id REVIEW_ID '
     [.[] | select(.id == $review_id)] | last
     | {id, url, commitId}'
 ```
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" audit OWNER REPO PR_NUMBER |
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" --watch-state WATCH_STATE_JSON audit OWNER REPO PR_NUMBER |
   jq -c '{audited: true, items: [(.uncovered // error("no uncovered"))[] | "\(.surface):\(.id)"]}'
 ```
 
-Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you. **If the path was not substituted**, it still begins with `$` rather than `/`; Codex CLI substitutes it only in hook commands. In that case locate the script with `**/monitor-pr/**/scripts/resolve-copilot-threads`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
-
 Eight points govern how the probe is run and read:
 
-- **A failed probe is not a clean probe, and it does not announce itself in the exit status.** Each command writes a diagnostic to stderr and exits nonzero, but the pipeline reports `jq`'s status, and `jq` over empty input emits nothing and exits `0`. So an authentication failure, a rate limit, or a wrong repository shows up as empty output beside the helper's error message, not as a zero count and not as a failing command. Read empty output as "this tick observed nothing", never as "no open threads": leave the Copilot axis unresolved, let the tick fall through to the wait, and probe again next tick. Prefixing the command with `set -o pipefail` makes the status carry the failure, at the cost of the recommended `Bash(bash "*/resolve-copilot-threads" *)` allow rule no longer matching, since the command would then begin with `set`.
+- **A failed probe is not a clean probe, and it does not announce itself in the exit status.** Each command writes a diagnostic to stderr and exits nonzero, but the pipeline reports `jq`'s status, and `jq` over empty input emits nothing and exits `0`. So an authentication failure, a rate limit, or a wrong repository shows up as empty output beside the helper's error message, not as a zero count and not as a failing command. Read empty output as "this tick observed nothing", never as "no open threads": leave the Copilot axis unresolved and submit the appropriate pending observation with stderr to the common handling below. Prefixing the command with `set -o pipefail` makes the status carry the failure, at the cost of the recommended `Bash(bash "*/resolve-copilot-threads" *)` allow rule no longer matching, since the command would then begin with `set`.
 
-- **All three commands are read-only.** `fetch` is a GraphQL query, `fetch-reviews` is a REST read, and `audit` is three REST reads and a GraphQL query; none writes to the PR. So the probe runs unchanged on a Dependabot PR and under `--no-fix`, which is what lets those paths observe Copilot's feedback without invoking a skill that pushes.
-- **The audit sees what the other two cannot.** It reports Copilot feedback outside any Copilot thread or review body, in `uncovered`: a Copilot reply inside an unresolved thread someone else opened, a review comment no thread holds, a comment on the PR itself, or a review whose body is not a string. Without it, that feedback would leave the Copilot axis clean while it sat unread. The list is PR-wide and persists like a review body, so the probe projects it as `items`, which is what step 7b records as processed. Each item names its surface (`review-comment:ID`, `issue-comment:ID`, or `review:ID` for a review whose body is not a string), because ids from different GitHub tables can coincide. An absent `audited` field is a failed audit, never an empty one: the filter emits nothing when `audit` fails or when its output lacks the list. After two consecutive ticks with a failed audit, escalate per step 9, quoting the stderr, rather than probing forever.
+- **Read-only is not unrestricted.** These three commands require the stored `read-review` permission, even on a Dependabot PR or under `--no-fix`. If permitted, they observe feedback without a fixing child; if blocked, record the skipped probe without reading bodies.
+- **The audit sees what the other two cannot.** It reports Copilot feedback outside any Copilot thread or review body, in `uncovered`: a Copilot reply inside an unresolved thread someone else opened, a review comment no thread holds, a comment on the PR itself, or a review whose body is not a string. Without it, that feedback would leave the Copilot axis clean while it sat unread. The list is PR-wide and persists like a review body, so the probe projects it as `items`, which is what step 7b records as processed. Each item names its surface (`review-comment:ID`, `issue-comment:ID`, or `review:ID` for a review whose body is not a string), because ids from different GitHub tables can coincide. An absent `audited` field is a failed audit, never an empty one: the filter emits nothing when `audit` fails or when its output lacks the list. Submit the audit outcome and stderr to merge-flow's observation handling below. The helper alone advances or resets its two-tick counter and returns terminal diagnostics at the bound.
 - **Run it only when the metadata probe's `commit_id` equals `headRefOid`.** A stale review sends the tick to step 7a whatever the probe would say, so running it there spends the whole probe on an answer nothing reads. Nothing is lost by the gate: `fetch` reports every unresolved Copilot thread on the PR, whatever review opened it, so threads left over from an earlier review are still counted the moment a current-head review appears.
 - **Project the fields shown on every tick, never the raw result.** `fetch-reviews` returns every Copilot review on the PR with its complete body, and a watch takes this snapshot on every tick. The body is read once per review, by the classification below.
 - **Select the review by `id`, not by head SHA.** Under `--confirm-clean` two reviews share one head, and only the newest one's body is the current verdict. `--argjson` is required because REST reports `id` as a number.
-- **An all-null result is not a failure, and it is not a match either.** `fetch-reviews` leaves out a review whose body is not a string, so a review the metadata probe found can be absent from its output. jq builds the object anyway, and the filter then answers `{"id":null,"url":null,"commitId":null}`. A null `id` means `fetch-reviews` did not return the review the metadata probe found. That has several causes: a body skipped because it is not a string (the command then prints `Warning: skipping review ID: its body is not a string.` on stderr), or a wrong `REVIEW_ID`. None of them is a clean review, so never satisfy the Copilot axis on a null `id`. Keep the thread count from `fetch`, re-probe on the next tick, and if the `id` is still null after two ticks, escalate per step 9, quoting any skip warning.
+- **An all-null result is not a failure, and it is not a match either.** `fetch-reviews` leaves out a review whose body is not a string, so a review the metadata probe found can be absent from its output. jq builds the object anyway, and the filter then answers `{"id":null,"url":null,"commitId":null}`. A null `id` means `fetch-reviews` did not return the review the metadata probe found. That has several causes: a body skipped because it is not a string (the command then prints `Warning: skipping review ID: its body is not a string.` on stderr), or a wrong `REVIEW_ID`. None of them is a clean review, so never satisfy the Copilot axis on a null `id`. Keep the thread count from `fetch` and submit pending `review-id` with any skip warning to the common handling below; no independent counter or escalation applies.
 - **`fetch-reviews` reads the reviews endpoint the metadata probe already read.** That repetition is deliberate: each command stays standalone and copy-pasteable, and the second read only happens on ticks where a current-head review exists.
 
 #### Classifying a Copilot review
 
+Consult the stored `classify-review` permission before any classification or reclassification, and `read-review` before obtaining or reading a body, even from a cache. Do not execute this section during a blocked triage or probe.
+
 The first time a current-head review `id` appears, read its **complete** body before recording anything about it:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" fetch-reviews OWNER REPO PR_NUMBER |
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" --watch-state WATCH_STATE_JSON fetch-reviews OWNER REPO PR_NUMBER |
   jq -c --argjson review_id REVIEW_ID '[.[] | select(.id == $review_id)] | last | {id, body}'
 ```
 
-**A failed read is not a body.** No output at all means the fetch failed, and it prints its cause on stderr; `{"id":null,"body":null}` means the result did not carry that review. Neither is a body to classify: record nothing for that `id`, let the tick fall through to the wait, and read again next tick. Count consecutive failed reads for the `id` in the watch state, and after two, escalate per step 9 quoting the stderr. Only a non-null `id` with a `body` is read and classified. An empty `body` states nothing, and any findings that review has are threads, so it is a `review`.
+**A failed read is not a body.** No output at all means the fetch failed, and it prints its cause on stderr; `{"id":null,"body":null}` means the result did not carry that review. Neither is a body to classify: record no classification for that `id` and submit pending `review-body` with stderr to the common handling below. No independent per-id counter, wait or escalation applies. Only a non-null `id` with a `body` is read and classified. An empty `body` states nothing, and any findings that review has are threads, so it is a `review`.
 
 Never truncate the body or read only its start. Copilot can place the text that says it did not review anywhere in the body, and a prefix discards exactly the evidence the classification needs. A review body is immutable, so one full read per review `id` is enough. Record one classification per `id` in the watch state:
 
@@ -195,7 +275,49 @@ Reduce the snapshot to the four axes in [Ready Criteria](#ready-criteria).
 
 ### 4. Classify and Dispatch
 
-Evaluate in this order and take the first match. Every condition below is work the skill can do now. Waiting is not, so it sits at the end as the fallthrough rather than in the middle of the list: a pending check is nothing the skill can act on, and it must never displace a condition that is.
+Use the lifecycle already computed once from this tick's snapshot before collecting candidates. MERGED admits only an unhandled post-merge candidate; CLOSED admits no work. For OPEN, collect matching conditions in the order below without routing them. The shared eligibility predicate checks every candidate against that lifecycle and the prepared policy; OPEN-only actions cannot survive a terminal state. A forbidden action becomes a `Would do` line in the report, never a route and never work to wait for. Route only the first remaining permitted action. If none remains, wait only for a running permitted check. Otherwise end with the policy-limited terminal report: `Status: unavailable`, every would-do line and remaining axis, the named parent resume target when supplied, and the scheduler cancellation outcome. Cancel the selected scheduler before returning; if cancellation fails, report that failure. Never offer a merge or start a merge watch from this terminal result. Do not invent pending work from a forbidden review request, repair, sync or merge.
+
+Use the existing `merge-flow dispatch` helper to apply this rule. Resolve `merge-flow` from the same physical loaded-package root as the other bundled helper, confirm it is executable, and pass one JSON snapshot on stdin. The helper only selects and reports; it performs no GitHub or git operation. A missing helper, invalid snapshot or failed command stops dispatch and is reported, never replaced by the old first-match behavior.
+
+Start from watch state containing the fresh `snapshot` and helper-computed `lifecycle`; append candidate fields, leaving `policy` unchanged. For example:
+
+```bash
+jq '.+{candidates:[{action:"repair",detail:"fix the failed check"}],runningPermittedCheck:false}' WATCH_STATE_JSON |
+  bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" dispatch
+```
+
+Pass the unchanged step 1 `policy` object. Only re-entering step 1 can replace permissions after an option or policy change. Use `sync` for DIRTY/BEHIND, `repair` for failed checks, `classify-review` for a new unclassified review, `process-review` for feedback/audit/unclear-review handling, `request-review` or `wait-review` for step 7a, `confirm-review` for step 7d, `merge` for readiness, `post-merge` for step 8f. For CLOSED, supply no candidates and report the closed state when dispatch returns its terminal result. A note-only BLOCKED state is reported but is not a route. `escalate` is available for a permitted non-review escalation. No unconditional wait candidate is allowed. `runningPermittedCheck` is true only when an actual check that policy permits observing remains running; a forbidden action never sets it.
+
+Write the snapshot with the host's file tool, or provide it through supported stdin transport, without interpolating review text into shell code. For a file transport, invoke the resolved helper as follows; `SNAPSHOT_FILE` is the completed JSON file's path:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" dispatch < SNAPSHOT_FILE
+```
+
+If the placeholder is literal, substitute the quoted physical loaded-package helper path already resolved above.
+
+Print every returned `wouldDo` item as data. Persist the helper's returned `observationFailures` unchanged before continuing; no skill-side code increments or resets these counters. If `route` is non-null, perform that selected action only, following its existing step, then take a new snapshot. A route with `retry: true` selects the next snapshot after the normal interruptible wait; do not add another standalone read before that snapshot. If `wait` is true, use the selected interruptible wait and resume at step 3. If `terminal` is true, include every returned diagnostic, preserve the returned status (`failure` for the terminal snapshot kind), and perform the terminal report and cancellation above. Do not subsequently apply raw condition priority or the old report-and-continue rule. Read-only snapshot/probe observations remain permitted under `--no-fix`; their results do not authorize a fixing or review-request route.
+
+#### Permitted pending observations
+
+The closed registry returned by `merge-flow observation-kinds < WATCH_STATE_JSON` is the only kind-to-permission/diagnostic mapping. Supply `{name, pending, diagnostic}` for every applicable read attempted this tick:
+
+| Kind              | Read outcome                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| `snapshot`        | Failed opening or later PR metadata, terminal before lifecycle as above                       |
+| `review-metadata` | Latest-review API or metadata projection failed; a successful no-review result is not pending |
+| `triage`          | Earlier-review batch/count read failed; leave the count unknown                               |
+| `threads`         | Thread fetch or projection failed or emitted no result                                        |
+| `review-id`       | Review identity fetch/projection failed or selected `id` is null                              |
+| `review-body`     | Full classification-body fetch failed or selected identity/body is absent                     |
+| `audit`           | Audit failed or lacks its required result fields                                              |
+| `mergeability`    | Mergeability remains unknown                                                                  |
+
+The registry maps `snapshot`, `review-metadata` and `mergeability` to `read-axis`, and other kinds to `read-review`. Existing triage/classification gates remain required; a retry never grants them. For each fresh OPEN snapshot, submit all applicable successful or pending outcomes through the same handler. A successful/known observation has `pending: false`. Preserve the actual diagnostic, including audit stderr. A forbidden observation is a would-do item, never a reason to wait and never an attempted read. No duplicate name is allowed within one tick.
+
+Pass the previous `observationFailures` returned by `merge-flow` back unchanged on the next dispatch, including resume. Only this helper owns these counters: it advances permitted pending work and resets it on permitted success. Every retryable registry kind shares the same two-tick bound; terminal `snapshot` never retries. The first pending outcome produces an explicit read retry even with no running CI check; the second ends `Status: unavailable` with a diagnostic naming the observation. Stop the scheduler at this result rather than escalating as if policy allowed unlimited retries. Terminal PR lifecycles ignore old observations and cannot wait on running checks. Restore counters from checkpoints; a missing resumed counter is reported rather than silently reset.
+
+`merge-flow lifecycle < SNAPSHOT_STATE_JSON > TICK_STATE_JSON` computes state before candidate collection. These are distinct input/output files; update the watch-state path to the completed result. Dispatch verifies that lifecycle still matches the snapshot. Treat a missing or invalid lifecycle as an input failure, not OPEN.
 
 Two orderings are deliberate:
 
@@ -203,23 +325,23 @@ Two orderings are deliberate:
 - **Act on Copilot findings without waiting for in-flight checks**, because that work is durable: the fixes land whatever the checks go on to do. Requesting a review is perishable by comparison, so both request paths keep a passing-checks precondition. Every push invalidates a review rendered against the old head, which makes a review requested mid-check one that a check fix would throw away, and it spends a round against the step 7c budget either way.
 
 1. **PR is `MERGED`**: go to step 8f with `mergeCommit.oid` from the snapshot, whoever merged it and whether or not the watch reached step 8; the step 8f guard makes a merge already handled a no-op. A merge seen before readiness is reported as such. When the snapshot has no merge commit yet, run the step 8c watch with the current `headRefOid` instead and handle its `merged` event; on the foreground path, run it in the foreground, since no question is open.
-1. **PR is `CLOSED`**: terminal. Report that it was closed without merging, and stop.
+1. **PR is `CLOSED`**: provide no work candidates. Report the closed state with the helper's terminal result and cancel scheduled work.
 1. **`mergeStateStatus` is `DIRTY`**: conflicts with the base branch. Go to step 5.
 1. **`mergeStateStatus` is `BEHIND`**: go to step 5.
 1. **`mergeStateStatus` is `BLOCKED`**: do not treat this as a blocker and do not wait on it, but record it. It means a branch protection rule is unsatisfied, most often a required approving review. Continue evaluating the remaining conditions, and carry the `BLOCKED` state into every status line and into the terminal report per step 8.
 1. **Any check concluded with a failure**: go to step 6.
-1. **Copilot's newest review against the current head has not been classified yet**: if the probe returned its `id`, read it in full and classify it now, per [classifying a Copilot review](#classifying-a-copilot-review); if the read succeeds, record the classification and evaluate this list again from the top. If the probe returned a null `id`, or the read fails, record nothing, count it, and go straight to the wait at the end of this list: no later Copilot condition may act on an unclassified review. A null probe `id` escalates under the probe's own two-tick rule, and a failed read under the classification section's.
+1. **Copilot's newest review against the current head has not been classified yet**: if the probe returned its `id`, read it in full and classify it now, per [classifying a Copilot review](#classifying-a-copilot-review); if the read succeeds, record the classification and evaluate this list again from the top. If the probe returned a null `id`, or the read fails, record no classification and submit the appropriate `review-id` or `review-body` outcome to the common handler. No later Copilot condition may act on an unclassified review; no separate counter or wait applies.
 1. **Copilot's newest review against the current head is classified `unclear`**: escalate per step 9 with the review link and a short quote of what made it ambiguous. Never route it to step 7b, and never treat it as clean.
 1. **Copilot's newest review against the current head is classified `notice`**: Copilot did not review this head. If no retry has been recorded for that notice's review `id`, request a review once as in step 7a, when checks pass, and record the `id`; this retry is keyed on the notice, so it does not spend the once-per-head request step 7a guards. If a retry is already recorded and the newest review is still that notice after two further ticks, or the review the retry produced is another notice, escalate per step 9 with the notice text. Never route a notice to step 7b, and never treat it as clean.
-1. **Copilot reviewed the current head, and the audit failed on this tick and on the one before it**: escalate per step 9, quoting the audit's stderr. A failed audit is one whose projection has no `audited` field. Count consecutive failed-audit ticks in the watch state, and reset the count on any tick whose audit succeeds. A single failure falls through to the conditions below with the audit treated as unresolved, so it can neither dispatch audit items nor let the Copilot axis read as clean; the next tick probes again.
+1. **An OPEN observation is pending or has succeeded**: supply its current outcome to the helper-owned observation handling above. Do not add an independent audit counter, retry loop or escalation route.
 1. **Copilot reviewed the current head, its newest review there is classified `review`, and either step 7b has not already been invoked for that review `id`, or the audit reported an item that no step 7b invocation has recorded at the current head**: go to step 7b. Every current-head review classified `review` goes to the resolver once, whatever its body says: only a full read can tell whether it states a concern, and that read is the resolver's job. Audit items are PR-wide, so a new one dispatches even against a review `id` already processed, and one recorded at the current head does not dispatch again. Checks still running do not hold this back. The `id` clause is step 7b's own once-per-review guard, lifted into the condition that reads it: a review body is immutable, so without the guard every later tick would dispatch the same review again.
 1. **Copilot reviewed the current head, step 7b already processed that review, and either its outcome was not `Completed` or `No unresolved Copilot feedback`, or the probe still reports open threads**: escalate per step 9, unless the outcome's `Still open` entry names that review as a Copilot notice, in which case reclassify it as `notice` per [classifying a Copilot review](#classifying-a-copilot-review) and evaluate this list again. Both shapes are terminal for that review. A non-clearing outcome never satisfies the axis, and a clearing outcome that leaves threads behind is the case step 7b calls out as unable to change on its own. The `id` guard in the condition above will not send the review to step 7b a second time, and no later tick alters an immutable review, so without this condition the tick falls through to the wait below and the watch never ends. **State the two disqualifying signals rather than a summary of them.** A phrasing such as "this tick has no new input" is true of a cleanly resolved review as well, and this condition sits above the terminal one, so that reading escalates every finished PR instead of merging it. A clean processed review does not belong here: it satisfies the Copilot axis, and its review-body findings are cleared by step 7b's record rather than by a later probe, per the Ready Criteria rules.
 1. **Checks pass and Copilot is missing or stale**: go to step 7a.
 1. **Checks pass, Copilot reviewed the current head cleanly, `--confirm-clean` is set, and this is the first such review**: go to step 7d to request and await the confirming review.
 1. **All four axes clean**: terminal. Go to step 8.
-1. **Nothing above matched**: wait, then return to step 3. Checks pending or running with nothing else to act on is the usual case.
+1. **No action condition matched**: supply no route candidate. The shared dispatch filter alone decides whether a running permitted check justifies waiting or the watch must terminate.
 
-Under `--no-fix`, replace steps 5, 6, and 7 with a report of what would have been done, then continue waiting. The step 3 feedback probe still runs: it writes nothing, and without it the report would not be able to say what Copilot actually found.
+The list above supplies candidates only. Restriction filtering and terminal reporting always use the shared rule before any step is entered, including under `--no-fix`.
 
 On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs), and the Copilot conditions above change as that section describes. The classification and `unclear` conditions apply unchanged. A `notice` makes the Copilot axis `n/a (Dependabot)` instead of requesting a retry, and so does a missing or stale review, so the missing-or-stale condition never requests a review either. The audit-failure condition applies unchanged. In place of the dispatch condition, read the classified `review` body in full yourself and escalate if it states any concern, or if the probe reports open threads or audit items. The processed-review condition never matches, because step 7b is never invoked there to record an outcome, and neither does the `--confirm-clean` condition, because no review is ever requested. The probe and the classification read are read-only, so the Dependabot path judges the review without invoking anything that pushes.
 
@@ -233,11 +355,12 @@ sync-with-main:merge
 Parent continuation:
 - Caller: monitor-pr:monitor
 - Resume target: Step 3, take a fresh state snapshot.
+- On needs-decision: escalate with the question and preserved state, returning it to this skill's parent when supplied.
 - On clean merge and push: Continue immediately to Step 3 without asking the user for confirmation.
 - On conflicts requiring a decision, or on any question raised: Stop the watch and escalate per Step 9.
 ```
 
-`sync-with-main:merge` has no parent continuation contract of its own and will ask the user directly about uncommitted changes and non-trivial conflicts. That is acceptable here: a question it raises is exactly the kind of decision this skill is supposed to surface rather than guess at. Treat any such question as an escalation.
+Treat `needs-decision` from `sync-with-main:merge` as an escalation. Under a parent, return the question and preserved state; standalone, ask through the available question mechanism.
 
 After a clean merge and push, resume at step 3. The head SHA has moved, so Copilot's prior review is now stale.
 
@@ -273,6 +396,7 @@ gh run view <run-id> --log-failed
   - Resume target: Step 6c, push the fix, then Step 3, take a fresh state snapshot.
   - On lint success: Continue immediately to Step 6c without asking the user for confirmation.
   - On lint failure or skipped required lint work: Stop the watch and escalate per Step 9.
+  - On needs-decision: escalate with the question and preserved state before pushing.
   ```
 
   Branch on its structured `Lint status: <success|no-tools|failure>` output.
@@ -342,13 +466,14 @@ The run check is what separates "Copilot has not started" from "Copilot is mid-r
 Invoke the `monitor-pr:resolve-copilot-feedback` skill:
 
 ```text
-monitor-pr:resolve-copilot-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id> [DEFER_SEVERITIES=Medium,Low]
+monitor-pr:resolve-copilot-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number> REVIEW_ID=<review id> WATCH_STATE_FILE=<same watch state path> [DEFER_SEVERITIES=Medium,Low]
 
 Parent continuation:
 - Caller: monitor-pr:monitor
 - Resume target: Step 3, take a fresh state snapshot.
 - On Completed or No unresolved Copilot feedback: Return the final summary comment URL, its Reviews read line and any originating review URLs, then continue immediately to Step 3 without asking the user for confirmation.
 - On Partial or Failed: Stop the watch and escalate per Step 9, unless a `Still open` entry names REVIEW_ID as a Copilot notice; then reclassify it as a notice per Step 3 and continue at Step 4.
+- On needs-decision: escalate with the question and preserved state, returning it to this skill's parent when supplied.
 ```
 
 Pass `DEFER_SEVERITIES=Medium,Low` when the review's triage round, per step 7c, is above `--triage-after`. Leave it out when `create-deferred-issues` is not installed, so every finding keeps blocking, and say so once with its install command.
@@ -402,17 +527,21 @@ Each review in a confirmation pair counts as its own round against the step 7c b
 
 ### 8. Terminal Report, Then Merge
 
+Under a parent continuation block, stop scheduled repair work, print the readiness report from step 8a and return `Status: success` to the named resume target before steps 8b through 8f. Merge policy and any merge decision belong to the parent. Do not create a merge watch, offer a merge or merge on the parent's behalf.
+
 Readiness ends the repair loop, not the watch. From here the skill reports, settles the merge policy, waits for any required approval, offers the merge, and handles the merge whoever performs it.
 
 The merge steps call a second script this plugin ships, the same way as the probe:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" policy OWNER REPO BASE
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" --watch-state WATCH_STATE_JSON policy OWNER REPO BASE
 ```
 
-If the plugin-root path was not substituted, locate `**/monitor-pr/**/scripts/merge-flow` exactly as the probe section describes for its script. Every `merge-flow` command prints one JSON value and reports a failed GitHub or git read inside it, including a response it cannot parse, so read the output, not the exit status. A nonzero exit means it printed no JSON: a usage error, `sync` or `panes` run outside a git repository, or `panes` unable to use tmux. **Treat any run that prints no JSON as a failed read**, quoting its stderr: `policy` then knows neither source, a `watch` escalates per step 9, `sync` has not synced, and `panes` could not enumerate peers. This includes a background watch that was stopped before it printed.
+If the plugin-root path was not substituted, use `${plugin_root}/scripts/merge-flow` from the same resolved loaded-package root as the probe, and confirm it is executable before invoking it. Every `merge-flow` command prints one JSON value and reports a failed GitHub or git read inside it, including a response it cannot parse, so read the output, not the exit status. A nonzero exit means it printed no JSON: a usage error, `sync` or `panes` run outside a git repository, or `panes` unable to use tmux. **Treat any run that prints no JSON as a failed read**, quoting its stderr: `policy` then knows neither source, a `watch` escalates per step 9, `sync` has not synced, and `panes` could not enumerate peers. This includes a background watch that was stopped before it printed.
 
 #### 8a. Report
+
+The deferred-issue batch below is shared by readiness and step 9 escalation. When this monitor has a parent and a batch needs user approval, return `Status: needs-decision` with the proposed concerns, resolver summary URL, destination constraints and preserved watch state **before** invoking the child. The parent can invoke `create-deferred-issues` in its own user-facing context, obtain the child's mandatory proposal approval and resume the monitor with the recorded outcome. Never turn a continuation block or a monitor readiness result into filing approval. This return takes precedence over step 8's success return. In a standalone monitor, preserve the child's explicit approval exception and its existing continuation.
 
 1. Stop the wait loop. On the `ScheduleWakeup` path, that means `ScheduleWakeup({stop: true})`; on the scheduled-task path, stop the task that resumes this conversation. Step 8c replaces it with a merge watch.
 1. Record `READY_HEAD`, the `headRefOid` readiness was declared on. Every later step compares against it.
@@ -470,25 +599,25 @@ Then, when the PR requires approval and `reviewDecision` is not `APPROVED`, go t
 
 Start a background watch on the PR **before** making the merge offer, so that it does not wait on the user's answer and the offer does not wait on it. The PR can be merged by anyone, from anywhere; the watch is how the skill learns of it. Run one watch at a time: stop the previous one before starting another.
 
-On Claude Code, run the watch with the `Bash` tool's `run_in_background` option. The harness re-invokes the session when it exits:
+When a background-command capability can notify this conversation on completion, run the watch through it, for example a tool's `run_in_background` option:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" watch OWNER REPO PR_NUMBER READY_HEAD
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" --watch-state WATCH_STATE_JSON watch OWNER REPO PR_NUMBER READY_HEAD
 ```
 
 During an approval wait, step 8d adds `--awaited DECISION`, the `reviewDecision` it is waiting to change, with `NONE` standing for an empty decision. The watch prints one JSON line when it exits, and bounds itself: `merge-flow --help` lists its interval, failure limit, and lifetime. Record its task ID in the watch state.
 
-On Codex with scheduled tasks, create a task that resumes this conversation at the 2-to-5-minute interval, and on each tick runs the same watch for a single read, passing back the counts the previous tick returned and the Unix time of the first tick:
+When an accepted scheduler can resume this conversation, create a task at the 2-to-5-minute interval. Each tick first enters step 1 policy preparation and checks the stored merge permission, then runs the same watch for a single read, passing back the counts the previous tick returned and the Unix time of the first tick:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" watch OWNER REPO PR_NUMBER READY_HEAD --once --failures F --merged-reads M --started T
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" --watch-state WATCH_STATE_JSON watch OWNER REPO PR_NUMBER READY_HEAD --once --failures F --merged-reads M --started T
 ```
 
 A `pending` event carries `failures` and `mergedReads` for the next tick; record them, with `T`, in the watch state. Any other event stops the task and is handled below.
 
-On the foreground path, a harness with neither a background task nor a scheduled task, no watch can run alongside an open question. Claude Code always has the background task, even when `ScheduleWakeup` was unavailable, so this path is for the others. Make the offer per step 8e, or during an approval wait report "Ready, awaiting approval" per step 8d, then end the turn with a resumable checkpoint carrying the step 8 fields, per [Checkpoint and Resume](./references/checkpoint.md). Say that a merge made elsewhere is picked up when `/monitor-pr:monitor` next runs, since step 4 sends a merged PR to step 8f.
+When neither capability can run a watch alongside an open question, make the permitted offer per step 8e, or during an approval wait report "Ready, awaiting approval" per step 8d, then end the turn with a resumable checkpoint carrying the step 8 fields, per [Checkpoint and Resume](./references/checkpoint.md). Say that a merge made elsewhere is observed on the next invocation, when the same restriction-filtered dispatcher decides whether post-merge work is permitted.
 
-Handle the watch's `event`:
+Treat delivery of a watch event as a new entry: resolve policy at step 1 before refreshing the snapshot and pass the applicable merge/post-merge candidates through the shared dispatcher before acting. A blocked action contributes a would-do line, even if an earlier tick permitted the watch. Handle the permitted watch's `event`:
 
 - **`merged`**: go to step 8f with its `mergeCommit`. When `mergeCommit` is `null`, GitHub reported the merge without naming its commit: report its `error`. When the event carries an `error` and a `mergeCommit`, the PR merged at a head other than `READY_HEAD`, so commits this watch never checked landed: lead the final report with that `error`, and still run step 8f, since the merge stands.
 - **`closed`**: report that the PR was closed without merging, and stop. Do not sync or notify.
@@ -533,7 +662,7 @@ Run this once per PR, whichever path observed the merge, and record that it ran 
 1. **Fast-forward the base branch.** From this repository's worktree, run:
 
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" sync OWNER REPO BASE MERGE_SHA
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" --watch-state WATCH_STATE_JSON sync OWNER REPO BASE MERGE_SHA
    ```
 
    It fetches `BASE` from the PR's repository, even in a fork, and fast-forwards whichever worktree has it checked out, usually the main worktree. `synced` is `true` only when the local `BASE` contains the merge. When it is `false`, report its `reason` as written and leave the worktrees as they are: never stash, reset, or force past it.
@@ -541,7 +670,7 @@ Run this once per PR, whichever path observed the merge, and record that it ran 
 1. **Notify the other sessions working in this repository.** On Claude Code, list the tmux panes inside this repository's worktrees:
 
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" panes
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" --watch-state WATCH_STATE_JSON panes
    ```
 
    It prints a JSON array of `{pane, worktree}`. Then list sessions with `ListAgents`: each row ends with its tmux location, such as `tmux plugins:@89.%206`, whose last part is the pane ID. Keep the sessions whose pane ID is in the array, and leave out this session. Send each one a message with `SendMessage`: the PR number and URL, the merge commit SHA, the base branch, and the `sync` result. Keep it informational: each recipient decides whether to merge the base branch into its own work.
@@ -550,7 +679,7 @@ Run this once per PR, whichever path observed the merge, and record that it ran 
 
 1. **Print the final line**, with the merge SHA, the sync result, and the sessions notified, then end the watch, stopping any background watch still running.
 
-Under `--no-fix`, step 8a's deferred-issue batch and steps 8b to 8f report what they would do, the method and the approval requirement included, and do none of it: no merge watch, no merge, no sync, and no messages.
+Steps 8a through 8f remain subject to the shared restriction filter before entry, including when a checkpoint restores a merge phase. A blocked merge or post-merge action contributes a would-do report, not a route, watch, sync or message.
 
 ### 9. Escalate
 
@@ -599,7 +728,7 @@ The terminal report uses the same table plus the readiness verdict for all four 
 - **No PR for the current branch**: Report that and stop, pointing the user at `/pr`.
 - **`gh` not available or not authenticated**: Report the error and stop.
 - **PR is a draft**: Monitor normally, but report the draft state in every status line, and say so explicitly before offering to merge in step 8.
-- **`mergeable` is `UNKNOWN`**: GitHub is still computing it. Treat as pending and re-poll. Do not report it as a failure.
+- **`mergeable` is `UNKNOWN`**: submit a pending mergeability observation with its diagnostic. Only the helper-owned two-tick retry path may re-poll; at the bound report policy-unavailable with that diagnostic, rather than an unbounded wait or a false clean result.
 - **`gh pr checks` exits non-zero**: Not an error. It exits non-zero for pending checks as well as failing ones. Classify from the JSON.
 - **No checks configured on the repository**: Not an error. Treat the checks axis as clean and say so explicitly in the report.
 - **`sync-with-main:merge` stops on conflicts it cannot resolve**: Escalate with the conflicted file list.

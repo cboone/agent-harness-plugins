@@ -29,3 +29,7 @@ Walks through the full process of creating a new Claude Code plugin: choosing a 
 
 - [Clean Up Agent Config](../clean-up-agent-config/README.md): organize existing agent config files
 - [All plugins](../../README.md)
+
+## Codex invocation
+
+Invoke `$create-plugin` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.

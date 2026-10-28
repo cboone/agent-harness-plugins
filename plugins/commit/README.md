@@ -58,3 +58,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - [PR](../pr/README.md): commit, push, and open a pull request in one step
 - [Trim Text](../trim-text/README.md): trims the commit message body
 - [All plugins](../../README.md)
+
+## Codex invocation
+
+Invoke `$commit` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.

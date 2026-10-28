@@ -31,6 +31,13 @@ Support monitor-pr:monitor's merge step: settle the merge policy, watch the PR u
 it merges, and bring the base branch up to date afterward.
 
 Commands:
+  prepare                                     Resolve restrictions into watch state on stdin
+  gate <action>                               Check one action against that resolved state
+  triage                                      Decide whether triage may read/classify reviews
+  lifecycle                                   Resolve snapshot lifecycle before candidate collection
+  observation-kinds                           List the closed pending-read registry
+  dispatch                                    Filter matched actions by active restrictions
+                                              Read one JSON snapshot from stdin; no GitHub calls
   policy <owner> <repo> <base>                  Print allowed merge methods and required approvals
   watch <owner> <repo> <pr_number> <head_sha> [--awaited <decision>]
         [--once [--failures <n>] [--merged-reads <n>] [--started <epoch>]]
@@ -39,6 +46,7 @@ Commands:
   panes                                         List tmux panes inside this repository's worktrees
 
 Options:
+  --watch-state <file>                         Guard policy/watch/sync/panes before any work
   -h, --help    Show this help
 
 Every command prints one JSON object or array on stdout and reports a failed
@@ -436,14 +444,63 @@ function cmd_panes() {
        | select($tree != null) | {pane, worktree: $tree}]' --args ${WORKTREE_PATHS[@]+"${WORKTREE_PATHS[@]}"} <<< "${CAPTURED_OUT}"
 }
 
+# Preparation replaces permissions; later operations validate and consult that same state.
+function policy_query() {
+  local mode="${1}" action="${2:-}" policy_dir
+  policy_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+  jq -se --arg mode "${mode}" --arg action "${action}" -f "${policy_dir}/watch-policy.jq"
+}
+
+function require_watch_action() {
+  local state_file="${1}" action="${2}" result
+  [[ -f "${state_file}" ]] || die "watch state is unavailable"
+  result="$(policy_query gate "${action}" < "${state_file}")" || die "invalid watch policy"
+  if ! jq -e '.allowed == true' > /dev/null <<< "${result}"; then
+    die "watch policy blocks ${action} ($(jq -r '.status' <<< "${result}"))"
+  fi
+}
+
+function cmd_policy_query() {
+  local mode="${1}"
+  shift
+  if [[ "${mode}" == gate ]]; then
+    [[ $# -eq 1 ]] || usage_error "gate needs one action and watch state on stdin"
+    policy_query gate "${1}"
+  else
+    [[ $# -eq 0 ]] || usage_error "${mode} takes watch state on stdin, no arguments"
+    policy_query "${mode}"
+  fi
+}
+
 function main() {
+  local watch_state="" action
+  if [[ "${1:-}" == --watch-state ]]; then
+    [[ $# -ge 2 ]] || usage_error "--watch-state needs a path"
+    watch_state="${2}"
+    [[ -n "${watch_state}" ]] || usage_error "watch state path must not be empty"
+    shift 2
+  fi
   local command="${1:-}"
   [[ $# -eq 0 ]] || shift
+  if [[ -n "${watch_state}" ]]; then
+    case "${command}" in
+      policy | watch)
+        for action in read-axis merge; do require_watch_action "${watch_state}" "${action}"; done
+        ;;
+      sync)
+        for action in read-axis sync post-merge; do require_watch_action "${watch_state}" "${action}"; done
+        ;;
+      panes) require_watch_action "${watch_state}" post-merge ;;
+      prepare | gate | triage | lifecycle | dispatch | observation-kinds) usage_error "policy commands read watch state on stdin" ;;
+      *) usage_error "unknown watch-state command ${command}" ;;
+    esac
+  fi
   case "${command}" in
     policy) cmd_policy "$@" ;;
     watch) cmd_watch "$@" ;;
     sync) cmd_sync "$@" ;;
     panes) cmd_panes "$@" ;;
+    prepare | gate | triage | lifecycle | dispatch | observation-kinds) cmd_policy_query "${command}" "$@" ;;
     -h | --help) usage ;;
     "") usage_error "missing command" ;;
     *) usage_error "unknown command ${command}" ;;
