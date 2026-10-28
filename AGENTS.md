@@ -47,7 +47,7 @@ These rules cover all repository text, including skill prompts, references, READ
 - No em dashes. Use other punctuation, or a spaced double hyphen where appropriate.
 - No human or agent work estimates, including durations, “quick”, sprints, sizes or story points. Describe scope, dependencies and uncertainty. Code runtime measurements and complexity are allowed.
 - Use neutral technical terms: running/stopped, in use/unused, terminate, validity check, sample data, unexpected, primary/replica and allowlist/blocklist. Fixed upstream identifiers and proper nouns remain unchanged.
-- Keep this operating summary concise. Place component rules in paired scoped instruction files and specialized detail in references. Check global plus root plus nested instruction sizes against 32 KiB.
+- Keep this operating summary concise. Place component rules in paired scoped instruction files and specialized detail in references. Check the root plus the largest nested instruction chain against 32 KiB; global `~/.codex/AGENTS.md` loads separately.
 
 ## License
 

@@ -374,8 +374,7 @@ sandbox_mode = "workspace-write"
 project_doc_fallback_filenames = ["CLAUDE.md"]
 ```
 
-The `project_doc_fallback_filenames` line lets Codex fall back to CLAUDE.md when AGENTS.md is not present.
-If CLAUDE.md is a symlink to AGENTS.md, omit `project_doc_fallback_filenames` to avoid Codex ingesting the same instructions twice.
+Keep `project_doc_fallback_filenames = ["CLAUDE.md"]` even when CLAUDE.md is a symlink to AGENTS.md. Codex reads at most one instruction file per directory; the fallback still serves CLAUDE.md-only directories.
 
 ### Phase 5: Verify
 
@@ -426,10 +425,10 @@ If CLAUDE.md is a symlink to AGENTS.md, omit `project_doc_fallback_filenames` to
 
 ### OpenAI Codex
 
-- **Instruction loading:** Walks from project root down to cwd, reading AGENTS.md at each directory level, concatenating them in order
+- **Instruction loading:** Walks from project root down to cwd, selecting the first existing regular file among AGENTS.override.md, AGENTS.md and configured fallbacks in each directory. Blank contents contribute no instructions and do not trigger another filename lookup
 - **AGENTS.override.md:** Temporary overrides in any directory without modifying the base file. Unique to Codex.
 - **Fallback filenames:** `project_doc_fallback_filenames` in config.toml makes Codex read CLAUDE.md or other files as instruction sources
-- **32 KiB limit:** Combined AGENTS.md content is capped at `project_doc_max_bytes` (default 32 KiB). Raise in config.toml if needed.
+- **32 KiB limit:** `project_doc_max_bytes` caps the project instruction chain (default 32 KiB), excluding global `~/.codex/AGENTS.md`, which loads separately. Raise in config.toml if needed.
 - **Profiles:** Named config profiles (`[profiles.name]`) for switching between careful review and fast iteration. Unique to Codex.
 - **Trust model:** Project .codex/config.toml only loads if the project is trusted.
 
