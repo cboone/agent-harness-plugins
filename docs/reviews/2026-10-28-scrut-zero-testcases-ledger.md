@@ -168,4 +168,10 @@ TOOLING explicitly opened the base-update gate: merge `origin/main` with a signe
 
 The only conflict was `.github/workflows/ci.yml`. It was resolved by retaining the checked-runner job and adding main’s `MONITOR_SKILL_FILE` and `WATCH_CHANGES_STUB_BIN` registrations with identical values. A comparison of every incoming literal environment registration against the resolved mapping confirmed none were lost or changed. Makefile auto-merged its matching registrations and watch-test unset variables. There was no runner conflict or design choice. No rebase or force push was used. The runner blob is unchanged by this merge.
 
-Post-merge version confirmation and the requested test runs are pending.
+Signed merge commit `c1973325` has both expected parents and a valid signature. The runner blob is identical to the first parent. Post-merge runner coverage passed 24/24. Version confirmation against new merge base `fec4708b738f3e30a76ffcc0e20957166fc3d724` passed for all 60 plugins, with no plugin content-directory changes or needed bumps. The full merged suite is pending.
+
+### Post-merge baseline validation
+
+A fresh disposable shared clone of `c1973325` was scanned against the actual new merge base `fec4708b738f3e30a76ffcc0e20957166fc3d724`, with `SEMGREP_REPO_NAME=cboone/agent-harness-plugins`, `--config auto`, baseline mode, JSON output and no metrics override. Exit 0, zero findings, 85 rules on 7 files. Exactly one parser error remains: the previously accepted `bin/run-scrut-documents:80`, columns 14–16, special-parameter-default span. No new span appeared, and the runner has not changed. The existing explicit exception therefore still applies. Captures remain at `/var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T/scrut-577-semgrep-merged.q3xXiK/result.json` and `scan.log`. The disposable clone was removed after inspection.
+
+The fresh merged `make test-all` will run alone on 41 documents, including main’s new watch coverage. Pushed history remains intact; no second tidy or history rewrite will be performed after publication.
