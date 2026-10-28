@@ -161,3 +161,11 @@ Exact-tree tidy passed against `fix/577-scrut-zero-testcases-pre-tidy`. The publ
 GitHub reports `CONFLICTING` / `DIRTY` against `main` at `fec4708b`, after the background-watch work in repository PR 668 merged. No PR CI run has started. A non-mutating `git merge-tree --write-tree HEAD origin/main` found one conflict, `.github/workflows/ci.yml`; Makefile auto-merges. The concrete resolution preserves the checked-runner CI job and adds the incoming `MONITOR_SKILL_FILE` and `WATCH_CHANGES_STUB_BIN` environment registrations. Prepared patch: `/tmp/577-ci-conflict-resolution.patch`. No runner or fallback change is required.
 
 TOOLING received the base-update gate request through the worker mailbox. No merge or rebase has begun. Pending authorization: signed merge of `origin/main`, the two-entry CI resolution, affected/full checks and version confirmation, push and green CI. Pushed history must remain intact. This gate request concerns the base update, not the already accepted parser exception. TOOLING retains responsibility for merging the PR.
+
+## Authorized main merge
+
+TOOLING explicitly opened the base-update gate: merge `origin/main` with a signed merge commit, preserve pushed history, keep both sides’ intent, rerun the runner suite and `make test-all`, then push. Design-choice conflicts or a runner conflict overlapping the open test-environment work require a stop.
+
+The only conflict was `.github/workflows/ci.yml`. It was resolved by retaining the checked-runner job and adding main’s `MONITOR_SKILL_FILE` and `WATCH_CHANGES_STUB_BIN` registrations with identical values. A comparison of every incoming literal environment registration against the resolved mapping confirmed none were lost or changed. Makefile auto-merged its matching registrations and watch-test unset variables. There was no runner conflict or design choice. No rebase or force push was used. The runner blob is unchanged by this merge.
+
+Post-merge version confirmation and the requested test runs are pending.

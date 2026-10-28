@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+# Stub gh and sleep for offline watch tests; reject unsupported requests.
+set -euo pipefail
+
+function refuse() {
+  echo "offline request rejected: ${1}" >&2
+  return 1
+}
+
+function parse_request() {
+  case "${1:-} ${2:-}" in
+    'pr view')
+      operation="pr"
+      shift 2
+      ;;
+    'run list')
+      operation="runs"
+      shift 2
+      ;;
+    *)
+      [[ "${1:-}" == api ]] || {
+        refuse 'unsupported operation'
+        return 1
+      }
+      operation="reviews"
+      shift
+      ;;
+  esac
+  local option seen='|' operand="" repo="" branch="" workflow="" limit="" paginate=false slurp=false
+  fields=""
+  while [[ $# -gt 0 ]]; do
+    option="${1}"
+    case "${operation}:${option}" in
+      pr:--repo | pr:--json | runs:--repo | runs:--branch | runs:--workflow | runs:--limit | runs:--json)
+        [[ "${seen}" != *"|${option}|"* && $# -ge 2 && -n "${2}" ]] \
+          || {
+            refuse 'missing or duplicate option value'
+            return 1
+          }
+        seen+="${option}|"
+        case "${option}" in
+          --repo) repo="${2}" ;;
+          --branch) branch="${2}" ;;
+          --workflow) workflow="${2}" ;;
+          --limit) limit="${2}" ;;
+          --json) fields="${2}" ;;
+          *) return 1 ;;
+        esac
+        shift 2
+        ;;
+      reviews:--paginate | reviews:--slurp)
+        [[ "${seen}" != *"|${option}|"* ]] || {
+          refuse 'duplicate pagination flag'
+          return 1
+        }
+        seen+="${option}|"
+        case "${option}" in --paginate) paginate=true ;; --slurp) slurp=true ;; *) return 1 ;; esac
+        shift
+        ;;
+      *:-*)
+        refuse 'unsupported option'
+        return 1
+        ;;
+      *)
+        [[ "${operation}" != runs && -z "${operand}" ]] || {
+          refuse 'unexpected operand'
+          return 1
+        }
+        operand="${1}"
+        shift
+        ;;
+    esac
+  done
+  local allowed
+  case "${operation}" in
+    pr)
+      [[ "${repo}" == acme/widgets && "${operand}" == 7 ]] || {
+        refuse 'PR identity'
+        return 1
+      }
+      allowed='["state","reviewDecision","headRefOid","headRefName","mergeCommit","statusCheckRollup","mergeable","mergeStateStatus"]'
+      ;;
+    runs)
+      [[ "${repo}" == acme/widgets && "${branch}" == topic && "${workflow}" == Copilot && "${limit}" == 10 ]] \
+        || {
+          refuse 'workflow scope'
+          return 1
+        }
+      allowed='["headSha","status"]'
+      ;;
+    reviews)
+      [[ "${operand}" == repos/acme/widgets/pulls/7/reviews && "${paginate}" == true && "${slurp}" == true ]] \
+        || {
+          refuse 'review endpoint or pagination'
+          return 1
+        }
+      return 0
+      ;;
+    *) return 1 ;;
+  esac
+  if ! fields="$(jq -nce --arg fields "${fields}" --argjson allowed "${allowed}" '
+    $fields | split(",")
+    | if length > 0 and (length == (unique | length)) and all(.[]; . as $field | $allowed | index($field) != null)
+      then . else error("unsupported JSON fields") end' 2> /dev/null)"; then
+    refuse 'JSON fields'
+    return 1
+  fi
+}
+
+function project_fields() {
+  jq -c --argjson fields "${fields}" --argjson array "${1}" '
+    def project: if type == "object" then with_entries(select(.key as $key | $fields | index($key) != null)) else . end;
+    if $ARGS.named.array then if type == "array" then map(project) else . end else project end'
+}
+
+function main() {
+  if [[ $# -eq 1 && "${1}" == --stub-check ]]; then
+    echo watch-changes-offline-stub
+    return
+  fi
+  if [[ "$(basename "$0")" == sleep ]]; then
+    printf '%s\n' "${1}" >> "${WATCH_TEST_SLEEP_LOG:?}"
+    return
+  fi
+  printf 'request\n' >> "${WATCH_TEST_CALLS:?}"
+  local operation="" fields="" count=0 row
+  parse_request "$@" || return 1
+  [[ ! -s "${WATCH_TEST_COUNT:?}" ]] || count="$(cat "${WATCH_TEST_COUNT}")"
+  if [[ "${operation}" == pr ]]; then
+    if [[ "${WATCH_TEST_READ_DELAY:-0}" == 1 ]]; then /bin/sleep 1; fi
+    count=$((count + 1))
+    printf '%s\n' "${count}" > "${WATCH_TEST_COUNT}"
+  fi
+  ((count > 0)) || count=1
+  row="$(sed -n "${count}p" "${WATCH_TEST_SEQUENCE:?}")"
+  [[ -n "${row}" ]] || row="$(tail -n 1 "${WATCH_TEST_SEQUENCE}")"
+  case "${operation}" in
+    pr)
+      if [[ "$(jq -r '.snapshot' <<< "${row}")" == FAIL ]]; then
+        echo 'offline PR read failed' >&2
+        return 1
+      fi
+      jq -c '.snapshot' <<< "${row}" | project_fields false
+      ;;
+    runs)
+      case "$(jq -r '.runs // []' <<< "${row}")" in
+        EMPTY) return 0 ;;
+        FAIL)
+          echo 'offline workflow read failed' >&2
+          return 1
+          ;;
+        NO_WORKFLOW)
+          echo 'could not find any workflows named Copilot' >&2
+          return 1
+          ;;
+        *) jq -c '.runs // []' <<< "${row}" | project_fields true ;;
+      esac
+      ;;
+    reviews)
+      case "$(jq -r '.reviews' <<< "${row}")" in
+        EMPTY) return 0 ;;
+        FAIL)
+          echo 'offline review read failed' >&2
+          return 1
+          ;;
+        *) jq -c '.reviews' <<< "${row}" ;;
+      esac
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+main "$@"
