@@ -1,0 +1,61 @@
+[
+  {
+    "name": "without-pr",
+    "arguments": [],
+    "branch": "feature/prose",
+    "matching_pr": null,
+    "remote_default": "origin/main",
+    "changed_prose": ["docs/notes.md"],
+    "expected_choice": "branch",
+    "expected_base": "origin/main",
+    "baseline_text": "Save the report.\n\nThe Summary tab, which is where summaries are displayed, is where to view the summary.\n\n[Reference](https://example.invalid/guide)\n\n```text\nDO NOT CHANGE THIS CODE\n```\n",
+    "working_text": "In order to save this report, you must first click the Save button.\n\nThe Summary tab, which is where summaries are displayed, is where to view the summary.\n\n[Reference](https://example.invalid/guide)\n\n```text\nDO NOT CHANGE THIS CODE\n```\n"
+  },
+  {
+    "name": "with-pr",
+    "arguments": [],
+    "branch": "feature/prose",
+    "matching_pr": {
+      "url": "https://example.invalid/pull/12",
+      "remote_base": "origin/release"
+    },
+    "remote_default": "origin/main",
+    "changed_prose": ["docs/notes.md"],
+    "expected_choice": "question",
+    "expected_options": ["pr", "branch"],
+    "expected_base": null
+  },
+  {
+    "name": "explicit-branch-pr-base",
+    "arguments": ["branch"],
+    "branch": "feature/prose",
+    "matching_pr": {
+      "url": "https://example.invalid/pull/12",
+      "remote_base": "origin/release"
+    },
+    "remote_default": "origin/main",
+    "changed_prose": ["docs/notes.md"],
+    "expected_choice": "branch",
+    "expected_base": "origin/release"
+  },
+  {
+    "name": "lookup-failure",
+    "arguments": [],
+    "branch": "feature/prose",
+    "lookup_error": "GitHub lookup failed",
+    "remote_default": "origin/main",
+    "changed_prose": ["docs/notes.md"],
+    "expected_choice": "question",
+    "expected_base": null
+  },
+  {
+    "name": "ambiguous-pr",
+    "arguments": [],
+    "branch": "feature/prose",
+    "matching_pr": "multiple matches",
+    "remote_default": "origin/main",
+    "changed_prose": ["docs/notes.md"],
+    "expected_choice": "question",
+    "expected_base": null
+  }
+]

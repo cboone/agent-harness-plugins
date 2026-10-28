@@ -31,7 +31,7 @@ How it applies the result depends on the input:
 
 ## Requirements
 
-- The [GitHub CLI](https://cli.github.com/), authenticated, for PR and issue bodies.
+- The [GitHub CLI](https://cli.github.com/), authenticated, for PR and issue bodies and current-branch PR lookups.
 - A Git repository for file paths.
 - `realpath` (GNU coreutils, or macOS 13 and later) for a symlinked instruction file such as `CLAUDE.md`.
 - Optional: [`codex`](https://github.com/openai/codex), authenticated, for the Codex dry run on file paths.
@@ -40,13 +40,17 @@ How it applies the result depends on the input:
 
 ```text
 /trim-text
+/trim-text branch
+/trim-text branch --base origin/main
 /trim-text pr 42
 /trim-text issue 17 --dry-run
 /trim-text AGENTS.md plugins/*/skills/*/SKILL.md
 /trim-text docs/guide.md --profile none --no-commit
 ```
 
-With no argument, the skill trims the body of the current branch's open PR. `--profile` overrides the profile detected from the input. `--dry-run` reports the proposed changes without editing anything. `--no-commit` edits files and verifies them but leaves the edits uncommitted. `--no-codex` classifies file paths in the current session instead of through Codex.
+With no scope argument, a branch with an open PR offers its body (default) or branch changes. Without a PR, default to branch changes. Explicit `branch` selects changed prose, including local on-disk changes and untracked prose, compared with the merge base of the PR's remote base or the verified remote default branch. `--base` selects another comparison ref. Unchanged prose and unrelated edits remain untouched; the existing file verification and commit rules apply.
+
+`--profile` overrides the profile detected from the input. `--dry-run` reports the proposed changes without editing anything. `--no-commit` edits files and verifies them but leaves the edits uncommitted. `--no-codex` classifies file paths in the current session instead of through Codex.
 
 When `codex` is installed, file paths first get a read-only Codex dry run (`codex exec` in a read-only sandbox with `approval_policy="never"` and `web_search="disabled"`, on `gpt-6.1-sol` at `low` effort with an 872k context window, set on the run so your own Codex settings never apply). The sandbox holds only with `approval_policy="never"`, which stops the run from asking to leave it. `web_search="disabled"` turns off Codex's web search, which the sandbox does not cover. Together they keep the run's commands and web search offline. MCP servers in your Codex configuration are not covered and can still reach the network. Started from a Codex session, the skill runs in that session instead, on that session's model and settings. The current session checks each proposal against the standard and the profile before applying it. PR and issue bodies and pasted text always run in the current session. When Codex is missing or its run fails a completion check, the session classifies the text itself and says so.
 
