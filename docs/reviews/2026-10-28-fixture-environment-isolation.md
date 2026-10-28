@@ -610,3 +610,33 @@ The first hostile integration run stopped at Prettier on the new negative guard
 data document. Its disposable caller remained unchanged. The data formatting
 was corrected before repeating validation. Existing review counts carry on;
 neither completed loop was restarted by the merge.
+
+The renewed baseline Semgrep scan against merged main `fec4708b` ran in the
+owned disposable clone: 88 rules, 13 files and zero findings. The same two
+PartialParsing warnings have exactly the raw spans recorded above. The overlap
+check again passed for all raw spans, the entire `stop_workers` function
+82–93 and the entire inventory-budget section 513–795. Both enclosing regions
+are byte-identical to the new baseline; neither contains changed lines. Evidence:
+`docs/reviews/2026-10-28-fixture-environment-semgrep-integration-spans.json`.
+Raw output is `semgrep-integration.json` and `semgrep-integration.log` under the
+validation directory. The scan clone was removed. An initial invocation in the
+worktree was terminated before reuse; only the completed disposable-clone scan
+counts as evidence, and worktree status was verified unchanged.
+
+The new PID, channel-split and background-failure paths also passed under
+`/bin/bash` 3.2.57, including the expected exit 7 and original diagnostic.
+Post-merge version checking is all clear against `fec4708b`: 60 manifests,
+two matching dual manifests, complete catalog coverage and no changed plugin
+content requiring a bump. Evidence: `version-check-post-merge.json`.
+
+The integration full suite exposed one incoming monitor-dispatch reference to
+the retired `GIT_WORKTREE_STUB_BIN` name. Updating that reference to the existing
+`WORKTREE_GIT_STUB_BIN` contract restored all 62 cases without changing an
+assertion. A second complete hostile run follows that correction.
+
+The negative four-backtick input includes a nested three-backtick line, so
+Prettier preserves its required fence length. The restored guard rejects it;
+planting the original three-backtick-only parser accepts it, which fails the
+existing expected-exit assertion. Restoring the guard restores rejection.
+Evidence: the directory recorded in `fence-plant.path` under the validation
+root. This keeps the fence regression meaningful after formatting.

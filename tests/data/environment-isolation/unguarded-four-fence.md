@@ -1,5 +1,7 @@
 # Negative guard input
 
-```scrut
-$ git status
+````scrut
+$ printf '%s\n' '```'
 ```
+$ git status
+````
