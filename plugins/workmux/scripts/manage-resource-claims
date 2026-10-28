@@ -354,7 +354,9 @@ function read_claims() {
 function release_lock() {
   [[ -n "${LOCK_DIRECTORY}" ]] || return 0
 
-  rm -rf "${LOCK_DIRECTORY}"
+  rm "${LOCK_DIRECTORY}/owner" || return 1
+  # Another writer may create its owner file before this directory is removed.
+  rmdir "${LOCK_DIRECTORY}" 2> /dev/null || :
   LOCK_DIRECTORY=""
 }
 
@@ -410,8 +412,8 @@ function held_lock_report() {
 # for one rm is not.
 #
 # This serializes access to the file; it does not make the claim an enforced
-# lock on the resource, which stays advisory. mkdir is the portable mutex: it
-# is atomic everywhere this runs, and flock is absent on macOS.
+# lock on the resource, which stays advisory. Bash noclobber creates the owner
+# exclusively, even when mkdir incorrectly reports success on an existing path.
 function acquire_lock() {
   local file="${1}"
   local lock="${file}.lock"
@@ -420,7 +422,15 @@ function acquire_lock() {
   directory="$(dirname "${file}")"
   mkdir -p "${directory}" || die "cannot create ${directory}"
 
-  while ! mkdir "${lock}" 2> /dev/null; do
+  while :; do
+    if mkdir "${lock}" 2> /dev/null; then
+      if (
+        set -o noclobber
+        printf '%s' "$$" > "${lock}/owner"
+      ) 2> /dev/null; then
+        break
+      fi
+    fi
     # mkdir fails for reasons other than contention: an unwritable parent, or
     # something that is not a directory already at that path. Waiting those out
     # and then reporting a held lock would be wrong twice over, since it costs
@@ -430,7 +440,12 @@ function acquire_lock() {
       # It may have been released between the mkdir and this test, so try once
       # more before concluding the failure was not contention.
       if mkdir "${lock}" 2> /dev/null; then
-        break
+        if (
+          set -o noclobber
+          printf '%s' "$$" > "${lock}/owner"
+        ) 2> /dev/null; then
+          break
+        fi
       fi
 
       if [[ ! -d "${lock}" ]]; then
@@ -446,17 +461,10 @@ function acquire_lock() {
     waited=$((waited + 1))
   done
 
-  # The trap goes on before the owner file is written, so a failure below
-  # still releases the directory instead of leaking it.
+  # Only the exclusive owner may install cleanup. Failed contenders leave the
+  # file untouched, including when its recorded PID no longer exists.
   LOCK_DIRECTORY="${lock}"
   trap release_lock EXIT
-
-  # The owner is what lets a waiter that times out say whether anything is
-  # still running, which is the difference between a message someone can act on
-  # and one that only says a directory exists. Refuse to hold a lock this
-  # cannot be recorded for.
-  printf '%s' "$$" > "${lock}/owner" \
-    || die "cannot record the lock owner in ${lock}"
 }
 
 # Replaces the file in one step so a reader never sees a half-written document.

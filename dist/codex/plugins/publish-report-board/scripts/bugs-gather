@@ -844,18 +844,22 @@ function cleanup() {
     rm -rf -- "${TEMP_DIR}"
   fi
   if [[ -n "${SAVE_LOCK}" ]]; then
+    rm -- "${SAVE_LOCK}/owner" || return 1
     rmdir -- "${SAVE_LOCK}" 2> /dev/null || true
   fi
 }
 
-# Takes the cache lock for a repository: a directory, since mkdir either
-# creates it or fails and macOS has no flock. Two syncs saving at once would
+# Takes the cache lock with exclusive owner-file creation. Two syncs saving at once would
 # otherwise interleave their writes and leave the three cache files from
 # different gathers. It waits about ten seconds for another save to finish.
 function acquire_save_lock() {
   local lock="${1}/save.lock"
   local -i tries=0
-  until mkdir -- "${lock}" 2> /dev/null; do
+  until mkdir -- "${lock}" 2> /dev/null \
+    && (
+      set -o noclobber
+      printf '%s' "$$" > "${lock}/owner"
+    ) 2> /dev/null; do
     if ((tries >= 100)); then
       die "${E_INVALID}" "another sync is saving the cache; if none is running, remove ${lock}"
     fi

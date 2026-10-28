@@ -647,7 +647,26 @@ exit 1
 save.lock
 ```
 
-## Reuse on a warm cache keeps every assessment that still matches its bug
+## Save refuses an owner even when mkdir incorrectly succeeds
+
+```scrut
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && lock="${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" \
+>   && mkdir -p "${lock}" "${cache}/bin" \
+>   && printf 'held\n' > "${lock}/owner" \
+>   && cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/mkdir" \
+>   && cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/sleep" \
+>   && test "$(PATH="${cache}/bin:${PATH}" command -v mkdir)" = "${cache}/bin/mkdir" \
+>   && test "$(PATH="${cache}/bin:${PATH}" command -v sleep)" = "${cache}/bin/sleep" \
+>   && { bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_DIRECTORY="${lock}" XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1; echo "exit=$?"; } | sed "s|${cache}|CACHE|g" \
+>   && cat "${lock}/owner" \
+>   && test ! -e "${lock%/save.lock}/gather.json"
+bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock
+exit=1
+held
+```
+
+## Reuse on a warm cache keeps every matching assessment
 
 `#12` changed after it was read, so it alone needs reading.
 

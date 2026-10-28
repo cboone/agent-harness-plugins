@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Model mkdir reporting success on an existing lock; accelerate bounded waits.
+set -euo pipefail
+
+case "${0##*/}" in
+  mkdir)
+    status=0
+    "${LOCK_TEST_REAL_MKDIR:?}" "$@" || status=$?
+    if [[ -d "${LOCK_TEST_DIRECTORY:?}" && "${!#}" == "${LOCK_TEST_DIRECTORY}" ]]; then
+      exit 0
+    fi
+    exit "${status}"
+    ;;
+  sleep) exit 0 ;;
+  *)
+    echo 'install this fixture as mkdir and sleep' >&2
+    exit 1
+    ;;
+esac

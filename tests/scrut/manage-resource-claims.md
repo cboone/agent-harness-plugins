@@ -427,6 +427,33 @@ $ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}"
 ["logic","simulator"]
 ```
 
+## A false successful mkdir cannot admit a second owner
+
+The stub reports success on an existing lock directory, reproducing uutils mkdir 0.10.0. The second writer must fail exclusive owner creation and wait until the first snapshot is committed.
+
+```scrut
+$ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" false-success
+["logic","simulator"]
+```
+
+## Releasing a directory cannot remove a succeeding owner
+
+The first writer pauses after removing its owner file. The second takes ownership before the first attempts rmdir. That cleanup must preserve the second owner and its eventual claim.
+
+```scrut
+$ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" release
+["logic","simulator"]
+```
+
+## A waiter cannot reclaim a live replacement for a stale owner
+
+The contender waits at an abandoned owner file. The fixture explicitly removes that stale file and starts a live owner before resuming the contender. The contender must time out without unlinking or overwriting the live owner's file.
+
+```scrut
+$ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" stale
+stale waiter refused; live owner preserved
+```
+
 ## The interleaving fixture removes its temporary directory
 
 ```scrut

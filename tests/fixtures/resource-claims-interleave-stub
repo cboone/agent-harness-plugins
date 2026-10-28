@@ -6,17 +6,44 @@ set -euo pipefail
 # shellcheck source=bin/lib/git-environment.bash
 source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
 
-: "${CLAIMS_REAL_MKDIR:?}" "${CLAIMS_WRITER:?}" "${WORKTREE_RESOURCES_FILE:?}"
+CLAIMS_WRITER="${CLAIMS_WRITER:-controller}"
+: "${CLAIMS_REAL_MKDIR:?}" "${WORKTREE_RESOURCES_FILE:?}"
 : "${CLAIMS_BARRIER:?}" "${WORKTREE_GIT_STUB_BIN:?}"
 
 case "${0##*/}" in
   mkdir)
     status=0
     "${CLAIMS_REAL_MKDIR}" "$@" || status=$?
-    if [[ "${CLAIMS_WRITER}" == second && $# -eq 1 && "${1}" == "${WORKTREE_RESOURCES_FILE}.lock" && "${status}" -ne 0 ]]; then
-      touch "${CLAIMS_BARRIER}/second-blocked"
+    if [[ $# -eq 1 && "${1}" == "${WORKTREE_RESOURCES_FILE}.lock" && "${CLAIMS_INTERLEAVE_MODE:-snapshot}" != snapshot && -d "${1}" ]]; then
+      status=0
     fi
     exit "${status}"
+    ;;
+  sleep)
+    if [[ "${CLAIMS_WRITER}" == second ]]; then
+      touch "${CLAIMS_BARRIER}/second-blocked"
+      if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == stale ]]; then
+        for ((attempt = 0; attempt < 200; attempt++)); do
+          [[ ! -f "${CLAIMS_BARRIER}/release-waiter" ]] || exit 0
+          "${CLAIMS_REAL_SLEEP:?}" 0.05
+        done
+        echo 'stale waiter barrier timed out' >&2
+        exit 1
+      fi
+    fi
+    exec "${CLAIMS_REAL_SLEEP:?}" "$@"
+    ;;
+  rm)
+    "${CLAIMS_REAL_RM:?}" "$@"
+    if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release && "${CLAIMS_WRITER}" == first && "${1:-}" == "${WORKTREE_RESOURCES_FILE}.lock/owner" ]]; then
+      touch "${CLAIMS_BARRIER}/first-owner-removed"
+      for ((attempt = 0; attempt < 200; attempt++)); do
+        [[ ! -f "${CLAIMS_BARRIER}/release-cleanup" ]] || exit 0
+        "${CLAIMS_REAL_SLEEP:?}" 0.05
+      done
+      echo 'cleanup barrier timed out' >&2
+      exit 1
+    fi
     ;;
   git)
     if [[ "${1:-}" == worktree ]]; then
@@ -35,11 +62,19 @@ case "${0##*/}" in
         exit 1
       fi
       touch "${CLAIMS_BARRIER}/second-read"
+      if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release ]]; then
+        for ((attempt = 0; attempt < 200; attempt++)); do
+          [[ ! -f "${CLAIMS_BARRIER}/release-second" ]] || exec "${WORKTREE_GIT_STUB_BIN}" "$@"
+          "${CLAIMS_REAL_SLEEP:?}" 0.05
+        done
+        echo 'second writer barrier timed out' >&2
+        exit 1
+      fi
     fi
     exec "${WORKTREE_GIT_STUB_BIN}" "$@"
     ;;
   *)
-    echo 'install this fixture as git and mkdir' >&2
+    echo 'install this fixture as git, mkdir, sleep and rm' >&2
     exit 1
     ;;
 esac
