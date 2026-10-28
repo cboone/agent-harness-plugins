@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Synchronize launch polling with the workmux stub's first log write.
+set -euo pipefail
+
+function main() {
+  if [[ "${1:-}" == "0.2" ]]; then
+    while [[ ! -e "${STUB_STATE:?}/output-ready" ]]; do
+      /bin/sleep 0.01
+    done
+  fi
+  /bin/sleep "$@"
+}
+
+main "$@"
