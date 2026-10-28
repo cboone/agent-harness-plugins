@@ -50,3 +50,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - [Review Branch](../review-branch/README.md): summarize branch work before opening a PR
 - [Trim Text](../trim-text/README.md): trims the drafted PR body
 - [All plugins](../../README.md)
+
+## Codex invocation
+
+Invoke `$pr` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.

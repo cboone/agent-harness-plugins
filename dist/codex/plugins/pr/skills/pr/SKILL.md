@@ -7,16 +7,30 @@ description: >-
 
 # PR
 
-Commit, push, and create a pull request in one automated step. Never prompt the user for input -- make opinionated decisions at every step.
+Commit, push, and create a pull request in one automated step. Add no workflow confirmations of its own; host restrictions and unresolved user-only decisions still require a precise stop.
 
 ## Skill dependencies
 
 - **Required:** `lint-and-fix`
 - **Optional:** `trim-text`
 
+## Capabilities and authority
+
+Use the tools this session actually offers. For a question, use a structured question tool when available in the active mode; otherwise present numbered choices and wait. In a noninteractive run, report the unresolved question and preserved state instead of choosing an answer. Tool names such as Write, Read, Glob and AskUserQuestion below are examples: perform the same file or question operation with the host's supported mechanism. Write a body file completely before issuing the command that reads it; never batch those dependent operations.
+
+Prior user authorization carries through the workflow; add no confirmation merely because the harness differs. Host approvals, active Plan or read-only mode, writable roots and network policy still apply. Stop before a prohibited write or any step dependent on a blocked operation, preserve state, and report the exact command and restriction. Never bypass controls or claim an unrun step completed. Separate completed, skipped, blocked and failed work in the result. For invocation hints, render the named skill with the running harness's form: slash invocation in Claude Code, dollar mention or the skills selector in Codex. A mention is not a tool call; load composed skills from their advertised locations.
+
+## Parent Continuation Contract
+
+Honor a supplied parent continuation block and its resume target. On success, return control to the parent without asking whether to continue. When a decision has no supplied answer, do not ask independently or guess: return `Status: needs-decision`, the question, available choices and preserved state. The parent asks or stops, then invokes this skill with an answer. For an in-progress merge or rebase, list conflicts and the applicable abort command; do not abort or discard work merely to return a result.
+
+Return `Status: <success|no-op|failure|unavailable|needs-decision>`, `Outputs`, `Unresolved or skipped` and `Caller resume target`. A no-op is successful only when no required work was skipped. Preserve any domain-specific status lines below. A host block or failed required check is failure, a missing required skill is unavailable, and unresolved choices are needs-decision. Standalone invocations retain their existing questions and reporting.
+
 ## Workflow
 
 ### 1. Gather Context
+
+Confirm that the `lint-and-fix` skill is available in the advertised skill list before any commit, push or PR creation. Match the bare name or its advertised plugin-qualified identity, never an uninstalled filesystem copy. If missing, stop with `Status: unavailable` and its installation command: `/plugin install lint-and-fix@agent-harness-plugins` in Claude Code or `codex plugin add lint-and-fix@agent-harness-plugins` in Codex.
 
 First, resolve the repository where `gh pr create` will open the PR and the repository that will host the pushed branch. Capture the origin fetch URL and every origin push URL inside a tool-side process without printing raw values. Accept only HTTP(S) or SSH URLs with an authority and exactly an owner/repository path, or SCP-style `[user@]host:owner/repository` values. Reject unsupported schemes, local paths, malformed authorities, extra path segments, queries, fragments, and control characters. Remove URL userinfo or the SCP-style username and a trailing `.git`, preserve URI authority ports, and validate the resulting `HOST/OWNER/NAME` selector before emitting it. On any parse or validation failure, emit only an unavailable-identity diagnostic, never the input. Do not use a substitution that passes unmatched raw URLs through to output.
 
@@ -223,6 +237,7 @@ Run the `lint-and-fix` skill to catch lint and formatting errors before pushing.
    - Resume target: Step 6, push branch, then Step 7, create the pull request.
    - On lint success: Continue immediately to Step 6 without asking the user for confirmation.
    - On lint failure or skipped required lint work: Stop before push and PR creation, then report the unresolved lint state.
+   - On needs-decision: stop and report the question and preserved state before publication.
    ```
 
    This runs all detected project linters and formatters, auto-fixes what it can, manually resolves remaining issues, and commits the fixes without pushing.

@@ -453,6 +453,43 @@ function check_compositions() {
   done <<< "${references}"
 }
 
+# Check adapter contracts only for skills that opt in.
+function check_adapter_contracts() {
+  local file="${1}" skill_dir="${2}" body="${3}"
+  local skill_md="${skill_dir}/SKILL.md" target child name kind
+  grep -q '^## Capabilities and authority$' "${skill_md}" || return 0
+
+  while IFS=$'\t' read -r kind name; do
+    [[ "${kind}" == required ]] || continue
+    if ! grep -Fq "Confirm that the \`${name}\` skill is available" "${skill_md}"; then
+      warning "${skill_md} lacks a canonical availability preflight for ${name}"
+    fi
+  done < <(dependency_records "${skill_md}")
+
+  while IFS= read -r target; do
+    [[ -n "${target}" ]] || continue
+    child=""
+    if [[ "${target}" == *:* ]]; then
+      child="$(skill_reference_path "${target}")"
+    else
+      for name in plugins/*/skills/"${target}"/SKILL.md; do
+        [[ -f "${name}" ]] && child="${name}"
+      done
+    fi
+    if [[ -f "${child}" ]] && ! grep -q '^## Parent Continuation Contract$' "${child}"; then
+      error "${file} passes a parent continuation to ${target}, but ${child} has no Parent Continuation Contract"
+    fi
+  done < <(printf '%s\n' "${body}" | awk '
+    /[Ii]nvoke the `\/?[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?` skill/ {
+      match($0, /[Ii]nvoke the `\/?[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?` skill/)
+      split(substr($0, RSTART, RLENGTH), parts, "`")
+      target=parts[2]; sub(/^\//, "", target)
+    }
+    /Parent continuation:/ { if (target != "") print target; target="" }
+    /^##/ { target="" }
+  ')
+}
+
 # Warn when "invoke `NAME`" names an existing, undeclared skill other than
 # this file's own. The phrase can also prohibit an invocation or name a command,
 # so findings are warnings; ignore comments do not suppress dependency findings.
@@ -621,6 +658,7 @@ function check_candidate_file() {
   done <<< "${ignores}"
 
   check_compositions "${file}" "${skill_dir}" "${body}"
+  check_adapter_contracts "${file}" "${skill_dir}" "${body}"
   check_near_misses "${file}" "${skill_dir}" "${body}"
   if [[ "${file}" == */SKILL.md ]]; then
     check_declarations "${file}" "${skill_dir}"

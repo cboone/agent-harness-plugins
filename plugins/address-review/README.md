@@ -37,3 +37,7 @@ Extracts items from checkboxes, bullets, numbered lists, and headings in a revie
 
 - [Resolve Copilot PR Feedback](../monitor-pr/README.md#monitor-prresolve-copilot-feedback): resolve automated Copilot review comments
 - [All plugins](../../README.md)
+
+## Codex invocation
+
+Invoke `$address-review` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.

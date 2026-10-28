@@ -201,3 +201,9 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - [All plugins](../../README.md)
 
 Resolver summaries lead with a verdict and linked findings grouped by outcome, with bookkeeping and the full findings table in collapsed details. Every completed thread gets a reply leading with its decision, linking fixing commits, conventions or tracked follow-ups where applicable.
+
+## Codex invocation
+
+At every entry, `merge-flow prepare` resolves active restrictions once into watch state before an axis is read. Triage, probes, classification, actions and resumed events consult that same policy; `merge-flow dispatch` selects from its permitted candidates. A paused triage count is recorded as paused without reading bodies or inventing a count. Blocked actions appear as would-do lines. With no permitted action or running permitted check, the watch cancels its scheduler and returns a policy-limited `Status: unavailable` report. Bundled script calls carry `--watch-state` so their reads and mutations consult the same policy before authentication or API work.
+
+Invoke `$monitor-pr:monitor` or `$monitor-pr:resolve-copilot-feedback` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.

@@ -21,6 +21,18 @@ The user may provide these options inline:
 - **Required:** None
 - **Optional:** `commit`
 
+## Capabilities and authority
+
+Use the tools this session actually offers. For a question, use a structured question tool when available in the active mode; otherwise present numbered choices and wait. In a noninteractive run, report the unresolved question and preserved state instead of choosing an answer. Tool names such as Write, Read, Glob and AskUserQuestion below are examples: perform the same file or question operation with the host's supported mechanism. Write a body file completely before issuing the command that reads it; never batch those dependent operations.
+
+Prior user authorization carries through the workflow; add no confirmation merely because the harness differs. Host approvals, active Plan or read-only mode, writable roots and network policy still apply. Stop before a prohibited write or any step dependent on a blocked operation, preserve state, and report the exact command and restriction. Never bypass controls or claim an unrun step completed. Separate completed, skipped, blocked and failed work in the result. For invocation hints, render the named skill with the running harness's form: slash invocation in Claude Code, dollar mention or the skills selector in Codex. A mention is not a tool call; load composed skills from their advertised locations.
+
+## Parent Continuation Contract
+
+Honor a supplied parent continuation block and its resume target. On success, return control to the parent without asking whether to continue. When a decision has no supplied answer, do not ask independently or guess: return `Status: needs-decision`, the question, available choices and preserved state. The parent asks or stops, then invokes this skill with an answer. For an in-progress merge or rebase, list conflicts and the applicable abort command; do not abort or discard work merely to return a result.
+
+Return `Status: <success|no-op|failure|unavailable|needs-decision>`, `Outputs`, `Unresolved or skipped` and `Caller resume target`. A no-op is successful only when no required work was skipped. Preserve any domain-specific status lines below. A host block or failed required check is failure, a missing required skill is unavailable, and unresolved choices are needs-decision. Standalone invocations retain their existing questions and reporting.
+
 ## Workflow
 
 ### 1. Pre-Flight Checks
@@ -55,8 +67,19 @@ If `git status` shows uncommitted changes (staged or unstaged):
 1. Warn the user that there are uncommitted changes.
 1. Ask whether to:
    - **Stash**: Run `git stash` before proceeding, then `git stash pop` after the merge completes.
-   - **Commit first**: Invoke the `/commit` skill, then continue with the merge. `commit` is an optional dependency: if it is not installed, leave this choice out and tell the user why, so they can commit by hand, or install `commit`, before running this skill again.
+   - **Commit first**: Invoke the `commit` skill with the continuation block below, then continue with the merge. `commit` is an optional dependency: if it is not installed, leave this choice out and tell the user why, so they can commit by hand, or install `commit`, before running this skill again.
    - **Abort**: Stop without doing anything.
+
+When invoked by a parent, return uncommitted-change and ambiguous-conflict decisions through the contract above. Never run the child before that decision has an answer. Pass the answered staging scope as `--staged` or `--all` when applicable. If the child returns a decision, propagate it rather than asking independently. Pass:
+
+```text
+Parent continuation:
+- Caller: sync-with-main:merge
+- Resume target: Step 3
+- On success: continue with Step 3
+- On failure or skipped required work: stop and report
+- On needs-decision: return the question to this skill's parent, or ask in a standalone invocation
+```
 
 ### 3. Fetch and Merge
 
