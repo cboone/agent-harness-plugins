@@ -3,7 +3,7 @@
 `scrut/` exercises plugin helpers and repository tooling. Executable stubs live in `fixtures/`; JSON inputs live in `data/`.
 
 - Use the `write-scrut-tests` skill when changing snapshot tests.
-- Register helper paths in both `../Makefile` (`SCRUT_ENV`) and `../.github/workflows/ci.yml` (`scrut-env`). A local-only registration leaves CI testing a different environment.
+- Register helper paths in both `../Makefile` (`SCRUT_ENV`) and `../.github/workflows/ci.yml` (the test step’s `env` mapping). A local-only registration leaves CI testing a different environment.
 - Preserve the copy-drift checks for helpers that still ship in separate plugins.
 - Run `make test-scrut` from the repository root and observe its final result before reporting success.
 
