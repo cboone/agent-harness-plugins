@@ -25,7 +25,7 @@ Core principles to cover:
 
 1. **Tmpfiles for long content**: Write long strings (PR bodies, issue bodies, review replies) to a tmpfile via the Write tool, then pass `--body-file`. Keeps Bash commands short.
 1. **HEREDOCs for short content**: Commit messages use `$(cat << 'EOF' ... EOF)`.
-1. **GPG sign every commit**: Always `git commit -S`. Sandbox cannot access GPG keys, so resort immediately to unsandboxed command.
+1. **GPG sign every commit**: Always `git commit -S`. Try the signed commit as is in the current host; never escalate up front. Only after an actual signing failure, follow the host's escalation rules to retry outside the sandbox, or report the failure.
 1. **Never amend**: Always create new commits. Pre-commit hook failures mean the commit did not happen, so `--amend` would modify the wrong commit.
 1. **Never use `--force`**: Never use `git push --force` or `git push -f`. If the user explicitly requests a force push, use `--force-with-lease --force-if-includes` instead, which protects against overwriting others' work. Never use `--no-verify` or other override flags without explicit user instruction.
 1. **Parallel tool calls over chained commands**: Separate Bash tool calls for independent commands instead of `;` or `&&`, which trigger permission prompts.

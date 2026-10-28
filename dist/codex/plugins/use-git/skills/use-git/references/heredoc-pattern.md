@@ -27,7 +27,7 @@ EOF
 ### Key Details
 
 - **Single-quoted `'EOF'`**: Prevents the shell from expanding variables (`$VAR`) or running subshells (`` `cmd` ``) inside the HEREDOC. Always use `'EOF'`, not unquoted `EOF`.
-- **GPG signing**: The `-S` flag ensures every commit is signed. The sandbox cannot access GPG keys, so resort immediately to the unsandboxed Bash command.
+- **GPG signing**: The `-S` flag ensures every commit is signed. Try the signed commit as is in the current host; never escalate up front. Only after an actual signing failure, follow the host's escalation rules to retry outside the sandbox, or report the failure.
 - **Indentation**: The closing `EOF` must appear on its own line with no leading whitespace (unless using `<<-` with tab indentation, which is fragile).
 
 ## Multi-Line Commit Messages
