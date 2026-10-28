@@ -14,8 +14,10 @@ Usage: launch-workmux <branch-name> [--base <branch>] [--await-completion]
 
 Create a worktree and tmux window via workmux, fully detached from the
 calling process. Both launch forms read the workmux prompt from stdin. By
-default the launcher waits WORKMUX_LAUNCH_WAIT_SECONDS (default 8) for
-workmux to initialize, then prints the log and removes it.
+default the launcher waits for workmux to exit, then prints its complete log
+and reports failure. WORKMUX_LAUNCH_TIMEOUT_SECONDS (default 90) bounds the
+wait; on timeout the child keeps running and its output and eventual status
+stay in the reported state directory. WORKMUX_LAUNCH_WAIT_SECONDS is ignored.
 
 With --generated-name, the invoking agent supplies the candidate. The launcher
 validates it and inserts the issue number when --issue is given.
@@ -31,8 +33,8 @@ Options:
                    Requires --generated-name.
   --base <branch>  Specify the base branch for the worktree
   --await-completion
-                   Wait for `workmux add` to exit instead of for a fixed
-                   interval, then confirm a worktree exists for the branch and
+                   After `workmux add` exits, also confirm a worktree
+                   exists for the branch and
                    print `Worktree ready: PATH`. Exits 1 when workmux fails or
                    no worktree appears, and 124 when
                    WORKMUX_LAUNCH_TIMEOUT_SECONDS (default 90) passes while
@@ -482,13 +484,10 @@ function normalize_branch_name() {
   printf '%s' "${name}"
 }
 
-# The detached half of --await-completion. Records workmux's exit status, then
-# tries to create the handoff directory. If it does, the caller is still waiting
-# and removes the state directory. If not, the caller timed out, and the status
-# and log stay behind as the record of the launch.
-#
-# Ignores hangups so a departing terminal or harness cannot stop `workmux add`
-# partway through creating a worktree.
+# Records workmux's exit status, then creates the handoff directory.
+# Success leaves cleanup to the waiting caller; failure means the caller
+# timed out, so the status and log remain.
+# Ignores hangups so a departing terminal or harness cannot interrupt worktree creation.
 function run_detached_launch() {
   local state_dir="${1}" prompt_file="${2}"
   local status=0
@@ -505,10 +504,9 @@ function run_detached_launch() {
   mkdir "${state_dir}/handoff" 2> /dev/null || true
 }
 
-# The waiting half of --await-completion. Polls for the handoff directory, not
-# the status file, because the handoff decides who owns the state directory.
+# Polls for the handoff directory because it determines who cleans up the state directory.
 function await_launch() {
-  local state_dir="${1}" branch="${2}" timeout="${3}"
+  local state_dir="${1}" branch="${2}" timeout="${3}" verify_worktree="${4}"
   local attempts=$((timeout * 5))
   local status worktree_path lookup_status
 
@@ -540,6 +538,8 @@ function await_launch() {
     return 1
   fi
 
+  [[ "${verify_worktree}" == "true" ]] || return 0
+
   lookup_status=0
   worktree_path="$(worktree_path_for_branch "${branch}")" || lookup_status=$?
   if ((lookup_status == 1)); then
@@ -560,7 +560,7 @@ function do_launch() {
   local issue="${4:-}"
   local await_completion="${5:-false}"
   local timeout="${6:-}"
-  local safe_name existing_worktree_path log prompt_file state_dir
+  local safe_name existing_worktree_path prompt_file state_dir
   local provisional_name
 
   if [[ -n "${generated_name}" ]]; then
@@ -616,28 +616,16 @@ function do_launch() {
     cmd+=(--base "${base_branch}")
   fi
 
-  if [[ "${await_completion}" == "true" ]]; then
-    state_dir="$(mktemp -d "${TMPDIR:-/tmp}/workmux-launch-${safe_name}.XXXXXX")"
-    # Job control gives the launch its own process group, so a harness that
-    # stops this launcher's group on a tool timeout does not stop `workmux add`.
-    # stderr is discarded to hide a spurious bash "child setpgid" error, printed
-    # when the parent sets the group first.
-    set -m
-    { run_detached_launch "${state_dir}" "${prompt_file}" "${cmd[@]}" < /dev/null > /dev/null 2>&1 & } 2> /dev/null
-    set +m
-    disown
-    await_launch "${state_dir}" "${branch}" "${timeout}"
-    return
-  fi
-
-  log="$(mktemp "${TMPDIR:-/tmp}/workmux-${safe_name}.log.XXXXXX")"
-
-  run_workmux_and_cleanup_prompt "${prompt_file}" "${cmd[@]}" > "${log}" 2>&1 &
+  state_dir="$(mktemp -d "${TMPDIR:-/tmp}/workmux-launch-${safe_name}.XXXXXX")"
+  # Job control gives the launch its own process group, so a harness that
+  # stops this launcher's group on a tool timeout does not stop `workmux add`.
+  # stderr is discarded to hide a spurious bash "child setpgid" error, printed
+  # when the parent sets the group first.
+  set -m
+  { run_detached_launch "${state_dir}" "${prompt_file}" "${cmd[@]}" < /dev/null > /dev/null 2>&1 & } 2> /dev/null
+  set +m
   disown
-  sleep "${WORKMUX_LAUNCH_WAIT_SECONDS:-8}"
-
-  cat "${log}"
-  remove_file_if_present "${log}"
+  await_launch "${state_dir}" "${branch}" "${timeout}" "${await_completion}"
 }
 
 function main() {
@@ -732,13 +720,11 @@ function main() {
     return
   fi
 
-  if [[ "${await_completion}" == "true" ]]; then
-    # Below Claude Code's 120-second Bash tool timeout, so this bound ends the
-    # wait first.
-    timeout="${WORKMUX_LAUNCH_TIMEOUT_SECONDS:-90}"
-    if [[ ! "${timeout}" =~ ^[1-9][0-9]*$ ]]; then
-      die "WORKMUX_LAUNCH_TIMEOUT_SECONDS must be a positive integer, got: ${timeout}"
-    fi
+  # Below Claude Code's 120-second Bash tool timeout, so this bound ends the
+  # wait first.
+  timeout="${WORKMUX_LAUNCH_TIMEOUT_SECONDS:-90}"
+  if [[ ! "${timeout}" =~ ^[1-9][0-9]*$ ]]; then
+    die "WORKMUX_LAUNCH_TIMEOUT_SECONDS must be a positive integer, got: ${timeout}"
   fi
 
   if [[ -n "${generated_name}" ]]; then

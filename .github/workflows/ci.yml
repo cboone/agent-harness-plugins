@@ -167,6 +167,7 @@ jobs:
         CHECK_NOTIFICATIONS_BIN=./tests/fixtures/check-notifications
         UNIX_SOCKET_FIXTURE_BIN=./tests/fixtures/create-unix-socket
         WORKMUX_STUB_BIN=./tests/fixtures/workmux-stub
+        LAUNCH_SLEEP_STUB_BIN=./tests/fixtures/launch-sleep-stub
       # bin/validate-corpus converts each defects.yaml through yq, which the
       # ubuntu runner image ships. Asserting it beats installing an unpinned
       # copy: an image that drops it, or swaps in python-yq with jq's flags,

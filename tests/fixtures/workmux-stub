@@ -75,6 +75,19 @@ function main() {
   fi
 
   printf 'workmux add\n'
+  if [[ -n "${STUB_STATE:-}" ]]; then
+    touch "${STUB_STATE}/output-ready"
+  fi
+  if [[ -n "${STUB_WORKMUX_RELEASE_FIFO:-}" ]]; then
+    local _release
+    IFS= read -r _release < "${STUB_WORKMUX_RELEASE_FIFO}"
+  fi
+
+  # Delay remaining output and prompt access to expose premature log reads or prompt removal.
+  if [[ -n "${STUB_WORKMUX_SLEEP:-}" ]]; then
+    sleep "${STUB_WORKMUX_SLEEP}"
+  fi
+
   printf 'branch: %s\n' "${branch}"
   printf 'open-if-exists: %s\n' "${open_if_exists}"
   if [[ "${STUB_CAPTURE_TERM:-}" == "1" ]]; then
@@ -93,12 +106,6 @@ function main() {
     printf 'yes\n'
   else
     printf 'no\n'
-  fi
-
-  # STUB_WORKMUX_SLEEP holds the stub open, so a caller can be observed waiting
-  # for it or giving up on it.
-  if [[ -n "${STUB_WORKMUX_SLEEP:-}" ]]; then
-    sleep "${STUB_WORKMUX_SLEEP}"
   fi
 
   # Records the worktree for the git stub's `git worktree list`, unless

@@ -15,7 +15,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u STUB_GH_PR_VIEW -u STUB_GH_PR_VIEW_STATE -u MERGE_FLOW_INTERVAL -u MERGE_FLOW_MAX_FAILURES -u MERGE_FLOW_LIFETIME \
 	-u STUB_GIT_BRANCHES -u STUB_GIT_FAIL -u STUB_GIT_INVALID_REF -u STUB_GIT_WORKTREE_PORCELAIN \
 	-u STUB_GIT_WORKTREE_PORCELAIN_FILE -u STUB_WORKMUX_EXIT -u STUB_WORKMUX_SKIP_WORKTREE \
-	-u STUB_WORKMUX_SLEEP \
+	-u STUB_WORKMUX_SLEEP -u STUB_WORKMUX_RELEASE_FIFO \
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
 	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR \
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
@@ -89,7 +89,8 @@ SCRUT_ENV := \
 	GIT_CONFIG_SYSTEM=/dev/null \
 	TMUX_STUB_BIN="$(CURDIR)/tests/fixtures/tmux-stub" \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
-	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub"
+	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub" \
+	LAUNCH_SLEEP_STUB_BIN="$(CURDIR)/tests/fixtures/launch-sleep-stub"
 
 # Resolved by bin/list-shell-scripts so a newly added script is linted without
 # anyone remembering to widen a glob here.
