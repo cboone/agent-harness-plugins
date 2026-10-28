@@ -173,6 +173,10 @@ Codex CLI: $address-issue 42
 
 A `$name` mention in generated prose is text for a person or model to read. It is not a tool call, and writing one does not load the skill.
 
+### Bundled helper location
+
+Use a substituted plugin-root placeholder when provided. Otherwise expand the loaded skill's advertised root alias, resolve its symlinks and derive the plugin root from that physical skill location. Never search other package versions or caches. Validate each selected helper before use; failure stops dependent operations. The two monitor skills demonstrate this installed-layout recipe.
+
 ### Skill composition
 
 A parent workflow composes another skill by loading it through the host's skill mechanism, passing its arguments and a continuation block, and resuming from a named step when it returns. Claude Code loads a skill with its `Skill` tool, and Codex by reading the `SKILL.md` at the path its skill list advertises.
@@ -204,7 +208,7 @@ Write `None` for an empty category. A skill that composes nothing omits the sect
 
 A composition reference in a skill's `references/` files counts against the skill's own `SKILL.md`. Keep `agents/openai.yaml` `dependencies.tools` for MCP tools; document external executables as requirements rather than dependencies.
 
-Before the first consequential step that needs a required skill, confirm the skill appears in the host's advertised skill list. If it is missing, report the skill and how to install it, preserve completed work, and stop before the dependent side effect. Never silently replace a missing required workflow:
+Before the first consequential step that needs a required skill, confirm the skill appears in the host's advertised skill list. Match the advertised bare or plugin-qualified identity unambiguously; a filesystem copy that is not advertised is not availability. If it is missing, report the skill and how to install it, preserve completed work, and stop before the dependent side effect. Never silently replace a missing required workflow:
 
 ```markdown
 Before pushing, confirm that the `lint-and-fix` skill is available. If it is not, stop and report: "Required skill `lint-and-fix` is not installed. Install it with `/plugin install lint-and-fix@agent-harness-plugins` in Claude Code or `codex plugin add lint-and-fix@agent-harness-plugins` in Codex, then rerun." Leave the local commit in place.
@@ -252,10 +256,12 @@ Parent continuation:
 - On failure or skipped required work: stop and report the unresolved items
 ```
 
+When a child reaches a decision without a supplied answer, it returns `needs-decision` with the question and preserved state instead of asking independently. The parent asks through the session's available question mechanism, or stops and reports when it cannot ask, then invokes the child with the answer. A continuation block may add `On needs-decision:` to name that handling. Preserve domain-specific status lines existing callers consume.
+
 The child returns:
 
 ```text
-Status: <success|no-op|failure|unavailable>
+Status: <success|no-op|failure|unavailable|needs-decision>
 Outputs: <commit SHA, paths, or none>
 Unresolved or skipped: <none|summary>
 Caller resume target: step 6
@@ -264,6 +270,8 @@ Caller resume target: step 6
 A failure, or a capability the child needs but the session lacks, returns control to the parent with an accurate status. The child does not switch to another workflow, and the parent does not present the step as complete.
 
 ## Skill cross-references
+
+Skills with a `## Capabilities and authority` section opt into the chain adapter checks. A composition followed by a parent continuation block requires the target's `## Parent Continuation Contract`. Required dependencies without the canonical sentence "Confirm that the `NAME` skill is available" warn. Workflows not yet adopted keep their current checks until their migration; these presence checks do not establish runtime correctness.
 
 Skills name each other and point at files by path, and a stale one fails only in the downstream project that loads the skill, long after the rename that broke it. `bin/check-cross-references` resolves them; rule 19 of `bin/validate-plugins` runs it over every `SKILL.md` and every file under a skill's `references/`.
 
