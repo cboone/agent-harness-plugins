@@ -45,6 +45,8 @@ Commands:
   parse-reviews [--skip <ids>] [--head <sha>]         Select Copilot reviews from JSON on stdin
   audit <owner> <repo> <pr_number>                    List Copilot items the fetches cannot reach
   parse-audit                                          Audit pull request JSON read from stdin
+  verify-fix <owner> <repo> <pr_number> <head_sha> <fix_commit>
+                                                      Check fix ancestry against the recorded PR head
   resolve <thread_id>                                  Resolve a review thread
   reply <thread_id> [--body-file <path>]               Reply to a review thread
   reply-and-resolve <thread_id> [--body-file <path>]   Reply and resolve
@@ -731,6 +733,42 @@ function do_audit() {
     | do_parse_audit
 }
 
+# Prints true or false only after verifying objects and reading ancestry successfully.
+function do_verify_fix() {
+  local owner="${1}" repo="${2}" pr_number="${3}" head_sha="${4}" fix_commit="${5}"
+  local repo_url fetched_head ancestry_exit shallow
+  [[ "${pr_number}" =~ ^[1-9][0-9]*$ ]] || die 'Invalid PR number for verify-fix'
+  [[ "${head_sha}" =~ ^[0-9a-f]{40}$ ]] || die 'verify-fix requires the full recorded head SHA'
+  [[ "${fix_commit}" =~ ^[0-9a-f]{7,40}$ ]] || die 'verify-fix requires a commit hash'
+
+  shallow="$(git rev-parse --is-shallow-repository)" || die 'Cannot read repository history state'
+  [[ "${shallow}" == true || "${shallow}" == false ]] || die 'Invalid repository history state'
+  if ! git cat-file -e "${head_sha}^{commit}" || ! git cat-file -e "${fix_commit}^{commit}" || [[ "${shallow}" == true ]]; then
+    require_gh
+    repo_url="$(gh repo view "${owner}/${repo}" --json url --jq '.url')" || die 'Cannot read PR repository URL'
+    [[ -n "${repo_url}" ]] || die 'PR repository URL is empty'
+    if [[ "${shallow}" == true ]]; then
+      git fetch --no-tags --unshallow -- "${repo_url}" "refs/pull/${pr_number}/head" || die 'Cannot fetch complete PR head history'
+    else
+      git fetch --no-tags -- "${repo_url}" "refs/pull/${pr_number}/head" || die 'Cannot fetch PR head ref'
+    fi
+    fetched_head="$(git rev-parse --verify FETCH_HEAD)" || die 'Cannot read fetched PR head'
+    [[ "${fetched_head}" == "${head_sha}" ]] || die 'PR head moved; refetch PR context before recovery'
+    git cat-file -e "${head_sha}^{commit}" || die 'Recorded PR head object is unavailable after fetch'
+    git cat-file -e "${fix_commit}^{commit}" || die 'Fix commit object is unavailable after fetching PR head'
+    shallow="$(git rev-parse --is-shallow-repository)" || die 'Cannot read fetched history state'
+    [[ "${shallow}" == false ]] || die 'PR history remains incomplete after fetch'
+  fi
+
+  if git merge-base --is-ancestor "${fix_commit}" "${head_sha}"; then
+    printf '%s\n' true
+  else
+    ancestry_exit=$?
+    [[ "${ancestry_exit}" -eq 1 ]] || die 'Cannot read fix ancestry'
+    printf '%s\n' false
+  fi
+}
+
 # Resolves a review thread via GraphQL mutation.
 # Arguments:
 #   $1 - Thread ID (e.g., PRRT_kwDONZ...)
@@ -825,6 +863,9 @@ function main() {
     fetch | fetch-reviews | audit | resolve | reply | reply-and-resolve)
       check_dependencies
       ;;
+    verify-fix)
+      command -v git > /dev/null 2>&1 || die "git is required for verify-fix"
+      ;;
     parse-reviews | parse-audit)
       # Reads stdin and touches no GitHub API, so it needs neither the CLI nor
       # credentials.
@@ -858,6 +899,10 @@ function main() {
     parse-audit)
       [[ $# -ne 0 ]] && die "Usage: ${SCRIPT_NAME} parse-audit (reads pull request JSON on stdin)"
       do_parse_audit
+      ;;
+    verify-fix)
+      [[ $# -ne 5 ]] && die "Usage: ${SCRIPT_NAME} verify-fix <owner> <repo> <pr_number> <head_sha> <fix_commit>"
+      do_verify_fix "$@"
       ;;
     resolve)
       [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"

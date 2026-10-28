@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# Test verify-fix with local histories and missing or unrelated upstreams.
+set -euo pipefail
+
+CASE_DIR=""
+
+function make_commit() {
+  local parent="${1:-}"
+  if [[ -n "${parent}" ]]; then
+    printf '%s\n' sample | git -c user.name=Sample -c user.email=sample@example.invalid commit-tree "${tree}" -p "${parent}"
+  else
+    printf '%s\n' base | git -c user.name=Sample -c user.email=sample@example.invalid commit-tree "${tree}"
+  fi
+}
+
+function main() {
+  local helper="${1:?helper required}" mode="${2:?mode required}" tree base fix head unrelated result case_exit fixture_dir
+  fixture_dir="$(cd "$(dirname "$0")" && pwd)"
+  CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/copilot-ancestry.XXXXXX")"
+  trap 'rm -r "${CASE_DIR}"' EXIT
+  mkdir "${CASE_DIR}/bin"
+  cp "${fixture_dir}/copilot-ancestry-gh-stub" "${CASE_DIR}/bin/gh"
+  printf '%s\n' "file://${CASE_DIR}/source" > "${CASE_DIR}/bin/repo-url"
+  export PATH="${CASE_DIR}/bin:${PATH}"
+  [[ "$(command -v gh)" == "${CASE_DIR}/bin/gh" ]] || return 1
+
+  git init -q "${CASE_DIR}/source"
+  cd "${CASE_DIR}/source"
+  tree="$(git mktree < /dev/null)"
+  base="$(make_commit)"
+  fix="$(make_commit "${base}")"
+  head="$(make_commit "${fix}")"
+  unrelated="$(printf '%s\n' unrelated | git -c user.name=Sample -c user.email=sample@example.invalid commit-tree "${tree}" -p "${base}")"
+  git update-ref refs/heads/pr "${head}"
+  git update-ref refs/heads/unrelated "${unrelated}"
+  git update-ref refs/pull/7/head "${head}"
+
+  if [[ "${mode}" == missing || "${mode}" == moved || "${mode}" == shallow-endpoints ]]; then
+    git clone -q --depth 1 --branch pr "file://${CASE_DIR}/source" "${CASE_DIR}/work"
+  else
+    git clone -q --branch pr "file://${CASE_DIR}/source" "${CASE_DIR}/work"
+  fi
+  cd "${CASE_DIR}/work"
+  case "${mode}" in
+    no-upstream)
+      git config --unset branch.pr.remote
+      git config --unset branch.pr.merge
+      ;;
+    unrelated-upstream)
+      git branch --set-upstream-to=origin/unrelated pr > /dev/null
+      fix="${unrelated}"
+      ;;
+    missing | moved)
+      if git cat-file -e "${fix}^{commit}" 2> /dev/null; then
+        echo 'fixture fix object unexpectedly exists' >&2
+        return 1
+      fi
+      if [[ "${mode}" == moved ]]; then head="${unrelated}"; fi
+      ;;
+    shallow-endpoints)
+      git --git-dir="${CASE_DIR}/source/.git" cat-file commit "${fix}" | git hash-object -t commit -w --stdin > /dev/null
+      git cat-file -e "${fix}^{commit}"
+      if git merge-base --is-ancestor "${fix}" "${head}"; then
+        echo 'fixture ancestry unexpectedly complete' >&2
+        return 1
+      fi
+      ;;
+    ancestry-error)
+      command -v git > "${CASE_DIR}/bin/real-git"
+      cp "${fixture_dir}/copilot-ancestry-git-stub" "${CASE_DIR}/bin/git"
+      hash -r
+      [[ "$(command -v git)" == "${CASE_DIR}/bin/git" ]] || return 1
+      ;;
+    unknown) fix=0000000000000000000000000000000000000000 ;;
+    fetch-error)
+      fix=0000000000000000000000000000000000000000
+      printf '%s\n' "file://${CASE_DIR}/missing-repository" > "${CASE_DIR}/bin/repo-url"
+      ;;
+    *)
+      echo 'unknown ancestry case' >&2
+      return 1
+      ;;
+  esac
+
+  set +e
+  bash "${helper}" verify-fix o r 7 "${head}" "${fix}" > "${CASE_DIR}/out" 2> "${CASE_DIR}/err"
+  case_exit=$?
+  set -e
+  result="$(cat "${CASE_DIR}/out")"
+  printf 'result=%s; exit=%s\n' "${result:-none}" "${case_exit}"
+  if [[ "${case_exit}" -ne 0 ]]; then
+    sed -n 's/^Error: /Error: /p' "${CASE_DIR}/err"
+  fi
+  if [[ "${mode}" == missing || "${mode}" == shallow-endpoints ]]; then
+    git cat-file -e "${fix}^{commit}"
+    [[ "$(git rev-parse --is-shallow-repository)" == false ]] || return 1
+    printf '%s\n' 'missing fix fetched from PR ref; history complete'
+  fi
+}
+
+main "$@"
