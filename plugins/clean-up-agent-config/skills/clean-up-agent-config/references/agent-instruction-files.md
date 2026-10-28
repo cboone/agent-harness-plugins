@@ -47,7 +47,7 @@ This is the emerging industry standard, now stewarded by the Agentic AI Foundati
 
 The adoption is broad and growing. Among the tools covered here: Codex uses it as the primary instruction file (having migrated from `codex.md`), and Copilot reads it alongside its own format. Over 40,000 open-source projects already have an `AGENTS.md`.
 
-**Codex's implementation** is the most sophisticated: it walks from the project root down to your current working directory, checking each directory for `AGENTS.override.md` first, then `AGENTS.md`, concatenating them in order. The 32 KiB default limit (`project_doc_max_bytes`) can be raised in config. You can also add fallback filenames in `config.toml` so Codex will read your existing `CLAUDE.md` or `TEAM_GUIDE.md`.
+**Codex's implementation** walks from the project root down to your current working directory. In each directory it selects the first existing regular file: `AGENTS.override.md`, then `AGENTS.md`, then each `project_doc_fallback_filenames` entry in order. Empty or whitespace-only contents contribute no instructions; Codex does not try another filename in that directory. `project_doc_max_bytes` caps this project chain (default 32 KiB), excluding global `~/.codex/AGENTS.md`, which loads separately. Add fallback filenames in `config.toml` to support existing `CLAUDE.md` or `TEAM_GUIDE.md` files.
 
 **Copilot's implementation** reads `AGENTS.md` files at the root and in subdirectories. If both `AGENTS.md` and `copilot-instructions.md` exist, instructions from both are used. Root-level `AGENTS.md` is treated as primary instructions; other locations are treated as additional.
 

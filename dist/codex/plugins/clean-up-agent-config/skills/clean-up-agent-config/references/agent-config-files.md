@@ -205,16 +205,16 @@ model_reasoning_effort = "medium"     # minimal | low | medium | high | xhigh
 approval_policy = "on-request"        # untrusted | on-failure | on-request | never
 sandbox_mode = "workspace-write"      # read-only | workspace-write | danger-full-access
 
-[sandbox_workspace_write]
-network_access = false
-writable_roots = ["/Users/YOU/.pyenv/shims"]
-
 # Web search
 web_search = "cached"                 # disabled | cached | live
 
 # Instruction file discovery
-project_doc_max_bytes = 32768         # Max combined AGENTS.md size (default 32 KiB)
+project_doc_max_bytes = 32768         # Max project instruction chain (default 32 KiB; excludes global)
 project_doc_fallback_filenames = ["CLAUDE.md", "TEAM_GUIDE.md"]
+
+[sandbox_workspace_write]
+network_access = false
+writable_roots = ["/Users/YOU/.pyenv/shims"]
 
 # MCP servers
 [mcp_servers.puppeteer]
@@ -246,7 +246,8 @@ The `#:schema` comment at the top enables autocomplete in editors with the "Even
 #### Notable unique features
 
 - **Profiles** -- define named config profiles (`[profiles.<name>]`) and switch with `codex --profile deep-review`. Excellent for having a "fast and loose" profile vs. a "careful review" profile.
-- **`project_doc_fallback_filenames`** -- lets Codex treat other filenames (e.g., `CLAUDE.md`, `TEAM_GUIDE.md`) as instruction files when `AGENTS.md` is not present. Use this when you don't want a `CLAUDE.md -> AGENTS.md` symlink; if `CLAUDE.md` is already a symlink to `AGENTS.md`, omit it here to avoid redundant reads.
+- **`project_doc_fallback_filenames`** -- lets Codex treat other filenames (e.g., `CLAUDE.md`, `TEAM_GUIDE.md`) as instruction files when `AGENTS.md` is not present. Keep `CLAUDE.md` in the list even alongside a `CLAUDE.md -> AGENTS.md` symlink: Codex reads at most one instruction file per directory, while the fallback still serves CLAUDE.md-only directories.
+- **`project_doc_max_bytes`** -- caps the project instruction chain, excluding global `~/.codex/AGENTS.md`, which loads separately.
 - **`requirements.toml`** -- admin-enforced constraints that users can't override. Deployed to system directories by IT.
 - **Trust model** -- project-scoped `.codex/config.toml` is only loaded when the project is trusted. If untrusted, Codex falls back to user/system defaults only.
 - **Sandbox granularity** -- `[sandbox_workspace_write]` allows fine-grained control: specific writable roots, network access toggle, tmpdir exclusion.
