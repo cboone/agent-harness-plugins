@@ -21,16 +21,18 @@ Detect the default branch:
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-Fall back to local detection if `gh` is unavailable:
+Fall back to local detection if `gh` is unavailable or the query fails:
 
 ```bash
-git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
+git symbolic-ref --quiet --short refs/remotes/origin/HEAD
 ```
+
+Strip the `origin/` prefix from successful output. Treat empty output, a failed command, or `HEAD` as not found. If neither query finds a base, ask for it and stop rather than guessing. Verify `origin/<base>` resolves to a commit and use that remote-tracking ref for comparisons; do not fall back to a potentially stale local branch.
 
 Find the merge base between the default branch and HEAD:
 
 ```bash
-git merge-base <default-branch> HEAD
+git merge-base origin/<default-branch> HEAD
 ```
 
 If HEAD equals the merge base (on the default branch or no divergent commits), compare against the state before the most recent merge instead -- use the most recent merge commit's first parent as the comparison base:

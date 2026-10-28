@@ -52,8 +52,10 @@ gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 If `gh` is not available or the command fails, fall back to a purely local query of the remote HEAD ref:
 
 ```bash
-git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
+git symbolic-ref --quiet --short refs/remotes/origin/HEAD
 ```
+
+Strip the `origin/` prefix from successful output. Treat empty output, a failed command, or `HEAD` as not found. If neither query finds a base, ask for it and stop rather than guessing. Verify `origin/<base>` resolves to a commit and use that remote-tracking ref for comparisons; do not fall back to a potentially stale local branch.
 
 1. **Find the merge base** between the base reference and HEAD:
 
@@ -371,7 +373,7 @@ To address the items in this review, run: /address-review docs/reviews/<filename
 - **No commits on this branch**: Report that the branch has no changes compared to the base and stop.
 - **Invalid --since ref**: If the specified ref does not exist, report the error and suggest checking the ref name.
 - **Plan file not found**: If `--plan <path>` points to a non-existent file, report the error and continue with the review without plan comparison.
-- **No gh CLI**: Fall back to `git remote show origin` for base branch detection. The review does not require `gh`.
+- **No gh CLI**: Use the validated local symbolic-ref fallback from step 1; ask for a base when it is unavailable.
 - **Detached HEAD**: Use `HEAD` as the branch name and note that the review is running in detached HEAD state.
 - **Save failure**: If the review file cannot be written (e.g., read-only filesystem, permissions issue), report the error but do not fail the entire review. The terminal output is already complete.
 - **Large diffs**: If the diff is extremely large (thousands of lines), focus the summary on the stat output and commit messages rather than reading the entire diff line by line. Note that the detailed diff was too large for full analysis.

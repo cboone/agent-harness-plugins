@@ -12,7 +12,7 @@ Fetch and merge the base branch into the current feature branch with automatic c
 
 **Type:** Skill
 **Trigger:** `/sync-with-main:merge`
-**Requires:** [`gh`](https://cli.github.com/) (falls back to `git remote show origin` if unavailable)
+**Requires:** [`gh`](https://cli.github.com/) (falls back to `git symbolic-ref --quiet --short refs/remotes/origin/HEAD` if unavailable)
 
 ### Installation
 
@@ -40,7 +40,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git merge *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git remote *)", "Bash(gh repo view *)"]
+    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git merge *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)", "Bash(git rev-parse *)", "Bash(gh repo view *)"]
   }
 }
 ```
@@ -64,7 +64,7 @@ Fetch and rebase the current feature branch onto the base branch with automatic 
 
 **Type:** Skill
 **Trigger:** `/sync-with-main:rebase`
-**Requires:** [`gh`](https://cli.github.com/) (falls back to `git remote show origin` if unavailable)
+**Requires:** [`gh`](https://cli.github.com/) (falls back to `git symbolic-ref --quiet --short refs/remotes/origin/HEAD` if unavailable)
 
 ### Installation
 
@@ -94,7 +94,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git rebase *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git remote *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(gh repo view *)"]
+    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git rebase *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(gh repo view *)"]
   }
 }
 ```

@@ -1,0 +1,78 @@
+{
+  "runs": [
+    {
+      "aspect": "code",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0,
+      "output": "/private/tmp/565-focused.ZKSi57/important2-out/code.json",
+      "log": "/private/tmp/565-focused.ZKSi57/important2-out/code.log"
+    },
+    {
+      "aspect": "errors",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0,
+      "output": "/private/tmp/565-focused.ZKSi57/important2-out/errors.json",
+      "log": "/private/tmp/565-focused.ZKSi57/important2-out/errors.log"
+    },
+    {
+      "aspect": "tests",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0,
+      "output": "/private/tmp/565-focused.ZKSi57/important2-out/tests.json",
+      "log": "/private/tmp/565-focused.ZKSi57/important2-out/tests.log"
+    },
+    {
+      "aspect": "comments",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0,
+      "output": "/private/tmp/565-focused.ZKSi57/important2-out/comments.json",
+      "log": "/private/tmp/565-focused.ZKSi57/important2-out/comments.log"
+    }
+  ],
+  "reviewed_snapshot": "fbc847403b8b9e0ee6eae8b478cfc90a606e4298",
+  "after_snapshot": "fbc847403b8b9e0ee6eae8b478cfc90a606e4298",
+  "results": [
+    {
+      "aspect": "code",
+      "findings": [],
+      "reviewed": "fbc847403b8b9e0ee6eae8b478cfc90a606e4298",
+      "strengths": ["Automatic base detection avoids guessed names and stale local branches while preserving explicit overrides.", "Missing-base coverage remains explicit, and unexpected commit-validation failures preserve their diagnostics and exit status."],
+      "summary": "Reviewed the full scoped diff against the trusted project guidelines and found no reportable defects; the change meets the project's standards. Read-only Bash syntax validation passed, and both helper copies are identical. Tests were inspected but not executed because they create files."
+    },
+    {
+      "aspect": "errors",
+      "findings": [
+        {
+          "confidence": 99,
+          "detail": "Exit status 1 does not uniquely mean the ref is missing: Git also returns 1 without diagnostics when the ref exists but its commit object is unavailable. A read-only reproduction preserved origin/main while hiding its objects; the old resolver and caller stopped, but the new path returned an empty base and continued. If only the base object is missing, collection can therefore emit successful partial-coverage JSON instead of reporting the repository problem. Both canonical helper copies contain this handler.",
+          "file": "plugins/review-pr-with-codex/scripts/review-scope",
+          "fix": "Resolve the candidate ref without ^{commit} first, treating only an absent ref as optional. Once the ref exists, make every failure to validate its commit fatal, with the ref name and diagnostic. Apply the same change to review-until-clean's helper and cover an existing ref whose object is missing.",
+          "line": 158,
+          "severity": "important",
+          "title": "write-bash-scripts: Checked commands: Missing base objects are treated as absent refs."
+        }
+      ],
+      "reviewed": "fbc847403b8b9e0ee6eae8b478cfc90a606e4298",
+      "strengths": ["Default-branch instructions explicitly reject guessed and stale local bases.", "Unexpected validation failures with statuses other than 1 preserve their diagnostic and exit status.", "Missing-base coverage is explicitly distinguished from an empty committed scope."],
+      "summary": "Reviewed the full supplied diff for error handling using read-only inspection and targeted in-memory checks. One important failure-classification defect remains: an unavailable base commit object can become a successful partial-coverage result."
+    },
+    {
+      "aspect": "tests",
+      "findings": [],
+      "reviewed": "fbc847403b8b9e0ee6eae8b478cfc90a606e4298",
+      "strengths": ["New tests exercise missing and dangling remote HEAD, nonstandard defaults, and remote-base selection despite a conflicting local branch.", "Error-path coverage checks the exit status, diagnostic, and absence of JSON after unexpected base-validation failures.", "Existing tests cover explicit bases, unrelated history, partial-coverage reporting, and shared-helper copy consistency.", "Fallback tests execute canonical command examples without pipefail, directly guarding against the original masked-failure regression."],
+      "summary": "Reviewed the complete committed diff and mapped changed behavior to new and existing tests; no material coverage gaps were found. Tests were inspected without execution because they create files."
+    },
+    {
+      "aspect": "comments",
+      "findings": [],
+      "reviewed": "fbc847403b8b9e0ee6eae8b478cfc90a606e4298",
+      "strengths": ["Fallback instructions clearly distinguish missing bases from valid remote-tracking refs and explain why local substitutes can mislead.", "Workmux documentation preserves explicit local-base overrides while validating automatically detected bases.", "Partial-coverage documentation accurately explains why an empty committed bucket cannot establish full review coverage."],
+      "summary": "Reviewed the full specified diff and checked changed comments and documentation against surrounding implementation and examples. No actionable inaccuracies or comment-rot issues found; clean at Nit."
+    }
+  ]
+}

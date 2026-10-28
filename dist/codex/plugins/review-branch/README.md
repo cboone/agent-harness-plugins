@@ -46,7 +46,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git branch *)", "Bash(git diff*)", "Bash(git log *)", "Bash(git merge-base *)", "Bash(git rev-parse *)", "Bash(gh repo view *)", "Bash(mkdir -p docs/reviews)"]
+    "allow": ["Bash(git branch *)", "Bash(git diff*)", "Bash(git log *)", "Bash(git merge-base *)", "Bash(git rev-parse *)", "Bash(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)", "Bash(gh repo view *)", "Bash(mkdir -p docs/reviews)"]
   }
 }
 ```
