@@ -23,6 +23,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          bash --version | head -1
+          mkdir --version
+          mv --version
           root="$(mktemp -d)"
           export REPO_ROOT="${PWD}"
           export TMPDIR=/dev/shm
@@ -56,3 +59,25 @@ jobs:
           done
           printf 'pairs=100 lost=%s writer_error_pairs=%s\n' "${lost}" "${errors}"
           ((lost == 0 && errors == 0))
+      - name: Test mkdir exclusivity directly
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          both=0
+          for ((pair=0; pair<1000; pair++)); do
+            first_status=0
+            second_status=0
+            mkdir "${root}/${pair}" 2> "${root}/first.log" &
+            first=$!
+            mkdir "${root}/${pair}" 2> "${root}/second.log" &
+            second=$!
+            wait "${first}" || first_status=$?
+            wait "${second}" || second_status=$?
+            if ((first_status == 0 && second_status == 0)); then
+              both=$((both + 1))
+            fi
+          done
+          printf 'mkdir pairs=1000 both_succeeded=%s\n' "${both}"
+          ((both == 0))
