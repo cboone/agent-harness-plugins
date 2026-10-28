@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Stub gh to test reply-and-resolve call order.
+set -euo pipefail
+
+CASE_DIR=""
+
+function main() {
+  local helper="${1:?helper required}" mode="${2:?mode required}" reply_exit
+  CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/copilot-reply.XXXXXX")"
+  trap 'rm -r "${CASE_DIR}"' EXIT
+  cp "$(dirname "$0")/copilot-reply-gh-stub" "${CASE_DIR}/gh"
+  printf '%s\n' "${mode}" > "${CASE_DIR}/mode"
+  # shellcheck disable=SC2016 # Markdown backticks are literal reply content.
+  printf '%s\n' '**Fixed** in [`abc1234`](https://github.com/o/r/commit/abc1234def5678abc1234def5678abc1234def56).' '' 'Added the missing check.' > "${CASE_DIR}/body"
+  : > "${CASE_DIR}/calls"
+  export PATH="${CASE_DIR}:${PATH}"
+  [[ "$(command -v gh)" == "${CASE_DIR}/gh" ]] || return 1
+  # Capture failure without invoking the helper in a conditional that suppresses errexit.
+  set +e
+  bash "${helper}" reply-and-resolve THREAD --body-file "${CASE_DIR}/body"
+  reply_exit=$?
+  set -e
+  printf 'exit=%s; calls=' "${reply_exit}"
+  paste -sd , "${CASE_DIR}/calls"
+}
+
+main "$@"

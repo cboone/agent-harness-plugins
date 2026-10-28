@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Supply the local PR repository URL; reject every other GitHub operation.
+set -euo pipefail
+
+function main() {
+  if [[ "$*" == 'auth status' ]]; then return; fi
+  [[ "$*" == 'repo view o/r --json url --jq .url' ]] || exit 99
+  cat "$(dirname "$0")/repo-url"
+}
+
+main "$@"

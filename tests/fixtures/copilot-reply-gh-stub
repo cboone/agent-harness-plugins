@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Stub GraphQL replies and resolutions to test failures and call order.
+set -euo pipefail
+
+function main() {
+  local case_dir mode thread_id="" body="" query=""
+  case_dir="$(cd "$(dirname "$0")" && pwd)"
+  mode="$(cat "${case_dir}/mode")"
+  if [[ "$*" == 'auth status' ]]; then return; fi
+  [[ "${1:-}" == api && "${2:-}" == graphql ]] || exit 99
+  shift 2
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -f | --raw-field)
+        [[ $# -ge 2 ]] || exit 99
+        case "${2}" in
+          threadId=*) thread_id="${2#threadId=}" ;;
+          body=*) body="${2#body=}" ;;
+          query=*) query="${2#query=}" ;;
+          *) exit 99 ;;
+        esac
+        shift 2
+        ;;
+      *) exit 99 ;;
+    esac
+  done
+  [[ "${thread_id}" == THREAD ]] || {
+    echo 'unexpected threadId' >&2
+    exit 99
+  }
+  case "${query}" in
+    *addPullRequestReviewThreadReply*)
+      [[ "${body}" == "$(cat "${case_dir}/body")" ]] || {
+        echo 'unexpected reply payload' >&2
+        exit 99
+      }
+      printf '%s\n' reply >> "${case_dir}/calls"
+      if [[ "${mode}" == reply ]]; then
+        printf '%s\n' '{"errors":[{"message":"sample reply failure"}]}'
+      else
+        printf '%s\n' '{"data":{"addPullRequestReviewThreadReply":{"comment":{"id":"reply1"}}}}'
+      fi
+      ;;
+    *resolveReviewThread*)
+      printf '%s\n' resolve >> "${case_dir}/calls"
+      if [[ "${mode}" == resolve ]]; then
+        printf '%s\n' '{"errors":[{"message":"sample resolve failure"}]}'
+      else
+        printf '%s\n' '{"data":{"resolveReviewThread":{"thread":{"isResolved":true}}}}'
+      fi
+      ;;
+    *) exit 99 ;;
+  esac
+}
+
+main "$@"
