@@ -402,6 +402,108 @@ child stopped
 no write after cancellation
 ```
 
+## Cancellation stops orphaned and late-starting descendants
+
+The stub records an orphan before readiness and starts a TERM-ignoring child
+from its shutdown handler. Both PID files must exist before checking absence.
+A separate process remains running, proving cleanup stays within its own group.
+
+```scrut
+$ mkdir "${FIXTURE}/family-pids" "${FIXTURE}/family-out" \
+>   && { sleep 300 & } && unrelated=$! \
+>   && { CODEX_STUB_MODES="code=hang-family" CODEX_STUB_PID_DIR="${FIXTURE}/family-pids" \
+>        "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
+>        --out-dir "${FIXTURE}/family-out" > "${FIXTURE}/family.log" 2>&1 & } \
+>   && helper=$! \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/family-pids/code.pid" ] && break; sleep 0.1; done \
+>   && kill -TERM "${helper}" \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/family-pids/code.late.pid" ] && break; sleep 0.1; done \
+>   && kill -TERM "${helper}" \
+>   && { wait "${helper}"; echo "helper exit=$?"; } \
+>   && for kind in orphan late; do \
+>        pid="$(cat "${FIXTURE}/family-pids/code.${kind}.pid")" || break; \
+>        state="$(ps -p "${pid}" -o stat=)"; \
+>        if [ -n "${state}" ] && [[ "${state}" != *Z* ]]; then \
+>          echo "${kind} still running"; kill -KILL "${pid}"; \
+>        else echo "${kind} stopped"; fi; \
+>      done \
+>   && kill -0 "${unrelated}" && echo 'unrelated still running' \
+>   && kill "${unrelated}" && { wait "${unrelated}" 2>/dev/null || true; } \
+>   && retained="$(sed -n 's/^codex-aspects: retained cancellation artifacts in //p' "${FIXTURE}/family.log")" \
+>   && { [ -z "${retained}" ] || rm -r "${retained}"; }
+helper exit=143
+orphan stopped
+late stopped
+unrelated still running
+```
+
+## Interrupting the helper stops the same process groups
+
+Monitor mode lets the background helper receive INT instead of inheriting an
+ignored interrupt from the test shell. Repeated INT cannot interrupt cleanup.
+
+```scrut
+$ mkdir "${FIXTURE}/interrupt-pids" "${FIXTURE}/interrupt-out" \
+>   && { sleep 300 & } && unrelated=$! \
+>   && set -m \
+>   && { CODEX_STUB_MODES="code=hang-family" CODEX_STUB_PID_DIR="${FIXTURE}/interrupt-pids" \
+>        "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
+>        --out-dir "${FIXTURE}/interrupt-out" > "${FIXTURE}/interrupt.log" 2>&1 & } \
+>   && helper=$! && set +m \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/interrupt-pids/code.pid" ] && break; sleep 0.1; done \
+>   && kill -INT "${helper}" \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/interrupt-pids/code.late.pid" ] && break; sleep 0.1; done \
+>   && kill -INT "${helper}" \
+>   && { wait "${helper}"; echo "helper exit=$?"; } \
+>   && for kind in orphan late; do \
+>        pid="$(cat "${FIXTURE}/interrupt-pids/code.${kind}.pid")" || break; \
+>        state="$(ps -p "${pid}" -o stat=)"; \
+>        if [ -n "${state}" ] && [[ "${state}" != *Z* ]]; then \
+>          echo "${kind} still running"; kill -KILL "${pid}"; \
+>        else echo "${kind} stopped"; fi; \
+>      done \
+>   && kill -0 "${unrelated}" && echo 'unrelated still running' \
+>   && kill "${unrelated}" && { wait "${unrelated}" 2>/dev/null || true; } \
+>   && retained="$(sed -n 's/^codex-aspects: retained cancellation artifacts in //p' "${FIXTURE}/interrupt.log")" \
+>   && { [ -z "${retained}" ] || rm -r "${retained}"; }
+helper exit=130
+orphan stopped
+late stopped
+unrelated still running
+```
+
+## Cancellation between launch and registration still owns the process group
+
+A sourced DEBUG hook waits for the stub, verifies its isolated group, then sends
+TERM immediately before the helper records its PID. The hook runs only in the
+helper and is disabled before signalling. Both processes must stop. The
+stub's delayed write must never happen.
+
+```scrut
+$ stub="" && mkdir "${FIXTURE}/launch-pids" "${FIXTURE}/launch-out" \
+>   && BASH_ENV="${CODEX_LAUNCH_CANCEL_ENV}" CODEX_STUB_MODES="code=hang" \
+>      CODEX_STUB_PID_DIR="${FIXTURE}/launch-pids" CODEX_STUB_SENTINEL="${FIXTURE}/launch-write" \
+>      "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
+>      --out-dir "${FIXTURE}/launch-out" > "${FIXTURE}/launch.log" 2>&1; echo "helper exit=$?" \
+>   && grep '^launch boundary reached' "${FIXTURE}/launch.log" \
+>   && stub="$(cat "${FIXTURE}/launch-pids/code.pid")" \
+>   && child="$(cat "${FIXTURE}/launch-pids/code.child.pid")" \
+>   && sleep 1.2 \
+>   && for entry in "stub:${stub}" "child:${child}"; do \
+>        state="$(ps -p "${entry#*:}" -o stat=)"; \
+>        if [ -n "${state}" ] && [[ "${state}" != *Z* ]]; then \
+>          echo "${entry%%:*} still running"; \
+>        else echo "${entry%%:*} stopped"; fi; \
+>      done \
+>   && { test ! -e "${FIXTURE}/launch-write" && echo 'no write after cancellation'; } \
+>   ; { [ -z "${stub}" ] || kill -KILL -- "-${stub}" 2>/dev/null || true; }
+helper exit=143
+launch boundary reached with isolated group
+stub stopped
+child stopped
+no write after cancellation
+```
+
 ## Denied process inspection retains artifacts and reports incomplete cancellation
 
 ```scrut
