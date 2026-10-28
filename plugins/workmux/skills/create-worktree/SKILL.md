@@ -213,7 +213,7 @@ If the user provided only a branch name with no description, derive a human-read
 
 ### 6. Create the Worktree
 
-**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is still running. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
+**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is still running. `launch-workmux` launches in a separate process group and waits for `workmux add` to exit before printing its complete log. A failed launch returns 1. After `WORKMUX_LAUNCH_TIMEOUT_SECONDS` (90 by default), it prints the log so far, returns 124, and leaves the child running with its log and eventual exit status in the reported state directory. Do not start another launch until that result is known. `--await-completion` also verifies that Git lists a worktree for the branch. `WORKMUX_LAUNCH_WAIT_SECONDS` no longer controls the wait.
 
 **Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the task description (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script reads the prompt from stdin, writes an escaped temporary prompt file for `workmux add -P`, and removes that temporary file after `workmux add` exits. Each escaped delimiter renders back to the literal characters, so the prompt stored at `<worktree>/.workmux/PROMPT-*.md` matches the original input.
 
@@ -363,7 +363,7 @@ Nothing has been launched yet, so stopping anywhere in this phase leaves nothing
 
 For each issue in the order given:
 
-1. **Compose and launch** with `--await-completion`, which waits for `workmux add` to exit rather than for a fixed interval, then confirms the branch's worktree:
+1. **Compose and launch** with `--await-completion`, which also confirms the branch's worktree after `workmux add` exits:
 
    ```bash
    bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON \
