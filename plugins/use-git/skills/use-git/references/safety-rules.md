@@ -4,7 +4,7 @@ Conventions that prevent data loss, protect shared repositories, and keep Claude
 
 ## GPG Sign Every Commit
 
-Always use `git commit -S` to GPG-sign commits. The sandbox cannot access GPG keys, so resort immediately to the unsandboxed Bash command when committing.
+Always use `git commit -S` to GPG-sign commits. Try the signed commit as is in the current host; never escalate up front. Only after an actual signing failure, follow the host's escalation rules to retry outside the sandbox, or report the failure.
 
 ```bash
 git commit -S -m "$(
