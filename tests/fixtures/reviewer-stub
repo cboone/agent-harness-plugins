@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Simulate reviewer output and failures for completion checks.
+set -euo pipefail
+
+function main() {
+  local mode="${1}" reply="${2}"
+  case "${mode}" in
+    ok) printf '{"findings":[],"reviewed":"sample"}\n' > "${reply}" ;;
+    mixed) printf '{"findings":[],"reviewed":"sample"}\nReview completed: no findings.\n' > "${reply}" ;;
+    silent) return 0 ;;
+    missing) printf 'progress only\n' >&2 ;;
+    empty) : > "${reply}" ;;
+    whitespace) printf ' \t\n' > "${reply}" ;;
+    malformed) printf 'unfinished {\n' > "${reply}" ;;
+    multiple) printf '{}\n{}\n' > "${reply}" ;;
+    nonzero)
+      printf '{"findings":[],"reviewed":"sample"}\n' > "${reply}"
+      return 7
+      ;;
+    *)
+      echo 'reviewer-stub: unknown mode' >&2
+      return 2
+      ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Deterministic failures for ledger persistence tests.
+set -euo pipefail
+
+function main() {
+  case "${0##*/}:${LEDGER_STUB_MODE:-}" in
+    jq:validate)
+      echo 'sample jq failure' >&2
+      return 23
+      ;;
+    grep:validate)
+      echo 'sample grep failure' >&2
+      return 24
+      ;;
+    mkdir:create)
+      echo 'sample mkdir failure' >&2
+      return 25
+      ;;
+    mkdir:reserve) return 0 ;; # Leave the destination directory absent.
+    cat:copy)
+      echo 'sample copy failure' >&2
+      return 19
+      ;;
+    *)
+      echo 'ledger-command-stub: unexpected invocation' >&2
+      return 99
+      ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Coordinate two real save-ledger processes at their first reservation.
+set -euo pipefail
+
+function main() {
+  local fixture="${1}" a_pid b_pid a_status=0 b_status=0 ready_a ready_b
+  mkdir "${fixture}/barrier" "${fixture}/concurrent"
+  mkfifo "${fixture}/barrier/ready" "${fixture}/barrier/a" "${fixture}/barrier/b"
+  printf '# Writer A\n' > "${fixture}/a.md"
+  printf '# Writer B\n' > "${fixture}/b.md"
+  exec 3<> "${fixture}/barrier/ready"
+  export LEDGER_BARRIER="${fixture}/barrier"
+  BASH_ENV="${LEDGER_BARRIER_ENV:?}" LEDGER_WRITER=a "${SAVE_REVIEW_LEDGER_BIN:?}" \
+    "${fixture}/a.md" "${fixture}/concurrent" run > "${fixture}/a.path" &
+  a_pid=$!
+  BASH_ENV="${LEDGER_BARRIER_ENV:?}" LEDGER_WRITER=b "${SAVE_REVIEW_LEDGER_BIN:?}" \
+    "${fixture}/b.md" "${fixture}/concurrent" run > "${fixture}/b.path" &
+  b_pid=$!
+  IFS= read -r ready_a <&3
+  IFS= read -r ready_b <&3
+  [[ "${ready_a}${ready_b}" == ab || "${ready_a}${ready_b}" == ba ]]
+  printf 'go\n' > "${fixture}/barrier/a"
+  printf 'go\n' > "${fixture}/barrier/b"
+  wait "${a_pid}" || a_status=$?
+  wait "${b_pid}" || b_status=$?
+  printf 'writers: %s %s\n' "${a_status}" "${b_status}"
+  [[ "${a_status}" == 0 && "${b_status}" == 0 ]]
+  [[ "$(cat "${fixture}/a.path")" != "$(cat "${fixture}/b.path")" ]]
+  cmp "${fixture}/a.md" "$(cat "${fixture}/a.path")"
+  cmp "${fixture}/b.md" "$(cat "${fixture}/b.path")"
+  printf 'distinct paths; both ledgers intact\n'
+}
+
+main "$@"
