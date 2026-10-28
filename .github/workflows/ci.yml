@@ -97,99 +97,98 @@ jobs:
       fail-fast: false
       matrix:
         document: ${{ fromJSON(needs.scrut-documents.outputs.documents) }}
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@3c9adb5a8b166444d3c0e3fe606d55f0dc7ac726 # v5.0.0
-    # Every scrut-env path below must start with "./". scrut runs each testcase
-    # from a temporary directory, and the reusable workflow rewrites only values
-    # matching ./* into absolute paths before exporting them. A bare "." is left
-    # untouched, so REPO_ROOT=. pointed at that temp dir: binaries still ran, but
-    # `cd "${REPO_ROOT}"` landed nowhere useful and the repository-wide grep
-    # guards scanned an empty directory and passed without checking anything.
-    #
-    # scrut-env is a literal block whose every line is parsed as KEY=value, and a
-    # comment inside it fails the job, which is why this note lives out here.
-    with:
-      scrut-env: |
-        CHECK_CROSS_REFERENCES_BIN=./bin/check-cross-references
-        BUILD_REVIEW_CHECKLISTS_BIN=./bin/build-review-checklists
-        BUILD_SHARED_REFERENCES_BIN=./bin/build-shared-references
-        REVIEW_CHECKLIST_FIXTURE_BIN=./tests/fixtures/review-checklist-fixture
-        BUILD_CODEX_MARKETPLACE_BIN=./bin/build-codex-marketplace
-        CODEX_TRANSLATION_FIXTURE_BIN=./tests/fixtures/codex-translation-fixture
-        COMPOSE_ISSUE_PROMPT_BIN=./plugins/workmux/scripts/compose-issue-prompt
-        COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
-        COPILOT_AUDIT_DATA_DIR=./tests/data/copilot-audit
-        COPILOT_GH_STUB_BIN=./tests/fixtures/copilot-gh-stub
-        COPILOT_SWEEP_CASE_BIN=./tests/fixtures/copilot-sweep-case
-        COPILOT_ANCESTRY_CASE_BIN=./tests/fixtures/copilot-ancestry-case
-        COPILOT_REPLY_CASE_BIN=./tests/fixtures/copilot-reply-case
-        COPILOT_GH_DATA_DIR=./tests/data/copilot-gh
-        CROSS_REFERENCE_FIXTURE_BIN=./tests/fixtures/cross-reference-fixture
-        CHAIN_HELPER_FIXTURE_BIN=./tests/fixtures/chain-helper-fixture
-        CHAIN_CODEX_STUB_BIN=./tests/fixtures/chain-codex-stub
-        CATALOG_RELEASE_FIXTURE_BIN=./tests/fixtures/catalog-release-fixture
-        VALIDATE_PLUGIN_FIXTURE_BIN=./tests/fixtures/validate-plugin-fixture
-        LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts
-        MATERIALIZE_CASE_BIN=./bin/materialize-case
-        VALIDATE_CORPUS_BIN=./bin/validate-corpus
-        REVIEW_CORPUS_FIXTURE_BIN=./tests/fixtures/review-corpus-fixture
-        REPO_ROOT=./
-        LAUNCH_WORKMUX_BIN=./plugins/workmux/scripts/launch-workmux
-        DEPENDABOT_PRS_BIN=./plugins/dependabot/scripts/dependabot-prs
-        DEPENDABOT_PRS_DATA_DIR=./tests/data/dependabot-prs
-        GH_STUB_BIN=./tests/fixtures/gh-stub
-        GIT_WORKTREE_STUB_BIN=./tests/fixtures/git-worktree-stub
-        MANAGE_RESOURCE_CLAIMS_BIN=./plugins/workmux/scripts/manage-resource-claims
-        RESOURCE_CLAIMS_INTERLEAVE_BIN=./tests/fixtures/resource-claims-interleave
-        RESOURCE_CLAIMS_INTERLEAVE_STUB_BIN=./tests/fixtures/resource-claims-interleave-stub
-        CLAIMS_INTERRUPT_CONTROL=
-        REPORT_BOARD_BIN=./plugins/publish-report-board/scripts/report-board
-        REPORT_BOARD_DATA_DIR=./tests/data/report-board
-        COPILOT_ROUNDS_REPORT_BIN=./bin/copilot-rounds-report
-        COPILOT_ROUNDS_REPORT_DATA_DIR=./tests/data/copilot-rounds-report
-        RECORD_TRAFFIC_BIN=./bin/record-traffic
-        RECORD_TRAFFIC_DATA_DIR=./tests/data/record-traffic
-        BUGS_GATHER_BIN=./plugins/publish-report-board/scripts/bugs-gather
-        BUGS_GATHER_DATA_DIR=./tests/data/bugs-gather
-        BACKLOG_GATHER_BIN=./plugins/publish-report-board/scripts/backlog-gather
-        BACKLOG_GATHER_DATA_DIR=./tests/data/backlog-gather
-        BACKLOG_GATHER_GH_STUB_BIN=./tests/fixtures/backlog-gather-gh-stub
-        CURL_STUB_BIN=./tests/fixtures/curl-stub
-        PUSH_NOTIFICATION_BIN=./plugins/push-notification/scripts/push-notification
-        NTFY_CURL_STUB_BIN=./tests/fixtures/ntfy-curl-stub
-        RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads
-        MERGE_FLOW_BIN=./plugins/monitor-pr/scripts/merge-flow
-        MERGE_FLOW_DATA_DIR=./tests/data/merge-flow
-        REVIEW_COMPLETION_BIN=./plugins/review-until-clean/scripts/check-completion
-        SAVE_REVIEW_LEDGER_BIN=./plugins/review-until-clean/scripts/save-ledger
-        REVIEWER_STUB_BIN=./tests/fixtures/reviewer-stub
-        LEDGER_BARRIER_ENV=./tests/fixtures/ledger-reservation-barrier.bash
-        LEDGER_COMMAND_STUB_BIN=./tests/fixtures/ledger-command-stub
-        LEDGER_CONCURRENCY_BIN=./tests/fixtures/ledger-concurrency
-        REVIEW_SCOPE_BIN=./plugins/review-until-clean/scripts/review-scope
-        REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN=./plugins/review-pr-with-codex/scripts/review-scope
-        CODEX_ASPECTS_BIN=./plugins/review-pr-with-codex/scripts/codex-aspects
-        CODEX_STUB_BIN=./tests/fixtures/codex-stub
-        CODEX_LAUNCH_CANCEL_ENV=./tests/fixtures/codex-launch-cancel.bash
-        RESULT_CHECK_JQ=./plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq
-        RUN_SCRUT_DOCUMENTS_BIN=./bin/run-scrut-documents
-        SCRUT_STUB_BIN=./tests/fixtures/scrut-stub
-        GIT_CONFIG_GLOBAL=/dev/null
-        GIT_CONFIG_SYSTEM=/dev/null
-        TMUX_STUB_BIN=./tests/fixtures/tmux-stub
-        NOTIFY_BIN=./plugins/notify/scripts/notify
-        ATTENTION_LOG_BIN=./plugins/attention-log/scripts/attention-log
-        CHECK_NOTIFICATIONS_BIN=./tests/fixtures/check-notifications
-        UNIX_SOCKET_FIXTURE_BIN=./tests/fixtures/create-unix-socket
-        WORKMUX_STUB_BIN=./tests/fixtures/workmux-stub
-        LAUNCH_SLEEP_STUB_BIN=./tests/fixtures/launch-sleep-stub
-      # bin/validate-corpus converts each defects.yaml through yq, which the
-      # ubuntu runner image ships. Asserting it beats installing an unpinned
-      # copy: an image that drops it, or swaps in python-yq with jq's flags,
-      # fails here with a clear message rather than as a scrut output diff.
-      scrut-setup-cmd: "yq --version | grep -q mikefarah"
-      scrut-test-dir: ${{ matrix.document }}
-      # The budget: every document's job finishes within half of this ceiling.
-      # When one outgrows that, cut its runtime or split it; do not raise the
-      # ceiling. tests/AGENTS.md says how to measure a document and where the
-      # time usually goes.
-      timeout-minutes: 10
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cboone/gh-actions/actions/set-up-scrut@3c9adb5a8b166444d3c0e3fe606d55f0dc7ac726 # v5.0.0
+      - name: Run checked scrut document
+        shell: bash
+        env:
+          STUB_SCRUT_CHILD_PIDS: ""
+          SCRUT_DOCUMENT: ${{ matrix.document }}
+          CHECK_CROSS_REFERENCES_BIN: "./bin/check-cross-references"
+          BUILD_REVIEW_CHECKLISTS_BIN: "./bin/build-review-checklists"
+          BUILD_SHARED_REFERENCES_BIN: "./bin/build-shared-references"
+          REVIEW_CHECKLIST_FIXTURE_BIN: "./tests/fixtures/review-checklist-fixture"
+          BUILD_CODEX_MARKETPLACE_BIN: "./bin/build-codex-marketplace"
+          CODEX_TRANSLATION_FIXTURE_BIN: "./tests/fixtures/codex-translation-fixture"
+          COMPOSE_ISSUE_PROMPT_BIN: "./plugins/workmux/scripts/compose-issue-prompt"
+          COPILOT_REVIEW_DATA_DIR: "./tests/data/copilot-reviews"
+          COPILOT_AUDIT_DATA_DIR: "./tests/data/copilot-audit"
+          COPILOT_GH_STUB_BIN: "./tests/fixtures/copilot-gh-stub"
+          COPILOT_SWEEP_CASE_BIN: "./tests/fixtures/copilot-sweep-case"
+          COPILOT_ANCESTRY_CASE_BIN: "./tests/fixtures/copilot-ancestry-case"
+          COPILOT_REPLY_CASE_BIN: "./tests/fixtures/copilot-reply-case"
+          COPILOT_GH_DATA_DIR: "./tests/data/copilot-gh"
+          CROSS_REFERENCE_FIXTURE_BIN: "./tests/fixtures/cross-reference-fixture"
+          CHAIN_HELPER_FIXTURE_BIN: "./tests/fixtures/chain-helper-fixture"
+          CHAIN_CODEX_STUB_BIN: "./tests/fixtures/chain-codex-stub"
+          CATALOG_RELEASE_FIXTURE_BIN: "./tests/fixtures/catalog-release-fixture"
+          VALIDATE_PLUGIN_FIXTURE_BIN: "./tests/fixtures/validate-plugin-fixture"
+          LIST_SHELL_SCRIPTS_BIN: "./bin/list-shell-scripts"
+          MATERIALIZE_CASE_BIN: "./bin/materialize-case"
+          VALIDATE_CORPUS_BIN: "./bin/validate-corpus"
+          REVIEW_CORPUS_FIXTURE_BIN: "./tests/fixtures/review-corpus-fixture"
+          REPO_ROOT: "./"
+          LAUNCH_WORKMUX_BIN: "./plugins/workmux/scripts/launch-workmux"
+          DEPENDABOT_PRS_BIN: "./plugins/dependabot/scripts/dependabot-prs"
+          DEPENDABOT_PRS_DATA_DIR: "./tests/data/dependabot-prs"
+          GH_STUB_BIN: "./tests/fixtures/gh-stub"
+          GIT_WORKTREE_STUB_BIN: "./tests/fixtures/git-worktree-stub"
+          MANAGE_RESOURCE_CLAIMS_BIN: "./plugins/workmux/scripts/manage-resource-claims"
+          RESOURCE_CLAIMS_INTERLEAVE_BIN: "./tests/fixtures/resource-claims-interleave"
+          RESOURCE_CLAIMS_INTERLEAVE_STUB_BIN: "./tests/fixtures/resource-claims-interleave-stub"
+          CLAIMS_INTERRUPT_CONTROL: ""
+          REPORT_BOARD_BIN: "./plugins/publish-report-board/scripts/report-board"
+          REPORT_BOARD_DATA_DIR: "./tests/data/report-board"
+          COPILOT_ROUNDS_REPORT_BIN: "./bin/copilot-rounds-report"
+          COPILOT_ROUNDS_REPORT_DATA_DIR: "./tests/data/copilot-rounds-report"
+          RECORD_TRAFFIC_BIN: "./bin/record-traffic"
+          RECORD_TRAFFIC_DATA_DIR: "./tests/data/record-traffic"
+          BUGS_GATHER_BIN: "./plugins/publish-report-board/scripts/bugs-gather"
+          BUGS_GATHER_DATA_DIR: "./tests/data/bugs-gather"
+          BACKLOG_GATHER_BIN: "./plugins/publish-report-board/scripts/backlog-gather"
+          BACKLOG_GATHER_DATA_DIR: "./tests/data/backlog-gather"
+          BACKLOG_GATHER_GH_STUB_BIN: "./tests/fixtures/backlog-gather-gh-stub"
+          CURL_STUB_BIN: "./tests/fixtures/curl-stub"
+          PUSH_NOTIFICATION_BIN: "./plugins/push-notification/scripts/push-notification"
+          NTFY_CURL_STUB_BIN: "./tests/fixtures/ntfy-curl-stub"
+          RESOLVE_COPILOT_THREADS_BIN: "./plugins/monitor-pr/scripts/resolve-copilot-threads"
+          MERGE_FLOW_BIN: "./plugins/monitor-pr/scripts/merge-flow"
+          MERGE_FLOW_DATA_DIR: "./tests/data/merge-flow"
+          REVIEW_COMPLETION_BIN: "./plugins/review-until-clean/scripts/check-completion"
+          SAVE_REVIEW_LEDGER_BIN: "./plugins/review-until-clean/scripts/save-ledger"
+          REVIEWER_STUB_BIN: "./tests/fixtures/reviewer-stub"
+          LEDGER_BARRIER_ENV: "./tests/fixtures/ledger-reservation-barrier.bash"
+          LEDGER_COMMAND_STUB_BIN: "./tests/fixtures/ledger-command-stub"
+          LEDGER_CONCURRENCY_BIN: "./tests/fixtures/ledger-concurrency"
+          REVIEW_SCOPE_BIN: "./plugins/review-until-clean/scripts/review-scope"
+          REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN: "./plugins/review-pr-with-codex/scripts/review-scope"
+          CODEX_ASPECTS_BIN: "./plugins/review-pr-with-codex/scripts/codex-aspects"
+          CODEX_STUB_BIN: "./tests/fixtures/codex-stub"
+          CODEX_LAUNCH_CANCEL_ENV: "./tests/fixtures/codex-launch-cancel.bash"
+          RESULT_CHECK_JQ: "./plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq"
+          RUN_SCRUT_DOCUMENTS_BIN: "./bin/run-scrut-documents"
+          SCRUT_STUB_BIN: "./tests/fixtures/scrut-stub"
+          GIT_CONFIG_GLOBAL: "/dev/null"
+          GIT_CONFIG_SYSTEM: "/dev/null"
+          TMUX_STUB_BIN: "./tests/fixtures/tmux-stub"
+          NOTIFY_BIN: "./plugins/notify/scripts/notify"
+          ATTENTION_LOG_BIN: "./plugins/attention-log/scripts/attention-log"
+          CHECK_NOTIFICATIONS_BIN: "./tests/fixtures/check-notifications"
+          UNIX_SOCKET_FIXTURE_BIN: "./tests/fixtures/create-unix-socket"
+          WORKMUX_STUB_BIN: "./tests/fixtures/workmux-stub"
+          LAUNCH_SLEEP_STUB_BIN: "./tests/fixtures/launch-sleep-stub"
+        run: |
+          yq --version | grep -q mikefarah
+          # Resolve registered paths before fixtures change directories.
+          while IFS= read -r key; do
+            value="${!key}"
+            case "${value}" in
+              ./*) export "${key}=${PWD}/${value#./}" ;;
+            esac
+          done < <(compgen -e)
+          bin/run-scrut-documents "${SCRUT_DOCUMENT}"
