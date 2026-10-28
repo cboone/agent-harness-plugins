@@ -32,6 +32,8 @@ Options:
                    When several local branches match, lists them and exits 1.
                    Requires --generated-name.
   --base <branch>  Specify the base branch for the worktree
+  --config <file>  Use a readable alternate workmux config file
+  --agent <name>   Select the destination agent
   --await-completion
                    After `workmux add` exits, also confirm a worktree
                    exists for the branch and
@@ -560,6 +562,7 @@ function do_launch() {
   local issue="${4:-}"
   local await_completion="${5:-false}"
   local timeout="${6:-}"
+  local config_file="${7:-}" agent="${8:-}"
   local safe_name existing_worktree_path prompt_file state_dir
   local provisional_name
 
@@ -615,6 +618,12 @@ function do_launch() {
   if [[ -n "${base_branch}" ]]; then
     cmd+=(--base "${base_branch}")
   fi
+  if [[ -n "${config_file}" ]]; then
+    cmd+=(--config "${config_file}")
+  fi
+  if [[ -n "${agent}" ]]; then
+    cmd+=(--agent "${agent}")
+  fi
 
   state_dir="$(mktemp -d "${TMPDIR:-/tmp}/workmux-launch-${safe_name}.XXXXXX")"
   # Job control gives the launch its own process group, so a harness that
@@ -635,6 +644,7 @@ function main() {
   fi
 
   local base_branch=""
+  local config_file="" agent=""
   local generated_name=""
   local generated_mode="false"
   local issue=""
@@ -647,6 +657,23 @@ function main() {
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
+      --config)
+        if [[ $# -lt 2 || -z "${2}" || "${2}" == -* ]]; then
+          die "--config requires a readable file"
+        fi
+        if [[ ! -f "${2}" || ! -r "${2}" ]]; then
+          die "--config file is not a readable regular file: ${2}"
+        fi
+        config_file="${2}"
+        shift 2
+        ;;
+      --agent)
+        if [[ $# -lt 2 || -z "${2//[[:space:]]/}" || "${2}" == -* ]]; then
+          die "--agent requires a nonempty name"
+        fi
+        agent="${2}"
+        shift 2
+        ;;
       --resolve-issue-branch)
         if [[ $# -lt 2 || -z "${2}" ]]; then
           usage >&2
@@ -739,7 +766,7 @@ function main() {
     fi
 
     generated_name="$(normalize_branch_name "${generated_name}")"
-    do_launch "" "${base_branch}" "${generated_name}" "${issue}" "${await_completion}" "${timeout}"
+    do_launch "" "${base_branch}" "${generated_name}" "${issue}" "${await_completion}" "${timeout}" "${config_file}" "${agent}"
     return
   fi
 
@@ -754,7 +781,7 @@ function main() {
   fi
 
   validate_branch_name "${positional[0]}"
-  do_launch "${positional[0]}" "${base_branch}" "" "" "${await_completion}" "${timeout}"
+  do_launch "${positional[0]}" "${base_branch}" "" "" "${await_completion}" "${timeout}" "${config_file}" "${agent}"
 }
 
 main "$@"
