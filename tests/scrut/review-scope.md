@@ -136,8 +136,9 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && git add tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && "${REVIEW_SCOPE_BIN}" --base no-such-ref 2>&1
-review-scope: base ref 'no-such-ref' does not resolve to a commit
-[1]
+fatal: Needed a single revision
+review-scope: could not resolve base (exit 128)
+[128]
 ```
 
 ## Outside a git work tree
@@ -348,7 +349,7 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 {"base":null,"base_ref":null,"committed":[],"untracked":["fresh.txt"],"empty":false}
 ```
 
-## The default base follows the conventional branch name
+## The default base uses the remote-tracking branch despite a stale local main
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
@@ -357,11 +358,14 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && printf 'one\n' > tracked.txt \
 >   && git add tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && git update-ref refs/remotes/origin/main HEAD \
+>   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main \
 >   && git checkout -q -b feature \
 >   && printf 'two\n' >> tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qam committed \
+>   && git update-ref refs/heads/main HEAD \
 >   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, committed}'
-{"base_ref":"main","committed":["tracked.txt"]}
+{"base_ref":"origin/main","committed":["tracked.txt"]}
 ```
 
 ## Head, base and snapshot are reported as resolved object names
@@ -578,13 +582,15 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && printf 'one\n' > a.txt \
 >   && git add a.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && git update-ref refs/remotes/origin/main HEAD \
+>   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main \
 >   && git checkout -q --orphan feature \
 >   && git rm -q -rf . \
 >   && printf 'work\n' > b.txt \
 >   && git add b.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm orphan \
 >   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, base, base_unrelated, committed}'
-{"base_ref":"main","base":null,"base_unrelated":true,"committed":[]}
+{"base_ref":"origin/main","base":null,"base_unrelated":true,"committed":[]}
 ```
 
 ## A base that shares history reports base_unrelated false
@@ -602,7 +608,7 @@ false
 
 ## Committed work with no base ref reports the bucket as uncovered
 
-With no `origin/HEAD`, `main` or `master`, there is nothing to measure commits
+With no valid `origin/HEAD` and no explicit base, there is nothing to measure commits
 from. An empty `committed` list alone would read as "nothing committed", so the
 branch's history could leave the scope while the run still looked complete.
 
@@ -628,13 +634,15 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && printf 'one\n' > a.txt \
 >   && git add a.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && git update-ref refs/remotes/origin/main HEAD \
+>   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main \
 >   && git checkout -q --orphan feature \
 >   && git rm -q -rf . \
 >   && printf 'work\n' > b.txt \
 >   && git add b.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm orphan \
 >   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, base_unrelated, committed_covered}'
-{"base_ref":"main","base_unrelated":true,"committed_covered":false}
+{"base_ref":"origin/main","base_unrelated":true,"committed_covered":false}
 ```
 
 ## A resolved base reports the committed bucket as covered
@@ -722,6 +730,8 @@ exported only inside this subshell. Each invocation verifies its resolution.
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && git init -q --template= . && git checkout -q -b main \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init --allow-empty \
+>   && git update-ref refs/remotes/origin/main HEAD \
+>   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main \
 >   && ( function git() { \
 >          if [[ "${1:-}" == merge-base ]]; then echo 'fatal: sample object read failure' >&2; return 128; fi; \
 >          command git "$@"; \
@@ -739,4 +749,58 @@ review-scope: git merge-base '*' '*' failed (exit 128) (glob)
 explicit exit=128
 fatal: sample object read failure
 review-scope: git merge-base '*' '*' failed (exit 128) (glob)
+```
+
+## Missing remote HEAD never guesses an existing local main
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b main \
+>   && printf 'one\n' > a.txt && git add a.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && git remote add origin https://example.invalid/repo.git \
+>   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, committed_covered}'
+{"base_ref":null,"committed_covered":false}
+```
+
+## A dangling remote HEAD is not a base
+
+```scrut
+$ cd "${work}" \
+>   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/missing \
+>   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, committed_covered}'
+{"base_ref":null,"committed_covered":false}
+```
+
+## A valid nonstandard remote default is a base
+
+```scrut
+$ cd "${work}" \
+>   && git update-ref refs/remotes/origin/integration HEAD \
+>   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/integration \
+>   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, committed_covered}'
+{"base_ref":"origin/integration","committed_covered":true}
+```
+
+## Unexpected inferred-base validation errors stop collection
+
+The committed function stub rejects only the inferred base's commit lookup.
+It passes other operations through and verifies its resolution before use.
+
+```scrut
+$ cd "${work}" \
+>   && ( function git() { \
+>          if [[ "${1:-}" == rev-parse && "${3:-}" == 'refs/remotes/origin/integration^{commit}' ]]; then \
+>            echo 'fatal: sample object read failure' >&2; return 128; \
+>          fi; \
+>          command git "$@"; \
+>        }; export -f git; \
+>        [[ "$(type -t git)" == function ]] || exit 1; \
+>        code=0; "${REVIEW_SCOPE_BIN}" > out 2> err || code=$?; \
+>        test ! -s out || exit 1; \
+>        printf 'exit=%s\n' "${code}"; cat err )
+exit=128
+fatal: sample object read failure
+review-scope: could not resolve base (exit 128)
 ```

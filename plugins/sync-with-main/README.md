@@ -12,7 +12,7 @@ Fetch and merge the base branch into the current feature branch with automatic c
 
 **Type:** Skill
 **Trigger:** `/sync-with-main:merge`
-**Requires:** [`gh`](https://cli.github.com/) (falls back to `git remote show origin` if unavailable)
+**Requires:** [`gh`](https://cli.github.com/) (falls back to `git symbolic-ref --quiet --short refs/remotes/origin/HEAD` if unavailable)
 
 ### Installation
 
@@ -40,7 +40,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git merge *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git remote *)", "Bash(gh repo view *)"]
+    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git merge *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)", "Bash(git rev-parse *)", "Bash(gh repo view *)"]
   }
 }
 ```
@@ -64,7 +64,7 @@ Fetch and rebase the current feature branch onto the base branch with automatic 
 
 **Type:** Skill
 **Trigger:** `/sync-with-main:rebase`
-**Requires:** [`gh`](https://cli.github.com/) (falls back to `git remote show origin` if unavailable)
+**Requires:** [`gh`](https://cli.github.com/) (falls back to `git symbolic-ref --quiet --short refs/remotes/origin/HEAD` if unavailable)
 
 ### Installation
 
@@ -94,7 +94,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git rebase *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git remote *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(gh repo view *)"]
+    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git rebase *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(gh repo view *)"]
   }
 }
 ```
@@ -122,3 +122,7 @@ The skill never uses plain `--force`, and never force-pushes the default branch.
 - [Merge Main](#sync-with-mainmerge): merge the base branch into the current branch instead of rebasing
 - [Review Branch](../review-branch/README.md): summarize what changed on the current branch
 - [All plugins](../../README.md)
+
+## Codex invocation
+
+Invoke `$sync-with-main:merge` or `$sync-with-main:rebase` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.

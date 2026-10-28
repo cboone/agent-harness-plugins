@@ -511,3 +511,19 @@ $ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BI
 $ echo '[]' | jq -c '{openThreads: length, locations: [.[].location]}'
 {"openThreads":0,"locations":[]}
 ```
+
+## The step 1c summary filter finds only the account's own summaries
+
+`monitor-pr:resolve-copilot-feedback` reads its earlier summaries back with a filter
+over the pull request's comments. This testcase reads the filter out of the
+skill, so it tests the text an agent runs, with `LOGIN` standing for the
+authenticated account. A summary starts with the hidden marker, or with the
+heading earlier versions posted. A comment that only quotes the marker partway
+through is not a summary, and neither is a summary another account posted. An
+empty filter, from a reworded command line, fails rather than passing.
+
+```scrut
+$ filter="$(sed -n "s|^gh api --paginate repos/OWNER/REPO/issues/PR_NUMBER/comments --jq '\(.*\)'\$|\1|p" "${REPO_ROOT}/plugins/monitor-pr/skills/resolve-copilot-feedback/SKILL.md")" && test -n "${filter}" && jq -n '[{user: {login: "LOGIN"}, created_at: "1", html_url: "u1", body: "<!-- copilot-feedback-summary -->\n\nok"}, {user: {login: "LOGIN"}, created_at: "2", html_url: "u2", body: "## Copilot Feedback Summary\n\nStatus: Completed"}, {user: {login: "LOGIN"}, created_at: "3", html_url: "u3", body: "The `<!-- copilot-feedback-summary -->` marker finds summaries."}, {user: {login: "someone-else"}, created_at: "4", html_url: "u4", body: "<!-- copilot-feedback-summary -->"}]' | jq -c "${filter}" | jq -r '.html_url'
+u1
+u2
+```

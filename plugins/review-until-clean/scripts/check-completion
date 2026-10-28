@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Check raw reviewer output before transcription or any clean decision.
+set -euo pipefail
+
+function failed() {
+  printf 'Review-until-clean status: failed\n'
+  printf 'check-completion: %s\n' "${1}" >&2
+  [[ -z "${2:-}" ]] || printf '%s\n' "${2}" >&2
+  exit 1
+}
+
+function main() {
+  if [[ $# -ne 3 || ! "${1}" =~ ^[0-9]+$ ]]; then
+    echo 'Usage: check-completion <exit-status> <raw-reply-file> <text|json>' >&2
+    exit 2
+  fi
+  local reviewer_status="${1}" reply="${2}" format="${3}" diagnostic
+  case "${format}" in
+    text | json) ;;
+    *)
+      echo 'check-completion: expected text or json' >&2
+      exit 2
+      ;;
+  esac
+
+  [[ "${reviewer_status}" == 0 ]] || failed "reviewer exited with status ${reviewer_status}"
+  [[ -f "${reply}" ]] || failed 'no output file was written'
+  [[ -r "${reply}" ]] || failed 'the output file is unreadable'
+  diagnostic="$(LC_ALL=C grep -q '[^[:space:]]' "${reply}" 2>&1)" \
+    || failed 'the output file has no review text' "${diagnostic}"
+  if [[ "${format}" == json ]]; then
+    diagnostic="$(command -v jq 2>&1 > /dev/null)" || failed 'jq is required for JSON output' "${diagnostic}"
+    diagnostic="$(jq -e -s 'length == 1' "${reply}" 2>&1 > /dev/null)" \
+      || failed 'the output is not exactly one JSON value' "${diagnostic}"
+  fi
+  printf 'Reviewer completion: passed\n'
+}
+
+main "$@"

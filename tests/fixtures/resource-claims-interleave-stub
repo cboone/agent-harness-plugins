@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Pause the first writer after its snapshot read.
+# Record when the second writer cannot acquire the lock.
+set -euo pipefail
+
+: "${CLAIMS_REAL_MKDIR:?}" "${CLAIMS_WRITER:?}" "${WORKTREE_RESOURCES_FILE:?}"
+: "${CLAIMS_BARRIER:?}" "${GIT_WORKTREE_STUB_BIN:?}"
+
+case "${0##*/}" in
+  mkdir)
+    status=0
+    "${CLAIMS_REAL_MKDIR}" "$@" || status=$?
+    if [[ "${CLAIMS_WRITER}" == second && $# -eq 1 && "${1}" == "${WORKTREE_RESOURCES_FILE}.lock" && "${status}" -ne 0 ]]; then
+      touch "${CLAIMS_BARRIER}/second-blocked"
+    fi
+    exit "${status}"
+    ;;
+  git)
+    if [[ "${1:-}" == worktree ]]; then
+      if [[ "${CLAIMS_WRITER}" == first ]]; then
+        touch "${CLAIMS_BARRIER}/first-read"
+        for ((attempt = 0; attempt < 200; attempt++)); do
+          if [[ -f "${CLAIMS_BARRIER}/release-first" ]]; then
+            if [[ -n "${CLAIMS_INTERRUPT_CONTROL:-}" ]]; then
+              touch "${CLAIMS_INTERRUPT_CONTROL}/first-released"
+            fi
+            exec "${GIT_WORKTREE_STUB_BIN}" "$@"
+          fi
+          sleep 0.05
+        done
+        echo 'first writer barrier timed out' >&2
+        exit 1
+      fi
+      touch "${CLAIMS_BARRIER}/second-read"
+    fi
+    exec "${GIT_WORKTREE_STUB_BIN}" "$@"
+    ;;
+  *)
+    echo 'install this fixture as git and mkdir' >&2
+    exit 1
+    ;;
+esac

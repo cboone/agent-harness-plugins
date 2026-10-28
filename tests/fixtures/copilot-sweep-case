@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Execute the skill's consistency-sweep block with local command stubs.
+set -euo pipefail
+
+CASE_DIR=""
+
+function main() {
+  local skill="${1:?skill path required}" mode="${2:?mode required}" block
+  block="$(awk '/^### 6\. Sweep for Consistency$/ {section=1; next} section && /^```bash$/ {code=1; next} code && /^```$/ {exit} code {print}' "${skill}")"
+  [[ -n "${block}" ]] || {
+    echo 'missing consistency-sweep block' >&2
+    return 1
+  }
+
+  function git() {
+    [[ "$*" == 'diff --no-ext-diff --no-textconv FIX_BASE' ]] || return 99
+    if [[ "${mode}" == diff ]]; then
+      echo 'sample git read error' >&2
+      return 17
+    fi
+    printf '%s\n' 'sample diff'
+  }
+  function gh() {
+    [[ "$*" == 'pr view PR_NUMBER --repo OWNER/REPO --json body' ]] || return 99
+    if [[ "${mode}" == body ]]; then
+      echo 'sample gh read error' >&2
+      return 23
+    fi
+    printf '%s\n' '{"body":"sample PR body"}'
+  }
+  [[ "$(type -t git)" == function && "$(type -t gh)" == function ]] || return 1
+  CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/copilot-sweep.XXXXXX")"
+  trap 'rm -r "${CASE_DIR}"' EXIT
+  printf '%s\n' "${block}" > "${CASE_DIR}/sweep.bash"
+  # Print the marker if a failed read does not stop the sweep.
+  (
+    # shellcheck disable=SC1091
+    source "${CASE_DIR}/sweep.bash"
+    printf '%s\n' 'sweep inputs read; push eligible'
+  )
+}
+
+main "$@"

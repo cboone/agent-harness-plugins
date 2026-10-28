@@ -2,6 +2,10 @@
 
 Some plugins include shell scripts under a `scripts/` directory. These scripts are called by hooks or by Claude Code during skill execution.
 
+## Installed helper resolution
+
+When the host does not substitute the plugin-root placeholder, expand the loaded skill's advertised path, resolve its symlinks, and derive the plugin root from that physical location. Never search other caches or versions. Confirm the selected helper is executable; stop and report if location or availability cannot be established. Keep dependent commands after this check. The two monitor skills carry the tested recipe.
+
 ## File Location
 
 ```text
@@ -159,7 +163,7 @@ For a script invoked with no arguments, drop the trailing space-plus-wildcard en
 
 **Caveat for SKILL.md prose:** the substitution is a global, unconditional text replacement, so a SKILL.md cannot _document_ the literal variable; every occurrence is rewritten, including inside fenced code blocks. Use the literal only where substitution is the intent. To describe the variable itself, put that prose in a `references/` file, which is read from disk and left untouched.
 
-Codex CLI differs: it substitutes the placeholder only in hook commands. For a script-backed skill that must run there too, add a short fallback telling Claude that an unsubstituted path still begins with `$` rather than `/`, and to locate the script with `**/plugin-name/**/scripts/script-name` (note the `**` between the plugin name and `scripts`, which tolerates the version segment), preferring a match inside the harness's own installed-plugin directory.
+When the placeholder remains literal in a skill, follow Installed helper resolution above: expand the advertised skill path, resolve its symlinks and derive the physical package root. Do not substitute a cache-wide glob or select a version by preference. A failed resolution stops dependent operations.
 
 ## Notes
 

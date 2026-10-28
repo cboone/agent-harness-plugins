@@ -46,7 +46,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git branch *)", "Bash(git diff*)", "Bash(git log *)", "Bash(git merge-base *)", "Bash(git rev-parse *)", "Bash(gh repo view *)", "Bash(mkdir -p docs/reviews)"]
+    "allow": ["Bash(git branch *)", "Bash(git diff*)", "Bash(git log *)", "Bash(git merge-base *)", "Bash(git rev-parse *)", "Bash(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)", "Bash(gh repo view *)", "Bash(mkdir -p docs/reviews)"]
   }
 }
 ```
@@ -56,3 +56,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 - [Address Review](../address-review/README.md): work through review feedback items
 - [PR](../pr/README.md): create a pull request after reviewing
 - [All plugins](../../README.md)
+
+## Codex invocation
+
+Invoke `$review-branch` in the conversation, or select the skill from `/skills`. Natural-language requests use the same workflow. Parent calls load the advertised skill location and pass their continuation block; they do not execute a dollar mention as a tool. Host restrictions still govern every step.

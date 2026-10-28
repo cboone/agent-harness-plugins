@@ -40,7 +40,7 @@ Everything below exists to keep these true. A step that would break one is wrong
 1. **A run that does not finish is never clean.** A shell command counts as finished only when it exits 0 with stdout holding a non-whitespace character, and a skill or command only when its report says it completed. Silence, an error, or output that is cut off ends the run as `failed`.
 1. **A clean result is bound to a content snapshot.** Any edit after the review invalidates it.
 
-## The helper script
+## The helper scripts
 
 `review-scope` ships with this plugin and computes the scope and its snapshot. Invoke it via `bash` followed by the quoted path:
 
@@ -50,7 +50,10 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/review-scope" --base main
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step. **If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the script with `**/review-until-clean/**/scripts/review-scope`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
 
-The steps below abbreviate that path to `review-scope`. Expand the abbreviation when you run one.
+The steps below abbreviate that path to `review-scope`. Expand the abbreviation when you run one. Resolve these bundled helpers the same way:
+
+- `${CLAUDE_PLUGIN_ROOT}/scripts/check-completion`: checks the raw reply and exit status before transcription.
+- `${CLAUDE_PLUGIN_ROOT}/scripts/save-ledger`: saves a run under a distinct, exclusively reserved filename.
 
 Do not recompute the snapshot by hand. It binds review to HEAD, the base tip and merge base, disk and index content, and bucket membership. Staging, unstaging and intent-to-add move it because reviewers read those diffs. `tree` identifies disk content only. See `./references/scope-and-snapshot.md`.
 
@@ -102,7 +105,9 @@ Run `review-scope` again **as soon as the reviewer returns**, before reading its
 
 Also compare the remote-tracking refs and tags with step 4's record, and, when `HEAD` moved, check that the old `HEAD` is an ancestor of the new one. A moved ref or a rewritten history ends the run as `failed`, per `./references/reviewers.md`.
 
-Then decide whether the review finished, from what the reviewer actually returned. Treat all of these as a **failed round**, never a clean one:
+Before transcription, run the bundled `check-completion <exit-status> <raw-reply-file> <text|json>`. Pass the captured process status for a shell reviewer; for a skill, save its actual report verbatim and pass `0` only after it has returned. Use `json` only when the reviewer promises an exclusively JSON reply. Use `text` for prose or a mixed JSON-and-prose report, such as `review-anti-patterns` in-session output; separately validate its structured portion against the reviewer's contract, taken unchanged from the raw report, before transcribing findings. Malformed structured portions still fail the round. A non-zero helper exit prints the terminal `failed` status: record that failure and stop. Never replace a missing report with an empty findings object.
+
+A passing helper checks only mechanical completion, not cleanliness. Then decide whether the review finished from the reviewer's actual reply. Treat all of these as a **failed round**, never a clean one:
 
 - a shell command that exited non-zero, timed out, produced no output as `./references/reviewers.md` defines it (stdout with a non-whitespace character), or printed only an error
 - a skill or command that produced no report, only an error, or a report that ends partway or says it could not run
@@ -176,7 +181,7 @@ When the round limit is reached after an edit round, stop with `stopped` and say
 
 After the final validity check, restore only this run's intent-to-add entries. Before resetting a path, verify its entry is unchanged and no other session staged its content. Leave changed entries alone and report incomplete cleanup. Label the ledger with the reviewed snapshot and report restoration as a subsequent index change. Apply the same guarded cleanup on failure or cancellation.
 
-Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, reserving the name with an exclusive create before the move, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Move any reply or stderr file stored beside it along with it, named after the ledger, as in `<ledger name>-round-2-reply.txt`, and update the names in the ledger. Use `.txt`: a reply kept verbatim is not formatted, and Markdown linting and formatting would fail on it or change it. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
+Save the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, or to the first free `-2`, `-3` and so on suffix when an earlier run already used that name, using the bundled `save-ledger <temporary-ledger> docs/reviews <date>-<branch>-until-clean`, per `./references/ledger.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Move any reply or stderr file stored beside it along with it, named after the ledger, as in `<ledger name>-round-2-reply.txt`, and update the names in the ledger. Use `.txt`: a reply kept verbatim is not formatted, and Markdown linting and formatting would fail on it or change it. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
 
 Print the status line, the ledger path, the reviewer, the selected threshold, and the coverage:
 

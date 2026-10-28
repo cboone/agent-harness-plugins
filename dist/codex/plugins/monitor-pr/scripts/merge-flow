@@ -31,14 +31,27 @@ Support monitor-pr:monitor's merge step: settle the merge policy, watch the PR u
 it merges, and bring the base branch up to date afterward.
 
 Commands:
+  prepare                                     Resolve restrictions into watch state on stdin
+  gate <action>                               Check one action against that resolved state
+  triage                                      Decide whether triage may read/classify reviews
+  lifecycle                                   Resolve snapshot lifecycle before candidate collection
+  observation-kinds                           List the closed pending-read registry
+  dispatch                                    Filter matched actions by active restrictions
+                                              Read one JSON snapshot from stdin; no GitHub calls
   policy <owner> <repo> <base>                  Print allowed merge methods and required approvals
   watch <owner> <repo> <pr_number> <head_sha> [--awaited <decision>]
         [--once [--failures <n>] [--merged-reads <n>] [--started <epoch>]]
                                                 Poll the PR until something changes, then print it
+  copilot-status <owner> <repo> <branch> <head_sha>
+                                                Read the current-head Copilot workflow status
+  watch-changes <owner> <repo> <pr_number> <head_sha> <baseline_json>
+        [--quiet-polls <n>] [--quiet-count <n>] [--review-wait] [--once [--failures <n>] [--started <epoch>]]
+                                                Wait for checks, review metadata or lifecycle changes
   sync <owner> <repo> <base> <merge_sha>        Fast-forward the local base branch to the merge
   panes                                         List tmux panes inside this repository's worktrees
 
 Options:
+  --watch-state <file>                         Guard policy/watch/sync/panes before any work
   -h, --help    Show this help
 
 Every command prints one JSON object or array on stdout and reports a failed
@@ -71,6 +84,24 @@ read it waits the interval times the failure count, at most 15 minutes.
 reads. It prints an event, or a pending event carrying the failures and
 mergedReads counts to pass back on the next read, and reports expired once
 --started (the Unix time of the first read) is a lifetime ago.
+
+watch-changes uses the same polling loop and bounds as watch, but needs only
+read-axis permission. baseline_json holds {snapshot, latestReview: {id, commit_id}}
+from the last dispatch (latestReview is null when absent). It exits on merged,
+closed, head, checks (completed/failed checks changed), review (a new Copilot
+review at this head), or mergeability (a known value changed). UNKNOWN values
+and running/queued check transitions stay quiet. --quiet-polls N returns quiet
+after N elapsed quiet polls for an existing finite quiet-tick deadline.
+--quiet-count restores the counter, and the event's quietPolls replaces it.
+The immediate startup read never spends a quiet tick. --review-wait uses the
+same current-head workflow query as copilot-status; queued/in_progress resets
+the count and stays silent. It needs snapshot.headRefName in the baseline.
+A failed read never counts as quiet. --once does not advance quiet counts.
+Numeric bounds require canonical decimal spelling, at most 15 digits (0 or no
+leading zero). Without an explicit
+MERGE_FLOW_INTERVAL, poll at 120 seconds for running checks, 300 for an awaited
+review, otherwise 1200. A positive override is the fixed cadence; 0 is useful
+for tests. Review reads project metadata only and never classify feedback.
 
 sync: fetches <base> from the remote whose URL names <owner>/<repo>, checks
 that it contains <merge_sha>, then fast-forwards the worktree that has <base>
@@ -173,17 +204,127 @@ function cmd_policy() {
 function read_pr() {
   local line
   state="" decision="" head="" merge=""
-  capture gh pr view "${pr}" --repo "${owner}/${repo}" --json state,reviewDecision,headRefOid,mergeCommit || return 1
-  if ! line="$(jq -r --arg sep "${FIELD_SEPARATOR}" '
-    [(.state // ""), (if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end),
+  local fields=state,reviewDecision,headRefOid,mergeCommit
+  [[ -z "${baseline}" ]] || fields+=,statusCheckRollup,mergeable,mergeStateStatus
+  capture gh pr view "${pr}" --repo "${owner}/${repo}" --json "${fields}" || return 1
+  current_snapshot="${CAPTURED_OUT}"
+  if ! line="$(jq -rs --arg sep "${FIELD_SEPARATOR}" '
+    if length == 1 then .[0] else error("one PR response required") end
+    | [(.state // ""), (if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end),
      (.headRefOid // ""), (.mergeCommit.oid // "")] | join($sep)' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
     CAPTURED_ERR="gh pr view returned output that is not JSON"
     return 1
   fi
   IFS="${FIELD_SEPARATOR}" read -r state decision head merge <<< "${line}"
-  if [[ -z "${state}" || -z "${head}" ]]; then
+  if [[ ! "${state}" =~ ^(OPEN|MERGED|CLOSED)$ || -z "${head}" ]]; then
     CAPTURED_ERR="gh pr view returned no state or head"
     return 1
+  fi
+}
+
+# Normalize only terminal checks; queue/running transitions do not wake the caller.
+function completed_checks() {
+  jq -ce '
+    if (.statusCheckRollup | type) != "array" then error("missing statusCheckRollup") else
+    [.statusCheckRollup[]
+      | select(.status == "COMPLETED" or (.state != null and .state != "PENDING" and .state != "EXPECTED"))
+      | {name, context, detailsUrl, targetUrl, conclusion, state}]
+    | sort_by(tojson) end'
+}
+
+function read_copilot_status() {
+  local run_metadata
+  copilot_status=""
+  if ! capture gh run list --repo "${owner}/${repo}" --branch "${branch}" \
+    --workflow Copilot --limit 10 --json headSha,status; then
+    if [[ "${CAPTURED_ERR}" == *"could not find any workflows named Copilot"* ]]; then
+      return 0
+    fi
+    return 1
+  fi
+  if ! run_metadata="$(jq -cse --arg head "${head}" '
+    if length == 1 then .[0] else error("one workflow response required") end
+    | if type != "array" or any(.[]; (.headSha | type) != "string" or (.status | type) != "string")
+    then error("invalid workflow metadata") else
+    {status: (first(.[] | select(.headSha == $head) | .status) // "")} end
+  ' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+    CAPTURED_ERR="gh run list returned invalid workflow metadata"
+    return 1
+  fi
+  copilot_status="$(jq -r '.status' <<< "${run_metadata}")"
+}
+
+function cmd_copilot_status() {
+  [[ $# -eq 4 ]] || usage_error "copilot-status needs <owner> <repo> <branch> <head_sha>"
+  local owner="${1}" repo="${2}" branch="${3}" head="${4}" copilot_status=""
+  if read_copilot_status; then
+    jq -nc --arg status "${copilot_status}" '{status: $status, working: ($status == "queued" or $status == "in_progress")}'
+  else
+    jq -nc --arg error "${CAPTURED_ERR}" '{error: $error}'
+  fi
+}
+
+function failed_poll() {
+  failures=$((failures + 1))
+  if ((failures >= max_failures)); then
+    event="failed"
+    error="${failures} consecutive reads failed; last error: ${CAPTURED_ERR}"
+  fi
+}
+
+function poll_changes() {
+  local checks review review_metadata mergeability_field baseline_mergeability current_mergeability
+  if ! checks="$(completed_checks <<< "${current_snapshot}" 2> /dev/null)"; then
+    CAPTURED_ERR="gh pr view returned invalid check metadata"
+    return 1
+  fi
+  if ! capture gh api --paginate --slurp "repos/${owner}/${repo}/pulls/${pr}/reviews"; then
+    return 1
+  fi
+  if ! review_metadata="$(jq -cse --arg head "${head}" '
+    if length == 1 then .[0] else error("one review response required") end
+    | [.[][] | select((.user.login? // "") as $login | ($login | type) == "string"
+      and (["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"]
+        | any(. == ($login | ascii_downcase))))]
+    | last | if . == null then null else
+      if (.id | type) != "number" or (.commit_id | type) != "string"
+      then error("invalid review metadata") else {id, commit_id} end end
+    | {latest: .}' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+    CAPTURED_ERR="gh api returned invalid review metadata"
+    return 1
+  fi
+  review="$(jq -c '.latest' <<< "${review_metadata}")"
+  if [[ "${checks}" != "${baseline_checks}" ]]; then
+    event="checks"
+  elif jq -e --arg head "${head}" --argjson old "${baseline_review}" \
+    '.latest != null and .latest.commit_id == $head and .latest.id != $old.id' > /dev/null <<< "${review_metadata}"; then
+    event="review"
+  else
+    for mergeability_field in mergeable mergeStateStatus; do
+      baseline_mergeability="$(jq -r --arg key "${mergeability_field}" '.snapshot[$key] // "UNKNOWN"' <<< "${baseline}")"
+      current_mergeability="$(jq -r --arg key "${mergeability_field}" '.[$key] // "UNKNOWN"' <<< "${current_snapshot}")"
+      if [[ "${current_mergeability}" != UNKNOWN && "${current_mergeability}" != "${baseline_mergeability}" ]]; then
+        event="mergeability"
+        break
+      fi
+    done
+  fi
+  working=false
+  if [[ -z "${event}" && "${review_wait}" == true ]]; then
+    read_copilot_status || return 1
+    case "${copilot_status}" in
+      queued | in_progress) working=true ;;
+      *) ;;
+    esac
+  fi
+  if [[ -z "${MERGE_FLOW_INTERVAL:-}" ]]; then
+    if jq -e 'any(.statusCheckRollup[]; .status == "IN_PROGRESS")' > /dev/null <<< "${current_snapshot}"; then
+      interval=120
+    elif [[ "${review_wait}" == true ]] || ! jq -e --arg head "${head}" '. != null and .commit_id == $head' > /dev/null <<< "${review}"; then
+      interval=300
+    else
+      interval=1200
+    fi
   fi
 }
 
@@ -192,15 +333,10 @@ function read_pr() {
 function poll_once() {
   event="" error=""
   if ! read_pr; then
-    failures=$((failures + 1))
-    if ((failures >= max_failures)); then
-      event="failed"
-      error="${failures} consecutive reads failed; last error: ${CAPTURED_ERR}"
-    fi
+    failed_poll
     return 0
   fi
 
-  failures=0
   case "${state}" in
     MERGED)
       merged_reads=$((merged_reads + 1))
@@ -224,17 +360,37 @@ function poll_once() {
       fi
       ;;
   esac
+  if [[ -z "${event}" && -n "${baseline}" && "${state}" == OPEN ]]; then
+    if ! poll_changes; then
+      failed_poll
+      return 0
+    fi
+    if [[ "${working}" == true ]]; then
+      quiet_polls=0
+    elif [[ -z "${event}" && "${count_quiet}" == true ]]; then
+      quiet_polls=$((quiet_polls + 1))
+      if ((quiet_limit > 0 && quiet_polls >= quiet_limit)); then event="quiet"; fi
+    fi
+  fi
+  failures=0
 }
 
 function emit_event() {
   jq -nc --arg event "${event}" --arg state "${state}" --arg decision "${decision}" \
     --arg head "${head}" --arg merge "${merge}" --arg error "${error}" \
-    --argjson failures "${failures}" --argjson mergedReads "${merged_reads}" '
+    --argjson failures "${failures}" --argjson mergedReads "${merged_reads}" \
+    --argjson quietPolls "${quiet_polls}" --argjson changes "$([[ -n "${baseline}" ]] && echo true || echo false)" '
     {event: $event}
     + (if $state == "" then {} else {state: $state, reviewDecision: $decision, headRefOid: $head,
         mergeCommit: (if $merge == "" then null else $merge end)} end)
     + (if $event == "pending" then {failures: $failures, mergedReads: $mergedReads} else {} end)
+    + (if $changes then {quietPolls: $quietPolls} else {} end)
     + (if $error == "" then {} else {error: $error} end)'
+}
+
+# Keep accepted counters exact in jq and within Bash's signed arithmetic range.
+function is_decimal_bound() {
+  [[ "${1}" =~ ^(0|[1-9][0-9]{0,14})$ ]]
 }
 
 function cmd_watch() {
@@ -242,15 +398,30 @@ function cmd_watch() {
   local owner="${1}" repo="${2}" pr="${3}" expected_head="${4}"
   shift 4
   local awaited="" once=false failures=0 merged_reads=0 first_read=""
+  local baseline="" baseline_checks="" baseline_review="" quiet_limit=0 quiet_polls=0 current_snapshot=""
+  local review_wait=false working=false count_quiet=false branch="" copilot_status=""
   while [[ $# -gt 0 ]]; do
     case "${1}" in
+      --review-wait)
+        review_wait=true
+        shift
+        ;;
       --once)
         once=true
         shift
         ;;
-      --awaited | --failures | --merged-reads | --started)
+      --awaited | --failures | --merged-reads | --started | --baseline | --quiet-polls | --quiet-count)
         [[ $# -ge 2 ]] || usage_error "${1} needs a value"
         case "${1}" in
+          --baseline)
+            if ! capture jq -cse 'if length == 1 then .[0] else error("one baseline required") end' "${2}"; then
+              usage_error "cannot load change-watch baseline ${2}: ${CAPTURED_ERR}"
+            fi
+            baseline="${CAPTURED_OUT}"
+            [[ -n "${baseline}" ]] || usage_error "empty change-watch baseline"
+            ;;
+          --quiet-polls) quiet_limit="${2}" ;;
+          --quiet-count) quiet_polls="${2}" ;;
           --awaited) awaited="${2}" ;;
           --failures) failures="${2}" ;;
           --merged-reads) merged_reads="${2}" ;;
@@ -262,14 +433,40 @@ function cmd_watch() {
       *) usage_error "unexpected watch argument ${1}" ;;
     esac
   done
-  [[ "${failures}" =~ ^[0-9]+$ && "${merged_reads}" =~ ^[0-9]+$ ]] \
-    || usage_error "--failures and --merged-reads need whole numbers"
-  [[ -z "${first_read}" || "${first_read}" =~ ^[0-9]+$ ]] || usage_error "--started needs a Unix time"
+  if ! is_decimal_bound "${failures}" || ! is_decimal_bound "${merged_reads}"; then
+    usage_error "--failures and --merged-reads need whole numbers"
+  fi
+  if [[ -n "${first_read}" ]] && ! is_decimal_bound "${first_read}"; then
+    usage_error "--started needs a Unix time"
+  fi
 
   local interval="${MERGE_FLOW_INTERVAL:-60}"
   local max_failures="${MERGE_FLOW_MAX_FAILURES:-8}"
   local lifetime="${MERGE_FLOW_LIFETIME:-86400}"
   local state="" decision="" head="" merge="" event="" error="" wait_for
+
+  if ! is_decimal_bound "${interval}" || ! is_decimal_bound "${max_failures}" || ! is_decimal_bound "${lifetime}" \
+    || ((max_failures == 0)); then
+    usage_error "interval and lifetime must be nonnegative; failure limit must be a positive whole number"
+  fi
+  if ! is_decimal_bound "${quiet_limit}" || ! is_decimal_bound "${quiet_polls}"; then
+    usage_error "quiet bounds need canonical decimal whole numbers"
+  fi
+  if [[ -n "${baseline}" ]]; then
+    jq -e --arg head "${expected_head}" '
+      type == "object" and .snapshot.state == "OPEN" and .snapshot.headRefOid == $head
+      and has("latestReview") and (.latestReview == null or
+        ((.latestReview.id | type) == "number" and (.latestReview.commit_id | type) == "string"))
+    ' > /dev/null <<< "${baseline}" || usage_error "invalid change-watch baseline"
+    baseline_checks="$(completed_checks <<< "$(jq -c '.snapshot' <<< "${baseline}")")" \
+      || usage_error "invalid baseline checks"
+    baseline_review="$(jq -c '.latestReview' <<< "${baseline}")"
+    [[ -z "${awaited}" ]] || usage_error "change watch cannot await an approval decision"
+    if [[ "${review_wait}" == true ]]; then
+      branch="$(jq -er '.snapshot.headRefName | select(type == "string" and length > 0)' <<< "${baseline}")" \
+        || usage_error "review wait needs the baseline head branch"
+    fi
+  fi
 
   if [[ "${once}" == "true" ]]; then
     if [[ -n "${first_read}" ]] && (($(date +%s) - first_read >= lifetime)); then
@@ -291,12 +488,20 @@ function cmd_watch() {
       return 0
     fi
     if ((failures > 0)); then
-      wait_for=$((interval * failures))
-      ((wait_for <= 900)) || wait_for=900
+      if [[ "${interval}" -gt "$((900 / failures))" ]]; then
+        wait_for=900
+      else
+        wait_for=$((interval * failures))
+      fi
     else
       wait_for="${interval}"
     fi
+    local elapsed=$((SECONDS - started))
+    local remaining=$((lifetime - elapsed))
+    ((remaining > 0)) || break
+    ((wait_for <= remaining)) || wait_for="${remaining}"
     sleep "${wait_for}"
+    count_quiet=true
   done
   state="" event="expired" error="no merge within ${lifetime} seconds"
   emit_event
@@ -436,14 +641,71 @@ function cmd_panes() {
        | select($tree != null) | {pane, worktree: $tree}]' --args ${WORKTREE_PATHS[@]+"${WORKTREE_PATHS[@]}"} <<< "${CAPTURED_OUT}"
 }
 
+# Preparation replaces permissions; later operations validate and consult that same state.
+function policy_query() {
+  local mode="${1}" action="${2:-}" policy_dir
+  policy_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+  jq -se --arg mode "${mode}" --arg action "${action}" -f "${policy_dir}/watch-policy.jq"
+}
+
+function require_watch_action() {
+  local state_file="${1}" action="${2}" result
+  [[ -f "${state_file}" ]] || die "watch state is unavailable"
+  result="$(policy_query gate "${action}" < "${state_file}")" || die "invalid watch policy"
+  if ! jq -e '.allowed == true' > /dev/null <<< "${result}"; then
+    die "watch policy blocks ${action} ($(jq -r '.status' <<< "${result}"))"
+  fi
+}
+
+function cmd_policy_query() {
+  local mode="${1}"
+  shift
+  if [[ "${mode}" == gate ]]; then
+    [[ $# -eq 1 ]] || usage_error "gate needs one action and watch state on stdin"
+    policy_query gate "${1}"
+  else
+    [[ $# -eq 0 ]] || usage_error "${mode} takes watch state on stdin, no arguments"
+    policy_query "${mode}"
+  fi
+}
+
 function main() {
+  local watch_state="" action
+  if [[ "${1:-}" == --watch-state ]]; then
+    [[ $# -ge 2 ]] || usage_error "--watch-state needs a path"
+    watch_state="${2}"
+    [[ -n "${watch_state}" ]] || usage_error "watch state path must not be empty"
+    shift 2
+  fi
   local command="${1:-}"
   [[ $# -eq 0 ]] || shift
+  if [[ -n "${watch_state}" ]]; then
+    case "${command}" in
+      watch-changes | copilot-status) require_watch_action "${watch_state}" read-axis ;;
+      policy | watch)
+        for action in read-axis merge; do require_watch_action "${watch_state}" "${action}"; done
+        ;;
+      sync)
+        for action in read-axis sync post-merge; do require_watch_action "${watch_state}" "${action}"; done
+        ;;
+      panes) require_watch_action "${watch_state}" post-merge ;;
+      prepare | gate | triage | lifecycle | dispatch | observation-kinds) usage_error "policy commands read watch state on stdin" ;;
+      *) usage_error "unknown watch-state command ${command}" ;;
+    esac
+  fi
   case "${command}" in
     policy) cmd_policy "$@" ;;
     watch) cmd_watch "$@" ;;
+    copilot-status) cmd_copilot_status "$@" ;;
+    watch-changes)
+      [[ $# -ge 5 ]] || usage_error "watch-changes needs <owner> <repo> <pr_number> <head_sha> <baseline_json>"
+      local owner="${1}" repo="${2}" pr="${3}" head="${4}" baseline_file="${5}"
+      shift 5
+      cmd_watch "${owner}" "${repo}" "${pr}" "${head}" --baseline "${baseline_file}" "$@"
+      ;;
     sync) cmd_sync "$@" ;;
     panes) cmd_panes "$@" ;;
+    prepare | gate | triage | lifecycle | dispatch | observation-kinds) cmd_policy_query "${command}" "$@" ;;
     -h | --help) usage ;;
     "") usage_error "missing command" ;;
     *) usage_error "unknown command ${command}" ;;

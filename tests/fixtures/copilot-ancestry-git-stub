@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Fail only the ancestry read; delegate object and repository reads to real Git.
+set -euo pipefail
+
+function main() {
+  printf '%s\n' "$*" >> "$(dirname "$0")/git-calls"
+  if [[ -e "$(dirname "$0")/fail-ancestry" && "${1:-}" == merge-base ]]; then
+    printf '%s\n' 'sample ancestry read error' >&2
+    exit 128
+  fi
+  exec "$(cat "$(dirname "$0")/real-git")" "$@"
+}
+
+main "$@"

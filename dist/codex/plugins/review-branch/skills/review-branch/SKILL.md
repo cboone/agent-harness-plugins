@@ -19,6 +19,18 @@ The user may provide these options inline:
 - **--brief**: Output only a high-level summary without the detailed breakdown
 - **--no-save**: Skip saving the review to `docs/reviews/` (default: save after outputting)
 
+## Capabilities and authority
+
+Use the tools this session actually offers. For a question, use a structured question tool when available in the active mode; otherwise present numbered choices and wait. In a noninteractive run, report the unresolved question and preserved state instead of choosing an answer. Tool names such as Write, Read, Glob and AskUserQuestion below are examples: perform the same file or question operation with the host's supported mechanism. Write a body file completely before issuing the command that reads it; never batch those dependent operations.
+
+Prior user authorization carries through the workflow; add no confirmation merely because the harness differs. Host approvals, active Plan or read-only mode, writable roots and network policy still apply. Stop before a prohibited write or any step dependent on a blocked operation, preserve state, and report the exact command and restriction. Never bypass controls or claim an unrun step completed. Separate completed, skipped, blocked and failed work in the result. For invocation hints, render the named skill with the running harness's form: slash invocation in Claude Code, dollar mention or the skills selector in Codex. A mention is not a tool call; load composed skills from their advertised locations.
+
+## Parent Continuation Contract
+
+Honor a supplied parent continuation block and its resume target. On success, return control to the parent without asking whether to continue. When a decision has no supplied answer, do not ask independently or guess: return `Status: needs-decision`, the question, available choices and preserved state. The parent asks or stops, then invokes this skill with an answer. For an in-progress merge or rebase, list conflicts and the applicable abort command; do not abort or discard work merely to return a result.
+
+Return `Status: <success|no-op|failure|unavailable|needs-decision>`, `Outputs`, `Unresolved or skipped` and `Caller resume target`. A no-op is successful only when no required work was skipped. Preserve any domain-specific status lines below. A host block or failed required check is failure, a missing required skill is unavailable, and unresolved choices are needs-decision. Standalone invocations retain their existing questions and reporting.
+
 ## Workflow
 
 ### 1. Determine the Base Reference
@@ -40,8 +52,10 @@ gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 If `gh` is not available or the command fails, fall back to a purely local query of the remote HEAD ref:
 
 ```bash
-git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
+git symbolic-ref --quiet --short refs/remotes/origin/HEAD
 ```
+
+Strip the `origin/` prefix from successful output. Treat empty output, a failed command, or `HEAD` as not found. If neither query finds a base, ask for it and stop rather than guessing. Verify `origin/<base>` resolves to a commit and use that remote-tracking ref for comparisons; do not fall back to a potentially stale local branch.
 
 1. **Find the merge base** between the base reference and HEAD:
 
@@ -328,6 +342,8 @@ The resulting filename format is `YYYY-MM-DD-sanitized-branch-name.md`. For exam
 
 #### 7b. Create the Directory
 
+In active Plan or read-only mode, skip directory creation and file saving. Print the complete review and report `Save: skipped by host policy` with the intended path. Do not claim it was saved. If a parent's continuation requires a saved artifact, return failure for that requirement; otherwise return the review with the skipped save listed.
+
 ```bash
 mkdir -p docs/reviews
 ```
@@ -357,7 +373,7 @@ To address the items in this review, run: /address-review docs/reviews/<filename
 - **No commits on this branch**: Report that the branch has no changes compared to the base and stop.
 - **Invalid --since ref**: If the specified ref does not exist, report the error and suggest checking the ref name.
 - **Plan file not found**: If `--plan <path>` points to a non-existent file, report the error and continue with the review without plan comparison.
-- **No gh CLI**: Fall back to `git remote show origin` for base branch detection. The review does not require `gh`.
+- **No gh CLI**: Use the validated local symbolic-ref fallback from step 1; ask for a base when it is unavailable.
 - **Detached HEAD**: Use `HEAD` as the branch name and note that the review is running in detached HEAD state.
 - **Save failure**: If the review file cannot be written (e.g., read-only filesystem, permissions issue), report the error but do not fail the entire review. The terminal output is already complete.
 - **Large diffs**: If the diff is extremely large (thousands of lines), focus the summary on the stat output and commit messages rather than reading the entire diff line by line. Note that the detailed diff was too large for full analysis.

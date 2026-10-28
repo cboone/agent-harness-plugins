@@ -15,10 +15,12 @@ gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 **Fallback** (if `gh` is unavailable or the command fails):
 
 ```bash
-git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+git symbolic-ref --quiet --short refs/remotes/origin/HEAD
 ```
 
-Use the detected value as `<default-branch>` in subsequent commands (e.g., `git diff <default-branch>...HEAD`).
+Strip the `origin/` prefix from successful output. Treat empty output, a failed command, or `HEAD` as not found. If neither query finds a base, ask for it and stop rather than guessing. Verify `origin/<base>` resolves to a commit and use that remote-tracking ref for comparisons; do not fall back to a potentially stale local branch.
+
+Use the detected value as `<default-branch>` in subsequent commands (e.g., `git diff origin/<default-branch>...HEAD`).
 
 ### Two different placeholders
 

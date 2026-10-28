@@ -8,7 +8,7 @@ description: >-
 
 # Use Git
 
-Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These rules keep Bash commands short, avoid unnecessary permission prompts, and prevent destructive operations.
+Conventions for running git and GitHub CLI (`gh`) commands. These rules keep commands short, avoid unnecessary permission prompts, and prevent destructive operations.
 
 ## Core Principles
 
@@ -33,6 +33,12 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 | Worktree prompts                    | Pipe through stdin       | Avoids shell escaping and a tmpfile   |
 | Tag messages                        | Inline `-m`              | Typically one line                    |
 | Listing API results                 | `gh api --paginate`      | One page silently truncates results   |
+
+## Capabilities and authority
+
+Use the tools this session actually offers. For a question, use a structured question tool when available in the active mode; otherwise present numbered choices and wait. In a noninteractive run, report the unresolved question and preserved state instead of choosing an answer. Tool names such as Write, Read, Glob and AskUserQuestion below are examples: perform the same file or question operation with the host's supported mechanism. Write a body file completely before issuing the command that reads it; never batch those dependent operations.
+
+Prior user authorization carries through the workflow; add no confirmation merely because the harness differs. Host approvals, active Plan or read-only mode, writable roots and network policy still apply. Stop before a prohibited write or any step dependent on a blocked operation, preserve state, and report the exact command and restriction. Never bypass controls or claim an unrun step completed. Separate completed, skipped, blocked and failed work in the result. For invocation hints, render the named skill with the running harness's form: slash invocation in Claude Code, dollar mention or the skills selector in Codex. A mention is not a tool call; load composed skills from their advertised locations.
 
 ## Workflow
 

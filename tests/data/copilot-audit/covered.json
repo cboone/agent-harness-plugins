@@ -30,7 +30,7 @@
         "login": "cboone"
       },
       "html_url": "https://github.com/o/r/pull/1#issuecomment-9201",
-      "body": "## Copilot Feedback Summary\n\nStatus: Completed"
+      "body": "<!-- copilot-feedback-summary -->\n\n✅ **Copilot feedback, round 1 on [`abc1234`](https://github.com/o/r/commit/abc1234):** 1 fixed\n\n<details>\n<summary>Details for tools</summary>\n\nStatus: Completed\n\nReviews read: 6100000001.\n\n</details>"
     }
   ],
   "threads": [

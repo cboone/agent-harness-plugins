@@ -1,0 +1,251 @@
+[
+  {
+    "id": "host-1",
+    "exit": 0,
+    "usage": {
+      "input_tokens": 147434,
+      "cached_input_tokens": 119936,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2867,
+      "reasoning_output_tokens": 51
+    },
+    "reply_excerpt": {
+      "evidence": {
+        "observed_execution": ["Read openai-docs/SKILL.md.", "codex exec --help exited 0.", "codex exec resume --help exited 0.", "Inspected in-session tool metadata without calling MCP services."],
+        "distinction": "Skill catalog and tool declarations advertise capabilities; only the local reads and help commands were exercised."
+      },
+      "local_cli_help": {
+        "resume": {
+          "syntax": "codex exec resume [OPTIONS] [SESSION_ID] [PROMPT]",
+          "session_selector": "UUID or thread name; UUID takes precedence.",
+          "--last": "Resume newest recorded session.",
+          "--all": "Disable current-directory filtering.",
+          "stdin": "Use - as PROMPT to read stdin."
+        },
+        "json_options_on_exec_and_resume": {
+          "--json": "Print events to stdout as JSONL.",
+          "--output-schema <FILE>": "Specify a JSON Schema for the final response.",
+          "-o, --output-last-message <FILE>": "Write the final agent message to a file."
+        },
+        "verification": "Help text observed; actual resume and JSON event behavior were not tested."
+      },
+      "limitations": ["No network, MCP service calls, gh, credentials, delegation, or configuration edits.", "Read one installed skill outside the repository and ran local CLI help from the repository.", "OpenAI Docs skill was consulted; its network-first workflow was skipped under the explicit offline restriction.", "Other skill paths are catalog declarations, not filesystem existence checks.", "Tool availability does not establish service connectivity or authorization."],
+      "chain_skill_roots": {
+        "r1": "<home>/.codex/plugins/cache/agent-harness-plugins",
+        "r2": "<home>/.codex/plugins/cache/agent-harness-plugins/monitor-pr/3.1.0/skills",
+        "r3": "<home>/.codex/plugins/cache/agent-harness-plugins/use-git/1.3.2/skills"
+      }
+    }
+  },
+  {
+    "record": {
+      "stage": "before",
+      "id": "activation-commit",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "0a9a258e54ab528154368af65b2451ceb2271c4d",
+      "after": "24eab25f3107b6cde41eb35d2766d645dcb46682",
+      "status": "?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Committed staged changes as `24eab25` (`chore: update sample fixture`) using `git commit -S`.\n\nUntracked fixture files remain unchanged. Body trim: nothing to trim. No network or `gh` operations used.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; cat .agents/skills/commit-commit/SKILL.md .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git log --oneline -10'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git --no-pager diff --cached --no-ext-diff --no-color'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc \"rg --files --hidden -g 'AGENTS.md' -g 'CLAUDE.md' -g '*commitlint*' -g 'package.json' -g '*commit-msg' -g '\"'!node_modules'\"' -g '\"'!.git/objects/**'\"'; git config --get core.hooksPath\"",
+        "exit": 1
+      },
+      {
+        "command": "/bin/zsh -lc 'git commit -S -m \"$(cat << '\"'EOF'\nchore: update sample fixture\nEOF\n)\\\"\"",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git status --short'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 144339,
+      "cached_input_tokens": 126976,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 396,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "record": {
+      "stage": "before",
+      "id": "activation-monitor",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "bb6b5e445ed7a6ac8dc012854bc8a2ac7e7e9e9b",
+      "after": "bb6b5e445ed7a6ac8dc012854bc8a2ac7e7e9e9b",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Stopped: `command -v gh` returned `/opt/homebrew/bin/gh`, not the permitted fixture stub. No `gh` operation ran, and PR 1 was not monitored.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; command -v gh; cat .agents/skills/monitor-pr-monitor/SKILL.md; cat .agents/skills/use-git-use-git/SKILL.md'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 55842,
+      "cached_input_tokens": 36608,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 142,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "record": {
+      "stage": "before",
+      "id": "activation-negative",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "af9be31575c3cbb22f19549f794429bd77206214",
+      "after": "af9be31575c3cbb22f19549f794429bd77206214",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["commit", "lint-and-fix", "pr", "review-branch", "address-review", "use-git:use-git", "sync-with-main:merge", "sync-with-main:rebase", "monitor-pr:monitor", "monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "`git rebase` reapplies commits from the current branch onto a different base commit, usually the latest commit on another branch.\n\nFor example, rebasing a feature branch onto `main` places the feature’s commits after the current `main` history. It creates new commits with new IDs because their parent history changes. Conflicts can require manual resolution.\n\nRebase produces a linear history, but rewriting commits already shared with others can disrupt their work.\n\nNo commands were run and nothing was changed.",
+    "commands": [],
+    "usage": {
+      "input_tokens": 24569,
+      "cached_input_tokens": 13184,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 103,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "record": {
+      "stage": "before",
+      "id": "partial-pr",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "553323e4c27e8c9ea4e0bd1457f85a9b480e6473",
+      "after": "553323e4c27e8c9ea4e0bd1457f85a9b480e6473",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["pr"],
+      "readOnly": false
+    },
+    "reply": "Stopped: `command -v gh` returned `/opt/homebrew/bin/gh`, not the permitted fixture stub. No `gh` operation ran, and no files, commits, pushes, or PRs were created.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'cat .agents/skills/pr-pr/SKILL.md'",
+        "exit": 0
+      },
+      {
+        "command": "/bin/zsh -lc 'git remote -v\n git status --short\n command -v gh'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 54091,
+      "cached_input_tokens": 37120,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 146,
+      "reasoning_output_tokens": 0
+    }
+  },
+  {
+    "record": {
+      "stage": "before",
+      "id": "partial-resolver",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "a6c62a7893825e9ade8e5e00aee0df5278aae277",
+      "after": "a6c62a7893825e9ade8e5e00aee0df5278aae277",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:resolve-copilot-feedback"],
+      "readOnly": false
+    },
+    "reply": "Stopped: `command -v gh` returned `/opt/homebrew/bin/gh`, not the required fixture stub:\n\n```text\n<scratch>/before/partial-resolver/bin/gh\n```\n\nRead the advertised skill and local remotes. No `gh` operation ran, no network was used, and no files changed. Feedback processing remains incomplete.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; command -v gh; git remote -v; cat .agents/skills/monitor-pr-resolve-copilot-feedback/SKILL.md'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 57630,
+      "cached_input_tokens": 37120,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 211,
+      "reasoning_output_tokens": 14
+    }
+  },
+  {
+    "record": {
+      "stage": "before",
+      "id": "partial-monitor",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "exit": 0,
+      "error": null,
+      "nonempty": true,
+      "before": "08301132761ab9b586a47c28cdfb1d1bfa1ed13c",
+      "after": "08301132761ab9b586a47c28cdfb1d1bfa1ed13c",
+      "status": "M  sample.txt\n?? .agents/\n?? review-result.json",
+      "skills": ["monitor-pr:monitor"],
+      "readOnly": false
+    },
+    "reply": "Stopped: `command -v gh` returned `/opt/homebrew/bin/gh`, not the required fixture stub. No `gh` operation ran, and no files changed.",
+    "commands": [
+      {
+        "command": "/bin/zsh -lc 'pwd; command -v gh; git remote -v; cat .agents/skills/monitor-pr-monitor/SKILL.md'",
+        "exit": 0
+      }
+    ],
+    "usage": {
+      "input_tokens": 56908,
+      "cached_input_tokens": 37120,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 138,
+      "reasoning_output_tokens": 10
+    }
+  }
+]

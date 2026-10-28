@@ -132,35 +132,63 @@ function require_command() {
   command -v "${1}" > /dev/null || die "${1} is required"
 }
 
-# Resolve the ref the committed part of the scope is measured against. An
-# explicit --base wins; otherwise follow origin's default branch, then the
-# conventional names. A repository with no base at all is not an error: the
-# scope is then the working tree alone.
+# Found and absent refs are explicit JSON outcomes. Git failures retain their
+# status and diagnostic, including an existing ref whose object is unavailable.
 function resolve_base_ref() {
   local requested="${1}"
-  local candidate
+  local candidate="refs/remotes/origin/HEAD"
+  local symbolic_ref=""
+  local ref_name=""
+  local commit
+  local ref_status
 
   if [[ -n "${requested}" ]]; then
-    git rev-parse --verify --quiet "${requested}^{commit}" > /dev/null \
-      || die "base ref '${requested}' does not resolve to a commit"
-    printf '%s' "${requested}"
-    return 0
-  fi
-
-  candidate="$(git rev-parse --abbrev-ref --symbolic-full-name origin/HEAD 2> /dev/null || true)"
-  if [[ -n "${candidate}" && "${candidate}" != "origin/HEAD" ]]; then
-    printf '%s' "${candidate}"
-    return 0
-  fi
-
-  for candidate in main master origin/main origin/master; do
-    if git rev-parse --verify --quiet "${candidate}^{commit}" > /dev/null; then
-      printf '%s' "${candidate}"
-      return 0
+    if symbolic_ref="$(git rev-parse --symbolic-full-name --verify "${requested}")"; then
+      # Commit IDs and revision expressions have no symbolic ref name.
+      candidate="${symbolic_ref:-${requested}}"
+      ref_name="${requested}"
+    else
+      return $?
     fi
-  done
+  fi
 
-  return 1
+  if [[ -z "${requested}" || -n "${symbolic_ref}" ]]; then
+    if git show-ref --verify --quiet "${candidate}"; then
+      :
+    else
+      ref_status=$?
+      if [[ "${ref_status}" -eq 1 ]]; then
+        jq -cn '{status: "not_found"}'
+        return
+      fi
+      return "${ref_status}"
+    fi
+  elif git cat-file -e "${candidate}"; then
+    :
+  else
+    return $?
+  fi
+
+  if [[ -z "${requested}" ]]; then
+    if ref_name="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)"; then
+      if [[ "${ref_name}" != origin/* || "${ref_name}" == origin/HEAD || "${ref_name}" == origin/ ]]; then
+        echo "${SCRIPT_NAME}: invalid origin default ref '${ref_name}'" >&2
+        return 1
+      fi
+      candidate="refs/remotes/${ref_name}"
+    else
+      ref_status=$?
+      echo "${SCRIPT_NAME}: cannot read symbolic origin default (exit ${ref_status})" >&2
+      return "${ref_status}"
+    fi
+  fi
+
+  if commit="$(git rev-parse --verify "${candidate}^{commit}")"; then
+    jq -cn --arg ref "${ref_name}" --arg commit "${commit}" \
+      '{status: "found", ref: $ref, commit: $commit}'
+  else
+    return $?
+  fi
 }
 
 # A content digest of every path git tracks or would track, built in a copy of
@@ -337,20 +365,20 @@ function main() {
   committed_covered="false"
   head="$(git rev-parse HEAD)"
 
-  # The `|| true` absorbs the `return 1` that means "no base found", which is a
-  # valid state: the scope is then the working tree alone. It does not absorb
-  # the `exit 1` from an explicit --base that does not resolve, because `exit`
-  # ends the subshell outright rather than failing a command `||` could catch,
-  # so that case still stops the script. The scrut suite covers both paths.
-  base_ref="$(resolve_base_ref "${requested_base}" || true)"
-  base_sha=""
-  base_tip=""
+  local resolution resolution_status
+  if resolution="$(resolve_base_ref "${requested_base}")"; then
+    base_ref="$(jq -r '.ref // empty' <<< "${resolution}")"
+    base_tip="$(jq -r '.commit // empty' <<< "${resolution}")"
+  else
+    resolution_status=$?
+    die "could not resolve base (exit ${resolution_status})" "${resolution_status}"
+  fi
+  if [[ -n "${requested_base}" && -z "${base_ref}" ]]; then
+    die "base ref '${requested_base}' does not resolve to a commit"
+  fi
+  base_sha="${base_tip}"
   merge_base=""
   if [[ -n "${base_ref}" ]]; then
-    base_sha="$(git rev-parse --verify --quiet "${base_ref}^{commit}")" \
-      || die "base ref '${base_ref}' does not resolve to a commit"
-    base_tip="${base_sha}"
-
     # Treat merge-base exit 1 as unrelated history; other failures stop collection.
     # Reject an unrelated explicit --base; report an inferred one as base_unrelated
     # so an empty bucket cannot imply committed coverage.
@@ -430,8 +458,13 @@ function main() {
   index_after="$(index_digest "${TMP_DIR}/index-after.records")"
   head_after="$(git rev-parse HEAD)"
   if [[ -n "${base_ref}" ]]; then
-    base_tip_after="$(git rev-parse --verify --quiet "${base_ref}^{commit}")" \
-      || die "the base ref disappeared while the scope was being read"
+    if resolution="$(resolve_base_ref "${base_ref}")"; then
+      base_tip_after="$(jq -r '.commit // empty' <<< "${resolution}")"
+      [[ -n "${base_tip_after}" ]] || die "the base ref disappeared while the scope was being read"
+    else
+      resolution_status=$?
+      die "could not recheck base (exit ${resolution_status})" "${resolution_status}"
+    fi
   fi
   [[ "${index_before}" == "${index_after}" && "${head}" == "${head_after}" && "${base_tip}" == "${base_tip_after}" ]] \
     || die "the index, HEAD or base changed while the scope was being read; rerun once it has settled"
