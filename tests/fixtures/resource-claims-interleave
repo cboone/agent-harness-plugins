@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Exercise the real claims script with a writer paused after its snapshot read.
+set -euo pipefail
+
+: "${RESOURCE_CLAIMS_INTERLEAVE_STUB_BIN:?}" "${MANAGE_RESOURCE_CLAIMS_BIN:?}"
+
+FIXTURE_DIRECTORY=""
+FIRST_WRITER=""
+SECOND_WRITER=""
+
+function cleanup() {
+  local exit_code=$?
+  trap - EXIT
+  trap '' HUP INT TERM
+  if [[ -n "${FIXTURE_DIRECTORY}" ]]; then
+    if [[ -d "${FIXTURE_DIRECTORY}/barrier" ]]; then
+      touch "${FIXTURE_DIRECTORY}/barrier/release-first" || exit_code=1
+    fi
+    if [[ -n "${FIRST_WRITER}" ]]; then
+      wait "${FIRST_WRITER}" || :
+    fi
+    if [[ -n "${SECOND_WRITER}" ]]; then
+      wait "${SECOND_WRITER}" || :
+    fi
+    rm -r -- "${FIXTURE_DIRECTORY}" || exit_code=1
+  fi
+  exit "${exit_code}"
+}
+
+function await_event() {
+  local attempt
+  for ((attempt = 0; attempt < 160; attempt++)); do
+    if [[ -f "${CLAIMS_BARRIER}/${1}" || -f "${CLAIMS_BARRIER}/${2:-${1}}" ]]; then
+      return 0
+    fi
+    sleep 0.05
+  done
+  echo "barrier timed out: ${1}" >&2
+  return 1
+}
+
+function main() {
+  local root stub first second first_status=0 second_status=0
+  root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+  FIXTURE_DIRECTORY="${root}"
+  trap cleanup EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  stub="${RESOURCE_CLAIMS_INTERLEAVE_STUB_BIN}"
+  export CLAIMS_REAL_MKDIR
+  CLAIMS_REAL_MKDIR="$(command -v mkdir)"
+  mkdir "${root}/bin" "${root}/barrier"
+  cp "${stub}" "${root}/bin/git"
+  cp "${stub}" "${root}/bin/mkdir"
+  export PATH="${root}/bin:${PATH}"
+  [[ "$(command -v git)" == "${root}/bin/git" && "$(command -v mkdir)" == "${root}/bin/mkdir" ]] || return 1
+  export CLAIMS_BARRIER="${root}/barrier"
+  export WORKTREE_RESOURCES_FILE="${root}/claims.json"
+  export STUB_GIT_WORKTREE_PORCELAIN='worktree /repo/live
+HEAD aaa
+branch refs/heads/main
+'
+  # Seed a file so both writers exercise the validated snapshot read.
+  printf '{"version":1,"claims":[]}' > "${WORKTREE_RESOURCES_FILE}"
+  CLAIMS_WRITER=first bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/live --branch main > "${root}/first.log" 2>&1 &
+  first=$!
+  FIRST_WRITER="${first}"
+  if ! await_event first-read; then
+    touch "${CLAIMS_BARRIER}/release-first"
+    wait "${first}" || first_status=$?
+    printf 'claim writer exit statuses: logic=%s simulator=not-started\n' "${first_status}"
+    cat "${root}/first.log"
+    return 1
+  fi
+  CLAIMS_WRITER=second bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim simulator --worktree /repo/live --branch main > "${root}/second.log" 2>&1 &
+  second=$!
+  SECOND_WRITER="${second}"
+  if ! await_event second-blocked second-read; then
+    touch "${CLAIMS_BARRIER}/release-first"
+    wait "${first}" || first_status=$?
+    wait "${second}" || second_status=$?
+    printf 'claim writer exit statuses: logic=%s simulator=%s\n' "${first_status}" "${second_status}"
+    cat "${root}/first.log" "${root}/second.log"
+    return 1
+  fi
+  if [[ -n "${CLAIMS_INTERRUPT_CONTROL:-}" ]]; then
+    printf '%s %s\n' "${first}" "${second}" > "${CLAIMS_INTERRUPT_CONTROL}/writers"
+    touch "${CLAIMS_INTERRUPT_CONTROL}/ready"
+    await_event interrupt-release || return 1
+  fi
+  # Without serialization, finish the second writer before releasing the old snapshot.
+  if [[ -f "${CLAIMS_BARRIER}/second-read" ]]; then
+    wait "${second}" || second_status=$?
+  fi
+  touch "${CLAIMS_BARRIER}/release-first"
+  wait "${first}" || first_status=$?
+  wait "${second}" || second_status=$?
+  if [[ "${first_status}" -ne 0 || "${second_status}" -ne 0 ]]; then
+    printf 'claim writer exit statuses: logic=%s simulator=%s\n' "${first_status}" "${second_status}"
+    cat "${root}/first.log" "${root}/second.log"
+    return 1
+  fi
+  jq -c '[.claims[].resource] | sort' "${WORKTREE_RESOURCES_FILE}"
+}
+
+main "$@"
