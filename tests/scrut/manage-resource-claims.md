@@ -22,6 +22,57 @@ $ function setup_claims() {
 > function claims_list() {
 >   claims list | sed 's/claimed=[^ ]*/claimed=TIMESTAMP/'
 > }
+> function claims_parallel() {
+>   local first second first_status=0 second_status=0
+>   claims claim logic --worktree /repo/wt-live --branch feature/a > "${stub_dir}/first.log" 2>&1 &
+>   first=$!
+>   claims claim simulator --worktree /repo/wt-live --branch feature/b > "${stub_dir}/second.log" 2>&1 &
+>   second=$!
+>   wait "${first}" || first_status=$?
+>   wait "${second}" || second_status=$?
+>   if [[ "${first_status}" -ne 0 || "${second_status}" -ne 0 ]]; then
+>     printf 'claim writer exit statuses: logic=%s simulator=%s\n' "${first_status}" "${second_status}"
+>     cat "${stub_dir}/first.log" "${stub_dir}/second.log"
+>     return 1
+>   fi
+> }
+> function claims_interrupted() {
+>   local control subject fixture_pid first_pid second_pid attempt fixture_status=0
+>   control="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   subject="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   CLAIMS_INTERRUPT_CONTROL="${control}" TMPDIR="${subject}" "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" > "${control}/log" 2>&1 &
+>   fixture_pid=$!
+>   for ((attempt=0; attempt<160; attempt++)); do
+>     if [[ -f "${control}/ready" ]]; then break; fi
+>     sleep 0.05
+>   done
+>   if [[ ! -f "${control}/ready" ]]; then
+>     kill -TERM "${fixture_pid}" 2> /dev/null || :
+>     wait "${fixture_pid}" || :
+>     cat "${control}/log"
+>     return 1
+>   fi
+>   if ! read -r first_pid second_pid < "${control}/writers" || [[ ! "${first_pid}" =~ ^[0-9]+$ || ! "${second_pid}" =~ ^[0-9]+$ ]]; then
+>     kill -TERM "${fixture_pid}" 2> /dev/null || :
+>     wait "${fixture_pid}" || :
+>     cat "${control}/log"
+>     return 1
+>   fi
+>   if ! kill -TERM "${fixture_pid}"; then
+>     wait "${fixture_pid}" || :
+>     cat "${control}/log"
+>     return 1
+>   fi
+>   wait "${fixture_pid}" || fixture_status=$?
+>   if [[ "${fixture_status}" -ne 143 ]] || kill -0 "${first_pid}" 2> /dev/null || kill -0 "${second_pid}" 2> /dev/null; then
+>     printf 'interrupted fixture exit=%s\n' "${fixture_status}"
+>     cat "${control}/log"
+>     return 1
+>   fi
+>   test -f "${control}/first-released" || return 1
+>   test -z "$(ls -A "${subject}")" || return 1
+>   echo "TERM exit=143; writers stopped; fixture directory cleaned"
+> }
 > function claims_tail() {
 >   local output status=0
 >   output="$(claims "$@" 2>&1)" || status=$?
@@ -352,12 +403,36 @@ Atomic replacement alone stops a reader seeing half a document, but not two work
 
 ```scrut
 $ setup_claims \
->   && { claims claim logic --worktree /repo/wt-live --branch feature/a > /dev/null 2>&1 & } \
->   && { claims claim simulator --worktree /repo/wt-live --branch feature/b > /dev/null 2>&1 & } \
->   && wait \
+>   && claims_parallel \
 >   && claims list | cut -d' ' -f1
 resource=logic
 resource=simulator
+```
+
+## A writer waits while another holds an earlier snapshot
+
+The fixture pauses the first writer after reading the claim file. The second writer either attempts the held lock or reads that same snapshot without serialization. Without serialization, the second writer finishes before the first resumes, forcing a lost update. The fixture checks both writer exit statuses.
+
+```scrut
+$ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}"
+["logic","simulator"]
+```
+
+## The interleaving fixture removes its temporary directory
+
+```scrut
+$ fixture_tmp="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && TMPDIR="${fixture_tmp}" "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" > /dev/null \
+>   && test -z "$(ls -A "${fixture_tmp}")" \
+>   && echo "fixture directory cleaned"
+fixture directory cleaned
+```
+
+## Interrupting the interleaving fixture releases and waits for both writers
+
+```scrut
+$ claims_interrupted
+TERM exit=143; writers stopped; fixture directory cleaned
 ```
 
 ## The lock is released when the operation finishes
