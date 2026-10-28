@@ -8,6 +8,10 @@ source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
 # shellcheck source=bin/lib/capture-child.bash
 source "${REPO_ROOT}/bin/lib/capture-child.bash"
 
+function report_capture_status() {
+  printf 'completion status=%s\n' "${1}"
+}
+
 function main() {
   local scenario="${1}" root output=''
   root="$(mktemp -d "${TMPDIR:-/tmp}/environment-isolation.XXXXXX")"
@@ -15,6 +19,36 @@ function main() {
   trap 'rm -r "${ISOLATION_TEST_ROOT}"' EXIT
 
   case "${scenario}" in
+    capture-background-pid)
+      # shellcheck disable=SC2016 # The executed child prints its own PID.
+      capture_child - --exec-log "${root}/child.log" -- bash -c 'printf "%s\n" "$$"' &
+      local child=$!
+      capture_child output --wait-log "${root}/child.log" "${child}"
+      if [[ "${output}" != "${child}" ]]; then
+        echo 'captured child PID mismatched' >&2
+        return 1
+      fi
+      output='captured-child-pid=true'
+      ;;
+    capture-channel-split)
+      local raw_error='' child_status=0
+      # shellcheck disable=SC2016 # The child sources the helper in its own shell.
+      capture_child raw_error --stdout "${root}/report" -- bash -c '
+        source "${REPO_ROOT}/bin/lib/capture-child.bash"
+        capture_child - --error-stdout-prefix "Error: " -- bash -c '\''printf "raw detail\nError: structured\n" >&2; exit 7'\''
+      ' || child_status=$?
+      [[ "${child_status}" -eq 7 && "${raw_error}" == 'raw detail' ]]
+      [[ "$(cat "${root}/report")" == 'Error: structured' ]]
+      output='structured-report-and-raw-detail-preserved=true'
+      ;;
+    capture-background-failure)
+      capture_child - --exec-log "${root}/child.log" -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" &
+      local child=$!
+      capture_child output --wait-log "${root}/child.log" "${child}"
+      ;;
+    capture-completion-order)
+      capture_child - --on-complete report_capture_status --error-stdout -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub"
+      ;;
     git-maintenance)
       # shellcheck disable=SC2016 # REPO_ROOT expands in the child shell.
       capture_child output -- env GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=maintenance.autoDetach GIT_CONFIG_VALUE_0=true \
@@ -26,12 +60,14 @@ function main() {
         CODEX_ENABLED_SKILL_PERCENT=101 CODEX_OTHER_SKILL_RESERVE_TOKENS=999999999 \
         "${REPO_ROOT}/bin/run-scrut" --shell bash test "${REPO_ROOT}/tests/data/environment-isolation/persistence.md"
       ;;
-    guard-missing-reset | guard-new-consumer | guard-late-reset | guard-indirect | guard-registered | guard-scrut-runner | guard-scrut-update | guard-scrut-ci | guard-scrut-ci-reusable | guard-scrut-new | guard-wrapper-reset | guard-capture | guard-stderr | guard-capture-library | guard-git-namespace)
+    guard-missing-reset | guard-new-consumer | guard-late-reset | guard-indirect | guard-registered | guard-scrut-runner | guard-scrut-update | guard-scrut-ci | guard-scrut-ci-reusable | guard-scrut-new | guard-wrapper-reset | guard-capture | guard-stderr | guard-capture-library | guard-git-namespace | guard-four-fence)
       mkdir "${root}/tree"
       cp -R "${REPO_ROOT}/bin" "${REPO_ROOT}/plugins" "${REPO_ROOT}/tests" "${REPO_ROOT}/.github" "${root}/tree/"
       cp "${REPO_ROOT}/Makefile" "${root}/tree/Makefile"
       if [[ "${scenario}" == guard-missing-reset ]]; then
         perl -ni -e 'print unless /^source .*git-environment[.]bash/' "${root}/tree/tests/fixtures/review-corpus-fixture"
+      elif [[ "${scenario}" == guard-four-fence ]]; then
+        cp "${REPO_ROOT}/tests/data/environment-isolation/unguarded-four-fence.md" "${root}/tree/tests/scrut/new-four-fence.md"
       elif [[ "${scenario}" == guard-capture || "${scenario}" == guard-stderr ]]; then
         local template=unguarded-capture.bash
         [[ "${scenario}" != guard-stderr ]] || template=unguarded-stderr.bash

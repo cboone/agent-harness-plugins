@@ -3,8 +3,11 @@
 # Record when the second writer cannot acquire the lock.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
 : "${CLAIMS_REAL_MKDIR:?}" "${CLAIMS_WRITER:?}" "${WORKTREE_RESOURCES_FILE:?}"
-: "${CLAIMS_BARRIER:?}" "${GIT_WORKTREE_STUB_BIN:?}"
+: "${CLAIMS_BARRIER:?}" "${WORKTREE_GIT_STUB_BIN:?}"
 
 case "${0##*/}" in
   mkdir)
@@ -24,7 +27,7 @@ case "${0##*/}" in
             if [[ -n "${CLAIMS_INTERRUPT_CONTROL:-}" ]]; then
               touch "${CLAIMS_INTERRUPT_CONTROL}/first-released"
             fi
-            exec "${GIT_WORKTREE_STUB_BIN}" "$@"
+            exec "${WORKTREE_GIT_STUB_BIN}" "$@"
           fi
           sleep 0.05
         done
@@ -33,7 +36,7 @@ case "${0##*/}" in
       fi
       touch "${CLAIMS_BARRIER}/second-read"
     fi
-    exec "${GIT_WORKTREE_STUB_BIN}" "$@"
+    exec "${WORKTREE_GIT_STUB_BIN}" "$@"
     ;;
   *)
     echo 'install this fixture as git and mkdir' >&2

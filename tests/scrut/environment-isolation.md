@@ -11,6 +11,35 @@ $ source "${REPO_ROOT}/bin/lib/git-environment.bash"
 ## Every Git consumer resets at entry
 
 ```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" guard-four-fence
+tests/scrut/new-four-fence.md: source bin/lib/git-environment.bash before Git consumers
+[1]
+```
+
+```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" capture-background-pid
+captured-child-pid=true
+```
+
+```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" capture-channel-split
+structured-report-and-raw-detail-preserved=true
+```
+
+```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" capture-background-failure 2>&1
+deliberate fixture failure
+[7]
+```
+
+```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" capture-completion-order 2>&1
+completion status=7
+deliberate fixture failure
+[7]
+```
+
+```scrut
 $ "${ENVIRONMENT_ISOLATION_BIN}" guard-git-namespace
 Makefile: fixture variables must stay outside the GIT_* namespace
 [1]

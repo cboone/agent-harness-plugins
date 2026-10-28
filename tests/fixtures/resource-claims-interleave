@@ -2,6 +2,12 @@
 # Exercise the real claims script with a writer paused after its snapshot read.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+
 : "${RESOURCE_CLAIMS_INTERLEAVE_STUB_BIN:?}" "${MANAGE_RESOURCE_CLAIMS_BIN:?}"
 
 FIXTURE_DIRECTORY=""
@@ -17,10 +23,10 @@ function cleanup() {
       touch "${FIXTURE_DIRECTORY}/barrier/release-first" || exit_code=1
     fi
     if [[ -n "${FIRST_WRITER}" ]]; then
-      wait "${FIRST_WRITER}" || :
+      capture_child - --wait-log "${FIXTURE_DIRECTORY}/first.log" "${FIRST_WRITER}" || :
     fi
     if [[ -n "${SECOND_WRITER}" ]]; then
-      wait "${SECOND_WRITER}" || :
+      capture_child - --wait-log "${FIXTURE_DIRECTORY}/second.log" "${SECOND_WRITER}" || :
     fi
     rm -r -- "${FIXTURE_DIRECTORY}" || exit_code=1
   fi
@@ -63,25 +69,26 @@ branch refs/heads/main
 '
   # Seed a file so both writers exercise the validated snapshot read.
   printf '{"version":1,"claims":[]}' > "${WORKTREE_RESOURCES_FILE}"
-  CLAIMS_WRITER=first bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/live --branch main > "${root}/first.log" 2>&1 &
+  CLAIMS_WRITER=first capture_child - --exec-log "${root}/first.log" -- bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/live --branch main &
   first=$!
   FIRST_WRITER="${first}"
   if ! await_event first-read; then
     touch "${CLAIMS_BARRIER}/release-first"
-    wait "${first}" || first_status=$?
+    capture_child - --wait-log "${root}/first.log" "${first}" || first_status=$?
+    FIRST_WRITER=''
     printf 'claim writer exit statuses: logic=%s simulator=not-started\n' "${first_status}"
-    cat "${root}/first.log"
     return 1
   fi
-  CLAIMS_WRITER=second bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim simulator --worktree /repo/live --branch main > "${root}/second.log" 2>&1 &
+  CLAIMS_WRITER=second capture_child - --exec-log "${root}/second.log" -- bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim simulator --worktree /repo/live --branch main &
   second=$!
   SECOND_WRITER="${second}"
   if ! await_event second-blocked second-read; then
     touch "${CLAIMS_BARRIER}/release-first"
-    wait "${first}" || first_status=$?
-    wait "${second}" || second_status=$?
+    capture_child - --wait-log "${root}/first.log" "${first}" || first_status=$?
+    FIRST_WRITER=''
+    capture_child - --wait-log "${root}/second.log" "${second}" || second_status=$?
+    SECOND_WRITER=''
     printf 'claim writer exit statuses: logic=%s simulator=%s\n' "${first_status}" "${second_status}"
-    cat "${root}/first.log" "${root}/second.log"
     return 1
   fi
   if [[ -n "${CLAIMS_INTERRUPT_CONTROL:-}" ]]; then
@@ -91,14 +98,18 @@ branch refs/heads/main
   fi
   # Without serialization, finish the second writer before releasing the old snapshot.
   if [[ -f "${CLAIMS_BARRIER}/second-read" ]]; then
-    wait "${second}" || second_status=$?
+    capture_child - --wait-log "${root}/second.log" "${second}" || second_status=$?
+    SECOND_WRITER=''
   fi
   touch "${CLAIMS_BARRIER}/release-first"
-  wait "${first}" || first_status=$?
-  wait "${second}" || second_status=$?
+  capture_child - --wait-log "${root}/first.log" "${first}" || first_status=$?
+  FIRST_WRITER=''
+  if [[ -n "${SECOND_WRITER}" ]]; then
+    capture_child - --wait-log "${root}/second.log" "${second}" || second_status=$?
+    SECOND_WRITER=''
+  fi
   if [[ "${first_status}" -ne 0 || "${second_status}" -ne 0 ]]; then
     printf 'claim writer exit statuses: logic=%s simulator=%s\n' "${first_status}" "${second_status}"
-    cat "${root}/first.log" "${root}/second.log"
     return 1
   fi
   jq -c '[.claims[].resource] | sort' "${WORKTREE_RESOURCES_FILE}"

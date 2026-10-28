@@ -100,8 +100,19 @@ function main() {
       document = FILENAME ~ /[.](md|markdown|scrut)$/ ? 1 : FILENAME ~ /[.](t|cram)$/ ? 2 : 0
       block = 0
     }
-    document == 1 && /^```scrut/ { block = 1; next }
-    document == 1 && /^```/ { block = 0; next }
+    document == 1 && /^```+scrut/ {
+      block = 1
+      fence = $0
+      sub(/[^`].*$/, "", fence)
+      fence_length = length(fence)
+      next
+    }
+    document == 1 && /^```/ {
+      fence = $0
+      sub(/[^`].*$/, "", fence)
+      if (length(fence) >= fence_length) block = 0
+      next
+    }
     document && ((document == 1 && !block) || $0 !~ /^[\t ]*[$>] /) { next }
     {
       text = $0

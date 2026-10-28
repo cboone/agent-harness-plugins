@@ -4,6 +4,10 @@ These cases call the shipped, side-effect-free `merge-flow dispatch` command. No
 
 ## Pending observations retry without a running check and stop at two ticks
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ state="$(printf '%s\n' '{"snapshot":{"state":"OPEN"},"restrictions":{"noFix":false,"copilotPaused":false},"candidates":[],"observations":[{"name":"mergeability","pending":true,"diagnostic":"mergeability UNKNOWN"}],"runningPermittedCheck":false}' | "${MERGE_FLOW_BIN}" prepare)" && first="$(printf '%s\n' "${state}" | "${MERGE_FLOW_BIN}" lifecycle 2>/dev/null | "${MERGE_FLOW_BIN}" dispatch)" && printf '%s\n' "${first}" | jq -c '{action:.route.action, retry:.route.retry, terminal, observationFailures}' && counts="$(printf '%s\n' "${first}" | jq -c .observationFailures)" && printf '%s\n' "${state}" | jq --argjson counts "${counts}" '.observationFailures=$counts' | "${MERGE_FLOW_BIN}" lifecycle 2>/dev/null | "${MERGE_FLOW_BIN}" dispatch | jq -c '{route, wait, terminal, status, diagnostics}'
 {"action":"read-axis","retry":true,"terminal":false,"observationFailures":{"audit":0,"mergeability":1,"review-body":0,"review-id":0,"review-metadata":0,"snapshot":0,"threads":0,"triage":0}}

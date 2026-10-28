@@ -6,6 +6,10 @@ of upstream configuration.
 
 ## A checkout without an upstream verifies its PR fix
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ bash "${COPILOT_ANCESTRY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" no-upstream
 result=true; exit=0

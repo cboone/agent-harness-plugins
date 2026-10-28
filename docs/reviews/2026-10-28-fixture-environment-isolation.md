@@ -582,3 +582,31 @@ retains the signed development history. Exact-tree comparison after rebuilding
 is reported in the workstream mailbox, keeping this candidate tree unchanged.
 The ready PR body carries the final checks and Semgrep evidence; TOOLING owns
 merging. No Copilot review is requested or awaited.
+
+## Main integration after publication
+
+TOOLING authorized a signed merge of `origin/main` after the monitor background
+watch landed as `fec4708b`. Merge commit `0cbce8f3` preserves published history.
+The CI conflict retains the shared Make/wrapper entry point and main's added
+fixture registrations and yq setup. No plugin source or version changes are
+introduced relative to the merged main.
+
+Incoming Git consumers now source the shared reset at entry. Incoming retained
+captures use the shared capture helper, including asynchronous writers. Its
+exec-log mode preserves the real child PID, while wait-log replays diagnostics
+and preserves status. Completion reporting preserves ancestry snapshots while
+unmatched diagnostic lines remain visible on stderr. The guard also parses
+four-backtick Scrut fences, which incoming documents use for embedded fences.
+
+Affected suites passed: resource claims 100 cases, ancestry 12, summary contract
+11, chain adapters 12 and environment isolation 45. The latter covers background
+PID identity, nonzero background replay, completion order, channel separation
+and four-backtick guard coverage. Removing exec caused the PID assertion to
+fail; removing shared replay caused the diagnostic assertion to fail. Both
+restored controls passed. Evidence: `integration-plants.eU6w64/` under the
+validation directory. Build regenerated no changed mirrors.
+
+The first hostile integration run stopped at Prettier on the new negative guard
+data document. Its disposable caller remained unchanged. The data formatting
+was corrected before repeating validation. Existing review counts carry on;
+neither completed loop was restarted by the merge.
