@@ -151,3 +151,13 @@ The fresh `make test-all` ran alone after all runner edits and plants ended. It 
 The repository `check-versions` procedure was repeated after fetching `origin/main`: comparison merge base remains `4b473c00e6ad3bb935f204eb7807aaa554b91c57`. No plugin content directory changed. All 60 plugins have catalog coverage and valid manifest-owned versions, and every present Codex manifest matches. No bump is needed.
 
 Tidy will use backup branch `fix/577-scrut-zero-testcases-pre-tidy`, rebuild from that merge base as signed implementation, test and documentation commits, then require an exact-tree comparison against the backup. The measured tidy result and PR/CI state will be reported outside this tree so the tidy preserves the linted and tested content. No additional code review round ran after the explicitly authorized syntax-only rewrite.
+
+## Publication and base-update gate
+
+Exact-tree tidy passed against `fix/577-scrut-zero-testcases-pre-tidy`. The published history contains three valid signed commits: `5ad91042` (implementation), `06b4cbd8` (tests), and `2c695270` (documentation). The worktree was clean and the pushed tree exactly matched the backup. The branch was pushed normally, with no history rewrite.
+
+[Reject scrut documents without valid testcase summaries](https://github.com/cboone/agent-harness-plugins/pull/670) is open and ready for review. The stored body matches the prepared body, includes the accepted parser span and external-workflow follow-up, and GitHub recognizes its closing reference to the issue.
+
+GitHub reports `CONFLICTING` / `DIRTY` against `main` at `fec4708b`, after the background-watch work in repository PR 668 merged. No PR CI run has started. A non-mutating `git merge-tree --write-tree HEAD origin/main` found one conflict, `.github/workflows/ci.yml`; Makefile auto-merges. The concrete resolution preserves the checked-runner CI job and adds the incoming `MONITOR_SKILL_FILE` and `WATCH_CHANGES_STUB_BIN` environment registrations. Prepared patch: `/tmp/577-ci-conflict-resolution.patch`. No runner or fallback change is required.
+
+TOOLING received the base-update gate request through the worker mailbox. No merge or rebase has begun. Pending authorization: signed merge of `origin/main`, the two-entry CI resolution, affected/full checks and version confirmation, push and green CI. Pushed history must remain intact. This gate request concerns the base update, not the already accepted parser exception. TOOLING retains responsibility for merging the PR.
