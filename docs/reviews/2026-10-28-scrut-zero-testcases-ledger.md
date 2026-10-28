@@ -19,7 +19,7 @@ The local test target uses the runner. The update target verifies documents afte
 
 - Corepack Yarn immutable installation: passed.
 - Targeted runner document: 24 testcases passed.
-- Final `make test-all`: exit 0, all 40 scrut documents passed; lint and validation passed.
+- Final merged `make test-all`: exit 0, all 41 scrut documents passed; lint and validation passed.
 - Focused review: clean at Important; structural review ended with behavior-preserving fixes.
 - Semgrep: zero findings with TOOLING’s explicit exception for the sole special-parameter-default span, recorded below.
 - Final version check: all 60 catalog entries/manifests valid; no plugin content-directory changes or version bumps needed.
@@ -168,10 +168,16 @@ TOOLING explicitly opened the base-update gate: merge `origin/main` with a signe
 
 The only conflict was `.github/workflows/ci.yml`. It was resolved by retaining the checked-runner job and adding main’s `MONITOR_SKILL_FILE` and `WATCH_CHANGES_STUB_BIN` registrations with identical values. A comparison of every incoming literal environment registration against the resolved mapping confirmed none were lost or changed. Makefile auto-merged its matching registrations and watch-test unset variables. There was no runner conflict or design choice. No rebase or force push was used. The runner blob is unchanged by this merge.
 
-Signed merge commit `c1973325` has both expected parents and a valid signature. The runner blob is identical to the first parent. Post-merge runner coverage passed 24/24. Version confirmation against new merge base `fec4708b738f3e30a76ffcc0e20957166fc3d724` passed for all 60 plugins, with no plugin content-directory changes or needed bumps. The full merged suite is pending.
+Signed merge commit `c1973325` has both expected parents and a valid signature. The runner blob is identical to the first parent. Post-merge runner coverage passed 24/24. Version confirmation against new merge base `fec4708b738f3e30a76ffcc0e20957166fc3d724` passed for all 60 plugins, with no plugin content-directory changes or needed bumps. The fresh merged full suite subsequently passed all 41 documents, as recorded below.
 
 ### Post-merge baseline validation
 
 A fresh disposable shared clone of `c1973325` was scanned against the actual new merge base `fec4708b738f3e30a76ffcc0e20957166fc3d724`, with `SEMGREP_REPO_NAME=cboone/agent-harness-plugins`, `--config auto`, baseline mode, JSON output and no metrics override. Exit 0, zero findings, 85 rules on 7 files. Exactly one parser error remains: the previously accepted `bin/run-scrut-documents:80`, columns 14–16, special-parameter-default span. No new span appeared, and the runner has not changed. The existing explicit exception therefore still applies. Captures remain at `/var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T/scrut-577-semgrep-merged.q3xXiK/result.json` and `scan.log`. The disposable clone was removed after inspection.
 
-The fresh merged `make test-all` will run alone on 41 documents, including main’s new watch coverage. Pushed history remains intact; no second tidy or history rewrite will be performed after publication.
+The fresh merged `make test-all` ran alone on 41 documents, including main’s new watch coverage. Pushed history remains intact; no second tidy or history rewrite will be performed after publication.
+
+### Post-merge full-suite result
+
+The requested fresh standalone `make test-all` exited 0. All 41 scrut documents passed, including the runner’s 24 cases and the incoming watch document’s 63 cases. Lint, formatting, workflow, JSON and plugin validation all passed in that run. No code edits, tests or reviews ran concurrently. Log: `/tmp/577-test-all-merged.log`.
+
+Only this result record changed after the successful run, and its Markdown checks passed before committing. The signed main merge and later record commits will be pushed normally, retaining the published history. The PR body will be updated to the 41-document result and the actual post-merge scan baseline. CI state will be reported through the PR and worker mailbox without changing the tested code tree again.
