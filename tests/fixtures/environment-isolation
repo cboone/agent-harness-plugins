@@ -1,0 +1,219 @@
+#!/usr/bin/env bash
+# Runs fixtures and the validation gate with hostile caller settings.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+
+function main() {
+  local scenario="${1}" root output=''
+  root="$(mktemp -d "${TMPDIR:-/tmp}/environment-isolation.XXXXXX")"
+  readonly ISOLATION_TEST_ROOT="${root}"
+  trap 'rm -r "${ISOLATION_TEST_ROOT}"' EXIT
+
+  case "${scenario}" in
+    git-maintenance)
+      # shellcheck disable=SC2016 # REPO_ROOT expands in the child shell.
+      capture_child output -- env GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=maintenance.autoDetach GIT_CONFIG_VALUE_0=true \
+        GIT_CONFIG_KEY_1=gc.autoDetach GIT_CONFIG_VALUE_1=true \
+        bash -c 'set -euo pipefail; source "${REPO_ROOT}/bin/lib/git-environment.bash"; git config --bool --get maintenance.autoDetach; git config --bool --get gc.autoDetach'
+      ;;
+    scrut-persistence)
+      capture_child output -- env GIT_DIR="${root}/caller-git-dir" CODEX_REFERENCE_CONTEXT_WINDOW=1 \
+        CODEX_ENABLED_SKILL_PERCENT=101 CODEX_OTHER_SKILL_RESERVE_TOKENS=999999999 \
+        "${REPO_ROOT}/bin/run-scrut" --shell bash test "${REPO_ROOT}/tests/data/environment-isolation/persistence.md"
+      ;;
+    guard-missing-reset | guard-new-consumer | guard-late-reset | guard-indirect | guard-registered | guard-scrut-runner | guard-scrut-update | guard-scrut-ci | guard-scrut-ci-reusable | guard-scrut-new | guard-wrapper-reset | guard-capture | guard-stderr | guard-capture-library | guard-git-namespace)
+      mkdir "${root}/tree"
+      cp -R "${REPO_ROOT}/bin" "${REPO_ROOT}/plugins" "${REPO_ROOT}/tests" "${REPO_ROOT}/.github" "${root}/tree/"
+      cp "${REPO_ROOT}/Makefile" "${root}/tree/Makefile"
+      if [[ "${scenario}" == guard-missing-reset ]]; then
+        perl -ni -e 'print unless /^source .*git-environment[.]bash/' "${root}/tree/tests/fixtures/review-corpus-fixture"
+      elif [[ "${scenario}" == guard-capture || "${scenario}" == guard-stderr ]]; then
+        local template=unguarded-capture.bash
+        [[ "${scenario}" != guard-stderr ]] || template=unguarded-stderr.bash
+        cp "${REPO_ROOT}/tests/data/environment-isolation/${template}" "${root}/tree/tests/fixtures/new-capture-consumer"
+      elif [[ "${scenario}" == guard-capture-library ]]; then
+        cp "${REPO_ROOT}/tests/data/environment-isolation/unguarded-capture.bash" "${root}/tree/bin/lib/new-capture.bash"
+      elif [[ "${scenario}" == guard-git-namespace ]]; then
+        perl -pi -e 's/WORKTREE_GIT_STUB_BIN/GIT_WORKTREE_STUB_BIN/g' "${root}/tree/Makefile"
+      elif [[ "${scenario}" == guard-wrapper-reset ]]; then
+        perl -ni -e 'print unless /^source .*git-environment[.]bash/' "${root}/tree/bin/run-scrut"
+      elif [[ "${scenario}" == guard-scrut-runner ]]; then
+        perl -pi -e 's/"\$\{RUN_SCRUT_WRAPPER\}"/scrut/g' "${root}/tree/bin/run-scrut-documents"
+      elif [[ "${scenario}" == guard-scrut-update ]]; then
+        perl -pi -e 's/bin\/run-scrut --shell bash update/scrut --shell bash update/' "${root}/tree/Makefile"
+      elif [[ "${scenario}" == guard-scrut-ci ]]; then
+        perl -pi -e 's/run: make test-scrut.*/run: scrut --shell bash test sample.md/' "${root}/tree/.github/workflows/ci.yml"
+      elif [[ "${scenario}" == guard-scrut-ci-reusable ]]; then
+        printf '%s\n' '  unwrapped-scrut:' \
+          '    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@3c9adb5a8b166444d3c0e3fe606d55f0dc7ac726 # v5.0.0' \
+          >> "${root}/tree/.github/workflows/ci.yml"
+      elif [[ "${scenario}" == guard-scrut-new ]]; then
+        printf '%s\n' '#!/usr/bin/env bash' 'scrut --shell bash test sample.md' > "${root}/tree/tests/fixtures/new-scrut-consumer"
+      elif [[ "${scenario}" == guard-indirect ]]; then
+        # Keep the generated caller variables literal for the guard to inspect.
+        # shellcheck disable=SC2016
+        printf '%s\n' '#!/usr/bin/env bash' '"${REPO_ROOT}/tests/fixtures/review-corpus-fixture"' > "${root}/tree/tests/fixtures/new-corpus-wrapper"
+      elif [[ "${scenario}" == guard-registered ]]; then
+        # shellcheck disable=SC2016
+        printf '%s\n' '# Registered corpus consumer' '```scrut' '$ "${REVIEW_CORPUS_FIXTURE_BIN}"' '```' > "${root}/tree/tests/scrut/new-corpus-consumer.md"
+      else
+        printf '#!/usr/bin/env bash\ngit status\n' > "${root}/tree/tests/fixtures/new-git-consumer"
+        if [[ "${scenario}" == guard-late-reset ]]; then
+          printf 'source "%s/bin/lib/git-environment.bash"\n' "${REPO_ROOT}" >> "${root}/tree/tests/fixtures/new-git-consumer"
+        fi
+      fi
+      "${REPO_ROOT}/bin/check-fixture-environments" "${root}/tree"
+      return
+      ;;
+    failure-maintenance)
+      mkdir "${root}/bin"
+      cp "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" "${root}/bin/git"
+      # shellcheck disable=SC2016 # The child verifies its own tool resolution.
+      env PATH="${root}/bin:${PATH}" EXPECTED_STUB="${root}/bin/git" \
+        HELPER="${REPO_ROOT}/tests/fixtures/environment-isolation" \
+        bash -c '[[ "$(command -v git)" == "${EXPECTED_STUB}" ]] || exit 2; exec "${HELPER}" git-maintenance'
+      return
+      ;;
+    capture-forward-failure)
+      capture_child - --stdout - -- bash -c 'printf "child stdout\n"; printf "child stderr\n" >&2; exit 7'
+      ;;
+    capture-readonly | capture-readonly-failure)
+      local captured=preserved
+      # shellcheck disable=SC2034 # The helper accesses this destination by name.
+      readonly captured
+      if [[ "${scenario}" == capture-readonly ]]; then
+        capture_child captured -- printf value
+      else
+        capture_child captured -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub"
+      fi
+      ;;
+    capture-replace-failure)
+      # shellcheck disable=SC2016 # The child expands its positional argument.
+      capture_child - --replace "${root}/path[1]" '<path>' -- bash -c 'printf "failure %s\n" "$1" >&2; exit 7' probe "${root}/path[1]"
+      ;;
+    failure-catalog | failure-budget)
+      mkdir -p "${root}/failed-repo/tests/fixtures" "${root}/failed-repo/bin/lib"
+      cp "${REPO_ROOT}/bin/lib/git-environment.bash" "${REPO_ROOT}/bin/lib/capture-child.bash" "${root}/failed-repo/bin/lib/"
+      local child_scenario child_name
+      if [[ "${scenario}" == failure-catalog ]]; then
+        child_scenario=catalog-commit
+        child_name=catalog-release-fixture
+      else
+        child_scenario=fixture-budget
+        child_name=validate-plugin-fixture
+      fi
+      cp "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" "${root}/failed-repo/tests/fixtures/${child_name}"
+      env REPO_ROOT="${root}/failed-repo" "${REPO_ROOT}/tests/fixtures/environment-isolation" "${child_scenario}"
+      return
+      ;;
+    fixture-paths)
+      mkdir -p "${root}/paths/dist" "${root}/paths/checklists"
+      jq '.metadata.description = "caller catalog"' "${REPO_ROOT}/.claude-plugin/marketplace.json" > "${root}/paths/source.json"
+      printf 'preserved\n' > "${root}/paths/marketplace.json"
+      printf 'preserved\n' > "${root}/paths/dist/sample"
+      printf 'preserved\n' > "${root}/paths/checklists/sample"
+      find "${root}/paths" -type f -exec cksum {} + | sort > "${root}/before"
+      capture_child output -- env CLAUDE_MARKETPLACE="${root}/paths/source.json" CODEX_MARKETPLACE="${root}/paths/marketplace.json" \
+        CODEX_DIST_DIR="${root}/paths/dist" CODEX_DIST_LABEL=caller-dist REVIEW_CHECKLISTS_DIR="${root}/paths/checklists" \
+        "${REPO_ROOT}/tests/fixtures/validate-plugin-fixture" valid
+      find "${root}/paths" -type f -exec cksum {} + | sort > "${root}/after"
+      cmp "${root}/before" "${root}/after"
+      output+=$'\ngenerator-paths-unchanged=true'
+      ;;
+    outer-git-dir | outer-git-dir-mutated)
+      git init --quiet --template= "${root}/caller"
+      printf 'preserved\n' > "${root}/caller/sample"
+      git -C "${root}/caller" add sample
+      git -C "${root}/caller" -c user.name=Fixture -c user.email=fixture@example.invalid commit --quiet -m sample
+      find "${root}/caller" -type f -exec cksum {} + | sort > "${root}/before"
+      export GIT_DIR="${root}/caller/.git"
+      capture_child output -- "${REPO_ROOT:?}/tests/fixtures/environment-isolation" corpus-hooks
+      if [[ "${scenario}" == outer-git-dir-mutated ]]; then
+        printf 'changed\n' > "${root}/caller/sample"
+      fi
+      find "${root}/caller" -type f -exec cksum {} + | sort > "${root}/after"
+      if ! cmp -s "${root}/before" "${root}/after"; then
+        echo 'caller repository changed'
+        return 1
+      fi
+      output+=$'\ncaller-repository-unchanged=true'
+      ;;
+    catalog-commit | catalog-tag | catalog-command-config | catalog-config-file)
+      printf '[user]\n signingkey = unusable-fixture-key\n[gpg]\n program = /usr/bin/false\n' > "${root}/gitconfig"
+      if [[ "${scenario}" == catalog-config-file ]]; then
+        printf '[sample]\n value = preserved\n' > "${root}/caller-gitconfig"
+        cp "${root}/caller-gitconfig" "${root}/expected-gitconfig"
+        export GIT_CONFIG="${root}/caller-gitconfig"
+      elif [[ "${scenario}" == catalog-command-config ]]; then
+        export GIT_CONFIG_COUNT=3
+        export GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=true
+        export GIT_CONFIG_KEY_1=user.signingkey GIT_CONFIG_VALUE_1=unusable-fixture-key
+        export GIT_CONFIG_KEY_2=gpg.program GIT_CONFIG_VALUE_2=/usr/bin/false
+      elif [[ "${scenario}" == catalog-commit ]]; then
+        printf '[commit]\n gpgsign = true\n' >> "${root}/gitconfig"
+      else
+        printf '[tag]\n gpgSign = true\n forceSignAnnotated = true\n' >> "${root}/gitconfig"
+      fi
+      export GIT_CONFIG_GLOBAL="${root}/gitconfig" GIT_CONFIG_SYSTEM="${root}/gitconfig"
+      export GIT_CONFIG_NOSYSTEM=0
+      capture_child output -- "${REPO_ROOT:?}/tests/fixtures/catalog-release-fixture" plugin-change
+      if [[ "${scenario}" == catalog-config-file ]]; then
+        cmp "${root}/expected-gitconfig" "${root}/caller-gitconfig"
+      fi
+      ;;
+    corpus-hooks | corpus-template)
+      mkdir "${root}/hooks"
+      printf '#!/usr/bin/env bash\nexit 1\n' > "${root}/hooks/pre-commit"
+      chmod +x "${root}/hooks/pre-commit"
+      if [[ "${scenario}" == corpus-hooks ]]; then
+        printf '[core]\n hooksPath = %s\n' "${root}/hooks" > "${root}/gitconfig"
+      else
+        : > "${root}/gitconfig"
+        mkdir "${root}/template"
+        cp -R "${root}/hooks" "${root}/template/hooks"
+        export GIT_TEMPLATE_DIR="${root}/template"
+      fi
+      export GIT_CONFIG_GLOBAL="${root}/gitconfig" GIT_CONFIG_SYSTEM="${root}/gitconfig"
+      export TMPDIR="${root}"
+      local corpus_root
+      corpus_root="$("${REPO_ROOT:?}/tests/fixtures/review-corpus-fixture")"
+      if [[ "$(git -C "${corpus_root}/corpus" rev-parse --absolute-git-dir)" != "$(cd "${corpus_root}/corpus/.git" && pwd -P)" ]]; then
+        echo 'corpus used the caller Git directory' >&2
+        return 1
+      fi
+      git -C "${corpus_root}/corpus" rev-parse --verify HEAD > /dev/null
+      output='corpus-created=true'
+      ;;
+    validate-context | validate-percent | validate-reserve | fixture-budget)
+      # Each gate case changes one setting, so dropping any one unset fails.
+      unset CODEX_REFERENCE_CONTEXT_WINDOW CODEX_ENABLED_SKILL_PERCENT CODEX_OTHER_SKILL_RESERVE_TOKENS
+      case "${scenario}" in
+        validate-context) export CODEX_REFERENCE_CONTEXT_WINDOW=1 ;;
+        validate-percent) export CODEX_ENABLED_SKILL_PERCENT=101 ;;
+        validate-reserve) export CODEX_OTHER_SKILL_RESERVE_TOKENS=999999999 ;;
+        fixture-budget)
+          export CODEX_REFERENCE_CONTEXT_WINDOW=1 CODEX_ENABLED_SKILL_PERCENT=101
+          export CODEX_OTHER_SKILL_RESERVE_TOKENS=999999999
+          ;;
+        *) return 2 ;;
+      esac
+      if [[ "${scenario}" == fixture-budget ]]; then
+        capture_child output -- "${REPO_ROOT:?}/tests/fixtures/validate-plugin-fixture" valid
+      else
+        capture_child output -- make --no-print-directory -C "${REPO_ROOT:?}" validate
+      fi
+      ;;
+    *)
+      echo "Unknown scenario: ${scenario}" >&2
+      return 2
+      ;;
+  esac
+  printf '%s\n' "${output}"
+}
+
+main "$@"

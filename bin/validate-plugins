@@ -2,6 +2,9 @@
 # Validates plugin structure and marketplace consistency.
 set -euo pipefail
 
+# shellcheck source=bin/lib/capture-child.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/capture-child.bash"
+
 MARKETPLACE=".claude-plugin/marketplace.json"
 CODEX_MARKETPLACE=".agents/plugins/marketplace.json"
 CODEX_DIST_DIR="dist/codex"
@@ -829,15 +832,11 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
 done
 
 # ─── 19. Skill cross-references resolve ─────────────────────────────────────
-# bin/check-cross-references owns the path and skill-name checks and emits its
-# own ::error:: and ::warning:: annotations, so its findings are relayed and
-# counted rather than re-derived here. It is a separate script so it can be
-# exercised on its own against the fixture trees in tests/scrut/. A passing run
-# still relays its warnings, which would otherwise be discarded with its
-# success line.
+# Relay bin/check-cross-references annotations and count ::error:: findings.
+# Preserve ::warning:: annotations even when the child succeeds.
 
-if ! cross_reference_output="$(bin/check-cross-references 2>&1)"; then
-  printf '%s\n' "${cross_reference_output}"
+cross_reference_output=''
+if ! capture_child cross_reference_output -- bin/check-cross-references; then
   cross_reference_errors="$(grep -c '^::error::' <<< "${cross_reference_output}" || true)"
   if [[ "${cross_reference_errors}" -gt 0 ]]; then
     errors=$((errors + cross_reference_errors))
@@ -866,8 +865,7 @@ function validate_review_checklists() {
   local expected_dir output relayed expected committed name
 
   expected_dir="$(mktemp -d "${TMPDIR:-/tmp}/review-checklists.XXXXXX")"
-  if ! output="$(env REVIEW_CHECKLISTS_DIR="${expected_dir}" bin/build-review-checklists 2>&1)"; then
-    printf '%s\n' "${output}"
+  if ! capture_child output -- env REVIEW_CHECKLISTS_DIR="${expected_dir}" bin/build-review-checklists; then
     relayed="$(grep -c '^::error::' <<< "${output}" || true)"
     if [[ "${relayed}" -gt 0 ]]; then
       errors=$((errors + relayed))
@@ -1033,8 +1031,8 @@ done
 # Each copy bin/build-shared-references writes must match its source byte for
 # byte; a hand-edited copy or an unbuilt source gives two skills different rules.
 
-if ! shared_reference_output="$(bin/build-shared-references --check 2>&1)"; then
-  printf '%s\n' "${shared_reference_output}"
+shared_reference_output=''
+if ! capture_child shared_reference_output -- bin/build-shared-references --check; then
   shared_reference_errors="$(grep -c '^::error::' <<< "${shared_reference_output}" || true)"
   if [[ "${shared_reference_errors}" -gt 0 ]]; then
     errors=$((errors + shared_reference_errors))

@@ -15,7 +15,12 @@ untracked symlink. Cases that change the tree run in a copy of it.
 ## Setup
 
 ```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
+```scrut {fail_fast: true}
 $ fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && unset CODEX_STUB_MODES CODEX_STUB_SENTINEL \
 >   && mkdir "${fixture}/bin" "${fixture}/out" "${fixture}/log" \
 >   && ln -s "${CODEX_STUB_BIN}" "${fixture}/bin/codex" \
 >   && export PATH="${fixture}/bin:${PATH}" FIXTURE="${fixture}" CODEX_STUB_LOG_DIR="${fixture}/log" \

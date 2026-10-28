@@ -23,6 +23,10 @@ its first line without a trailing backslash, so that command does not count for
 it. The third sets another approval policy, and the fourth, which starts with
 `if !`, holds both settings only in its prompt.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" unpinned-codex-exec 2>&1
 Codex skill inventory: * (glob)

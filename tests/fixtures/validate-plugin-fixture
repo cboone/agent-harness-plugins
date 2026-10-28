@@ -2,6 +2,9 @@
 # Runs bin/validate-plugins against a disposable copy with one targeted mutation.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
 FIXTURE_ROOT=""
 
 function cleanup() {
@@ -185,6 +188,20 @@ function fail_rule23_call() {
 
 function main() {
   local scenario="${1}"
+  unset CLAUDE_MARKETPLACE CODEX_MARKETPLACE CODEX_DIST_DIR CODEX_DIST_LABEL REVIEW_CHECKLISTS_DIR
+  shift
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --context-window) export CODEX_REFERENCE_CONTEXT_WINDOW="${2?Missing context window}" ;;
+      --enabled-percent) export CODEX_ENABLED_SKILL_PERCENT="${2?Missing enabled percentage}" ;;
+      --reserve-tokens) export CODEX_OTHER_SKILL_RESERVE_TOKENS="${2?Missing reserve tokens}" ;;
+      *)
+        echo "Unknown fixture option: ${1}" >&2
+        return 2
+        ;;
+    esac
+    shift 2
+  done
   FIXTURE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
   trap cleanup EXIT
 

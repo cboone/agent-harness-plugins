@@ -6,6 +6,10 @@ rendered page, and compares two syncs.
 
 ## Valid data passes validation
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ "${REPORT_BOARD_BIN}" validate "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" 2>&1
 report-board: */backlog-triage.json is valid: 7 issues in 3 lanes (glob)

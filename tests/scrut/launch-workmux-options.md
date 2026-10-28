@@ -4,6 +4,10 @@ Tests for config and agent forwarding and validation.
 
 ## Test helpers
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ function prepare_stubs() {
 >   unset TMUX TMUX_TMPDIR WORKMUX_TMUX WORKMUX_TERM
@@ -11,7 +15,7 @@ $ function prepare_stubs() {
 >   stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux"
 >   cp "${TMUX_STUB_BIN}" "${stub_dir}/tmux"
->   cp "${GIT_WORKTREE_STUB_BIN}" "${stub_dir}/git"
+>   cp "${WORKTREE_GIT_STUB_BIN}" "${stub_dir}/git"
 >   chmod +x "${stub_dir}/workmux" "${stub_dir}/tmux" "${stub_dir}/git"
 >   local tool
 >   for tool in workmux tmux git; do

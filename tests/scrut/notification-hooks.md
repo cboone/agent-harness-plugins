@@ -5,6 +5,10 @@
 Load both hook manifests and execute every command against a local notify stub.
 The stub prints its arguments and sends no notifications.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && root="${work}/plugin with spaces" && mkdir -p "${root}/scripts" \

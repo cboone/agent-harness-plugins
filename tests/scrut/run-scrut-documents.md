@@ -18,6 +18,10 @@ worker or stays running until signalled.
 
 ## Help
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ "${RUN_SCRUT_DOCUMENTS_BIN}" --help
 Usage: run-scrut-documents [PATH]

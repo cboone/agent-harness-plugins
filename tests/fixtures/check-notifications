@@ -4,6 +4,12 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+
 # Transcript helpers append one Claude Code record to the file in $1.
 # Appends a prompt, with the extra fields in optional JSON $2.
 function transcript_prompt() {
@@ -289,23 +295,21 @@ function tier_scenario() {
       ;;
     tier-explain-errors)
       local status=0
-      explain "${dir}/missing.jsonl" > "${dir}/explain.out" 2>&1 || status=$?
-      sed "s|${dir}|<dir>|g" "${dir}/explain.out"
+      capture_child - --replace "${dir}" '<dir>' --replay-stdout -- explain "${dir}/missing.jsonl" || status=$?
       echo "exit ${status}"
       mkdir -p "${dir}/claude/projects/sample-project"
       jq -nc '{type: "agent-name", agentName: "LOOKUP"}' > "${dir}/claude/projects/sample-project/unreadable.jsonl"
       chmod 000 "${dir}/claude/projects/sample-project/unreadable.jsonl"
       for session in absent unreadable 'bad/../id'; do
         status=0
-        CLAUDE_CODE_SESSION_ID="${session}" CLAUDE_CONFIG_DIR="${dir}/claude" explain > "${dir}/explain.out" 2>&1 || status=$?
-        sed "s|${dir}|<dir>|g" "${dir}/explain.out"
+        CLAUDE_CODE_SESSION_ID="${session}" CLAUDE_CONFIG_DIR="${dir}/claude" \
+          capture_child - --replace "${dir}" '<dir>' --replay-stdout -- explain || status=$?
         echo "exit ${status}"
       done
       status=0
       mkdir -p "${XDG_CONFIG_HOME}/agent-harness-notify/tiers"
       status=0
-      explain > "${dir}/explain.out" 2>&1 || status=$?
-      sed "s|${dir}|<dir>|g" "${dir}/explain.out"
+      capture_child - --replace "${dir}" '<dir>' --replay-stdout -- explain || status=$?
       echo "exit ${status}"
       ;;
     tier-rules-dir)

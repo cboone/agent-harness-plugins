@@ -4,9 +4,9 @@ SCRUT_TEST_DIR := tests/scrut/
 # not depend on the developer's shell; every testcase that needs one sets it
 # explicitly on its own env line. See issue #330.
 #
-# This list is maintained by hand: add an entry whenever a launcher script or a
-# fixture under tests/fixtures/ starts reading a new variable, or the suite
-# silently becomes sensitive to the developer's environment again.
+# Git and Codex budget inputs belong in bin/lib/git-environment.bash; run-scrut
+# clears them before Scrut starts. Add other ambient inputs to this list when
+# a launcher script or fixture starts reading them.
 SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u WORKMUX_LAUNCH_WAIT_SECONDS -u WORKMUX_LAUNCH_TIMEOUT_SECONDS \
 	-u WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS \
@@ -19,7 +19,8 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
 	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR \
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
-	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT -u CODEX_OTHER_SKILL_RESERVE_TOKENS \
+	-u CLAUDE_MARKETPLACE -u CODEX_MARKETPLACE -u CODEX_DIST_DIR -u CODEX_DIST_LABEL \
+	-u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
@@ -29,8 +30,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from
-# drifting apart, and .github/workflows/ci.yml passes the same list to the
-# reusable scrut workflow.
+# drifting apart. CI invokes these targets and uses this same environment.
 SCRUT_ENV := \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
 	ATTENTION_LOG_BIN="$(CURDIR)/plugins/attention-log/scripts/attention-log" \
@@ -53,12 +53,14 @@ SCRUT_ENV := \
 	COPILOT_GH_DATA_DIR="$(CURDIR)/tests/data/copilot-gh" \
 	CROSS_REFERENCE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/cross-reference-fixture" \
 	CATALOG_RELEASE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/catalog-release-fixture" \
+	ENVIRONMENT_ISOLATION_BIN="$(CURDIR)/tests/fixtures/environment-isolation" \
+	CHECK_FIXTURE_ENVIRONMENTS_BIN="$(CURDIR)/bin/check-fixture-environments" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \
 	LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/workmux/scripts/launch-workmux" \
 	DEPENDABOT_PRS_BIN="$(CURDIR)/plugins/dependabot/scripts/dependabot-prs" \
 	DEPENDABOT_PRS_DATA_DIR="$(CURDIR)/tests/data/dependabot-prs" \
 	GH_STUB_BIN="$(CURDIR)/tests/fixtures/gh-stub" \
-	GIT_WORKTREE_STUB_BIN="$(CURDIR)/tests/fixtures/git-worktree-stub" \
+	WORKTREE_GIT_STUB_BIN="$(CURDIR)/tests/fixtures/git-worktree-stub" \
 	MANAGE_RESOURCE_CLAIMS_BIN="$(CURDIR)/plugins/workmux/scripts/manage-resource-claims" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
@@ -84,9 +86,8 @@ SCRUT_ENV := \
 	CODEX_LAUNCH_CANCEL_ENV="$(CURDIR)/tests/fixtures/codex-launch-cancel.bash" \
 	RESULT_CHECK_JQ="$(CURDIR)/plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq" \
 	RUN_SCRUT_DOCUMENTS_BIN="$(CURDIR)/bin/run-scrut-documents" \
+	RUN_SCRUT_BIN="$(CURDIR)/bin/run-scrut" \
 	SCRUT_STUB_BIN="$(CURDIR)/tests/fixtures/scrut-stub" \
-	GIT_CONFIG_GLOBAL=/dev/null \
-	GIT_CONFIG_SYSTEM=/dev/null \
 	TMUX_STUB_BIN="$(CURDIR)/tests/fixtures/tmux-stub" \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
 	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub" \
@@ -135,7 +136,9 @@ format:
 
 validate:
 	bin/validate-json
-	bin/validate-plugins
+	bin/check-fixture-environments
+	env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
+		-u CODEX_OTHER_SKILL_RESERVE_TOKENS -u CLAUDE_MARKETPLACE bin/validate-plugins
 
 # Deliberately outside validate and test-all. The corpus lives in a separate
 # repository, so it is absent on most checkouts and in CI, and a merge gate that
@@ -158,6 +161,6 @@ test-scrut:
 # stream to review.
 test-scrut-update:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
-	env $(SCRUT_UNSET) $(SCRUT_ENV) scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"
+	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"
 
 test-all: lint validate test-scrut
