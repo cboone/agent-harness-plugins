@@ -414,3 +414,9 @@ All five standalone read-only aspects completed with exit 0, valid schema/nonemp
 | important: historical child-guidance documentation (comments)    | Important, shipped reference does not state that known limitation       | Record with follow-up 674; PR body discloses the follow-up                 | No edits     |
 
 No Critical finding and no behavior changes. Focused round ends **clean at Critical**, with the Important findings explicitly retained. No further round is launched. The narrow checker change received no additional finding. Fresh baseline Semgrep and integrated final checks follow before the non-force push.
+
+## Fresh merged-tree Semgrep baseline
+
+Semgrep 1.180.0 completed with exit 0 and zero findings against merge base a2e56c535ed6326cc8d531d945fbb6c627a9b335, in disposable shared clone /tmp/523-semgrep-merged.zsnrt0py/repo of e7d6dc59. Command: SEMGREP_REPO_NAME=cboone/agent-harness-plugins semgrep scan --config auto --baseline-commit a2e56c535ed6326cc8d531d945fbb6c627a9b335 --json --output /tmp/523-semgrep-merged.zsnrt0py/results.json. No metrics suppression, exclusions or full-scan substitute.
+
+The scan ran 131 rules on 57 files and parsed approximately **77.3 percent** of lines. PartialParsing affects only shell files: bin/build-shared-references (58-59 and 78-79) and plugins/review-pr-with-codex/scripts/codex-aspects (body from line 3). Targeted ShellCheck passed on both with exit 0. No other parsing error was reported. The scan counts under the explicit shell-only partial-parsing rule, with incomplete shell parse coverage disclosed. Concise diagnostics are merged-semgrep-diagnostics.json beside this ledger; full output/log remains in the disposable scan directory. Integrated lint-and-fix --no-push, make test-all and version checks follow. Pushed history remains intact; no further tidy rewrite is performed.
