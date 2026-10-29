@@ -5,6 +5,10 @@ in two plugins read into the plugin that does not hold its source. Each
 testcase runs in a throwaway tree holding every source path, so
 the script's own list of copies applies unchanged.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ function tree() {
 >   local root

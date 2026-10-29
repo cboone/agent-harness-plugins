@@ -331,3 +331,21 @@ $ "${ENVIRONMENT_ISOLATION_BIN}" fixture-budget
 Codex skill inventory: * (glob)
 All plugin validations passed.
 ```
+
+## Shared-reference copy data does not imply execution
+
+```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" guard-copy-only
+All Git consumers reset their fixture environment.
+```
+
+## Executing a copied Git consumer still requires a reset
+
+```scrut
+$ set -o pipefail && "${ENVIRONMENT_ISOLATION_BIN}" guard-copy-execution | sort
+bin/build-review-checklists: source bin/lib/git-environment.bash before Git consumers
+bin/build-shared-references: source bin/lib/git-environment.bash before Git consumers
+bin/validate-plugins: source bin/lib/git-environment.bash before Git consumers
+tests/scrut/build-review-checklists.md: source bin/lib/git-environment.bash before Git consumers
+[1]
+```
