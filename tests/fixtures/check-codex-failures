@@ -1,0 +1,268 @@
+#!/usr/bin/env bash
+# check-codex-failures -- Exercise rollout delivery with committed alert stubs.
+set -euo pipefail
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+CHILD_PID=""
+OTHER_PID=""
+
+function cleanup() {
+  local pid
+  for pid in "${CHILD_PID}" "${OTHER_PID}"; do
+    [[ -n "${pid}" ]] || continue
+    kill "${pid}" 2> /dev/null || true
+    wait "${pid}" 2> /dev/null || true
+  done
+  rm -r "${CASE_DIR}"
+}
+
+function count_is() {
+  [[ "$(wc -l < "${ROLLOUT_ALERTS}" | tr -d ' ')" == "${1}" ]]
+}
+
+function await_count() {
+  local attempt
+  for attempt in {1..150}; do
+    if count_is "${1}"; then return; fi
+    sleep 0.02
+  done
+  echo 'Expected alert count was not reached' >&2
+  return 1
+}
+
+function run_case() {
+  /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout "${DATA}/${1}.jsonl" --once \
+    --cwd "${CASE_DIR}" --session-name MONITOR --tmux-session atlas --tmux-window 'w sample' "${@:2}"
+}
+
+function await_delivery() {
+  local attempt
+  for attempt in {1..150}; do
+    if ! pgrep -f -- "${CASE_DIR}/plugin/scripts/notify" > /dev/null; then return; fi
+    sleep 0.02
+  done
+  return 1
+}
+
+function main() {
+  local scenario="${1}" stub_dir
+  CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-failure-test.XXXXXX")"
+  trap cleanup EXIT
+  stub_dir="${REPO_ROOT:?}/tests/fixtures/notify-rollout"
+  export PATH="${stub_dir}:${PATH}"
+  local tool
+  for tool in alerter tmux sleep wc; do
+    [[ "$(command -v "${tool}")" == "${stub_dir}/${tool}" ]] || return 1
+  done
+  export XDG_CACHE_HOME="${CASE_DIR}/cache" XDG_CONFIG_HOME="${CASE_DIR}/config"
+  export ROLLOUT_ALERTS="${CASE_DIR}/alerts" ROLLOUT_LOOKUPS="${CASE_DIR}/lookups"
+  export ROLLOUT_READY="${CASE_DIR}/ready"
+  export TMUX_PANE='%wrong-pane' TMUX='/tmp/unrelated-server,1,0'
+  unset NOTIFY_TIER NOTIFY_SOUND_SET CLAUDE_PROJECT_DIR CLAUDE_CODE_SESSION_ID
+  unset ROLLOUT_BOUNDARY_READY ROLLOUT_BOUNDARY_RELEASE
+  unset ROLLOUT_ALERTER_STATUS
+  export ROLLOUT_ATTEMPTS="${CASE_DIR}/attempts"
+  : > "${ROLLOUT_ALERTS}"
+  : > "${ROLLOUT_LOOKUPS}"
+  DATA="${REPO_ROOT}/tests/data/codex-failure-rollouts"
+  cp -R "$(dirname "${CODEX_FAILURE_WATCHER_BIN:?}")/.." "${CASE_DIR}/plugin"
+  CODEX_FAILURE_WATCHER_BIN="${CASE_DIR}/plugin/scripts/watch-codex-failures"
+  case "${scenario}" in
+    error)
+      run_case error
+      await_count 1
+      ;;
+    refusals)
+      local policy
+      for policy in cyber_policy bio_policy misalignment_policy_violation; do
+        run_case "${policy}"
+      done
+      await_count 3
+      ;;
+    quiet)
+      run_case recovered
+      run_case approval
+      run_case subagent
+      run_case untyped
+      run_case error
+      await_count 1
+      ;;
+    metadata)
+      run_case untyped-objects
+      run_case object-error
+      await_count 1
+      ;;
+    duplicates)
+      run_case duplicate
+      run_case duplicate
+      await_count 2
+      ;;
+    threads)
+      run_case error
+      run_case other-thread
+      await_count 2
+      ;;
+    concurrent)
+      run_case error &
+      CHILD_PID=$!
+      run_case error &
+      OTHER_PID=$!
+      wait "${CHILD_PID}"
+      CHILD_PID=""
+      wait "${OTHER_PID}"
+      OTHER_PID=""
+      await_count 1
+      ;;
+    identity)
+      /bin/bash "${CODEX_FAILURE_WATCHER_BIN}" --rollout "${DATA}/identity.jsonl" --once \
+        --thread-id thread-fallback --cwd "${CASE_DIR}" --tmux-session atlas --tmux-window 'w fallback'
+      await_count 1
+      ;;
+    outside)
+      mkdir "${CASE_DIR}/sample-repo"
+      /bin/bash "${CODEX_FAILURE_WATCHER_BIN}" --rollout "${DATA}/error.jsonl" --once \
+        --cwd "${CASE_DIR}/sample-repo"
+      await_count 1
+      ;;
+    directory)
+      mkdir -p "${XDG_CONFIG_HOME}/agent-harness-notify"
+      printf '%s\n' 'worker dir /unrelated-claude-context' > "${XDG_CONFIG_HOME}/agent-harness-notify/tiers"
+      export CLAUDE_PROJECT_DIR='/unrelated-claude-context'
+      run_case error
+      await_count 1
+      ;;
+    unicode)
+      LC_ALL=C.UTF-8 /bin/bash -c '[[ ÉQUIPE =~ ^[[:upper:]]+$ ]]'
+      mkdir -p "${XDG_CONFIG_HOME}/agent-harness-notify"
+      printf '%s\n' 'worker name ^[[:upper:]]+$' > "${XDG_CONFIG_HOME}/agent-harness-notify/tiers"
+      LC_ALL=C.UTF-8 run_case error --session-name ÉQUIPE
+      await_count 1
+      ;;
+    preflight)
+      local preflight_status
+      if BASH_ENV="${stub_dir}/preflight-unavailable.bash" capture_child - --replay-stdout -- run_case error; then
+        return 1
+      else
+        preflight_status=$?
+      fi
+      [[ "${preflight_status}" == 1 && ! -e "${XDG_CACHE_HOME}/agent-harness-notify/codex-failures" ]]
+      run_case error
+      await_count 1
+      ;;
+    backend-failure)
+      export ROLLOUT_ALERTER_STATUS=127
+      local backend_diagnostics replay_diagnostics
+      capture_child backend_diagnostics -- run_case error
+      capture_child replay_diagnostics -- run_case error
+      [[ -z "${replay_diagnostics}" ]]
+      [[ "$(wc -l < "${ROLLOUT_ATTEMPTS}" | tr -d ' ')" == 1 ]]
+      [[ "${backend_diagnostics}" == $'fixture backend startup failed\nnotify: alerter exited with status 127 (thread thread-sample, turn turn-sample)' ]]
+      printf '%s\n' "${backend_diagnostics}"
+      echo 'attempts: 1'
+      ;;
+    dispatch-failure)
+      cp "${stub_dir}/notify-failure" "$(dirname "${CODEX_FAILURE_WATCHER_BIN}")/notify"
+      cmp "${stub_dir}/notify-failure" "$(dirname "${CODEX_FAILURE_WATCHER_BIN}")/notify"
+      local dispatch_status dispatch_diagnostics
+      if capture_child dispatch_diagnostics -- run_case error; then return 1; else dispatch_status=$?; fi
+      [[ "${dispatch_status}" == 23 ]]
+      [[ -z "${dispatch_diagnostics}" ]]
+      if capture_child dispatch_diagnostics -- run_case error; then
+        [[ -z "${dispatch_diagnostics}" ]]
+        [[ "$(wc -l < "${ROLLOUT_ATTEMPTS}" | tr -d ' ')" == 1 ]]
+      else
+        printf 'Unexpected replay status; attempts: %s\n' "$(wc -l < "${ROLLOUT_ATTEMPTS}" | tr -d ' ')"
+        return 1
+      fi
+      printf 'first status: %s\nattempts: 1\n' "${dispatch_status}"
+      ;;
+    tiers)
+      local tier
+      mkdir -p "${XDG_CONFIG_HOME}/agent-harness-notify"
+      printf '%s\n' 'worker name MONITOR' > "${XDG_CONFIG_HOME}/agent-harness-notify/tiers"
+      for tier in untiered top lead worker; do
+        run_case error --tier "${tier}"
+        await_delivery
+        await_count 1
+        jq -r '.[index("--title")+1]' "${ROLLOUT_ALERTS}"
+        : > "${ROLLOUT_ALERTS}"
+        # Separate cache roots keep the same recorded turn independently deliverable per tier.
+        export XDG_CACHE_HOME="${CASE_DIR}/${tier}"
+      done
+      return
+      ;;
+    follow | startup | shutdown)
+      local boundary_env="" ready="${ROLLOUT_READY}"
+      cp "${DATA}/error.jsonl" "${CASE_DIR}/live.jsonl"
+      if [[ "${scenario}" == startup ]]; then
+        jq -nc '{type:"response_item",payload:{type:"message",role:"assistant",content:[{type:"output_text",text:("é" * 1000)}]}}' >> "${CASE_DIR}/live.jsonl"
+        export ROLLOUT_BOUNDARY_READY="${CASE_DIR}/boundary-ready" ROLLOUT_BOUNDARY_RELEASE="${CASE_DIR}/boundary-release"
+        ready="${ROLLOUT_BOUNDARY_READY}"
+      elif [[ "${scenario}" == shutdown ]]; then
+        boundary_env="${stub_dir}/owner-boundary.bash"
+        export ROLLOUT_OWNER_READY="${CASE_DIR}/owner-ready" ROLLOUT_OWNER_RELEASE="${CASE_DIR}/owner-release"
+        export ROLLOUT_OWNER_COUNT="${CASE_DIR}/owner-count"
+        ready="${ROLLOUT_OWNER_READY}"
+      fi
+      /bin/sleep 30 &
+      OTHER_PID=$!
+      BASH_ENV="${boundary_env}" ROLLOUT_OWNER_PID="${OTHER_PID}" \
+        /bin/bash "${CODEX_FAILURE_WATCHER_BIN}" --rollout "${CASE_DIR}/live.jsonl" \
+        --owner-pid "${OTHER_PID}" --session-name MONITOR --tmux-session atlas --tmux-window 'w sample' &
+      CHILD_PID=$!
+      # Synchronize at EOF or the captured byte boundary before appending.
+      local attempt
+      for attempt in {1..150}; do
+        if [[ -f "${ready}" ]]; then break; fi
+        sleep 0.02
+      done
+      ((attempt < 150)) || return 1
+      if [[ "${scenario}" == startup ]]; then
+        # Append after the captured boundary, before the watcher reads the old records.
+        printf '%s\n' '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"startup-turn","error":{"codex_error_info":"other","message":"Appended during startup"}}}' >> "${CASE_DIR}/live.jsonl"
+        : > "${ROLLOUT_BOUNDARY_RELEASE}"
+      elif [[ "${scenario}" == shutdown ]]; then
+        printf '%s\n' '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"shutdown-turn","error":{"codex_error_info":"other","message":"Appended at shutdown"}}}' >> "${CASE_DIR}/live.jsonl"
+        kill "${OTHER_PID}"
+        wait "${OTHER_PID}" 2> /dev/null || true
+        OTHER_PID=""
+        : > "${ROLLOUT_OWNER_RELEASE}"
+      else
+        printf '%s' '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"new-turn",' >> "${CASE_DIR}/live.jsonl"
+        sleep 0.3
+        count_is 0
+        printf '%s\n' '"error":{"codex_error_info":"other","message":"Appended error"}}}' >> "${CASE_DIR}/live.jsonl"
+      fi
+      await_count 1
+      if [[ -n "${OTHER_PID}" ]]; then
+        kill "${OTHER_PID}"
+        wait "${OTHER_PID}" 2> /dev/null || true
+        OTHER_PID=""
+      fi
+      for attempt in {1..150}; do
+        if ! kill -0 "${CHILD_PID}" 2> /dev/null; then break; fi
+        sleep 0.02
+      done
+      ((attempt < 150)) || return 1
+      wait "${CHILD_PID}"
+      CHILD_PID=""
+      ;;
+    mismatch)
+      run_case error --thread-id different-thread
+      ;;
+    *)
+      echo 'Unknown fixture scenario' >&2
+      return 1
+      ;;
+  esac
+  await_delivery
+  jq -r '[.[index("--title")+1], .[index("--subtitle")+1], .[index("--message")+1], .[index("--sound")+1]] | join(" | ")' "${ROLLOUT_ALERTS}" | sort
+  [[ ! -s "${ROLLOUT_LOOKUPS}" ]] || {
+    cat "${ROLLOUT_LOOKUPS}"
+    return 1
+  }
+}
+
+main "$@"

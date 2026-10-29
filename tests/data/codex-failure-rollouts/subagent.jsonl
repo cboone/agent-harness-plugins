@@ -1,0 +1,2 @@
+{"type":"session_meta","payload":{"id":"thread-sample","session_id":"thread-sample","source":{"subagent":{"thread_spawn":{"parent_thread_id":"parent"}}}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"subagent-turn","error":{"codex_error_info":"other","message":"API limit reached"}}}

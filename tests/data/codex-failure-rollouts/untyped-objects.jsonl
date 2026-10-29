@@ -1,0 +1,5 @@
+{"type":"session_meta","payload":{"id":"thread-sample","session_id":"thread-sample","source":"cli"}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"missing-info","error":{"message":"Untyped sample error"}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"null-info","error":{"message":"Untyped sample error","codex_error_info":null}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"empty-string-info","error":{"message":"Untyped sample error","codex_error_info":""}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"empty-object-info","error":{"message":"Untyped sample error","codex_error_info":{}}}}

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+/usr/bin/wc "$@"
+if [[ "${1:-}" == -c && -n "${ROLLOUT_BOUNDARY_READY:-}" ]]; then
+  : > "${ROLLOUT_BOUNDARY_READY}"
+  : "${ROLLOUT_BOUNDARY_RELEASE:?}"
+  for ((attempt = 0; attempt < 150; attempt++)); do
+    [[ ! -f "${ROLLOUT_BOUNDARY_RELEASE}" ]] || exit 0
+    /bin/sleep 0.02
+  done
+  exit 1
+fi

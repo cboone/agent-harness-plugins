@@ -1,0 +1,2 @@
+{"type":"session_meta","payload":{"id":"thread-sample","session_id":"thread-sample","source":"cli"}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"typed-object","error":{"message":"Connection failed","codex_error_info":{"http_connection_failed":{"http_status_code":503}}}}}

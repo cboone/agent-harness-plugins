@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n "${ROLLOUT_ALERTER_STATUS:-}" ]]; then
+  printf '%s\n' attempted >> "${ROLLOUT_ATTEMPTS:?}"
+  echo 'fixture backend startup failed' >&2
+  exit "${ROLLOUT_ALERTER_STATUS}"
+fi
+jq -nc --args '$ARGS.positional' -- "$@" >> "${ROLLOUT_ALERTS:?}"

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1}" == 0.2 ]]; then : > "${ROLLOUT_READY:?}"; fi
+exec /bin/sleep "$@"
