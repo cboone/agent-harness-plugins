@@ -23,7 +23,7 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >        plugins/workmux/skills/create-worktree/SKILL.md \
 >        plugins/workmux/skills/start-issue/SKILL.md; do \
 >     command_text="$(awk '/^git .*origin\/HEAD|^git remote show origin/ { print; count++ } END { if (count != 1) exit 1 }' "${REPO_ROOT}/${path}")" || exit 1; \
->     code=0; output="$(bash +o pipefail -c "${command_text}" 2>/dev/null)" || code=$?; \
+>     code=0; output="$(bash +o pipefail -c "${command_text}" )" || code=$?; \
 >     if [[ "${code}" == 0 || -n "${output}" ]]; then printf 'invalid fallback: %s\n' "${path}"; exit 1; fi; \
 >   done && echo 'all seven fallbacks report not found'
 all seven fallbacks report not found

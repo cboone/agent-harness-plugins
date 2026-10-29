@@ -56,20 +56,20 @@ Usage: codex-aspects schema
 ## No command prints the usage and fails
 
 ```scrut
-$ "${CODEX_ASPECTS_BIN}" 2>&1 | head -1
+$ "${CODEX_ASPECTS_BIN}" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: No command prints the usage and fails
 Usage: codex-aspects schema
 ```
 
 ```scrut
-$ "${CODEX_ASPECTS_BIN}" > /dev/null 2>&1
+$ "${CODEX_ASPECTS_BIN}" > /dev/null
 [1]
 ```
 
 ## Unknown command
 
 ```scrut
-$ "${CODEX_ASPECTS_BIN}" review > "${FIXTURE}/unknown.err" 2>&1; echo "exit=$?" \
->   && tail -1 "${FIXTURE}/unknown.err"
+$ "${CODEX_ASPECTS_BIN}" review > "${FIXTURE}/unknown.err" 2>&1; echo "exit=$?" && # error-output-allow: testcase asserts the retained command diagnostic and exit status
+>   tail -1 "${FIXTURE}/unknown.err"
 exit=1
 codex-aspects: unknown command: review
 ```
@@ -115,7 +115,7 @@ codex-aspects: unknown aspect 'style'; expected one of: code errors tests commen
 ```scrut
 $ printf '{}' > "${FIXTURE}/bad-scope.json" \
 >   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/bad-scope.json" > "${FIXTURE}/bad-scope.err" 2>&1; echo "exit=$?"; } \
->   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/bad-scope.err"
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/bad-scope.err" # error-output-allow: testcase asserts retained diagnostics: A scope file that is not review-scope output
 exit=1
 codex-aspects: scope file 'FIXTURE/bad-scope.json' is not review-scope output
 ```
@@ -128,7 +128,7 @@ error, and the review would cover less than it claimed.
 ```scrut
 $ jq 'del(.untracked)' "${FIXTURE}/scope.json" > "${FIXTURE}/no-untracked.json" \
 >   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/no-untracked.json" > "${FIXTURE}/no-untracked.err" 2>&1; echo "exit=$?"; } \
->   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/no-untracked.err"
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/no-untracked.err" # error-output-allow: testcase asserts retained diagnostics: A scope file missing a bucket
 exit=1
 codex-aspects: scope file 'FIXTURE/no-untracked.json' is not review-scope output
 ```
@@ -141,7 +141,7 @@ the committed changes out with no error.
 ```scrut
 $ jq '.base = null' "${FIXTURE}/scope.json" > "${FIXTURE}/no-base.json" \
 >   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/no-base.json" > "${FIXTURE}/no-base.err" 2>&1; echo "exit=$?"; } \
->   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/no-base.err"
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/no-base.err" # error-output-allow: testcase asserts retained diagnostics: A scope with committed changes and no base
 exit=1
 codex-aspects: scope file 'FIXTURE/no-base.json' is not review-scope output
 ```
@@ -154,7 +154,7 @@ empty `reviewed` pass.
 ```scrut
 $ for field in snapshot tree; do
 >   jq --arg field "${field}" '.[$field] = ""' "${FIXTURE}/scope.json" > "${FIXTURE}/empty-${field}.json"
->   "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/empty-${field}.json" > /dev/null 2> "${FIXTURE}/empty-${field}.err"
+>   "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/empty-${field}.json" > /dev/null 2> "${FIXTURE}/empty-${field}.err" # error-output-allow: testcase asserts retained diagnostics: A scope with an empty snapshot or tree
 >   echo "${field}: exit=$?"
 >   sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/empty-${field}.err"
 > done
@@ -172,7 +172,7 @@ segment would send it outside the repository.
 ```scrut
 $ jq '.untracked = ["../outside.txt"]' "${FIXTURE}/scope.json" > "${FIXTURE}/escape-scope.json" \
 >   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/escape-scope.json" > "${FIXTURE}/escape-scope.err" 2>&1; echo "exit=$?"; } \
->   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/escape-scope.err"
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/escape-scope.err" # error-output-allow: testcase asserts retained diagnostics: A scope path that leaves the repository
 exit=1
 codex-aspects: scope file 'FIXTURE/escape-scope.json' is not review-scope output
 ```
@@ -191,7 +191,7 @@ $ mkdir "${FIXTURE}/aspects" "${FIXTURE}/unreadable-out" \
 >        --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/unreadable-out" > "${FIXTURE}/unreadable.err" 2>&1; echo "exit=$?"; } \
 >   && chmod 644 "${FIXTURE}/aspects/code.md" \
 >   && tail -1 "${FIXTURE}/unreadable.err" | sed "s|${FIXTURE}|FIXTURE|" \
->   && ls "${FIXTURE}/unreadable-out"
+>   && ls "${FIXTURE}/unreadable-out" # error-output-allow: testcase asserts retained diagnostics: An aspect file that cannot be read stops the run before Codex starts
 exit=1
 codex-aspects: could not read the aspect instructions at FIXTURE/aspects/code.md
 schema.json
@@ -392,7 +392,7 @@ gone.
 $ mkdir "${FIXTURE}/pids" "${FIXTURE}/cancel-out" \
 >   && { CODEX_STUB_MODES="code=hang" CODEX_STUB_PID_DIR="${FIXTURE}/pids" CODEX_STUB_SENTINEL="${FIXTURE}/continued" \
 >        "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
->        --out-dir "${FIXTURE}/cancel-out" > /dev/null 2>&1 & } \
+>        --out-dir "${FIXTURE}/cancel-out" > /dev/null & } \
 >   && helper=$! \
 >   && for attempt in $(seq 50); do [ -s "${FIXTURE}/pids/code.pid" ] && break; sleep 0.1; done \
 >   && stub="$(cat "${FIXTURE}/pids/code.pid")" \
@@ -436,9 +436,9 @@ $ mkdir "${FIXTURE}/family-pids" "${FIXTURE}/family-out" \
 >        else echo "${kind} stopped"; fi; \
 >      done \
 >   && kill -0 "${unrelated}" && echo 'unrelated still running' \
->   && kill "${unrelated}" && { wait "${unrelated}" 2>/dev/null || true; } \
+>   && kill "${unrelated}" && { wait "${unrelated}" || true; } \
 >   && retained="$(sed -n 's/^codex-aspects: retained cancellation artifacts in //p' "${FIXTURE}/family.log")" \
->   && { [ -z "${retained}" ] || rm -r "${retained}"; }
+>   && { [ -z "${retained}" ] || rm -r "${retained}"; } # error-output-allow: testcase asserts retained diagnostics: Cancellation stops orphaned and late-starting descendants
 helper exit=143
 orphan stopped
 late stopped
@@ -471,9 +471,9 @@ $ mkdir "${FIXTURE}/interrupt-pids" "${FIXTURE}/interrupt-out" \
 >        else echo "${kind} stopped"; fi; \
 >      done \
 >   && kill -0 "${unrelated}" && echo 'unrelated still running' \
->   && kill "${unrelated}" && { wait "${unrelated}" 2>/dev/null || true; } \
+>   && kill "${unrelated}" && { wait "${unrelated}" || true; } \
 >   && retained="$(sed -n 's/^codex-aspects: retained cancellation artifacts in //p' "${FIXTURE}/interrupt.log")" \
->   && { [ -z "${retained}" ] || rm -r "${retained}"; }
+>   && { [ -z "${retained}" ] || rm -r "${retained}"; } # error-output-allow: testcase asserts retained diagnostics: Interrupting the helper stops the same process groups
 helper exit=130
 orphan stopped
 late stopped
@@ -492,8 +492,8 @@ $ stub="" && mkdir "${FIXTURE}/launch-pids" "${FIXTURE}/launch-out" \
 >   && BASH_ENV="${CODEX_LAUNCH_CANCEL_ENV}" CODEX_STUB_MODES="code=hang" \
 >      CODEX_STUB_PID_DIR="${FIXTURE}/launch-pids" CODEX_STUB_SENTINEL="${FIXTURE}/launch-write" \
 >      "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
->      --out-dir "${FIXTURE}/launch-out" > "${FIXTURE}/launch.log" 2>&1; echo "helper exit=$?" \
->   && grep '^launch boundary reached' "${FIXTURE}/launch.log" \
+>      --out-dir "${FIXTURE}/launch-out" > "${FIXTURE}/launch.log" 2>&1; echo "helper exit=$?" && # error-output-allow: testcase asserts the retained command diagnostic and exit status
+>   grep '^launch boundary reached' "${FIXTURE}/launch.log" \
 >   && stub="$(cat "${FIXTURE}/launch-pids/code.pid")" \
 >   && child="$(cat "${FIXTURE}/launch-pids/code.child.pid")" \
 >   && sleep 1.2 \
@@ -504,7 +504,7 @@ $ stub="" && mkdir "${FIXTURE}/launch-pids" "${FIXTURE}/launch-out" \
 >        else echo "${entry%%:*} stopped"; fi; \
 >      done \
 >   && { test ! -e "${FIXTURE}/launch-write" && echo 'no write after cancellation'; } \
->   ; { [ -z "${stub}" ] || kill -KILL -- "-${stub}" 2>/dev/null || true; }
+>   ; { [ -z "${stub}" ] || kill -KILL -- "-${stub}" || true; }
 helper exit=143
 launch boundary reached with isolated group
 stub stopped
@@ -528,7 +528,7 @@ $ mkdir "${FIXTURE}/denied-bin" "${FIXTURE}/denied-pids" "${FIXTURE}/denied-out"
 >   && grep 'cancellation is incomplete' "${FIXTURE}/denied.log" \
 >   && retained="$(sed -n 's/^codex-aspects: retained cancellation artifacts in //p' "${FIXTURE}/denied.log")" \
 >   && test -d "${retained}" && echo 'artifacts retained' \
->   && rm -r "${retained}"
+>   && rm -r "${retained}" # error-output-allow: testcase asserts retained diagnostics: Denied process inspection retains artifacts and reports incomplete cancellation
 helper exit=4
 codex-aspects: cancellation is incomplete; a process is active or its state could not be checked
 artifacts retained
@@ -548,7 +548,7 @@ $ source "$(dirname "${REVIEW_SCOPE_BIN}")/review-git.bash" \
 >   && { "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/large-scope.json" \
 >        --out-dir "${FIXTURE}/large-out" > "${FIXTURE}/large.err" 2>&1; echo "exit=$?"; } \
 >   && sed 's/is [0-9]* bytes/is N bytes/' "${FIXTURE}/large.err" \
->   && ls "${FIXTURE}/large-out"
+>   && ls "${FIXTURE}/large-out" # error-output-allow: testcase asserts retained diagnostics: A prompt too large for one argument stops the run before Codex starts
 exit=1
 codex-aspects: the code prompt is N bytes, above the 120000-byte limit for one argument; untracked files are listed one by one, so commit or ignore some of them
 schema.json
@@ -669,8 +669,8 @@ ok
 ## The output directory must exist
 
 ```scrut
-$ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/missing" > "${FIXTURE}/missing.err" 2>&1; echo "exit=$?" \
->   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/missing.err"
+$ "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/missing" > "${FIXTURE}/missing.err" 2>&1; echo "exit=$?" && # error-output-allow: testcase asserts the retained command diagnostic and exit status
+>   sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/missing.err"
 exit=1
 codex-aspects: --out-dir 'FIXTURE/missing' is not an existing directory
 ```
@@ -735,7 +735,7 @@ $ jq '.tree = "0000000000000000000000000000000000000001"' "${FIXTURE}/scope.json
 >   && { "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/missing-tree.json" --after "${FIXTURE}/scope.json" \
 >        > "${FIXTURE}/missing-tree.out" 2> "${FIXTURE}/missing-tree.err"; echo "exit=$?"; } \
 >   && tail -1 "${FIXTURE}/missing-tree.err" | sed "s/[0-9a-f]\{40\}/SHA/g" \
->   && wc -c < "${FIXTURE}/missing-tree.out" | tr -d ' '
+>   && wc -c < "${FIXTURE}/missing-tree.out" | tr -d ' ' # error-output-allow: testcase asserts retained diagnostics: Changes fails when the trees cannot be compared
 exit=1
 codex-aspects: could not compare tree SHA with SHA
 0
@@ -852,7 +852,7 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/self" && cd "${FIXTURE}/self" \
 >   && cp "$(dirname "${CODEX_ASPECTS_BIN}")/../skills/review-pr-with-codex/references/aspects/"*.md aspects-copy/ \
 >   && { CODEX_ASPECTS_DIR="${PWD}/aspects-copy" "${CODEX_ASPECTS_BIN}" prompt --aspect code \
 >        --scope "${FIXTURE}/scope.json" > "${FIXTURE}/self.err" 2>&1; echo "exit=$?"; } \
->   && sed -e "s|${FIXTURE}|FIXTURE|" -e 's|/private/|/|' "${FIXTURE}/self.err"
+>   && sed -e "s|${FIXTURE}|FIXTURE|" -e 's|/private/|/|' "${FIXTURE}/self.err" # error-output-allow: testcase asserts retained diagnostics: Aspect instructions inside the repository under review are refused
 exit=1
 codex-aspects: the aspect instructions at FIXTURE/self/aspects-copy are inside the repository under review, so the change could rewrite its own review instructions; run an installed copy of codex-aspects instead
 ```
@@ -870,7 +870,7 @@ $ mkdir "${FIXTURE}/linked-aspects" \
 >   && cd "${FIXTURE}/repo" \
 >   && { CODEX_ASPECTS_DIR="${FIXTURE}/linked-aspects" "${CODEX_ASPECTS_BIN}" prompt --aspect errors \
 >        --scope "${FIXTURE}/scope.json" > "${FIXTURE}/linked.err" 2>&1; echo "exit=$?"; } \
->   && sed -e "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/linked.err"
+>   && sed -e "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/linked.err" # error-output-allow: testcase asserts retained diagnostics: A symlinked aspect file is refused
 exit=1
 codex-aspects: the aspect instructions at FIXTURE/linked-aspects/code.md are a symlink, which could lead into the repository under review
 ```
@@ -917,7 +917,7 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/self-helper" && cd "${FIXTURE}/self-helper
 >   && cp "$(dirname "${CODEX_ASPECTS_BIN}")/review-git.bash" helper/review-git.bash \
 >   && { CODEX_ASPECTS_DIR="$(dirname "${CODEX_ASPECTS_BIN}")/../skills/review-pr-with-codex/references/aspects" \
 >        ./helper/codex-aspects prompt --aspect code --scope "${FIXTURE}/scope.json" > "${FIXTURE}/self-helper.err" 2>&1; echo "exit=$?"; } \
->   && sed -e "s|^codex-aspects: codex-aspects at /private/|codex-aspects: codex-aspects at /|" -e "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/self-helper.err"
+>   && sed -e "s|^codex-aspects: codex-aspects at /private/|codex-aspects: codex-aspects at /|" -e "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/self-helper.err" # error-output-allow: testcase asserts retained diagnostics: A helper inside the repository under review is refused
 exit=1
 codex-aspects: codex-aspects at FIXTURE/self-helper/helper is inside the repository under review, so the change could rewrite the helper its own review runs with; run an installed copy instead
 ```
@@ -1097,7 +1097,7 @@ $ cd "${FIXTURE}/guides" && ln -s ../outside.md AGENTS.md \
 >   && git add AGENTS.md && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm escape \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base HEAD > "${FIXTURE}/escape-guide-scope.json" \
 >   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/escape-guide-scope.json" > "${FIXTURE}/escape-guide.out" 2> "${FIXTURE}/escape-guide.err"; echo "exit=$?"; } \
->   && tail -1 "${FIXTURE}/escape-guide.err"
+>   && tail -1 "${FIXTURE}/escape-guide.err" # error-output-allow: testcase asserts retained diagnostics: Historical guides cannot follow a link outside the repository
 exit=1
 codex-aspects: historical guide link leaves the repository
 ```
@@ -1149,7 +1149,7 @@ exit=1
 ```scrut
 $ jq '.submodules = [{path: "../outside", initialized: true, scope: .}]' "${FIXTURE}/scope.json" > "${FIXTURE}/escaping-child.json" \
 >   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/escaping-child.json" 2> "${FIXTURE}/escaping-child.err"; echo "exit=$?"; } \
->   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/escaping-child.err"
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/escaping-child.err" # error-output-allow: testcase asserts retained diagnostics: Recursive submodule paths cannot escape the scope root
 exit=1
 codex-aspects: scope file 'FIXTURE/escaping-child.json' is not review-scope output
 ```

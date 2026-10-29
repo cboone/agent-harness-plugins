@@ -44,7 +44,7 @@ Usage: push-notification <command> [options]
 ## No command is a usage error
 
 ```scrut
-$ pn 2>&1 | head -n 1
+$ pn 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: No command is a usage error
 Usage: push-notification <command> [options]
 [2]
 ```
@@ -54,7 +54,7 @@ Usage: push-notification <command> [options]
 The server falls back to ntfy.sh, but no topic is ever invented.
 
 ```scrut
-$ pn check 2>&1 | sed "s|${work}|WORK|g"
+$ pn check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: With nothing configured, check names the missing topic
 config file: WORK/config/push-notification/config (not found)
 backend: ntfy (default)
 server: https://ntfy.sh (default)
@@ -68,7 +68,7 @@ ready: no
 ## Send refuses to run without a topic
 
 ```scrut
-$ pn send --title Done 2>&1 | sed "s|${work}|WORK|g"
+$ pn send --title Done 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: Send refuses to run without a topic
 push-notification: NTFY_TOPIC is not set. Set it in WORK/config/push-notification/config or the environment.
 [3]
 ```
@@ -116,14 +116,14 @@ private file as the token.
 
 ```scrut
 $ printf '%s\n' 'NTFY_TOPIC=sample-topic' 'NTFY_TOKEN=tk_sample' | write_config 644
-> pn check 2>&1 | sed "s|${work}|WORK|g"
+> pn check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A config file that holds a topic or token must be private
 push-notification: WORK/config/push-notification/config holds NTFY_TOPIC or NTFY_TOKEN but is readable by others (mode 644); run: chmod 600 "WORK/config/push-notification/config"
 [3]
 ```
 
 ```scrut
 $ printf '%s\n' 'NTFY_TOPIC=sample-topic' | write_config 644
-> pn check 2>&1 | sed "s|${work}|WORK|g"
+> pn check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A config file that holds a topic or token must be private
 push-notification: WORK/config/push-notification/config holds NTFY_TOPIC or NTFY_TOKEN but is readable by others (mode 644); run: chmod 600 "WORK/config/push-notification/config"
 [3]
 ```
@@ -152,14 +152,14 @@ ready: yes
 
 ```scrut
 $ printf '%s\n' 'NTFY_TOPIC=sample-topic' 'NTFY_PASSWORD=x' | write_config
-> pn check 2>&1 | sed "s|${work}|WORK|g"
+> pn check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: Unknown keys and malformed lines are rejected with their line number
 push-notification: WORK/config/push-notification/config:2: unknown key NTFY_PASSWORD
 [3]
 ```
 
 ```scrut
 $ printf '%s\n' 'NTFY_TOPIC sample-topic' | write_config
-> pn check 2>&1 | sed "s|${work}|WORK|g"
+> pn check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: Unknown keys and malformed lines are rejected with their line number
 push-notification: WORK/config/push-notification/config:1: expected KEY=value
 [3]
 ```
@@ -189,7 +189,7 @@ A path named this way must exist, or a send would fall back to ntfy.sh
 without the server and token the file was meant to supply.
 
 ```scrut
-$ pn PUSH_NOTIFICATION_CONFIG="${work}/missing-config" NTFY_TOPIC=env-topic send --title Done --dry-run 2>&1 | sed "s|${work}|WORK|g"
+$ pn PUSH_NOTIFICATION_CONFIG="${work}/missing-config" NTFY_TOPIC=env-topic send --title Done --dry-run 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: PUSH_NOTIFICATION_CONFIG names another config file
 push-notification: PUSH_NOTIFICATION_CONFIG names WORK/missing-config, which is not a file; fix the path or unset it
 [3]
 ```
@@ -202,7 +202,7 @@ send to ntfy.sh without the server and token meant for it.
 
 ```scrut
 $ mkdir -p "${work}/as-dir/push-notification/config"
-> pn XDG_CONFIG_HOME="${work}/as-dir" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
+> pn XDG_CONFIG_HOME="${work}/as-dir" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A default config path that exists but cannot be the file is an error
 push-notification: WORK/as-dir/push-notification/config exists but is not a readable regular file; replace it with the config file or remove it
 [3]
 ```
@@ -210,21 +210,21 @@ push-notification: WORK/as-dir/push-notification/config exists but is not a read
 ```scrut
 $ mkdir -p "${work}/as-link/push-notification"
 > ln -s "${work}/no-such-file" "${work}/as-link/push-notification/config"
-> pn XDG_CONFIG_HOME="${work}/as-link" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
+> pn XDG_CONFIG_HOME="${work}/as-link" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A default config path that exists but cannot be the file is an error
 push-notification: WORK/as-link/push-notification/config exists but is not a readable regular file; replace it with the config file or remove it
 [3]
 ```
 
 ```scrut
 $ ln -s "${work}/no-such-dir" "${work}/as-broken-link"
-> pn XDG_CONFIG_HOME="${work}/as-broken-link" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
+> pn XDG_CONFIG_HOME="${work}/as-broken-link" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A default config path that exists but cannot be the file is an error
 push-notification: cannot look for WORK/as-broken-link/push-notification/config: WORK/as-broken-link is not a searchable directory
 [3]
 ```
 
 ```scrut
 $ : > "${work}/as-file"
-> pn XDG_CONFIG_HOME="${work}/as-file" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g"
+> pn XDG_CONFIG_HOME="${work}/as-file" NTFY_TOPIC=env-topic check 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A default config path that exists but cannot be the file is an error
 push-notification: cannot look for WORK/as-file/push-notification/config: WORK/as-file is not a searchable directory
 [3]
 ```
@@ -437,13 +437,13 @@ When the topic occurs inside the token, or the token inside the topic, the
 longer value is replaced first, so no part of either is left behind.
 
 ```scrut
-$ pn NTFY_TOPIC=tk_sample NTFY_TOKEN=tk_sample_private STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='Bearer tk_sample_private for tk_sample' send --title Done 2>&1 | head -n 1
+$ pn NTFY_TOPIC=tk_sample NTFY_TOKEN=tk_sample_private STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='Bearer tk_sample_private for tk_sample' send --title Done 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: A rejected send exits 1, relays the server's answer, and removes the token file
 push-notification: ntfy did not confirm the notification: Bearer (token hidden) for (topic hidden)
 [1]
 ```
 
 ```scrut
-$ pn NTFY_TOPIC=agent-tk_x-feed NTFY_TOKEN=tk_x STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='topic agent-tk_x-feed, Bearer tk_x' send --title Done 2>&1 | head -n 1
+$ pn NTFY_TOPIC=agent-tk_x-feed NTFY_TOKEN=tk_x STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='topic agent-tk_x-feed, Bearer tk_x' send --title Done 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: A rejected send exits 1, relays the server's answer, and removes the token file
 push-notification: ntfy did not confirm the notification: topic (topic hidden), Bearer (token hidden)
 [1]
 ```
@@ -486,7 +486,7 @@ id.
 
 ```scrut
 $ for id in '"id":7,' '"id":null,' '' '"id":"",'; do
->   pn STUB_CURL_RESPONSE="{${id}\"event\":\"message\",\"topic\":\"sample-topic\"}" send --title Done > /dev/null 2>&1; echo "exit $?"
+>   pn STUB_CURL_RESPONSE="{${id}\"event\":\"message\",\"topic\":\"sample-topic\"}" send --title Done > /dev/null ; echo "exit $?"
 > done
 exit 1
 exit 1
@@ -508,7 +508,7 @@ not a confirmation.
 
 ```scrut
 $ for answer in '{"id":"req-1","error":"upstream unavailable"}' '{"id":"m1","event":"message","topic":"other-topic"}' '{"id":"m1","event":"open","topic":"sample-topic"}' '{"id":"m1","event":"message","topic":"sample-topic","error":"x"}'; do
->   pn STUB_CURL_RESPONSE="${answer}" send --title Done > /dev/null 2>&1; echo "exit $?"
+>   pn STUB_CURL_RESPONSE="${answer}" send --title Done > /dev/null ; echo "exit $?"
 > done
 exit 1
 exit 1
@@ -559,7 +559,7 @@ jq ran
 ## A token file that cannot be prepared stops the send
 
 ```scrut
-$ pn TMPDIR="${work}/no-such-dir" STUB_CURL_LOG="${work}/no-tmp.log" send --title Done 2>&1 | grep -v '^mktemp'
+$ pn TMPDIR="${work}/no-such-dir" STUB_CURL_LOG="${work}/no-tmp.log" send --title Done 2>&1 | grep -v '^mktemp' # error-output-allow: testcase asserts retained diagnostics: A token file that cannot be prepared stops the send
 push-notification: could not create a temporary directory for the authorization header
 [1]
 ```

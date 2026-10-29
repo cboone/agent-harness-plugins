@@ -12,8 +12,8 @@ function cleanup() {
   local pid
   for pid in "${CHILD_PID}" "${OTHER_PID}"; do
     [[ -n "${pid}" ]] || continue
-    kill "${pid}" 2> /dev/null || true
-    wait "${pid}" 2> /dev/null || true
+    kill "${pid}" 2> /dev/null || true # error-output-allow: owned test process may already have exited during cleanup
+    wait "${pid}" 2> /dev/null || true # error-output-allow: cleanup reaps owned processes regardless of their exit status
   done
   rm -r "${CASE_DIR}"
 }
@@ -240,7 +240,7 @@ function main() {
       elif [[ "${scenario}" == shutdown ]]; then
         printf '%s\n' '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"shutdown-turn","error":{"codex_error_info":"other","message":"Appended at shutdown"}}}' >> "${CASE_DIR}/live.jsonl"
         kill "${OTHER_PID}"
-        wait "${OTHER_PID}" 2> /dev/null || true
+        wait "${OTHER_PID}" 2> /dev/null || true # error-output-allow: owned supervisor termination status is expected during shutdown synchronization
         OTHER_PID=""
         : > "${ROLLOUT_OWNER_RELEASE}"
       else
@@ -252,11 +252,11 @@ function main() {
       await_count 1
       if [[ -n "${OTHER_PID}" ]]; then
         kill "${OTHER_PID}"
-        wait "${OTHER_PID}" 2> /dev/null || true
+        wait "${OTHER_PID}" 2> /dev/null || true # error-output-allow: owned supervisor termination status is expected during shutdown synchronization
         OTHER_PID=""
       fi
       for attempt in {1..150}; do
-        if ! kill -0 "${CHILD_PID}" 2> /dev/null; then break; fi
+        if ! kill -0 "${CHILD_PID}" 2> /dev/null; then break; fi # error-output-allow: owned watcher existence predicate bounds fixture shutdown wait
         sleep 0.02
       done
       ((attempt < 150)) || return 1

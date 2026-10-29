@@ -112,7 +112,7 @@ $ jq -n '[inputs as $reviews | {number: 1,
 >     reviews: {totalCount: ($reviews | length), nodes: [$reviews[] | {author: {login: .user.login}, body, comments: {totalCount: ([.body | scan("· New")] | length)}}]}}]
 >   | [{data: {search: {issueCount: length, pageInfo: {hasNextPage: false}, nodes: .}}}]' \
 >   "${COPILOT_REVIEW_DATA_DIR}"/format-*.json "${COPILOT_REVIEW_DATA_DIR}"/notice-*.json > "${work}/variant.json" \
->   && replay 2>&1 | grep -E '^(copilot-rounds-report|Pull requests matched|\| (1 |pinned/))' | sort
+>   && replay 2>&1 | grep -E '^(copilot-rounds-report|Pull requests matched|\| (1 |pinned/))' | sort # error-output-allow: testcase asserts retained diagnostics: Pinned real review bodies
 Pull requests matched: 12. With a Copilot round: 10. Copilot notices in place of a review, not counted as rounds: 2.
 | 1 | 10 | 11 | 1.1 | 40% of 10 | 4 |
 | pinned/format-a#1 | 1 | 0 | none (older layout) |
@@ -134,7 +134,7 @@ $ jq '[{data: {search: {issueCount: 1, pageInfo: {hasNextPage: false}, nodes: [{
 >     repository: {nameWithOwner: "pinned/format-c", owner: {login: "pinned"}},
 >     reviews: {totalCount: 1, nodes: [.[] | {author: {login: .user.login}, body, comments: {totalCount: 2}}]}}]}}}]' \
 >   "${COPILOT_REVIEW_DATA_DIR}/format-c.json" > "${work}/variant.json" \
->   && replay 2>&1 | grep -c warning
+>   && replay 2>&1 | grep -c warning # error-output-allow: testcase asserts retained diagnostics: Pinned real review bodies
 0
 [1]
 ```
@@ -178,7 +178,7 @@ copilot-rounds-report: warning: the search matched 5 pull requests but returned 
 The report itself says it is partial, so the gap does not live only on stderr.
 
 ```scrut
-$ variant '.[].data.search.issueCount = 5' && replay 2> /dev/null | grep '^Partial'
+$ variant '.[].data.search.issueCount = 5' && replay | grep '^Partial'
 Partial: 4 of the 5 matched pull requests were returned, so every figure below leaves some out.
 ```
 
@@ -220,7 +220,7 @@ copilot-rounds-report: warning: 2 Copilot rounds list findings or badges the rep
 A failed search stops the report rather than printing an empty one, and leaves no temporary files behind.
 
 ```scrut
-$ (set -o pipefail; STUB_GH_GRAPHQL_FAIL=copilot-rounds TMPDIR="${work}/tmp" report 2>&1 | tail -n 1)
+$ (set -o pipefail; STUB_GH_GRAPHQL_FAIL=copilot-rounds TMPDIR="${work}/tmp" report 2>&1 | tail -n 1) # error-output-allow: testcase asserts retained diagnostics: Partial or missing data stops the report
 copilot-rounds-report: could not search for pull requests
 [1]
 ```
@@ -234,7 +234,7 @@ A temporary directory whose path holds a quote is still removed, and the quote n
 
 ```scrut
 $ mkdir "${work}/it's" \
->   && STUB_GH_GRAPHQL_FAIL=copilot-rounds TMPDIR="${work}/it's" report > /dev/null 2>&1; \
+>   && STUB_GH_GRAPHQL_FAIL=copilot-rounds TMPDIR="${work}/it's" report > /dev/null ; \
 >   find "${work}/it's" -mindepth 1 | wc -l | tr -d ' '
 0
 ```
@@ -288,7 +288,7 @@ copilot-rounds-report: expected a non-empty array of search pages
 ```
 
 ```scrut
-$ (set -o pipefail; printf '[{"data":' > "${work}/variant.json" && replay 2>&1 | tail -n 1)
+$ (set -o pipefail; printf '[{"data":' > "${work}/variant.json" && replay 2>&1 | tail -n 1) # error-output-allow: testcase asserts retained diagnostics: Partial or missing data stops the report
 copilot-rounds-report: the search response is not valid JSON
 [1]
 ```
@@ -409,7 +409,7 @@ A search that fails with no output still replaces an earlier saved file, so no s
 
 ```scrut
 $ printf 'stale\n' > "${work}/stale.json" \
->   && STUB_GH_GRAPHQL_FAIL=copilot-rounds report --save "${work}/stale.json" 2>&1 | tail -n 1; \
+>   && STUB_GH_GRAPHQL_FAIL=copilot-rounds report --save "${work}/stale.json" 2>&1 | tail -n 1; # error-output-allow: testcase asserts retained diagnostics: Argument errors
 >   wc -c < "${work}/stale.json" | tr -d ' '
 copilot-rounds-report: could not search for pull requests; /*/stale.json holds gh's output from the failed search (glob)
 1
@@ -470,7 +470,7 @@ Pull requests matched: 4. With a Copilot round: 3. Copilot notices in place of a
 ```
 
 ```scrut
-$ (set -o pipefail; "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 extra 2>&1 | tail -n 1)
+$ (set -o pipefail; "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 extra 2>&1 | tail -n 1) # error-output-allow: testcase asserts retained diagnostics: Argument errors
 copilot-rounds-report: unexpected argument 'extra'
 [1]
 ```

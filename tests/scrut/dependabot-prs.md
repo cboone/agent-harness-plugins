@@ -477,7 +477,7 @@ Error: Invalid timestamp 'yesterday'. Expected YYYY-MM-DDTHH:MM:SSZ.
 ## Argument errors
 
 ```scrut
-$ "${DEPENDABOT_PRS_BIN}" 2>&1 | head -n 1
+$ "${DEPENDABOT_PRS_BIN}" 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Argument errors
 Usage: dependabot-prs <command> [options]
 ```
 

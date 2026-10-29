@@ -32,7 +32,7 @@ function die() {
 # Prints the permission bits of a file, with GNU stat first as report-board
 # does, because BSD stat has no -c.
 function file_mode() {
-  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}"
+  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}" # error-output-allow: GNU stat failure selects the BSD stat fallback
 }
 
 function main() {

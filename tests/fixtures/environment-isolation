@@ -62,7 +62,12 @@ function main() {
       ;;
     guard-missing-reset | guard-new-consumer | guard-late-reset | guard-indirect | guard-registered | guard-scrut-runner | guard-scrut-update | guard-scrut-ci | guard-scrut-ci-reusable | guard-scrut-new | guard-wrapper-reset | guard-capture | guard-stderr | guard-capture-library | guard-git-namespace | guard-four-fence | guard-copy-only | guard-copy-execution)
       mkdir "${root}/tree"
-      cp -R "${REPO_ROOT}/bin" "${REPO_ROOT}/plugins" "${REPO_ROOT}/tests" "${REPO_ROOT}/.github" "${root}/tree/"
+      cp -R "${REPO_ROOT}/bin" "${REPO_ROOT}/plugins" "${REPO_ROOT}/.github" "${root}/tree/"
+      mkdir "${root}/tree/tests"
+      cp -R "${REPO_ROOT}/tests/fixtures" "${REPO_ROOT}/tests/data" "${root}/tree/tests/"
+      mkdir "${root}/tree/tests/scrut"
+      cp "${REPO_ROOT}/tests/data/error-output/control.md" "${root}/tree/tests/scrut/control.md"
+      cp "${REPO_ROOT}/tests/scrut/build-review-checklists.md" "${root}/tree/tests/scrut/build-review-checklists.md"
       cp "${REPO_ROOT}/Makefile" "${root}/tree/Makefile"
       if [[ "${scenario}" == guard-copy-only ]]; then
         : # The shared-library copy entry already present must not imply execution.

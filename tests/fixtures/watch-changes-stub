@@ -101,7 +101,7 @@ function parse_request() {
   if ! fields="$(jq -nce --arg fields "${fields}" --argjson allowed "${allowed}" '
     $fields | split(",")
     | if length > 0 and (length == (unique | length)) and all(.[]; . as $field | $allowed | index($field) != null)
-      then . else error("unsupported JSON fields") end' 2> /dev/null)"; then
+      then . else error("unsupported JSON fields") end')"; then
     refuse 'JSON fields'
     return 1
   fi

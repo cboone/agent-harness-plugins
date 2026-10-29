@@ -67,7 +67,7 @@ function main() {
     if [[ "${STUB_GIT_INVALID_REF:-}" == "1" ]]; then
       return 1
     fi
-    /usr/bin/git check-ref-format --branch "${3}" > /dev/null 2>&1
+    /usr/bin/git check-ref-format --branch "${3}" > /dev/null 2>&1 # error-output-allow: branch validity predicate returns the real git status
     return $?
   fi
 

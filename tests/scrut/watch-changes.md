@@ -347,7 +347,7 @@ no-read
 
 ```scrut
 $ for option in --quiet-count --failures --merged-reads --started; do \
->   reset_watch; "${MERGE_FLOW_BIN}" watch-changes acme widgets 7 aaa "${work}/baseline" --once "${option}" 08 > "${work}/error" 2>&1; \
+>   reset_watch; "${MERGE_FLOW_BIN}" watch-changes acme widgets 7 aaa "${work}/baseline" --once "${option}" 08 > "${work}/error" 2>&1; # error-output-allow: testcase asserts retained diagnostics: Numeric sibling parameters use the same decimal contract
 >   test "$?" = 2 && test ! -s "${WATCH_TEST_CALLS}" && echo "${option}: refused"; done
 --quiet-count: refused
 --failures: refused
@@ -357,7 +357,7 @@ $ for option in --quiet-count --failures --merged-reads --started; do \
 
 ```scrut
 $ for option in MERGE_FLOW_INTERVAL MERGE_FLOW_MAX_FAILURES MERGE_FLOW_LIFETIME; do \
->   reset_watch; env "${option}=08" "${MERGE_FLOW_BIN}" watch-changes acme widgets 7 aaa "${work}/baseline" --once > "${work}/error" 2>&1; \
+>   reset_watch; env "${option}=08" "${MERGE_FLOW_BIN}" watch-changes acme widgets 7 aaa "${work}/baseline" --once > "${work}/error" 2>&1; # error-output-allow: testcase asserts retained diagnostics: Numeric sibling parameters use the same decimal contract
 >   test "$?" = 2 && test ! -s "${WATCH_TEST_CALLS}" && echo "${option}: refused"; done
 MERGE_FLOW_INTERVAL: refused
 MERGE_FLOW_MAX_FAILURES: refused
@@ -481,7 +481,7 @@ requires its explicit contract diagnostic, not an incidental parser failure.
 
 ```scrut {fail_fast: true}
 $ function rejected() { local label="${1}" code=0; shift; "${WATCH_CHANGES_STUB_BIN}" "$@" > "${work}/refusal" 2>&1 || code=$?; test "${code}" = 1 && grep -q '^offline request rejected:' "${work}/refusal" && printf '%s: refused\n' "${label}"; } \
->   && echo contract-ready
+>   && echo contract-ready # error-output-allow: testcase asserts retained diagnostics: Invalid request contract helper
 contract-ready
 ```
 

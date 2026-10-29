@@ -191,7 +191,7 @@ Warning: skipping review 6000000043: its body is not a string.
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/malformed-body.json" 2>/dev/null | jq -c '{ids: [.[].id]}'
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/malformed-body.json" | jq -c '{ids: [.[].id]}'
 {"ids":[6000000042]}
 ```
 
@@ -207,7 +207,7 @@ Warning: skipping review 72: its body is not a string.
 Every Copilot review is returned, so a caller and `monitor-pr:monitor`'s metadata probe agree on which review is newest. An empty body states nothing; any findings the review has are threads that `fetch` reports.
 
 ```scrut
-$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:00Z","body":""},{"id":2,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:01Z","body":null}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1 | jq -c '[.[] | {id, body}]'
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:00Z","body":""},{"id":2,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:01Z","body":null}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1 | jq -c '[.[] | {id, body}]' # error-output-allow: testcase asserts retained diagnostics: A null or empty body comes back empty
 [{"id":1,"body":""},{"id":2,"body":""}]
 ```
 
@@ -500,7 +500,7 @@ An audit result missing its list is a failed probe, not an empty one: the
 filter emits nothing.
 
 ```scrut
-$ echo '{"surfaces":{}}' | jq -c '{audited: true, items: [(.uncovered // error("no uncovered"))[] | "\(.surface):\(.id)"]}' 2> /dev/null
+$ echo '{"surfaces":{}}' | jq -c '{audited: true, items: [(.uncovered // error("no uncovered"))[] | "\(.surface):\(.id)"]}'
 [5]
 ```
 

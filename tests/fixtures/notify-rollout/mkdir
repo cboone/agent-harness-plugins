@@ -8,7 +8,7 @@ function main() {
   if [[ -n "${barrier}" ]]; then
     case "${target}" in
       "${XDG_CACHE_HOME:?}/agent-harness-notify/codex-failures/"*)
-        if /bin/mkdir "${barrier}/first" 2> /dev/null; then
+        if /bin/mkdir "${barrier}/first" 2> /dev/null; then # error-output-allow: exclusive barrier creation elects the first reader; the second creates its own marker
           :
         else
           /bin/mkdir "${barrier}/second"
