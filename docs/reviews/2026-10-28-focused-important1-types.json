@@ -1,0 +1,17 @@
+{
+  "aspect": "types",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "RecursiveReviewScope: invariants include complete recursive review inputs and correct immutable repository/revision context for applicable guidance. Ratings: encapsulation 7/10, invariant expression 6/10, invariant usefulness 9/10, invariant enforcement 6/10. Recursive rendering includes module/src/file.go, but render_guides resolves module/AGENTS.md using the superproject's revision and object database, which cannot cross the gitlink. Required child instructions are omitted while review can succeed. This is the known historical-child-guidance finding, retained under the explicit record-without-fixing disposition.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "In the recorded follow-up, resolve child guidance in the child's object database at the gitlink revision selected by the trusted parent baseline, recursively; handle absent baseline children explicitly and fail diagnostically for unavailable required objects.",
+      "line": 448,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands, recursive review omits trusted child guidance."
+    }
+  ],
+  "reviewed": "4420995611f18e86ce4b8c12a01e7fc5c458e01a",
+  "strengths": ["ReviewMembership enforces unique relative paths, allowed nonempty bucket sets, matching compatibility views and untracked inventory coverage; encapsulation 8/10, invariant expression 9/10, invariant usefulness 9/10, invariant enforcement 9/10.", "SubmoduleRecord distinguishes initialized recursive scopes from pointer-only uninitialized entries and recursively validates initialized children; encapsulation 8/10, invariant expression 8/10, invariant usefulness 9/10, invariant enforcement 8/10.", "MembershipDescriptor references captured records through an absolute file path and fixed JSON pointer; encapsulation 8/10, invariant expression 9/10, invariant usefulness 9/10, invariant enforcement 8/10.", "LinkDescription separates canonical relative paths from uninterpreted link targets, with rooted discovery that avoids target traversal; encapsulation 8/10, invariant expression 9/10, invariant usefulness 9/10, invariant enforcement 8/10.", "AspectStatus carries validated outcome and captured membership paths that the gate checks; encapsulation 8/10, invariant expression 8/10, invariant usefulness 9/10, invariant enforcement 8/10.", "GateResult derives eligibility from its nullable failure reason and checks snapshot and membership consistency; encapsulation 8/10, invariant expression 9/10, invariant usefulness 9/10, invariant enforcement 9/10.", "ChangeReport derives accepted paths from canonical membership and outside-scope paths by set subtraction, with guarded recursive record writes; encapsulation 8/10, invariant expression 9/10, invariant usefulness 9/10, invariant enforcement 9/10."],
+  "summary": "Reviewed the full specified committed scope and its changed data contracts; no new Important or Critical type-design defects were found. The known historical-child-guidance finding remains recorded without fixing, as directed. No files were changed and tests requiring writes were not run."
+}

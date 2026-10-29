@@ -1,0 +1,17 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "For recursive members such as module/src/file.go, historical_guide queries module/AGENTS.md in the superproject's baseline tree. Git cannot traverse that gitlink, so the empty lookup becomes expected absence and the prompt incorrectly reports no historical guide. Review can succeed without mandatory child instructions, with no diagnostic identifying incomplete guidance resolution. This known finding is retained under the explicit record-without-fixing disposition.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "Resolve each child's trusted revision from the parent baseline gitlink and load guides from the child's object database recursively. Distinguish absent guides from unavailable historical objects, failing diagnostically when required resolution cannot complete.",
+      "line": 539,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: Child guidance lookup failures are treated as expected absence."
+    }
+  ],
+  "reviewed": "4420995611f18e86ce4b8c12a01e7fc5c458e01a",
+  "strengths": ["Both recursive path-record appends now fail explicitly with path and output-file context.", "Missing required child objects preserve Git diagnostics and stop collection.", "Recursive state changes stop collection with an actionable rerun message."],
+  "summary": "Reviewed the complete committed scope for error handling; no additional Important or Critical defects were found. The known historical-child-guidance finding remains recorded under its explicit disposition. Runtime suites were not run because their fixtures write files."
+}

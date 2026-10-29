@@ -5,6 +5,10 @@ in two plugins read into the plugin that does not hold its source. Each
 testcase runs in a throwaway tree holding every source path, so
 the script's own list of copies applies unchanged.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ function tree() {
 >   local root
@@ -13,6 +17,8 @@ $ function tree() {
 >   printf '%s\n' '# Progress Model' > "${root}/plugins/publish-report-board/skills/publish-report-board/references/progress-model.md"
 >   mkdir -p "${root}/plugins/review-anti-patterns/skills/review-anti-patterns/references"
 >   printf '%s\n' '# Running a Skill Through codex exec' > "${root}/plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md"
+>   mkdir -p "${root}/plugins/review-until-clean/scripts"
+>   printf '%s\n' '# Shared review Git policy' > "${root}/plugins/review-until-clean/scripts/review-git.bash"
 >   printf '%s\n' "${root}"
 > }
 > source_file=plugins/publish-report-board/skills/publish-report-board/references/progress-model.md
@@ -23,7 +29,7 @@ $ function tree() {
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" && cmp "${source_file}" "${copy_file}" && echo identical
-Shared references: 3 copied (3 written).
+Shared references: 4 copied (4 written).
 identical
 ```
 
@@ -31,14 +37,14 @@ identical
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" > /dev/null && "${BUILD_SHARED_REFERENCES_BIN}"
-Shared references: 3 copied (0 written).
+Shared references: 4 copied (0 written).
 ```
 
 ## Rewrites a copy edited by hand
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" > /dev/null && printf '%s\n' 'edited' >> "${copy_file}" && "${BUILD_SHARED_REFERENCES_BIN}" && cmp "${source_file}" "${copy_file}" && echo identical
-Shared references: 3 copied (1 written).
+Shared references: 4 copied (1 written).
 identical
 ```
 
@@ -53,10 +59,11 @@ passed
 
 ```scrut
 $ cd "$(tree)" && { "${BUILD_SHARED_REFERENCES_BIN}" --check; echo "exit ${?}"; } && test ! -e "${copy_file}" && echo "not written"
+::error::Shared reference copy 'plugins/review-pr-with-codex/scripts/review-git.bash' is missing; run make build
 ::error::Shared reference copy 'plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md' is missing; run make build
 ::error::Shared reference copy 'plugins/trim-comments/skills/trim-comments/references/codex-exec.md' is missing; run make build
 ::error::Shared reference copy 'plugins/trim-text/skills/trim-text/references/codex-exec.md' is missing; run make build
-3 shared reference error(s) found.
+4 shared reference error(s) found.
 exit 1
 not written
 ```

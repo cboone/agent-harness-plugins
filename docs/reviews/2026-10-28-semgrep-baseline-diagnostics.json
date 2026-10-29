@@ -1,0 +1,16 @@
+{
+  "findings": 0,
+  "errors": [
+    {
+      "type": "PartialParsing",
+      "path": "bin/build-shared-references",
+      "message": "Syntax error at line bin/build-shared-references:58:"
+    },
+    {
+      "type": "PartialParsing",
+      "path": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "message": "Syntax error at line plugins/review-pr-with-codex/scripts/codex-aspects:3:"
+    }
+  ],
+  "scanned": 46
+}

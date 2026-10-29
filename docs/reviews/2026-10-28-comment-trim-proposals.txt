@@ -1,0 +1,20 @@
+Files classified:
+
+- `.github/workflows/ci.yml`
+- `Makefile`
+- `bin/build-shared-references`
+- `plugins/review-pr-with-codex/.claude-plugin/plugin.json`
+- `plugins/review-pr-with-codex/scripts/codex-aspects`
+- `plugins/review-pr-with-codex/scripts/review-scope`
+- `plugins/review-until-clean/.claude-plugin/plugin.json`
+- `plugins/review-until-clean/scripts/review-git.bash`
+- `plugins/review-until-clean/scripts/review-scope`
+- `tests/fixtures/review-submodule-fixture`
+
+| file:line | Action | Before | After |
+|---|---|---|---|
+| `plugins/review-until-clean/scripts/review-git.bash:1` | rewrite | `# Shared Git policy for collecting scope and rendering reviewer commands.`<br>`# Sourced by the review helpers; this file does not execute a workflow.` | `# Shared Git options for scope collection and reviewer commands.` |
+| `plugins/review-until-clean/scripts/review-git.bash:177` | rewrite | `# Embedded repositories are emitted as dir/ by Git. Replace that entry with`<br>`# the captured files, so consumers never have to interpret directory scope.` | `# Expand Git's embedded-repository dir/ entries into captured file paths.` |
+| `plugins/review-pr-with-codex/scripts/review-scope:416` | rewrite | `# Run from the top level. `review_git ls-files` is scoped to the current directory`<br>`# and prints cwd-relative paths, while `git diff` is whole-tree and prints`<br>`# repository-relative ones. Called from a subdirectory the two disagree, so`<br>`# untracked files above it vanish from the scope while the whole-tree digest`<br>`# still covers them: the loop would bank a clean result over code no reviewer`<br>`# was shown, and the paths it did report would not resolve from the root.` | `# Run from the repository root so ls-files includes every untracked path`<br>`# and uses the same repository-relative paths as diff.` |
+| `plugins/review-until-clean/scripts/review-scope:416` | rewrite | `# Run from the top level. `review_git ls-files` is scoped to the current directory`<br>`# and prints cwd-relative paths, while `git diff` is whole-tree and prints`<br>`# repository-relative ones. Called from a subdirectory the two disagree, so`<br>`# untracked files above it vanish from the scope while the whole-tree digest`<br>`# still covers them: the loop would bank a clean result over code no reviewer`<br>`# was shown, and the paths it did report would not resolve from the root.` | `# Run from the repository root so ls-files includes every untracked path`<br>`# and uses the same repository-relative paths as diff.` |
+| `tests/fixtures/review-submodule-fixture:51` | rewrite | `# Exercise all consumers using a schema-valid local review result, without`<br>`# starting a reviewer. Every consumer reads the same captured path contract.` | `# Supply a schema-valid review result to exercise all consumers without starting a reviewer.` |

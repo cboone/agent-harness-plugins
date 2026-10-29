@@ -1,0 +1,17 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 90,
+      "detail": "Saying that “aspect path validation” consumes the emitted membership suggests that returned finding locations are checked against it. In fact, aspect_status checks finding paths only with safe_path and copies membership_paths into status metadata. A schema-valid finding naming module/other passes validation even when that path is outside membership. This wording can mislead maintainers about the validator’s guarantee.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md",
+      "fix": "Replace the final sentence with: “Prompts, changes and the gate consume the emitted paths. Aspect validation checks scope consistency and reports membership_paths; finding locations are checked for safe relative syntax, not membership. There is no directory-wide editing allowance.”",
+      "line": 43,
+      "severity": "suggestion",
+      "title": "write-markdown: Factual accuracy, clarify that finding-path validation does not enforce membership."
+    }
+  ],
+  "reviewed": "5fc102fb97bf1883469ab948e6a0889d14aa7b53",
+  "strengths": ["The documentation clearly explains why internal submodule edits require comparing child trees.", "The snapshot explanation accurately distinguishes index changes from disk-content changes and identifies detection limits."],
+  "summary": "Reviewed the full specified committed diff and checked comments and documentation against the implementation. One wording clarification is suggested; no Important or Critical documentation defects were found."
+}

@@ -1,0 +1,17 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "The guide-coverage claim now applies to recursively reviewed child files, but render_guides resolves every path against the superproject's baseline and object database. For module/src/file.go, module/AGENTS.md cannot be read through the gitlink. The prompt also prohibits checkout instructions, so required child checks can be omitted while review succeeds. This is the known finding retained under the explicit record-without-fixing disposition.",
+      "file": "plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+      "fix": "Record without fixing as directed. Suggested clarification for a follow-up: “Historical guide discovery currently searches only the superproject baseline. Child repository instructions are not loaded, so recursive reviews do not provide complete historical-guideline coverage.”",
+      "line": 92,
+      "severity": "important",
+      "title": "write-markdown: Factual accuracy: Historical-guidance coverage is overstated for submodules."
+    }
+  ],
+  "reviewed": "4420995611f18e86ce4b8c12a01e7fc5c458e01a",
+  "strengths": ["The documentation accurately distinguishes finding-path syntax validation from membership enforcement.", "The recursive tree-comparison explanation clearly states why parent gitlinks cannot measure internal edits."],
+  "summary": "Reviewed the complete specified diff for comment and documentation accuracy. No new Important or Critical issues were found; the known historical-child-guidance finding is retained as directed. No files were changed or write-producing tests run."
+}

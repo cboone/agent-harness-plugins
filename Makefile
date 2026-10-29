@@ -100,6 +100,7 @@ SCRUT_ENV := \
 	LEDGER_BARRIER_ENV="$(CURDIR)/tests/fixtures/ledger-reservation-barrier.bash" \
 	LEDGER_COMMAND_STUB_BIN="$(CURDIR)/tests/fixtures/ledger-command-stub" \
 	LEDGER_CONCURRENCY_BIN="$(CURDIR)/tests/fixtures/ledger-concurrency" \
+	REVIEW_SUBMODULE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/review-submodule-fixture" \
 	REVIEW_SCOPE_BIN="$(CURDIR)/plugins/review-until-clean/scripts/review-scope" \
 	REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN="$(CURDIR)/plugins/review-pr-with-codex/scripts/review-scope" \
 	CODEX_ASPECTS_BIN="$(CURDIR)/plugins/review-pr-with-codex/scripts/codex-aspects" \

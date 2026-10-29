@@ -60,11 +60,15 @@ function main() {
         CODEX_ENABLED_SKILL_PERCENT=101 CODEX_OTHER_SKILL_RESERVE_TOKENS=999999999 \
         "${REPO_ROOT}/bin/run-scrut" --shell bash test "${REPO_ROOT}/tests/data/environment-isolation/persistence.md"
       ;;
-    guard-missing-reset | guard-new-consumer | guard-late-reset | guard-indirect | guard-registered | guard-scrut-runner | guard-scrut-update | guard-scrut-ci | guard-scrut-ci-reusable | guard-scrut-new | guard-wrapper-reset | guard-capture | guard-stderr | guard-capture-library | guard-git-namespace | guard-four-fence)
+    guard-missing-reset | guard-new-consumer | guard-late-reset | guard-indirect | guard-registered | guard-scrut-runner | guard-scrut-update | guard-scrut-ci | guard-scrut-ci-reusable | guard-scrut-new | guard-wrapper-reset | guard-capture | guard-stderr | guard-capture-library | guard-git-namespace | guard-four-fence | guard-copy-only | guard-copy-execution)
       mkdir "${root}/tree"
       cp -R "${REPO_ROOT}/bin" "${REPO_ROOT}/plugins" "${REPO_ROOT}/tests" "${REPO_ROOT}/.github" "${root}/tree/"
       cp "${REPO_ROOT}/Makefile" "${root}/tree/Makefile"
-      if [[ "${scenario}" == guard-missing-reset ]]; then
+      if [[ "${scenario}" == guard-copy-only ]]; then
+        : # The shared-library copy entry already present must not imply execution.
+      elif [[ "${scenario}" == guard-copy-execution ]]; then
+        printf '%s\n' 'bash plugins/review-until-clean/scripts/review-git.bash' >> "${root}/tree/bin/build-shared-references"
+      elif [[ "${scenario}" == guard-missing-reset ]]; then
         perl -ni -e 'print unless /^source .*git-environment[.]bash/' "${root}/tree/tests/fixtures/review-corpus-fixture"
       elif [[ "${scenario}" == guard-four-fence ]]; then
         cp "${REPO_ROOT}/tests/data/environment-isolation/unguarded-four-fence.md" "${root}/tree/tests/scrut/new-four-fence.md"

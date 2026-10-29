@@ -1,0 +1,17 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "The new recursive-review description leaves the historical-guidance guarantee unqualified. For module/src/file.go, render_guides searches for module/AGENTS.md in the superproject's baseline, which cannot traverse the gitlink. Child instructions are omitted while the prompt prohibits loading checkout instructions, so review can succeed without required child checks. The ledger acknowledges this limitation, but the shipped reference does not.",
+      "file": "plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+      "fix": "Add under Historical instruction discovery: “Historical guide discovery currently searches only the superproject baseline. Child repository instructions are not loaded, so recursive reviews do not provide complete historical-guideline coverage.”",
+      "line": 80,
+      "severity": "important",
+      "title": "write-markdown: Factual accuracy: Historical-guidance coverage is overstated for submodules."
+    }
+  ],
+  "reviewed": "0fdf085555b9350c44f31ebd7629836b4b0ceb29",
+  "strengths": ["The snapshot documentation distinguishes index changes from disk-content changes and states detection limits.", "Recursive comparison comments explain why parent gitlinks cannot measure internal file edits."],
+  "summary": "Reviewed the complete specified diff for comment and documentation accuracy against the implementation. One Important documentation gap remains; no files were changed or write-producing tests run."
+}

@@ -1,0 +1,14 @@
+{
+  "findings": [
+    {
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "line": 449,
+      "severity": "important",
+      "title": "Keep deleted submodules visible in rendered review diffs",
+      "detail": "The new ignore override depends on current submodule records. After deleting the last submodule and its checkout, submodules is empty, so the rendered committed diff omits --ignore-submodules=none. With diff.ignoreSubmodules=all, review-scope now includes the deletion but the command handed to the reviewer hides it. Apply the override independently of current submodule presence. This repeats the ignore-settings coverage class recorded in the preceding round.",
+      "evidence": "review-scope:312-317 collects gitlinks only from current real and disk indexes; a fully removed submodule appears in neither. Line 489 explicitly overrides ignore settings when collecting committed paths. Evaluating render_scope's jq expression with submodules=[] and committed=[\"module\"] produced a committed diff command without the override. Installed Git documentation confirms that diff.ignoreSubmodules supplies the default and 'all' hides submodule changes."
+    }
+  ],
+  "summary": "Reviewed all 14 changed canonical files fully, excluding generated mirrors. One Important coverage defect; no additional worthwhile behavior-preserving simplifications. stopped: recurring defect. No writes or fixtures were run. GitHub metadata verification was unavailable because the API was unreachable.",
+  "files_reviewed": [".github/workflows/ci.yml", "Makefile", "docs/reviews/2026-10-28-submodule-snapshot-ledger.md", "plugins/review-pr-with-codex/.claude-plugin/plugin.json", "plugins/review-pr-with-codex/scripts/codex-aspects", "plugins/review-pr-with-codex/scripts/review-scope", "plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md", "plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md", "plugins/review-until-clean/.claude-plugin/plugin.json", "plugins/review-until-clean/scripts/review-scope", "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md", "plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md", "tests/fixtures/review-submodule-fixture", "tests/scrut/review-scope-submodules.md"]
+}

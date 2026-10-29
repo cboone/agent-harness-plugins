@@ -40,7 +40,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/review-scope" --base main
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/codex-aspects" --help
 ```
 
-- `review-scope` reports the scope (committed changes since the merge base, staged, unstaged and untracked files) and a content-addressed `tree` and `snapshot` of it. It is a copy of the `review-until-clean` helper of the same name.
+- `review-scope` publishes canonical membership used by every consumer and reports the scope (committed changes since the merge base, staged, unstaged and untracked files) and a content-addressed `tree` and `snapshot` of it. It is a copy of the `review-until-clean` helper of the same name.
 - `codex-aspects` renders each aspect's prompt, runs aspects through `codex exec`, validates their output, and compares two scopes to show what changed between them.
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you. **If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the scripts with `**/review-pr-with-codex/**/scripts/codex-aspects`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm both scripts with `test -x`, and use their absolute paths for the rest of the session.
@@ -115,7 +115,7 @@ Run it alone with `<tmp>/scope-after.json` from step 5. Immediately before editi
 - **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-after.json --out-dir <tmp>/out --reviewed-scope <tmp>/scope.json --results <tmp>/initial-results.json --statuses <tmp>/initial-statuses.json --reviewed-aspect <name>... [--guide-name <name>...] [--model <model>] [--effort <level>] [--window <tokens>]`, which reruns the gate, recaptures the scope and refuses to launch unless it still matches `--scope`, then uses `--sandbox workspace-write`. Another session can still edit between that check and the launch.
 - **Subagent path:** one subagent with the rendered `simplify` task, then `validate` its reply.
 
-Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-after.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, their content diff from `git diff <before_tree> <after_tree>`, and any prohibited edits in `outside_scope`. Use the measured diff rather than `simplify`'s account, even when simplification failed; report that failure too.
+Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-after.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, their content diff using the shared policy (`review_diff <before_tree> <after_tree>` after sourcing the bundled `review-git.bash`), and any prohibited edits in `outside_scope`. For submodule paths, compare the corresponding child scope trees with `review_git -C <submodule> diff "${REVIEW_DIFF_OPTIONS[@]}" <before_tree> <after_tree>`, recursively; the parent trees contain gitlinks only. Use the measured diff rather than `simplify`'s account, even when simplification failed; report that failure too.
 
 ### 7. Validate and review the final state
 

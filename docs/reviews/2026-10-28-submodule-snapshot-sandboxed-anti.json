@@ -1,0 +1,35 @@
+{
+  "complete": true,
+  "excluded": ["dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json", "dist/codex/plugins/review-pr-with-codex/scripts/codex-aspects", "dist/codex/plugins/review-pr-with-codex/scripts/review-scope", "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md", "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md", "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json", "dist/codex/plugins/review-until-clean/scripts/review-scope", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/reviewers.md", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md"],
+  "findings": [
+    {
+      "detail": "Delete the last submodule and its checkout, then capture a committed or staged deletion with diff.ignoreSubmodules=all. Neither current index contains that gitlink, so submodules is empty. The scope collector includes the deletion using an explicit ignore override, but the rendered reviewer command omits that override and hides the deletion. Apply the override independently of current submodule presence.",
+      "evidence": "Both review-scope copies collect submodule records from the current real and temporary indexes at lines 312–316 and override ignore settings for bucket collection at lines 489–494. render_scope adds --ignore-submodules=none only when submodules is nonempty. Installed git-config documentation identifies diff.ignoreSubmodules as the default for git diff; git-diff documentation states that all hides every submodule change.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "line": 449,
+      "severity": "important",
+      "title": "Parallel paths: deleted submodules lose the rendered diff ignore override"
+    },
+    {
+      "detail": "A retained checkout staged for deletion, or an untracked embedded repository, produces an aggregate untracked entry such as module/. Bucket extension preserves that entry alongside recursive internal paths. codex-aspects rejects every path containing an empty segment, including a trailing slash, so prompt, changes and gate reject the newly supported scope as invalid. Handle these directory entries consistently across collection and consumption.",
+      "evidence": "review-scope:495 collects untracked entries directly from git ls-files; extend_submodule_buckets:349–350 retains them unchanged. codex-aspects:204–207 rejects trailing slashes, and require_scope_file:265 applies that rule to untracked. A read-only Git probe using the existing external checkout's index and the reviewed repository's parent as --work-tree returned exactly 523-review-snapshot-submodules/. The deleted fixture exercises collection but never passes its resulting scope through an aspect consumer. Both canonical collectors have identical behavior.",
+      "file": "plugins/review-pr-with-codex/scripts/review-scope",
+      "line": 349,
+      "severity": "important",
+      "title": "Parallel paths: retained checkout scopes fail the aspect consumer's path validation"
+    },
+    {
+      "detail": "This paragraph predates the change. It says staging or unstaging an already tracked path leaves snapshot unchanged and that the index counts only when tracking membership changes. The helper hashes semantic index content and bucket membership, including recursively captured child indexes, so ordinary staging can move snapshot while tree stays unchanged. The main skill and snapshot reference describe the implemented behavior correctly.",
+      "evidence": "reviewers.md:131 claims staging and unstaging leave the snapshot unchanged. review-scope:564–573 hashes the index digest and all four buckets. scope-and-snapshot.md explicitly states that staging, unstaging and intent-to-add move snapshot even when tree stays unchanged; the main review-until-clean skill states the same at line 58.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 131,
+      "severity": "nit",
+      "title": "Docs drift: edit-round explanation still describes snapshots as insensitive to staging"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Reviewed 4b473c00e6ad3bb935f204eb7807aaa554b91c57..working-tree against the caller-specified origin/main base. Read all 15 changed canonical files in full, including tests, documentation and historical review records. Working tree was clean. Excluded the nine listed generated Codex mirror files. No PR body applied, per the caller.\n\nGroups: code, agent prose and docs. Walked all 13 items: Sibling input forms, Boundary arithmetic, Stale writes, Validator gaps, Absent or partial data, Untrusted data in commands, Tests that cannot fail, Crashes instead of reports, Unrun platform configuration, Unenforced trust boundary, Parallel paths, Agent-prose control flow and Docs drift.\n\nResults: 2 Important findings and 1 Nit. Siblings examined included both canonical collectors, committed/staged/unstaged prompt branches, recursive prompt and tree comparisons, retained and untracked embedded checkouts, fixture assertions, the main loop skill and both snapshot references. Historical reviewer classifications and stop decisions did not govern this review.\n\nMechanical checks passed: bash -n and ShellCheck for all four changed shell scripts; jq empty for both manifests and historical JSON; actionlint for CI with external helper execution disabled. A read-only Git probe confirmed trailing-slash output for an embedded checkout. Installed Git documentation confirmed ignore-setting behavior. Repository tests and validators were not executed; their results and mutation sensitivity remain unverified.\n\nSession could write: no, enforced by the read-only filesystem sandbox. --run-checks: off. No artifacts were created. Reviewed in this session because --no-codex and the caller prohibited delegation. All Git operations used git -C from outside the reviewed checkout; no default-branch lookup occurred. GitHub ownership metadata lookup failed because api.github.com was unreachable.",
+  "reviewed": "4b473c00e6ad3bb935f204eb7807aaa554b91c57..working-tree",
+  "status": "success",
+  "unverified": ["Recursive regression execution: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope-submodules.md. Not run because repository code execution was prohibited.", "Existing collector regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope.md. Not run because repository code execution was prohibited.", "Existing aspect regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/codex-aspects.md. Not run because repository code execution was prohibited.", "Plugin and reference validation: make validate. Not run because repository code execution was prohibited.", "Tests that cannot fail: use the plant-defects skill against the recursive snapshot and consumer assertions. Planting and running defects were prohibited.", "GitHub ownership metadata: gh repo view cboone/agent-harness-plugins --json isArchived,isFork,parent. Attempt failed because api.github.com was unreachable."]
+}

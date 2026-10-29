@@ -128,11 +128,13 @@ Compare the snapshot from step 1 with `review-scope`'s snapshot taken **immediat
 - **Unchanged:** a report round. The reviewer's findings go through steps 6 to 9 as usual.
 - **Moved:** an edit round. Whatever moved it happened while the reviewer ran, so it is that round's result. Record the paths that changed. Any findings the reviewer also reported are recorded but never queued for the fixer, since they name lines in code its edits replaced. An edit round is never clean, whatever it reported, because the code it reviewed is no longer the code on disk; the next round reviews the new snapshot.
 
-The snapshot binds `HEAD`, the resolved merge base, and the working tree's content as Git would store it. A reviewer that commits moves it even when no file content changed; record such a round's `HEAD` or base change in place of the changed paths, which can then be empty. A `HEAD` that moved to a commit not descended from the old one is a rewrite, not an edit round, per the ancestry check above. Within the tree, it sees lasting changes to stored content and nothing else. An unchanged snapshot does not prove the reviewer wrote nothing: staging or unstaging a path that is already tracked, a write to an ignored untracked file, an edit reverted before the reviewer returned, and an edit Git normalizes away, such as a line-ending change under text normalization, all leave it where it was. Such a round is recorded as a report round. The index does count in one case: it decides which paths are tracked, so force-adding an ignored file with `git add -f`, or removing a tracked ignored file from the index, moves the snapshot without changing any file's bytes, and that round is an edit round. None of them changes the content the snapshot binds a clean result to, which is why the mode is decided from it; say what the snapshot covers rather than that nothing was written.
+The snapshot binds HEAD, the resolved base tip and merge base, disk content, semantic index entries and bucket membership, including initialized submodules recursively. Commits, staging, unstaging and intent-to-add invalidate the snapshot even when disk content stays unchanged; record index or ref movement separately when no disk paths changed. A HEAD rewrite fails the ancestry check above. Ignored untracked writes, edits reverted between scans and byte changes normalized away by Git remain undetected. An unchanged snapshot means no lasting change to those inputs was found; it does not prove that nothing was written.
 
 A change made by something other than the reviewer during its run, such as a formatter on save or another session, is indistinguishable from the reviewer's own edit. It is recorded the same way, which costs at most one more round and never a wrong clean result.
 
-The changed paths come from the content trees the two scope reads report: `git diff-tree -r -z --name-only <tree before> <tree after>` lists exactly the paths whose stored content changed, added or deleted. Do not derive them from the file lists. Those lists sort paths into buckets, and staging, unstaging or `git add -N` moves a path between them, or off them, without changing a byte, so a path that only left a list is not an edit. Record a `HEAD` or base change separately, as above. List the paths in the ledger; do not summarize them as "the reviewer made changes".
+Before listing or diffing reviewed paths, source the bundled `review-git.bash` beside the resolved helper. Use `review_git` for path listings and `review_diff` for diffs; both use the shared call-local policy even when no submodule remains.
+
+The changed paths come from the content trees the two scope reads report: `review_git diff-tree "${REVIEW_DIFF_OPTIONS[@]}" -r -z --name-only <tree before> <tree after>` lists this repository's paths whose stored content changed, added or deleted. Repeat that comparison inside each initialized submodule using its before/after scope trees, recursively, and prefix internal paths back to the parent. A parent tree contains only gitlinks, so it cannot report internal edits. Also report submodule paths whose initialization state changed; if the required child objects are unavailable, report incomplete edit measurement rather than an empty path list. Do not derive them from the file lists. Those lists sort paths into buckets, and staging, unstaging or `git add -N` moves a path between them, or off them, without changing a byte, so a path that only left a list is not an edit. Record a `HEAD` or base change separately, as above. List the paths in the ledger; do not summarize them as "the reviewer made changes".
 
 Under `--report-only`, an edit round is reported with its changed paths, and nothing is reverted. Reverting would be the loop editing code under `--report-only`, and a guess about which edits were the reviewer's.
 
@@ -144,7 +146,7 @@ The reviewer decides what it reads. The loop cannot make it read all four bucket
 
 Many reviewers read only `git diff`, and an untracked file is in no diff, though untracked files are usually the newest and least reviewed code in the scope. When the scope has untracked files, ask once per run whether to make them visible with `git add -N`, which records an intent to add without staging content. Use the structured-question capability where the harness has one, and a numbered list with a wait for the reply where it does not. Record only the paths this run adds, and never reset an entry that was in the index before. When no one can answer, as in a non-interactive run, do not touch the index: record the untracked bucket as not covered and go on.
 
-The index is review input, so `git add -N` moves the snapshot. Prepare before the round's snapshot is captured, then run `review-scope` again and take its snapshot and buckets as the round's, so the preparation is not mistaken for the reviewer's edit. Keep the entries through the validity check and any confirming round, and prepare newly untracked paths before a later round the same way.
+The index is review input, so `git add -N` moves the snapshot. For a prefixed submodule path, create and restore the entry in the corresponding child index with `git -C <submodule>`, using the path relative to that child. Track each repository's entries separately. Files already tracked inside an untracked retained or embedded checkout do not become visible in the parent diff by adding child intent-to-add entries. Have the reviewer read those captured paths directly or report partial coverage; never replace a staged parent gitlink deletion to make them appear. Prepare before the round's snapshot is captured, then run `review-scope` again and take its snapshot and buckets as the round's, so the preparation is not mistaken for the reviewer's edit. Keep the entries through the validity check and any confirming round, and prepare newly untracked paths before a later round the same way.
 
 Restore the index once, after the final validity check, and also when the run fails or is cancelled. Reset only this run's entries, and before resetting a path check that its entry is still the intent-to-add one this run created and that no other session staged content for it since. Leave an entry that changed alone, and report the cleanup as incomplete. The ledger names the snapshot that was reviewed; the restoration is a later index change, reported separately.
 
@@ -170,14 +172,18 @@ Do not split a round to reach full coverage. Running the reviewer once over one 
 
 `git ls-files --others --exclude-standard` lists an untracked symlink exactly like an untracked regular file. A reviewer told to read that path reads the target instead of the link, and the target is chosen by whoever created the link. A link to `~/.ssh/id_ed25519` or to another checkout puts that content into the reviewer's context, from where it reaches the findings, the ledger, and any commit made from them.
 
-So find the untracked symlinks before the round:
+Find links from the canonical captured membership through the bundled helper, not by rediscovering parent untracked files. Set `scope_file` to that round's captured JSON and `review_scope_bin` to the resolved bundled executable. Run from the captured repository root. The helper uses rooted filesystem operands, checks ancestor replacements and returns link text without following targets:
 
 ```bash
-while IFS= read -r -d '' path; do
-  if [[ -L "${path}" ]]; then
-    printf 'symlink %s -> %s\n' "${path}" "$(readlink "${path}")"
-  fi
-done < <(git ls-files -z --others --exclude-standard)
+links_file="$(mktemp "${TMPDIR:-/tmp}/review-links.XXXXXX")" || exit
+if ! "${review_scope_bin}" --symlinks "${scope_file}" > "${links_file}"; then
+  rm "${links_file}"
+  exit 1
+fi
+jq -c '.links[]' "${links_file}"
+link_status=$?
+rm "${links_file}"
+if [[ "${link_status}" -ne 0 ]]; then exit "${link_status}"; fi
 ```
 
 Then:

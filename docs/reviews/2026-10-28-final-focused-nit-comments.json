@@ -1,0 +1,26 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "The new recursive-review description leaves the historical-guidance guarantee unqualified. For a reviewed path such as module/src/file.go, render_guides searches for module/AGENTS.md in the superproject's baseline, which cannot traverse the gitlink. The prompt also prohibits checkout instructions, so required child checks can be omitted while review succeeds. The process ledger records this limitation, but the shipped invocation reference does not.",
+      "file": "plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+      "fix": "Add: “Historical guide discovery currently searches only the superproject baseline. Child repository instructions are not loaded, so recursive reviews do not provide complete historical-guideline coverage.”",
+      "line": 80,
+      "severity": "important",
+      "title": "write-markdown: Factual accuracy: Document the missing historical submodule guidance."
+    },
+    {
+      "confidence": 98,
+      "detail": "The paragraph says the files inventory represents symlinks by link text and gitlinks by pointer metadata. write_file_inventory actually emits only path strings. A consumer implementing link annotations from this documented contract would receive names without targets or object identifiers; link descriptions come separately from --symlinks.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md",
+      "fix": "Rewrite the first sentence as: “The required files inventory is an array of repository-relative path strings, including symlink paths and pointer-only entries for empty uninitialized gitlinks. Link text is returned separately by --symlinks.”",
+      "line": 43,
+      "severity": "suggestion",
+      "title": "write-markdown: Factual accuracy: Describe the inventory as path strings."
+    }
+  ],
+  "reviewed": "4bf2d596dd5361d0b3a6653b3e926dd201d44056",
+  "strengths": ["The snapshot documentation clearly distinguishes index changes from disk-content changes and explains detection limits.", "The recursive tree-comparison comments explain why parent gitlinks cannot measure internal edits."],
+  "summary": "Reviewed the complete committed scope for comment and documentation accuracy against the implementation. One Important documentation gap and one contract clarification remain; no files were changed or write-producing tests run."
+}

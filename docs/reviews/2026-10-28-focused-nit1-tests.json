@@ -1,0 +1,26 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Criticality 7/10. The contract-rejection fixture changes only .untracked, leaving .membership inconsistent. All 12 probes therefore reject even when the untracked-minus-files validation is removed, as confirmed with an in-memory check. These tests would miss a regression allowing a consistently encoded directory or uninventoried file into review membership.",
+      "file": "tests/scrut/review-scope-submodule-consumers.md",
+      "fix": "Construct negative scopes with matching membership and bucket views while leaving the tested paths absent from .files. Run them through all four consumers and confirm that removing inventory validation makes the relevant assertions fail.",
+      "line": 65,
+      "severity": "important",
+      "title": "write-scrut-tests: Structured output checks reject inventory inputs for the wrong reason."
+    },
+    {
+      "confidence": 96,
+      "detail": "Criticality 7/10. The new recursive stability check is never exercised with a child mutation during collection. Added fixtures mutate children between completed scans, while the existing during-collection test changes only the parent index in a repository without submodules. Removing the recursive comparison could therefore pass these tests while allowing a child index change, invisible to the parent tree and index, to produce stale review inputs.",
+      "file": "tests/scrut/review-scope-submodules.md",
+      "fix": "Add a deterministic fixture that changes a child's indexed content after the first recursive capture and before the closing capture, preserving disk bytes and both HEADs. Assert nonzero exit, empty scope output and the recursive-change diagnostic; confirm that removing the comparison makes the test fail.",
+      "line": 14,
+      "severity": "important",
+      "title": "write-scrut-tests: Relevant error output lacks coverage for mutation during recursive collection."
+    }
+  ],
+  "reviewed": "5fc102fb97bf1883469ab948e6a0889d14aa7b53",
+  "strengths": ["Fixtures cover consecutive dirty edits, nested changes and staged child content with restored disk bytes.", "Consumer integration checks connect stored digest membership to prompts, validation, change reporting, gates and symlink discovery.", "Regression cases cover precise gitlink membership, unrelated-file rejection, missing objects, symlink replacements and option-like paths."],
+  "summary": "Reviewed the full committed scope and mapped changed behavior to added and existing tests. Coverage is broad, but inventory rejection and recursive scan consistency have two important gaps. The suites were not executed because their fixtures create files."
+}
