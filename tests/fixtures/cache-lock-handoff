@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Run two real cache saves with the first paused after releasing ownership.
+set -euo pipefail
+
+source "${REPO_ROOT:?}/bin/lib/capture-child.bash"
+
+FIXTURE_DIRECTORY=""
+FIRST_WRITER=""
+SECOND_WRITER=""
+
+function cleanup() {
+  local result=$?
+  trap - EXIT
+  trap '' HUP INT TERM
+  [[ -n "${FIXTURE_DIRECTORY}" ]] || exit "${result}"
+  touch "${FIXTURE_DIRECTORY}/barrier/release-first" "${FIXTURE_DIRECTORY}/barrier/release-second" || result=1
+  if [[ -n "${FIRST_WRITER}" ]]; then
+    capture_child - --wait-log "${FIXTURE_DIRECTORY}/first.log" "${FIRST_WRITER}" || result=1
+  fi
+  if [[ -n "${SECOND_WRITER}" ]]; then
+    capture_child - --wait-log "${FIXTURE_DIRECTORY}/second.log" "${SECOND_WRITER}" || result=1
+  fi
+  rm -r -- "${FIXTURE_DIRECTORY}" || result=1
+  exit "${result}"
+}
+
+function await_event() {
+  local marker="${1}" attempt
+  for ((attempt = 0; attempt < 160; attempt++)); do
+    [[ ! -e "${LOCK_TEST_BARRIER}/${marker}" ]] || return 0
+    "${LOCK_TEST_REAL_SLEEP}" 0.05
+  done
+  echo "cache barrier timed out: ${marker}" >&2
+  return 1
+}
+
+function main() {
+  local released_successor=false
+  if [[ "${1:-}" == --released-successor ]]; then
+    released_successor=true
+    shift
+  fi
+  [[ $# == 4 ]] || exit 2
+  local root tool first_status=0 second_status=0 owner
+  root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+  FIXTURE_DIRECTORY="${root}"
+  mkdir "${root}/bin" "${root}/barrier"
+  trap cleanup EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  export LOCK_TEST_REAL_MKDIR LOCK_TEST_REAL_RM LOCK_TEST_REAL_RMDIR LOCK_TEST_REAL_SLEEP
+  LOCK_TEST_REAL_MKDIR="$(command -v mkdir)"
+  LOCK_TEST_REAL_RM="$(command -v rm)"
+  LOCK_TEST_REAL_RMDIR="$(command -v rmdir)"
+  LOCK_TEST_REAL_SLEEP="$(command -v sleep)"
+  for tool in mkdir rm rmdir; do
+    cp "${DIRECTORY_LOCK_STUB_BIN:?}" "${root}/bin/${tool}"
+  done
+  export PATH="${root}/bin:${PATH}"
+  for tool in mkdir rm rmdir; do
+    [[ "$(command -v "${tool}")" == "${root}/bin/${tool}" ]] || return 1
+  done
+  export LOCK_TEST_MODE=handoff LOCK_TEST_BARRIER="${root}/barrier"
+  export XDG_CACHE_HOME="${root}/cache"
+  export LOCK_TEST_DIRECTORY="${XDG_CACHE_HOME}/report-boards/bugs/github.com/acme/widgets/save.lock"
+  jq '. + {lock_test_writer:"second"}' "${2}" > "${root}/gather.json"
+  jq 'map(. + {lock_test_writer:"second"})' "${3}" > "${root}/assessments.json"
+  jq '. + {lock_test_writer:"second"}' "${4}" > "${root}/scored.json"
+  LOCK_TEST_ROLE=first BASH_ENV="${OWNER_WRITE_FAILURE_ENV:?}" capture_child - --exec-log "${root}/first.log" -- "${BUGS_HANDOFF_SUBJECT_BIN:?}" save "$@" &
+  FIRST_WRITER=$!
+  await_event first-released || return 1
+  LOCK_TEST_ROLE=second BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" capture_child - --exec-log "${root}/second.log" -- "${BUGS_HANDOFF_SUBJECT_BIN}" save "${1}" "${root}/gather.json" "${root}/assessments.json" "${root}/scored.json" &
+  SECOND_WRITER=$!
+  await_event second-owned || return 1
+  owner="$(cat "${LOCK_TEST_DIRECTORY}/owner")"
+  if [[ "${released_successor}" == true ]]; then
+    touch "${LOCK_TEST_BARRIER}/release-second"
+    capture_child - --wait-log "${root}/second.log" "${SECOND_WRITER}" || second_status=$?
+    SECOND_WRITER=""
+    [[ ! -e "${LOCK_TEST_DIRECTORY}/owner" ]] || return 1
+  fi
+  touch "${LOCK_TEST_BARRIER}/release-first"
+  capture_child - --wait-log "${root}/first.log" "${FIRST_WRITER}" || first_status=$?
+  FIRST_WRITER=""
+  if [[ -n "${SECOND_WRITER}" ]]; then
+    [[ "$(cat "${LOCK_TEST_DIRECTORY}/owner")" == "${owner}" ]] || return 1
+    touch "${LOCK_TEST_BARRIER}/release-second"
+    capture_child - --wait-log "${root}/second.log" "${SECOND_WRITER}" || second_status=$?
+    SECOND_WRITER=""
+  fi
+  ((first_status == 0 && second_status == 0)) || return 1
+  [[ ! -e "${LOCK_TEST_DIRECTORY}/owner" ]] || return 1
+  [[ ! -e "${LOCK_TEST_BARRIER}/unexpected-rmdir" ]] || {
+    echo 'cache writer attempted directory removal' >&2
+    return 1
+  }
+  [[ -d "${LOCK_TEST_DIRECTORY}" ]] || return 1
+  jq -e '.lock_test_writer == "second"' "${LOCK_TEST_DIRECTORY%/save.lock}/gather.json" > /dev/null
+  jq -e 'all(.[]; .lock_test_writer == "second")' "${LOCK_TEST_DIRECTORY%/save.lock}/assessments.json" > /dev/null
+  jq -e '.lock_test_writer == "second"' "${LOCK_TEST_DIRECTORY%/save.lock}/scored.json" > /dev/null
+  echo 'both saves succeeded; successor preserved; cache consistent'
+}
+
+main "$@"

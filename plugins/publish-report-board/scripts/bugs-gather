@@ -840,19 +840,12 @@ function require_tools() {
 }
 
 function cleanup() {
-  local diagnostic result=0
+  local result=0
   if [[ -n "${TEMP_DIR}" && -d "${TEMP_DIR}" ]]; then
     rm -rf -- "${TEMP_DIR}" || result=1
   fi
   if [[ -n "${SAVE_LOCK}" ]]; then
     rm -- "${SAVE_LOCK}/owner" || return 1
-    if ! diagnostic="$(rmdir -- "${SAVE_LOCK}" 2>&1)"; then
-      if [[ ! -e "${SAVE_LOCK}/owner" ]] \
-        && { [[ -e "${SAVE_LOCK}" ]] || [[ ! -x "${SAVE_LOCK%/*}" ]]; }; then
-        echo "${SCRIPT_NAME}: cannot remove ${SAVE_LOCK}: ${diagnostic}; manual cleanup may be required" >&2
-        return 1
-      fi
-    fi
   fi
   return "${result}"
 }
@@ -862,34 +855,26 @@ function cleanup() {
 # different gathers. It waits about ten seconds for another save to finish.
 function acquire_save_lock() {
   local lock="${1}/save.lock"
-  local owner_error="" diagnostic
+  local owner_error=""
   local -i tries=0
+  mkdir -p -- "${lock}" || die "${E_INVALID}" "cannot create ${lock}"
   while :; do
-    if mkdir -- "${lock}" 2> /dev/null; then
-      if owner_error="$(
-        (
-          set -o noclobber
-          : > "${lock}/owner"
-        ) 2>&1
-      )"; then
-        SAVE_LOCK="${lock}"
-        printf '%s' "$$" > "${lock}/owner" \
-          || die "${E_INVALID}" "cannot record the lock owner in ${lock}"
-        return 0
-      fi
-      if [[ ! -e "${lock}/owner" && ! -L "${lock}/owner" ]]; then
-        if ! diagnostic="$(rmdir -- "${lock}" 2>&1)"; then
-          if [[ ! -e "${lock}/owner" ]] && { [[ -e "${lock}" ]] || [[ ! -x "${lock%/*}" ]]; }; then
-            die "${E_INVALID}" "cannot create ${lock}/owner: ${owner_error}; cannot remove ${lock}: ${diagnostic}; manual cleanup may be required"
-          fi
-        fi
-      fi
+    if owner_error="$(
+      (
+        set -o noclobber
+        : > "${lock}/owner"
+      ) 2>&1
+    )"; then
+      SAVE_LOCK="${lock}"
+      printf '%s' "$$" > "${lock}/owner" \
+        || die "${E_INVALID}" "cannot record the lock owner in ${lock}"
+      return 0
     fi
     if ((tries >= 100)); then
       if [[ ! -e "${lock}/owner" && -n "${owner_error}" ]]; then
         die "${E_INVALID}" "cannot create ${lock}/owner: ${owner_error}"
       fi
-      die "${E_INVALID}" "another sync is saving the cache; if none is running, remove ${lock}"
+      die "${E_INVALID}" "another sync is saving the cache; if none is running, remove ${lock}/owner"
     fi
     tries=$((tries + 1))
     sleep 0.1

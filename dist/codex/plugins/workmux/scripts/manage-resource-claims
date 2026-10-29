@@ -353,18 +353,9 @@ function read_claims() {
 }
 
 function release_lock() {
-  local diagnostic
   [[ -n "${LOCK_DIRECTORY}" ]] || return 0
 
   rm "${LOCK_DIRECTORY}/owner" || return 1
-  # Another writer may create its owner file before this directory is removed.
-  if ! diagnostic="$(rmdir "${LOCK_DIRECTORY}" 2>&1)"; then
-    if [[ ! -e "${LOCK_DIRECTORY}/owner" ]] \
-      && { [[ -e "${LOCK_DIRECTORY}" ]] || [[ ! -x "${LOCK_DIRECTORY%/*}" ]]; }; then
-      echo "${SCRIPT_NAME}: cannot remove ${LOCK_DIRECTORY}: ${diagnostic}; manual cleanup may be required" >&2
-      return 1
-    fi
-  fi
   LOCK_DIRECTORY=""
 }
 
@@ -386,16 +377,16 @@ function held_lock_report() {
   fi
 
   if [[ -z "${owner}" ]]; then
-    printf '%s is held by an unrecorded process; remove that directory if no claim is in progress' "${lock}"
+    printf '%s/owner is held by an unrecorded process; remove that file if no claim is in progress' "${lock}"
     return
   fi
 
   if kill -0 "${owner}" 2> /dev/null; then
-    printf '%s is held by process %s, which is still running; wait for it to finish' "${lock}" "${owner}"
+    printf '%s/owner is held by process %s, which is still running; wait for it to finish' "${lock}" "${owner}"
     return
   fi
 
-  printf '%s is held by process %s, which has exited; remove that directory' "${lock}" "${owner}"
+  printf '%s/owner is held by process %s, which has exited; remove that file' "${lock}" "${owner}"
 }
 
 # Serializes a whole read-modify-write. Atomic replacement alone stops a reader
@@ -423,8 +414,7 @@ function held_lock_report() {
 # lock on the resource, which stays advisory. Bash noclobber creates the owner
 # exclusively, even when mkdir incorrectly reports success on an existing path.
 function try_acquire_lock() {
-  local lock="${1}" diagnostic
-  mkdir "${lock}" 2> /dev/null || return 1
+  local lock="${1}"
   if LOCK_OWNER_ERROR="$(
     (
       set -o noclobber
@@ -437,15 +427,6 @@ function try_acquire_lock() {
       || die "cannot record the lock owner in ${lock}"
     return 0
   fi
-  # A failed reservation owns no file. rmdir can remove only an empty shell;
-  # an owner arriving meanwhile prevents that removal.
-  if [[ ! -e "${lock}/owner" && ! -L "${lock}/owner" ]]; then
-    if ! diagnostic="$(rmdir "${lock}" 2>&1)"; then
-      if [[ ! -e "${lock}/owner" ]] && { [[ -e "${lock}" ]] || [[ ! -x "${lock%/*}" ]]; }; then
-        die "cannot create ${lock}/owner: ${LOCK_OWNER_ERROR}; cannot remove ${lock}: ${diagnostic}; manual cleanup may be required"
-      fi
-    fi
-  fi
   return 1
 }
 
@@ -455,29 +436,13 @@ function acquire_lock() {
   local directory waited=0
 
   directory="$(dirname "${file}")"
-  mkdir -p "${directory}" || die "cannot create ${directory}"
+  mkdir -p "${lock}" \
+    || die "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
 
   while :; do
     if try_acquire_lock "${lock}"; then
       break
     fi
-    # mkdir fails for reasons other than contention: an unwritable parent, or
-    # something that is not a directory already at that path. Waiting those out
-    # and then reporting a held lock would be wrong twice over, since it costs
-    # the full timeout and tells the user to remove a directory that may not
-    # exist. Contention is the case where the lock directory is now there.
-    if [[ ! -d "${lock}" ]]; then
-      # It may have been released between the mkdir and this test, so try once
-      # more before concluding the failure was not contention.
-      if try_acquire_lock "${lock}"; then
-        break
-      fi
-
-      if [[ ! -d "${lock}" && -z "${LOCK_OWNER_ERROR}" ]]; then
-        die "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
-      fi
-    fi
-
     if ((waited >= LOCK_WAIT_SECONDS)); then
       if [[ ! -e "${lock}/owner" && -n "${LOCK_OWNER_ERROR}" ]]; then
         die "cannot create ${lock}/owner: ${LOCK_OWNER_ERROR}"
@@ -488,7 +453,6 @@ function acquire_lock() {
     sleep 1
     waited=$((waited + 1))
   done
-
 }
 
 # Replaces the file in one step so a reader never sees a half-written document.

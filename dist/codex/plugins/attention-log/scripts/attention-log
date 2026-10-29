@@ -226,16 +226,23 @@ function file_inode() {
 # never rename twice and lose the first rotation. A lock left by a stopped
 # writer is taken over once it is a minute old.
 function rotate_events() {
-  if ! mkdir "${ROTATE_LOCK}" 2> /dev/null; then
-    [[ -n "$(find "${ROTATE_LOCK}" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0
-    rmdir "${ROTATE_LOCK}" 2> /dev/null || return 0
-    mkdir "${ROTATE_LOCK}" 2> /dev/null || return 0
+  mkdir -p "${ROTATE_LOCK}" 2> /dev/null || return 0
+  if ! reserve_owner "${ROTATE_LOCK}/owner"; then
+    [[ -n "$(find "${ROTATE_LOCK}/owner" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0
+    # Age-based reclaim can remove a live successor's owner file.
+    # https://github.com/cboone/agent-harness-plugins/issues/673
+    rm "${ROTATE_LOCK}/owner" || return 0
+    reserve_owner "${ROTATE_LOCK}/owner" || return 0
+  fi
+  if ! printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; then
+    rm "${ROTATE_LOCK}/owner"
+    return
   fi
   file_size "${EVENTS_FILE}"
   if ((FILE_SIZE >= ROTATE_BYTES)); then
     mv -f "${EVENTS_FILE}" "${ROTATED_FILE}" || true
   fi
-  rmdir "${ROTATE_LOCK}" 2> /dev/null || true
+  rm "${ROTATE_LOCK}/owner"
 }
 
 # Appends line $1 in one write: cat reads the here-string, complete before cat
@@ -354,23 +361,35 @@ function transcript_shows_refusal() {
 # Takes the session lock, a directory holding its owner's PID. It is taken over
 # from a stopped owner, or after a minute without a PID; a running owner is
 # waited on for about ten seconds and never overtaken. Fails if not taken.
+function reserve_owner() {
+  (
+    set -o noclobber
+    : > "${1}"
+  ) 2> /dev/null
+}
+
 function lock_session() {
   local tries=0 owner
   LOCK_DIR="${SESSIONS_DIR}/${SESSION_ID}.lock"
-  while ! mkdir "${LOCK_DIR}" 2> /dev/null; do
+  mkdir -p "${LOCK_DIR}" 2> /dev/null || return 1
+  while ! reserve_owner "${LOCK_DIR}/pid"; do
     owner=""
     IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
     if { [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2> /dev/null; } \
-      || { [[ -z "${owner}" && -n "$(find "${LOCK_DIR}" -maxdepth 0 -mmin +1 2> /dev/null)" ]]; }; then
+      || { [[ -z "${owner}" && -n "$(find "${LOCK_DIR}/pid" -maxdepth 0 -mmin +1 2> /dev/null)" ]]; }; then
+      # PID/age reclaim can remove a live successor's owner file.
+      # https://github.com/cboone/agent-harness-plugins/issues/673
       rm -f "${LOCK_DIR}/pid"
-      rmdir "${LOCK_DIR}" 2> /dev/null || true
     fi
     ((tries += 1))
     ((tries <= 100)) || return 1
     sleep 0.1
   done
-  printf '%s\n' "$$" > "${LOCK_DIR}/pid"
   LOCK_HELD=true
+  if ! printf '%s\n' "$$" > "${LOCK_DIR}/pid"; then
+    unlock_session
+    return 1
+  fi
 }
 
 # Releases the session lock if this hook still owns it.
@@ -381,7 +400,6 @@ function unlock_session() {
   IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
   [[ "${owner}" == "$$" ]] || return 0
   rm -f "${LOCK_DIR}/pid"
-  rmdir "${LOCK_DIR}" 2> /dev/null || true
 }
 
 # Adds an open state of kind $1 with id $2 for the payload's agent and tool.

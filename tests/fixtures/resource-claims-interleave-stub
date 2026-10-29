@@ -24,7 +24,7 @@ case "${0##*/}" in
   mkdir)
     status=0
     "${CLAIMS_REAL_MKDIR}" "$@" || status=$?
-    if [[ $# -eq 1 && "${1}" == "${WORKTREE_RESOURCES_FILE}.lock" && "${CLAIMS_INTERLEAVE_MODE:-snapshot}" != snapshot && -d "${1}" ]]; then
+    if [[ "${!#}" == "${WORKTREE_RESOURCES_FILE}.lock" && "${CLAIMS_INTERLEAVE_MODE:-snapshot}" != snapshot && -d "${!#}" ]]; then
       status=0
     fi
     exit "${status}"
@@ -41,11 +41,16 @@ case "${0##*/}" in
     ;;
   rm)
     "${CLAIMS_REAL_RM:?}" "$@"
-    if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release && "${CLAIMS_WRITER}" == first && "${1:-}" == "${WORKTREE_RESOURCES_FILE}.lock/owner" ]]; then
+    if [[ ("${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release || "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == released-successor) && "${CLAIMS_WRITER}" == first && "${1:-}" == "${WORKTREE_RESOURCES_FILE}.lock/owner" ]]; then
       touch "${CLAIMS_BARRIER}/first-owner-removed"
       await_release release-cleanup 'cleanup barrier timed out'
       exit 0
     fi
+    ;;
+  rmdir)
+    touch "${CLAIMS_BARRIER}/unexpected-rmdir"
+    echo 'writers must retain the preparation directory' >&2
+    exit 79
     ;;
   git)
     if [[ "${1:-}" == worktree ]]; then
@@ -72,7 +77,7 @@ case "${0##*/}" in
     exec "${WORKTREE_GIT_STUB_BIN}" "$@"
     ;;
   *)
-    echo 'install this fixture as git, mkdir, sleep and rm' >&2
+    echo 'install this fixture as git, mkdir, sleep, rm and rmdir' >&2
     exit 1
     ;;
 esac

@@ -51,12 +51,12 @@ $ function bugs() {
 >   cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   lock="${cache}/report-boards/bugs/github.com/acme/widgets/save.lock"
 >   mkdir "${cache}/bin"
->   for tool in mkdir sleep rmdir; do
+>   for tool in mkdir sleep rmdir rm; do
 >     cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/${tool}"
 >     test "$(PATH="${cache}/bin:${PATH}" command -v "${tool}")" = "${cache}/bin/${tool}" || return 1
 >   done
 >   output="$(bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_MODE="${mode}" LOCK_TEST_DIRECTORY="${lock}" \
->     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" \
+>     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" LOCK_TEST_REAL_RM="$(command -v rm)" \
 >     BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" XDG_CACHE_HOME="${cache}" save \
 >     "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1)" || status=$?
 >   if [[ "${status}" != 1 ]]; then printf '%s\nexit=%s\n' "${output}" "${status}"; return 1; fi
@@ -68,15 +68,15 @@ $ function bugs() {
 >       [[ "${output}" == *"injected owner write failure"* && "${output}" == *"cannot record the lock owner"* ]] || { printf '%s\n' "${output}"; return 1; }
 >       ;;
 >     cleanup)
->       [[ "${output}" == *"injected rmdir failure"* && "${output}" == *"manual cleanup may be required"* ]] || { printf '%s\n' "${output}"; return 1; }
->       test -d "${lock}" && test ! -e "${lock}/owner" && test -e "${lock%/save.lock}/gather.json" || return 1
->       echo 'cleanup: exit=1; cache saved; empty lock reported'
+>       [[ "${output}" == *"injected owner unlink failure"* ]] || { printf '%s\n' "${output}"; return 1; }
+>       test -f "${lock}/owner" && test -e "${lock%/save.lock}/gather.json" || return 1
+>       echo 'cleanup: exit=1; cache saved; owner retained'
 >       return
 >       ;;
 >     *) return 1 ;;
 >   esac
->   test ! -e "${lock}" && test ! -e "${lock%/save.lock}/gather.json" || return 1
->   printf '%s: exit=1; cache unchanged; lock removed\n' "${mode}"
+>   test -d "${lock}" && test ! -e "${lock}/owner" && test ! -e "${lock%/save.lock}/gather.json" || return 1
+>   printf '%s: exit=1; cache unchanged; owner absent\n' "${mode}"
 > }
 > function progress() {
 >   jq -r --argjson n "${2}" '.bugs[] | select(.number == $n) | .progress | if . == null then "none" else "\(.stage), \(.nextMove): \(.nextAction)\(if (.flags | length) > 0 then " [\(.flags | join(", "))]" else "" end)" end' "${1}"
@@ -663,6 +663,7 @@ $ bugs save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work
 bugs-gather: saved the cache in WORK/cache/report-boards/bugs/github.com/acme/widgets
 assessments.json
 gather.json
+save.lock
 scored.json
 Previous gather: 2026-10-15T16:00:00Z
 This gather: 2026-10-15T16:00:00Z
@@ -673,8 +674,8 @@ This gather: 2026-10-15T16:00:00Z
 ## Save waits for another sync's save, then refuses and names the lock
 
 ```scrut
-$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${cache}|CACHE|g"; echo "exit ${PIPESTATUS[0]}"; ls "${cache}/report-boards/bugs/github.com/acme/widgets"
-bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" && touch "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock/owner" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${cache}|CACHE|g"; echo "exit ${PIPESTATUS[0]}"; ls "${cache}/report-boards/bugs/github.com/acme/widgets"
+bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock/owner
 exit 1
 save.lock
 ```
@@ -693,7 +694,7 @@ $ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && { bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_DIRECTORY="${lock}" XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1; echo "exit=$?"; } | sed "s|${cache}|CACHE|g" \
 >   && cat "${lock}/owner" \
 >   && test ! -e "${lock%/save.lock}/gather.json"
-bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock
+bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock/owner
 exit=1
 held
 ```
@@ -702,21 +703,39 @@ held
 
 ```scrut
 $ bugs_fault create
-create: exit=1; cache unchanged; lock removed
+create: exit=1; cache unchanged; owner absent
 ```
 
 ## Save releases its owner when PID recording fails
 
 ```scrut
 $ bugs_fault write
-write: exit=1; cache unchanged; lock removed
+write: exit=1; cache unchanged; owner absent
 ```
 
-## Save propagates unexpected lock-directory cleanup errors
+## Save propagates owner unlink errors
 
 ```scrut
 $ bugs_fault cleanup
-cleanup: exit=1; cache saved; empty lock reported
+cleanup: exit=1; cache saved; owner retained
+```
+
+## Cache cleanup preserves a live successor
+
+```scrut
+$ real_bugs="${BUGS_GATHER_BIN}" \
+>   && BUGS_GATHER_BIN="${CACHE_LOCK_HANDOFF_BIN}" bugs BUGS_HANDOFF_SUBJECT_BIN="${real_bugs}" \
+>     "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json"
+both saves succeeded; successor preserved; cache consistent
+```
+
+## Cache cleanup succeeds after its successor has already released
+
+```scrut
+$ real_bugs="${BUGS_GATHER_BIN}" \
+>   && BUGS_GATHER_BIN="${CACHE_LOCK_HANDOFF_BIN}" bugs BUGS_HANDOFF_SUBJECT_BIN="${real_bugs}" --released-successor \
+>     "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json"
+both saves succeeded; successor preserved; cache consistent
 ```
 
 ## Reuse on a warm cache keeps every assessment that still matches its bug

@@ -65,9 +65,10 @@ function main() {
   cp "${stub}" "${root}/bin/mkdir"
   cp "${stub}" "${root}/bin/sleep"
   cp "${stub}" "${root}/bin/rm"
+  cp "${stub}" "${root}/bin/rmdir"
   export PATH="${root}/bin:${PATH}"
   local tool
-  for tool in git mkdir sleep rm; do
+  for tool in git mkdir sleep rm rmdir; do
     [[ "$(command -v "${tool}")" == "${root}/bin/${tool}" ]] || return 1
   done
   export CLAIMS_BARRIER="${root}/barrier"
@@ -117,23 +118,34 @@ branch refs/heads/main
     printf 'claim writer exit statuses: logic=%s simulator=not-started\n' "${first_status}"
     return 1
   fi
-  if [[ "${CLAIMS_INTERLEAVE_MODE}" == release ]]; then
+  if [[ "${CLAIMS_INTERLEAVE_MODE}" == release || "${CLAIMS_INTERLEAVE_MODE}" == released-successor ]]; then
     touch "${CLAIMS_BARRIER}/release-first"
     await_event first-owner-removed || return 1
   fi
   CLAIMS_WRITER=second capture_child - --exec-log "${root}/second.log" -- bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim simulator --worktree /repo/live --branch main &
   second=$!
   SECOND_WRITER="${second}"
-  if [[ "${CLAIMS_INTERLEAVE_MODE}" == release ]]; then
+  if [[ "${CLAIMS_INTERLEAVE_MODE}" == release || "${CLAIMS_INTERLEAVE_MODE}" == released-successor ]]; then
     await_event second-read || return 1
+    if [[ "${CLAIMS_INTERLEAVE_MODE}" == released-successor ]]; then
+      capture_child - --wait-log "${root}/second.log" "${second}" || second_status=$?
+      SECOND_WRITER=''
+      [[ ! -e "${WORKTREE_RESOURCES_FILE}.lock/owner" ]] || return 1
+    fi
     touch "${CLAIMS_BARRIER}/release-cleanup"
     capture_child - --wait-log "${root}/first.log" "${first}" || first_status=$?
     FIRST_WRITER=''
-    [[ "$(cat "${WORKTREE_RESOURCES_FILE}.lock/owner")" == "${second}" ]] || return 1
-    touch "${CLAIMS_BARRIER}/release-second"
-    capture_child - --wait-log "${root}/second.log" "${second}" || second_status=$?
-    SECOND_WRITER=''
+    if [[ -n "${SECOND_WRITER}" ]]; then
+      [[ "$(cat "${WORKTREE_RESOURCES_FILE}.lock/owner")" == "${second}" ]] || return 1
+      touch "${CLAIMS_BARRIER}/release-second"
+      capture_child - --wait-log "${root}/second.log" "${second}" || second_status=$?
+      SECOND_WRITER=''
+    fi
     ((first_status == 0 && second_status == 0)) || return 1
+    [[ ! -e "${CLAIMS_BARRIER}/unexpected-rmdir" ]] || {
+      echo 'writer attempted directory removal' >&2
+      return 1
+    }
     jq -c '[.claims[].resource] | sort' "${WORKTREE_RESOURCES_FILE}"
     return
   fi
@@ -167,6 +179,10 @@ branch refs/heads/main
     printf 'claim writer exit statuses: logic=%s simulator=%s\n' "${first_status}" "${second_status}"
     return 1
   fi
+  [[ ! -e "${CLAIMS_BARRIER}/unexpected-rmdir" ]] || {
+    echo 'writer attempted directory removal' >&2
+    return 1
+  }
   jq -c '[.claims[].resource] | sort' "${WORKTREE_RESOURCES_FILE}"
 }
 

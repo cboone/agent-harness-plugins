@@ -87,12 +87,12 @@ $ function setup_claims() {
 >   local mode="${1}" tool status=0 output
 >   mkdir -p "${claim_file%/*}"
 >   printf '{"version":1,"claims":[]}' > "${claim_file}"
->   for tool in mkdir sleep rmdir; do
+>   for tool in mkdir sleep rmdir rm; do
 >     cp "${DIRECTORY_LOCK_STUB_BIN}" "${stub_dir}/${tool}"
 >     test "$(PATH="${stub_dir}:${PATH}" command -v "${tool}")" = "${stub_dir}/${tool}" || return 1
 >   done
 >   output="$(env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" \
->     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" \
+>     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" LOCK_TEST_REAL_RM="$(command -v rm)" \
 >     LOCK_TEST_DIRECTORY="${claim_file}.lock" LOCK_TEST_MODE="${mode}" BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" \
 >     WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/wt-live --branch main 2>&1)" || status=$?
 >   if [[ "${status}" != 1 ]]; then printf '%s\nexit=%s\n' "${output}" "${status}"; return 1; fi
@@ -104,17 +104,17 @@ $ function setup_claims() {
 >       [[ "${output}" == *"injected owner write failure"* && "${output}" == *"cannot record the lock owner"* ]] || { printf '%s\n' "${output}"; return 1; }
 >       ;;
 >     cleanup)
->       [[ "${output}" == *"injected rmdir failure"* && "${output}" == *"manual cleanup may be required"* ]] || { printf '%s\n' "${output}"; return 1; }
->       test -d "${claim_file}.lock" && test ! -e "${claim_file}.lock/owner" || return 1
+>       [[ "${output}" == *"injected owner unlink failure"* ]] || { printf '%s\n' "${output}"; return 1; }
+>       test -f "${claim_file}.lock/owner" || return 1
 >       jq -e '[.claims[].resource] == ["logic"]' "${claim_file}" > /dev/null || return 1
->       echo 'cleanup: exit=1; claim saved; empty lock reported'
+>       echo 'cleanup: exit=1; claim saved; owner retained'
 >       return
 >       ;;
 >     *) return 1 ;;
 >   esac
->   test ! -e "${claim_file}.lock" || return 1
+>   test -d "${claim_file}.lock" && test ! -e "${claim_file}.lock/owner" || return 1
 >   test "$(cat "${claim_file}")" = '{"version":1,"claims":[]}' || return 1
->   printf '%s: exit=1; claims unchanged; lock removed\n' "${mode}"
+>   printf '%s: exit=1; claims unchanged; owner absent\n' "${mode}"
 > }
 > function claims_tail() {
 >   local output status=0
@@ -488,6 +488,13 @@ $ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" stale
 stale waiter refused; live owner preserved
 ```
 
+## A successor may release before the previous cleanup returns
+
+```scrut
+$ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" released-successor
+["logic","simulator"]
+```
+
 ## The interleaving fixture removes its temporary directory
 
 ```scrut
@@ -509,21 +516,21 @@ TERM exit=143; writers stopped; fixture directory cleaned
 
 ```scrut
 $ claims_fault create
-create: exit=1; claims unchanged; lock removed
+create: exit=1; claims unchanged; owner absent
 ```
 
 ## Owner write errors release the exclusively reserved file
 
 ```scrut
 $ claims_fault write
-write: exit=1; claims unchanged; lock removed
+write: exit=1; claims unchanged; owner absent
 ```
 
-## Unexpected directory cleanup errors propagate after the write
+## Owner unlink errors propagate after the write
 
 ```scrut
 $ claims_fault cleanup
-cleanup: exit=1; claim saved; empty lock reported
+cleanup: exit=1; claim saved; owner retained
 ```
 
 ## The lock is released when the operation finishes
@@ -531,7 +538,8 @@ cleanup: exit=1; claim saved; empty lock reported
 ```scrut
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/a > /dev/null \
->   && if [[ -d "${claim_file}.lock" ]]; then echo "lock leaked"; else echo "lock released"; fi
+>   && test -d "${claim_file}.lock" \
+>   && if [[ -e "${claim_file}.lock/owner" ]]; then echo "lock leaked"; else echo "lock released"; fi
 lock released
 ```
 
@@ -848,7 +856,7 @@ $ setup_claims \
 >   && mkdir -p "${claim_file}.lock" \
 >   && sh -c 'echo $$' > "${claim_file}.lock/owner" \
 >   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
-manage-resource-claims: */.claude/worktree-resources.local.json.lock is held by process *, which has exited; remove that directory (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json.lock/owner is held by process *, which has exited; remove that file (glob)
 [1]
 ```
 
@@ -859,7 +867,7 @@ $ setup_claims \
 >   && mkdir -p "${claim_file}.lock" \
 >   && printf '%s' "$$" > "${claim_file}.lock/owner" \
 >   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
-manage-resource-claims: */.claude/worktree-resources.local.json.lock is held by process *, which is still running; wait for it to finish (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json.lock/owner is held by process *, which is still running; wait for it to finish (glob)
 [1]
 ```
 
@@ -868,8 +876,9 @@ manage-resource-claims: */.claude/worktree-resources.local.json.lock is held by 
 ```scrut
 $ setup_claims \
 >   && mkdir -p "${claim_file}.lock" \
+>   && touch "${claim_file}.lock/owner" \
 >   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
-manage-resource-claims: */.claude/worktree-resources.local.json.lock is held by an unrecorded process; remove that directory if no claim is in progress (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json.lock/owner is held by an unrecorded process; remove that file if no claim is in progress (glob)
 [1]
 ```
 

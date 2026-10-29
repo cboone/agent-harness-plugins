@@ -135,3 +135,33 @@ Resume state: local head includes the source fix, I/O regressions and plants; re
 TOOLING confirmed the cache-save fix and expanded the acquisition fix to attention-log's session and rotation locks. Preserve their PID-and-age automatic recovery, unchanged in policy and no less safe than before; do not remove auto-recovery. TOOLING filed the existing reclaim race as [attention-log: stale-lock reclaim can remove a live successor's lock](https://github.com/cboone/agent-harness-plugins/issues/673), verified open. Cite it in the PR body as a known follow-up; this PR must not claim to fix or close it. Patch-bump every changed plugin. The existing workmux and publish-report-board bumps are already present; attention-log will need a forward patch bump from 1.0.0. The fixture plan is approved.
 
 This sweep instruction does not decide the separate cleanup-result recurrence. No attention-log source change has been made while that structural gate remains open. Both authorizations and the existing review counts must carry into the resumed work.
+
+## Approved structural resolution
+
+TOOLING cleared the recurrence stop: the exclusive owner file is the complete mutex; directories are reusable preparation made with mkdir -p, and converted writers never remove them. Release unlinks only the owner file, so no later directory observation can reclassify a successful save. This applies to resource claims, cache saves and both attention-log acquisitions. The next focused review is Important 2; another cleanup or ownership interleaving finding requires a new stop. No round counts restart.
+
+Resource claims and cache saves register cleanup after exclusive empty-file reservation and before recording the PID. Creation failures retain their diagnostic, with an ownerless preparation directory permitted to persist; failed PID recording unlinks the reserved owner. Owner-unlink errors propagate. All rmdir calls and cleanup-result classification are removed from these writers.
+
+Attention-log uses exclusive pid/owner files for session and rotation acquisition. Its stopped-PID and age-based automatic recovery remain enabled, now observing the owner file rather than directory lifetime. The known check-then-unlink reclaim race remains [the separate attention-log follow-up](https://github.com/cboone/agent-harness-plugins/issues/673), not a closing reference. Its existing hook interface still always exits zero; low-level release returns the unlink result, and no hook registration or live config was changed. Versions: workmux 1.1.2, publish-report-board 1.3.2, attention-log 1.0.1 in both manifests.
+
+### Reader and diagnostic audit
+
+| Surface                                            | Owner-file interpretation                                                                                                                                |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| resource acquire_lock / try_acquire_lock           | mkdir -p prepares the directory; only noclobber reservation grants ownership. No directory-existence contention check remains.                           |
+| resource held_lock_report                          | Reports the owner-file path and instructs removal of that file, rather than the directory.                                                               |
+| cache acquire_save_lock timeout                    | Reports the owner file to remove; an empty save.lock directory does not block a save.                                                                    |
+| attention lock_session / unlock_session            | pid is the exclusive owner, liveness input and release target; an empty session lock directory is free.                                                  |
+| attention unrecorded-owner age / rotate_events age | Age checks target pid or owner, preserving recovery thresholds while excluding preparation-directory lifetime.                                           |
+| attention pending / session-end readers            | Existing production readers use .open/.name files, not lock directories. The SessionEnd regression now counts files and permits preparation directories. |
+| resource and attention release assertions          | Check owner-file absence, with preparation directories explicitly retained.                                                                              |
+| cache listing and refusal fixtures                 | Listing includes save.lock; refusal fixtures create an owner file. Creation/write fault cases assert owner absence rather than directory removal.        |
+| workmux create-worktree / start-issue guidance     | Explains persistent preparation directories and exclusive owner files; ignore globs still cover both.                                                    |
+| shell review guidance / attention README           | Replace directory-removal assumptions, explain reusable preparation and link the known reclaim limitation.                                               |
+| generated Codex mirrors                            | Rebuilt from canonical sources and guidance; no hand edits.                                                                                              |
+
+### Structural regression coverage
+
+Resource interleaving tests cover a live successor and a successor that has already released before the prior cleanup returns. A new cache fixture exercises both orders with real saves, checks both statuses, verifies the live successor's owner and validates the second writer's data across all three cache files. Both fixtures install rmdir sentinels and assert no attempt to remove the preparation directory, preventing the entire recurring error-classification path from returning.
+
+Attention tests force mkdir success while a live session owner or fresh rotation owner exists. They assert the owner survives and protected marker/rotation work is not performed. Existing stopped-owner and aged-rotation recovery cases remain enabled. Initial affected runs: resource 107/107, cache 91/91, attention 56/56. Earlier failures were only directory-listing assertions; they were updated to the explicit new directory-lifetime contract, preserving owner and data assertions. No source behavior failure was observed in those runs.

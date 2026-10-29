@@ -155,7 +155,7 @@ $ fresh
 ## Session end removes the session's files
 
 ```scrut
-$ hook SessionEnd && ls "${ATTENTION_LOG_DIR}/sessions" | wc -l | tr -d ' '
+$ hook SessionEnd && test -d "${ATTENTION_LOG_DIR}/sessions/s1.lock" && find "${ATTENTION_LOG_DIR}/sessions" -type f | wc -l | tr -d ' '
 0
 ```
 
@@ -270,11 +270,11 @@ $ fresh
 > (exit 0) &
 > stopped=$!
 > wait "${stopped}"
-> mkdir "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> mkdir -p "${ATTENTION_LOG_DIR}/sessions/s1.lock"
 > printf '%s\n' "${stopped}" > "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid"
 > hook PostToolUse '{"tool_name": "Bash", "tool_input": {}, "tool_response": {}, "tool_use_id": "t1"}'
 > events .event | tail -n 1
-> ls "${ATTENTION_LOG_DIR}/sessions" | grep -c lock
+> find "${ATTENTION_LOG_DIR}/sessions" -name pid | grep -c pid
 "cleared"
 0
 [1]
@@ -289,7 +289,7 @@ $ fresh
 > hook PermissionRequest '{"tool_name": "Bash", "tool_input": {"command": "x"}}'
 > sleep 30 &
 > holder=$!
-> mkdir "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> mkdir -p "${ATTENTION_LOG_DIR}/sessions/s1.lock"
 > printf '%s\n' "${holder}" > "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid"
 > hook PostToolUse '{"tool_name": "Bash", "tool_input": {}, "tool_response": {}, "tool_use_id": "t1"}'
 > [[ "$(cat "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid")" == "${holder}" ]] && echo "lock still held by its owner"
@@ -297,6 +297,35 @@ $ fresh
 > events .event
 lock still held by its owner
 "permission_request"
+```
+
+## A false successful mkdir does not replace a live session owner
+
+```scrut
+$ fresh
+> lock="${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> mkdir -p "${lock}" "${work}/lock-bin"
+> printf '%s\n' "$$" > "${lock}/pid"
+> cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/lock-bin/mkdir"
+> cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/lock-bin/sleep"
+> test "$(PATH="${work}/lock-bin:${PATH}" command -v mkdir)" = "${work}/lock-bin/mkdir" && test "$(PATH="${work}/lock-bin:${PATH}" command -v sleep)" = "${work}/lock-bin/sleep" || exit 1
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/lock-bin:${PATH}" LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionRequest
+> test "$(cat "${lock}/pid")" = "$$" && test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && echo 'live owner preserved'
+live owner preserved
+```
+
+## A false successful mkdir does not bypass the rotation owner
+
+```scrut
+$ fresh
+> lock="${ATTENTION_LOG_DIR}/rotate.lock"
+> mkdir -p "${lock}"
+> printf 'held\n' > "${lock}/owner"
+> head -c 5242880 /dev/zero > "${events_file}"
+> test "$(PATH="${work}/lock-bin:${PATH}" command -v mkdir)" = "${work}/lock-bin/mkdir" && test "$(PATH="${work}/lock-bin:${PATH}" command -v sleep)" = "${work}/lock-bin/sleep" || exit 1
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/lock-bin:${PATH}" LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied
+> test ! -e "${events_file}.1" && test "$(cat "${lock}/owner")" = held && echo 'rotation owner preserved'
+rotation owner preserved
 ```
 
 ## The next prompt clears every open state with "*"
@@ -550,10 +579,11 @@ lines: 20
 ```scrut
 $ fresh
 > mkdir -p "${ATTENTION_LOG_DIR}/rotate.lock"
-> touch -t 202001010000 "${ATTENTION_LOG_DIR}/rotate.lock"
+> touch "${ATTENTION_LOG_DIR}/rotate.lock/owner"
+> touch -t 202001010000 "${ATTENTION_LOG_DIR}/rotate.lock/owner"
 > head -c 5242880 /dev/zero > "${events_file}"
 > hook PermissionDenied '{"tool_name": "Bash", "tool_input": {"command": "x"}}'
-> echo "rotated: $(wc -c < "${events_file}.1" | tr -d ' '), new lines: $(wc -l < "${events_file}" | tr -d ' '), lock left: $(ls -d "${ATTENTION_LOG_DIR}/rotate.lock" 2> /dev/null | wc -l | tr -d ' ')"
+> echo "rotated: $(wc -c < "${events_file}.1" | tr -d ' '), new lines: $(wc -l < "${events_file}" | tr -d ' '), lock left: $(ls -d "${ATTENTION_LOG_DIR}/rotate.lock/owner" 2> /dev/null | wc -l | tr -d ' ')"
 rotated: 5242880, new lines: 1, lock left: 0
 ```
 
