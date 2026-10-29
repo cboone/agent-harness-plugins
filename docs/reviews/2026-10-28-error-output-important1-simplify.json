@@ -1,0 +1,17 @@
+{
+  "aspect": "simplify",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "shorthand_kind returns 1 for discarded diagnostics and 2 for captured diagnostics. The caller repeats these numeric comparisons, requiring readers to trace both functions to understand each classification.",
+      "file": "bin/check-fixture-environments",
+      "fix": "Use \"discard\" and \"capture\" as the internal return values and update both comparisons. Preserve the empty default, continued scanning after capture, and immediate return for discard.",
+      "line": 67,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Naming: Give redirect classifications descriptive values."
+    }
+  ],
+  "reviewed": "cfe765393124ace7e7408428abc51210c1c08a94",
+  "strengths": ["Early returns make exemption and discard precedence clear.", "Static samples isolate individual acceptance and rejection cases."],
+  "summary": "Reviewed the complete pinned scope and found one optional clarity improvement in redirect classification. No files or Git state were changed, and no repository scripts ran, as required by the report-only override."
+}

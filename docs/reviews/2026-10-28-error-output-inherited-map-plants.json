@@ -1,0 +1,65 @@
+[
+  {
+    "phase": "fixed-before",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "nested-zero-discard",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "nested-inout-discard",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "previous-AST",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "previous-AST",
+    "sample": "nested-zero-discard",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "previous-AST",
+    "sample": "nested-inout-discard",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "nested-zero-discard",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "nested-inout-discard",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,94 @@
+{
+  "head_before_seeding": "9f0e18df97231907302b66c05bc51c6f98b1f0b3",
+  "pinned_base": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+  "units": 2027,
+  "errors": [],
+  "policy_exclusions": [
+    {
+      "name": "bin/lib/error-output-ast.jq",
+      "kind": "non-Bash",
+      "reason": "jq evaluator, not a shell program; its Bash caller checks status and keeps diagnostics live."
+    },
+    {
+      "name": "plugins/attention-log/scripts/claude-transcript.jq",
+      "kind": "non-Bash",
+      "reason": "Generated jq transcript selector, not Bash source; shell callers invoke it through jq."
+    },
+    {
+      "name": "plugins/monitor-pr/scripts/watch-policy.jq",
+      "kind": "non-Bash",
+      "reason": "jq watch-policy transitions are data transformations, not Bash source."
+    },
+    {
+      "name": "plugins/notify/scripts/claude-transcript.jq",
+      "kind": "non-Bash",
+      "reason": "Canonical jq transcript selector, not Bash source; shell callers invoke it through jq."
+    },
+    {
+      "name": "plugins/notify/scripts/codex-failure.jq",
+      "kind": "non-Bash",
+      "reason": "jq rollout-failure classifier, not a shell program; watch-codex-failures is its Bash caller."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/backlog-gather-queries/issues.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL issues query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/backlog-gather-queries/merged.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL merged query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/backlog-gather-queries/pulls.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL pulls query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/backlog-gather-queries/repository.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL repository query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/branches.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL branches query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/open-pulls.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL open-pulls query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/pulls.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL pulls query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/repository.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL repository query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/search.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL search query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/zenhub.graphql",
+      "kind": "non-Bash",
+      "reason": "GraphQL zenhub query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/progress.jq",
+      "kind": "non-Bash",
+      "reason": "Pure jq progress calculations have no shell redirection syntax."
+    },
+    {
+      "name": "plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-workflow-template.yml",
+      "kind": "non-Bash",
+      "reason": "Workflow configuration is not a Bash source file; its embedded run text is outside this AST scope."
+    }
+  ],
+  "note": "Complete post-seeding native inventory; zero guard findings, no additional rare-form sites. Generated copies rebuilt from canonical source."
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "mutation": "shorthand",
+    "control_exit": 0,
+    "weakened_exit": 2,
+    "expected_failure": "2 testcase(s): 1 succeeded, 1 failed and 0 skipped",
+    "test_heading": "Shorthand discard"
+  },
+  {
+    "mutation": "token-joining",
+    "control_exit": 0,
+    "weakened_exit": 2,
+    "expected_failure": "2 testcase(s): 1 succeeded, 1 failed and 0 skipped",
+    "test_heading": "Split discard token"
+  },
+  {
+    "mutation": "blank-boundary",
+    "control_exit": 0,
+    "weakened_exit": 2,
+    "expected_failure": "2 testcase(s): 1 succeeded, 1 failed and 0 skipped",
+    "test_heading": "Blank boundary"
+  },
+  {
+    "mutation": "comment-boundary",
+    "control_exit": 0,
+    "weakened_exit": 2,
+    "expected_failure": "2 testcase(s): 1 succeeded, 1 failed and 0 skipped",
+    "test_heading": "Comment backslash"
+  },
+  {
+    "mutation": "backslash-parity",
+    "control_exit": 0,
+    "weakened_exit": 2,
+    "expected_failure": "2 testcase(s): 1 succeeded, 1 failed and 0 skipped",
+    "test_heading": "Even backslashes"
+  },
+  {
+    "mutation": "pending-eof",
+    "control_exit": 0,
+    "weakened_exit": 2,
+    "expected_failure": "2 testcase(s): 1 succeeded, 1 failed and 0 skipped",
+    "test_heading": "Pending at eof"
+  }
+]

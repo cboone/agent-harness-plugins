@@ -1,0 +1,58 @@
+[
+  {
+    "case": "shorthand-discard",
+    "source": "some-command >& /dev/null",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "case": "shorthand-capture",
+    "source": "some-command >& diagnostics.log",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "case": "split-discard-token",
+    "source": "some-command 2\\\n>/dev/null",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "case": "split-capture-token",
+    "source": "some-command 2>\\\n&1",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "case": "blank-boundary",
+    "source": "some-command 2>/dev/null \\\n\ntrue # error-output-allow: separate probe",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "case": "comment-boundary",
+    "source": "some-command 2>/dev/null \\\n# command boundary\ntrue # error-output-allow: separate probe",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "case": "comment-backslash",
+    "source": "some-command 2>/dev/null # ordinary comment \\\ntrue # error-output-allow: separate probe",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,194 @@
+{
+  "policy": "Every descriptor-2 redirect requires a reason except syntactic self-duplication; inferred destinations and exec prefixes do not grant exemptions.",
+  "redirect_count": 412,
+  "annotation_count": 408,
+  "file_count": 35,
+  "grouping": "One annotation per outer parsed command end line; multiple redirects covered by that same line count once. Existing valid marker exemptions are already excluded.",
+  "files": {
+    "tests/scrut/backlog-gather.md": 8,
+    "tests/scrut/bugs-gather.md": 11,
+    "tests/scrut/build-codex-marketplace.md": 1,
+    "tests/scrut/build-review-checklists.md": 17,
+    "tests/scrut/build-shared-references.md": 2,
+    "tests/scrut/check-cross-references.md": 15,
+    "tests/scrut/codex-aspects.md": 11,
+    "tests/scrut/combined-worktrees.md": 1,
+    "tests/scrut/compose-issue-prompt.md": 4,
+    "tests/scrut/copilot-rounds-report.md": 36,
+    "tests/scrut/copilot-summary-contract.md": 4,
+    "tests/scrut/dependabot-prs.md": 14,
+    "tests/scrut/environment-isolation.md": 9,
+    "tests/scrut/error-output-guard.md": 1,
+    "tests/scrut/launch-workmux-options.md": 10,
+    "tests/scrut/launch-workmux.md": 18,
+    "tests/scrut/manage-resource-claims.md": 16,
+    "tests/scrut/merge-flow.md": 2,
+    "tests/scrut/progress-model.md": 2,
+    "tests/scrut/push-notification.md": 18,
+    "tests/scrut/record-traffic.md": 9,
+    "tests/scrut/repo-tooling.md": 6,
+    "tests/scrut/report-board-bugs.md": 1,
+    "tests/scrut/report-board.md": 98,
+    "tests/scrut/resolve-copilot-threads.md": 22,
+    "tests/scrut/review-completion.md": 7,
+    "tests/scrut/review-corpus.md": 10,
+    "tests/scrut/review-scope-submodule-consumers.md": 1,
+    "tests/scrut/review-scope-submodules.md": 2,
+    "tests/scrut/review-scope.md": 7,
+    "tests/scrut/run-scrut-documents.md": 9,
+    "tests/scrut/validate-plugins-catalog.md": 7,
+    "tests/scrut/validate-plugins-codex-exec.md": 4,
+    "tests/scrut/validate-plugins-skills.md": 18,
+    "tests/scrut/watch-changes.md": 7
+  },
+  "sample": [
+    {
+      "file": "tests/scrut/backlog-gather.md",
+      "annotation_line": 339,
+      "source": "$ dir=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp -R \"${BACKLOG_GATHER_DATA_DIR}/github/.\" \"${dir}/\" && jq '(.. | objects | select(.number? == 11 and has(\"assignees\")) | .assignees.pageInfo) = {hasNextPage: true}' \"${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json\" > \"${dir}/graphql/issues.json\" && backlog STUB_GH_DIR=\"${dir}\" gather acme/widgets \"${work}/cut.json\" 2>&1 > /dev/null; echo \"exit ${?}\"",
+      "redirects": [
+        {
+          "line": 339,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/backlog-gather.md",
+      "annotation_line": 350,
+      "source": "$ dir=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp -R \"${BACKLOG_GATHER_DATA_DIR}/github/.\" \"${dir}/\" && jq '(.. | objects | select(.number? == 1 and has(\"labels\")) | .labels.pageInfo) = {hasNextPage: true} | (.. | objects | select(.number? == 11 and has(\"timelineItems\")) | .timelineItems.pageInfo) = {hasPreviousPage: true}' \"${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json\" > \"${dir}/graphql/issues.json\" && backlog STUB_GH_DIR=\"${dir}\" gather acme/widgets \"${work}/x.json\" 2>&1",
+      "redirects": [
+        {
+          "line": 350,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/backlog-gather.md",
+      "annotation_line": 356,
+      "source": "$ dir=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp -R \"${BACKLOG_GATHER_DATA_DIR}/github/.\" \"${dir}/\" && jq '(.. | objects | select(.number? == 40 and has(\"closingIssuesReferences\")) | .closingIssuesReferences.pageInfo) = {hasNextPage: true}' \"${BACKLOG_GATHER_DATA_DIR}/github/graphql/pulls.json\" > \"${dir}/graphql/pulls.json\" && backlog STUB_GH_DIR=\"${dir}\" gather acme/widgets \"${work}/x.json\" 2>&1",
+      "redirects": [
+        {
+          "line": 356,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/backlog-gather.md",
+      "annotation_line": 364,
+      "source": "$ config_with && backlog STUB_GH_GRAPHQL_FAIL=issues gather acme/widgets \"${work}/x.json\" 2>&1",
+      "redirects": [
+        {
+          "line": 364,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/backlog-gather.md",
+      "annotation_line": 371,
+      "source": "$ backlog gather acme/other \"${work}/x.json\" 2>&1",
+      "redirects": [
+        {
+          "line": 371,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/backlog-gather.md",
+      "annotation_line": 379,
+      "source": "$ git remote set-url origin https://evilgithub.com/acme/widgets.git && backlog gather acme/widgets \"${work}/x.json\" 2>&1; code=$?; git remote set-url origin https://github.com/acme/widgets.git; echo \"exit ${code}\"",
+      "redirects": [
+        {
+          "line": 379,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/backlog-gather.md",
+      "annotation_line": 385,
+      "source": "$ (cd \"${work}\" && backlog gather acme/widgets \"${work}/x.json\") 2>&1",
+      "redirects": [
+        {
+          "line": 385,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/backlog-gather.md",
+      "annotation_line": 405,
+      "source": "$ backlog gather not-a-repo \"${work}/x.json\" 2>&1",
+      "redirects": [
+        {
+          "line": 405,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/bugs-gather.md",
+      "annotation_line": 350,
+      "source": "$ bugs BUGS_TEST_ZENHUB_TOKEN= gather \"${work}/config.json\" \"${work}/no-token.json\" 2>&1",
+      "redirects": [
+        {
+          "line": 350,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/bugs-gather.md",
+      "annotation_line": 358,
+      "source": "$ bugs STUB_GH_GRAPHQL_FAIL=open-labels gather \"${work}/config.json\" \"${work}/failed.json\" 2>&1",
+      "redirects": [
+        {
+          "line": 358,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/bugs-gather.md",
+      "annotation_line": 754,
+      "source": "$ bugs gather ../widgets \"${work}/dots.json\" 2>&1; echo \"exit $?\"",
+      "redirects": [
+        {
+          "line": 754,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    },
+    {
+      "file": "tests/scrut/bugs-gather.md",
+      "annotation_line": 771,
+      "source": "$ config_with '.triageNote = \"/nonexistent/triage.md\"' > \"${work}/lost-note.json\" && bugs score \"${work}/lost-note.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/lost-scored.json\" 2>&1",
+      "redirects": [
+        {
+          "line": 771,
+          "operator": ">&",
+          "descriptor": "2"
+        }
+      ]
+    }
+  ],
+  "annotations_added": 0,
+  "checker_sha256": "b8570b987e22d7cf0610de7882110c05989b9f5dcbccc51269924f5ccab99d43",
+  "inventory_exit_status": 1,
+  "parse_errors": 0
+}

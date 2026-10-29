@@ -1,0 +1,15 @@
+{
+  "status": "failure",
+  "stage": "process exit",
+  "exit_status": 1,
+  "base": "e8667c85610d10882e7c33078748c7113b1c4a8e",
+  "head": "dd43f040",
+  "aspect": "simplify",
+  "retry": false,
+  "log": "Reading additional input from stdin...\nNot inside a trusted directory and --skip-git-repo-check was not specified.\n",
+  "capture_directory": "/var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T/672-ast-important2.ys3f9if9",
+  "cause": "Codex --cd pointed at the external capture directory instead of the disposable Git clone. No override or retry was attempted.",
+  "pending_batches": [],
+  "not_started_batches": [3, 4, 5, 6, 7],
+  "completed_batches": [1, 2]
+}

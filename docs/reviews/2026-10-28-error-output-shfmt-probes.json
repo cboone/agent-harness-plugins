@@ -1,0 +1,260 @@
+{
+  "version": "3.14.1",
+  "probes": [
+    {
+      "case": "quoted-hash-token-split",
+      "parse_exit": 0,
+      "redirects": [
+        {
+          "Pos": {
+            "Offset": 30,
+            "Line": 1,
+            "Col": 31
+          },
+          "End": {
+            "Offset": 43,
+            "Line": 2,
+            "Col": 11
+          },
+          "OpPos": {
+            "Offset": 33,
+            "Line": 2,
+            "Col": 1
+          },
+          "Op": ">",
+          "N": {
+            "Pos": {
+              "Offset": 30,
+              "Line": 1,
+              "Col": 31
+            },
+            "End": {
+              "Offset": 33,
+              "Line": 2,
+              "Col": 1
+            },
+            "ValuePos": {
+              "Offset": 30,
+              "Line": 1,
+              "Col": 31
+            },
+            "ValueEnd": {
+              "Offset": 33,
+              "Line": 2,
+              "Col": 1
+            },
+            "Value": "2"
+          },
+          "Word": {
+            "Pos": {
+              "Offset": 34,
+              "Line": 2,
+              "Col": 2
+            },
+            "End": {
+              "Offset": 43,
+              "Line": 2,
+              "Col": 11
+            },
+            "Parts": [
+              {
+                "Type": "Lit",
+                "Pos": {
+                  "Offset": 34,
+                  "Line": 2,
+                  "Col": 2
+                },
+                "End": {
+                  "Offset": 43,
+                  "Line": 2,
+                  "Col": 11
+                },
+                "ValuePos": {
+                  "Offset": 34,
+                  "Line": 2,
+                  "Col": 2
+                },
+                "ValueEnd": {
+                  "Offset": 43,
+                  "Line": 2,
+                  "Col": 11
+                },
+                "Value": "/dev/null"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "stderr-output-close",
+      "parse_exit": 0,
+      "redirects": [
+        {
+          "Pos": {
+            "Offset": 13,
+            "Line": 1,
+            "Col": 14
+          },
+          "End": {
+            "Offset": 17,
+            "Line": 1,
+            "Col": 18
+          },
+          "OpPos": {
+            "Offset": 14,
+            "Line": 1,
+            "Col": 15
+          },
+          "Op": ">&",
+          "N": {
+            "Pos": {
+              "Offset": 13,
+              "Line": 1,
+              "Col": 14
+            },
+            "End": {
+              "Offset": 14,
+              "Line": 1,
+              "Col": 15
+            },
+            "ValuePos": {
+              "Offset": 13,
+              "Line": 1,
+              "Col": 14
+            },
+            "ValueEnd": {
+              "Offset": 14,
+              "Line": 1,
+              "Col": 15
+            },
+            "Value": "2"
+          },
+          "Word": {
+            "Pos": {
+              "Offset": 16,
+              "Line": 1,
+              "Col": 17
+            },
+            "End": {
+              "Offset": 17,
+              "Line": 1,
+              "Col": 18
+            },
+            "Parts": [
+              {
+                "Type": "Lit",
+                "Pos": {
+                  "Offset": 16,
+                  "Line": 1,
+                  "Col": 17
+                },
+                "End": {
+                  "Offset": 17,
+                  "Line": 1,
+                  "Col": 18
+                },
+                "ValuePos": {
+                  "Offset": 16,
+                  "Line": 1,
+                  "Col": 17
+                },
+                "ValueEnd": {
+                  "Offset": 17,
+                  "Line": 1,
+                  "Col": 18
+                },
+                "Value": "-"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "stderr-input-close",
+      "parse_exit": 0,
+      "redirects": [
+        {
+          "Pos": {
+            "Offset": 13,
+            "Line": 1,
+            "Col": 14
+          },
+          "End": {
+            "Offset": 17,
+            "Line": 1,
+            "Col": 18
+          },
+          "OpPos": {
+            "Offset": 14,
+            "Line": 1,
+            "Col": 15
+          },
+          "Op": "<&",
+          "N": {
+            "Pos": {
+              "Offset": 13,
+              "Line": 1,
+              "Col": 14
+            },
+            "End": {
+              "Offset": 14,
+              "Line": 1,
+              "Col": 15
+            },
+            "ValuePos": {
+              "Offset": 13,
+              "Line": 1,
+              "Col": 14
+            },
+            "ValueEnd": {
+              "Offset": 14,
+              "Line": 1,
+              "Col": 15
+            },
+            "Value": "2"
+          },
+          "Word": {
+            "Pos": {
+              "Offset": 16,
+              "Line": 1,
+              "Col": 17
+            },
+            "End": {
+              "Offset": 17,
+              "Line": 1,
+              "Col": 18
+            },
+            "Parts": [
+              {
+                "Type": "Lit",
+                "Pos": {
+                  "Offset": 16,
+                  "Line": 1,
+                  "Col": 17
+                },
+                "End": {
+                  "Offset": 17,
+                  "Line": 1,
+                  "Col": 18
+                },
+                "ValuePos": {
+                  "Offset": 16,
+                  "Line": 1,
+                  "Col": 17
+                },
+                "ValueEnd": {
+                  "Offset": 17,
+                  "Line": 1,
+                  "Col": 18
+                },
+                "Value": "-"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

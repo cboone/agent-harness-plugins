@@ -1,0 +1,101 @@
+{
+  "base": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+  "checks": [
+    {
+      "finding": "symlink metadata",
+      "file": "plugins/publish-report-board/scripts/report-board",
+      "checks": [
+        {
+          "function": "write_output",
+          "same_executable_AST": true,
+          "base_sha256": "c9aabe6c0f11e5bfe06ac47826e88fa974b378c6a8cdb96f8f7047f1a2694704",
+          "head_sha256": "c9aabe6c0f11e5bfe06ac47826e88fa974b378c6a8cdb96f8f7047f1a2694704"
+        },
+        {
+          "function": "cmd_render",
+          "same_executable_AST": true,
+          "base_sha256": "9ac33bbc4e1672089ae8027b392c25771c72ef642ee685dfb53d736de36f4141",
+          "head_sha256": "9ac33bbc4e1672089ae8027b392c25771c72ef642ee685dfb53d736de36f4141"
+        }
+      ]
+    },
+    {
+      "finding": "unavailable metadata",
+      "file": "plugins/publish-report-board/scripts/report-board",
+      "checks": [
+        {
+          "function": "write_output",
+          "same_executable_AST": true,
+          "base_sha256": "c9aabe6c0f11e5bfe06ac47826e88fa974b378c6a8cdb96f8f7047f1a2694704",
+          "head_sha256": "c9aabe6c0f11e5bfe06ac47826e88fa974b378c6a8cdb96f8f7047f1a2694704"
+        },
+        {
+          "function": "cmd_render",
+          "same_executable_AST": true,
+          "base_sha256": "9ac33bbc4e1672089ae8027b392c25771c72ef642ee685dfb53d736de36f4141",
+          "head_sha256": "9ac33bbc4e1672089ae8027b392c25771c72ef642ee685dfb53d736de36f4141"
+        }
+      ]
+    },
+    {
+      "finding": "origin URL diagnostic",
+      "file": "plugins/publish-report-board/scripts/bugs-gather",
+      "checks": [
+        {
+          "function": "cmd_gather",
+          "same_executable_AST": true,
+          "base_sha256": "69c52e1f8c7a5f4ec63ee615cfbaf9da221b50d4070a3e5f1e942b700fd052f8",
+          "head_sha256": "69c52e1f8c7a5f4ec63ee615cfbaf9da221b50d4070a3e5f1e942b700fd052f8"
+        }
+      ]
+    },
+    {
+      "finding": "dash-leading input filenames",
+      "file": "plugins/publish-report-board/scripts/backlog-gather",
+      "checks": [
+        {
+          "function": "require_json_file",
+          "same_executable_AST": true,
+          "base_sha256": "2103601aa4363260098b1ce7a3ad145a212353704ba92b6df9469725eeeff036",
+          "head_sha256": "2103601aa4363260098b1ce7a3ad145a212353704ba92b6df9469725eeeff036"
+        },
+        {
+          "function": "cmd_finish",
+          "same_executable_AST": true,
+          "base_sha256": "57ac3862a6e0005f7dbf82ff0ea10c15931f6dcc87fef868872702c185c0988d",
+          "head_sha256": "57ac3862a6e0005f7dbf82ff0ea10c15931f6dcc87fef868872702c185c0988d"
+        }
+      ]
+    },
+    {
+      "finding": "partial worktree inventory",
+      "file": "plugins/workmux/scripts/manage-resource-claims",
+      "checks": [
+        {
+          "function": "main_worktree_path",
+          "same_executable_AST": true,
+          "base_sha256": "b37cd3045bb0c16697a45f26ad2a024f2df9a4ed4bbcb26400fe189f74635c5c",
+          "head_sha256": "b37cd3045bb0c16697a45f26ad2a024f2df9a4ed4bbcb26400fe189f74635c5c"
+        },
+        {
+          "function": "live_worktrees_json",
+          "same_executable_AST": true,
+          "base_sha256": "78456f88a621bb06b2b61864b77af94dc653f3e0bbf240f34e31321f80026f9a",
+          "head_sha256": "78456f88a621bb06b2b61864b77af94dc653f3e0bbf240f34e31321f80026f9a"
+        }
+      ]
+    },
+    {
+      "finding": "concatenated issue objects",
+      "file": "plugins/workmux/scripts/compose-issue-prompt",
+      "checks": [
+        {
+          "function": "validate_json",
+          "same_executable_AST": true,
+          "base_sha256": "b7cb8e0800ccdbbf172d5f8dc2ea8103692081de3c61d0cbcad77703e5b9f699",
+          "head_sha256": "b7cb8e0800ccdbbf172d5f8dc2ea8103692081de3c61d0cbcad77703e5b9f699"
+        }
+      ]
+    }
+  ]
+}
