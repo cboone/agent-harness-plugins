@@ -31,6 +31,9 @@ It posts no notifications; [Notify](../notify/README.md) covers banners. It neve
 - **Prompts without a request.** A sandbox's network prompt raises no `PermissionRequest`, so its `permission_waiting` opens a state with its own `id`. Later notifications for that prompt repeat the `id`.
 - **Requests that cannot prompt.** `PermissionRequest` also fires for calls that cannot show a dialog, such as a background subagent's, which are then denied. Those events carry an `agent_id`.
 - **Refusals.** A safeguard refusal that ends a turn reaches `StopFailure` as an `invalid_request` error. The hook labels it `refusal_stop` when the session transcript's last records show the refusal, reading record types and flags only, and `api_error_stop` otherwise. `Stop` does not fire for a turn that `StopFailure` ended.
+
+The refusal and prompt classifier is shared with notify through `make build`. Metadata, local-command output, and tool results preserve the current refusal. A new prompt, including an older `human` record, or an ordinary assistant reply clears it.
+
 - **Closing states.** A dismissed dialog can leave no hook behind, so the next prompt, turn end or session end closes every state the session still has open. An error or refusal stop stays open until the next prompt or session end.
 
 ## Event format

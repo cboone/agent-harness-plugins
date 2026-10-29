@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# Copies reference files that skills in more than one plugin read.
+# Copies reference files and helpers that plugins share.
 #
-# A skill can read only the files its own plugin ships, so a reference that two
-# plugins share lives in one of them and is copied, byte for byte, into the
-# other. SHARED_REFERENCES lists each source and its copy.
+# Copies shared files into each consuming plugin, which can read only its own files.
 #
 # Usage:
 #   build-shared-references          write every copy that is missing or stale
@@ -23,6 +21,7 @@ SHARED_REFERENCES=(
   "plugins/publish-report-board/skills/publish-report-board/references/progress-model.md|plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md"
   "plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md|plugins/trim-comments/skills/trim-comments/references/codex-exec.md"
   "plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md|plugins/trim-text/skills/trim-text/references/codex-exec.md"
+  "plugins/notify/scripts/claude-transcript.jq|plugins/attention-log/scripts/claude-transcript.jq"
 )
 readonly SHARED_REFERENCES
 

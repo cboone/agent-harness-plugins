@@ -75,17 +75,20 @@ These tables describe untiered sessions; [tiered sessions](#session-tiers) post 
 
 ### Claude Code
 
-`UserPromptSubmit` resets completion deduplication without posting a banner. `Stop` posts only for turns that began with your prompt. The idle reminder hook is not registered. Claude Code also raises a permission prompt for `AskUserQuestion`; that prompt posts nothing, because the question banner already covers it.
+`UserPromptSubmit` resets completion deduplication without posting a banner. `Stop` posts only for turns that began with your prompt. `StopFailure` posts an error or refusal banner in every tier, including background turns and a visible pane. The idle reminder hook is not registered. Claude Code also raises a permission prompt for `AskUserQuestion`; that prompt posts nothing, because the question banner already covers it.
 
-| Event                                         | Title                                 | Body                                                     | Sound   |
-| --------------------------------------------- | ------------------------------------- | -------------------------------------------------------- | ------- |
-| `PreToolUse:AskUserQuestion`                  | `Question` or `<N> questions`         | The first question, then `(+N more)`                     | `Tink`  |
-| `Notification:elicitation_dialog`             | `Question`                            | The question text from the payload                       | `Tink`  |
-| `Notification:permission_prompt`              | `Approve <Tool>?` or `Needs approval` | The tool preview, or the payload message                 | `Funk`  |
-| `Notification:permission_prompt` for the plan | `Plan ready for review`               | The plan's first heading outside code, or its first line | `Tink`  |
-| `Stop`                                        | `Done`                                | Summary of `last_assistant_message`                      | `Glass` |
+| Event                                         | Title                                      | Body                                                     | Sound   |
+| --------------------------------------------- | ------------------------------------------ | -------------------------------------------------------- | ------- |
+| `PreToolUse:AskUserQuestion`                  | `Question` or `<N> questions`              | The first question, then `(+N more)`                     | `Tink`  |
+| `Notification:elicitation_dialog`             | `Question`                                 | The question text from the payload                       | `Tink`  |
+| `Notification:permission_prompt`              | `Approve <Tool>?` or `Needs approval`      | The tool preview, or the payload message                 | `Funk`  |
+| `Notification:permission_prompt` for the plan | `Plan ready for review`                    | The plan's first heading outside code, or its first line | `Tink`  |
+| `Stop`                                        | `Done`                                     | Summary of `last_assistant_message`                      | `Glass` |
+| `StopFailure`                                 | `Error: <session>` or `Refusal: <session>` | API error message or fixed refusal description           | `Funk`  |
 
 MCP tools appear by their tool name, as in `Approve batch?`, with the server named in the body.
+
+Failure titles name the session from the transcript, falling back to its ID. Their subtitle is `session: window` in tmux, even without a tier, or the repository/task subtitle outside tmux. An `invalid_request` is labeled `Refusal` only when the current transcript tail contains structured refusal metadata; a new prompt or ordinary reply clears earlier metadata. The hook allows up to two seconds for delayed transcript writes. A refusal body is always `Turn ended in a safeguard refusal.` Unclassified `invalid_request` events also use a fixed API-error description. Other errors use `last_assistant_message`, or `Turn ended in an API error.` when missing. Failure banners use the permission sound role and bypass completion deduplication. Approval waits retain their approval titles.
 
 ### Codex
 
@@ -95,6 +98,8 @@ MCP tools appear by their tool name, as in `Approve batch?`, with the server nam
 | `Stop`                          | `Done`                        | Summary of `last_assistant_message`  | `Glass` |
 
 `UserPromptSubmit` resets completion deduplication without posting a banner. `Stop` posts nothing for subagent sessions or `codex exec` and `codex review` runs, except a run started in a terminal with an option that takes a value before its command; see [Notes and caveats](#notes-and-caveats). Repeated Stop events in the same user turn are suppressed, including their sounds. A Stop hook that requests continuation can still cause the first completion banner before that continuation finishes; the notification plugin does not decide whether other Stop hooks will continue the turn.
+
+Terminal-error and refusal banners for Codex are pending a follow-on watcher PR under the [shared turn-failure plan](https://github.com/cboone/agent-harness-plugins/blob/main/docs/plans/todo/2026-10-28-shared-turn-failure-notifications.md). Codex 0.165.0 does not run `Stop` on terminal API errors. Its `PostModelRequest` event precedes retry resolution, so a failed request does not prove the turn stopped. A watcher can observe terminal app-server `error` events (`willRetry: false`) or `turn/completed` with failed status and distinguish them from approval waits. This release adds the Claude Code half of that paired change.
 
 ## Session tiers
 
@@ -113,6 +118,7 @@ A session placed in no tier is untiered and behaves as the rest of this README d
 | Completion of a turn your prompt started           | `Done`, unless you answered one of the session's questions or plans in it (Claude Code only) | nothing                   |
 | Completion of a turn started any other way         | nothing                                                                                      | nothing                   |
 | Permission prompt                                  | posts                                                                                        | posts, titled `Worker: …` |
+| Claude Code API error or refusal stop              | posts                                                                                        | posts, titled `Worker: …` |
 | Elicitation dialog                                 | posts                                                                                        | posts, titled `Worker: …` |
 | Plan approval                                      | nothing                                                                                      | posts, titled `Worker: …` |
 | Question (`AskUserQuestion`, `request_user_input`) | nothing                                                                                      | nothing                   |

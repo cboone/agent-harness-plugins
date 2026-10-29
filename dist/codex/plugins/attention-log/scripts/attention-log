@@ -10,6 +10,9 @@
 set -euo pipefail
 
 readonly SCRIPT_NAME="${0##*/}"
+SCRIPT_DIR="${BASH_SOURCE[0]%/*}"
+[[ "${SCRIPT_DIR}" != "${BASH_SOURCE[0]}" ]] || SCRIPT_DIR=.
+readonly SCRIPT_DIR
 
 STATE_DIR="${ATTENTION_LOG_DIR:-${HOME}/.local/state/attention-log}"
 readonly STATE_DIR
@@ -93,20 +96,9 @@ def shrink:
 JQ
 readonly EVENT_JQ
 
-# Prints "refusal" when a refusal record (a model_refusal_no_fallback system
-# record, or an API-error assistant record that stopped for a refusal) follows
-# the turn's last prompt or ordinary reply. A tool result is not a prompt.
-# Reads record types and metadata only.
-IFS= read -r -d '' REFUSAL_JQ << 'JQ' || true
-reduce (inputs | fromjson? | objects) as $record (false;
-  if $record.type == "assistant" and $record.isApiErrorMessage != true then false
-  elif $record.type == "user" and ($record.message.content | type == "string" or (type == "array" and all(.[]; .type? != "tool_result"))) then false
-  elif $record.type == "system" and $record.subtype == "model_refusal_no_fallback" then true
-  elif $record.type == "assistant" and $record.message.stop_reason == "refusal" then true
-  else . end)
-| if . then "refusal" else empty end
-JQ
-readonly REFUSAL_JQ
+# Shared with notify through build-shared-references.
+TRANSCRIPT_JQ="$(cat "${SCRIPT_DIR}/claude-transcript.jq")"$'\n'
+readonly TRANSCRIPT_JQ
 
 # Replays both files into the open states, newest rotation last, and prints one
 # line per state: "<tmux session>: <window>" (or the session's name or id
@@ -325,15 +317,14 @@ function read_tmux() {
   IFS="${FIELD_SEP}" read -r TMUX_SESSION TMUX_WINDOW TMUX_WINDOW_ID <<< "${names}" || true
 }
 
-# Succeeds when the transcript shows that a safeguard refusal ended the turn.
-# The hook can run before the transcript has the turn's last records, so it
-# looks again for a short while before deciding.
+# Retries refusal detection because the transcript can lag behind the hook.
 function transcript_shows_refusal() {
   [[ -f "${TRANSCRIPT_PATH}" ]] || return 1
-  local attempt verdict
+  local attempt
   for attempt in 1 2 3 4 5; do
-    verdict="$(tail -n 20 "${TRANSCRIPT_PATH}" 2> /dev/null | jq -Rnr "${REFUSAL_JQ}" 2> /dev/null)" || verdict=""
-    [[ "${verdict}" != refusal ]] || return 0
+    if tail -n 20 "${TRANSCRIPT_PATH}" 2> /dev/null | jq -Rne "${TRANSCRIPT_JQ} shows_refusal" > /dev/null 2>&1; then
+      return 0
+    fi
     if ((attempt < 5)); then
       sleep 0.5
     fi
