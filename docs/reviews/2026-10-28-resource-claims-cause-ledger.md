@@ -103,3 +103,14 @@ Code, errors, tests and comments ran in parallel through the installed codex-asp
 | suggestion: write-bash-scripts: Checked commands lacks coverage for owner-file write failures.               | Nit: missing tests for the change's own filesystem boundaries               | Take: creation, PID-write and rmdir fault cases in both writers, asserting status, diagnostic, data and lock state                                                                            | Covered by the behavior-fix round above                          |
 
 The comments aspect found no issues. Initial I/O cases passed: claims 106/106 and cache 89/89. Fixture stubs are committed with the tests and each case verifies stub resolution. Owner-creation failure uses an actually unwritable directory; PID writing and rmdir use explicit injected failures. A parent search-permission guard and best-effort cache unlock were added after that run; final checks must cover them. First Important round has not run yet.
+
+I/O plant artifacts: `/tmp/656-io-plants.V54RIW`. Extracted permanent helpers and the three new fault cases from each Scrut document; unmodified controls passed 5/5 cases each. Every plant passed Bash syntax validation, ran against the real production script and was restored before the next plant. Both restored sources matched their saved copies byte-for-byte.
+
+| Planted defect                                                    | Measured result                             | Permanent assertion                                                           |
+| ----------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------- |
+| Omit resource empty-directory cleanup after failed owner creation | make exit 2, creation case failed           | Owner creation errors retain the filesystem diagnostic; lock must be absent   |
+| Omit resource ownership cleanup registration before PID write     | make exit 2, write and cleanup cases failed | Owner write errors release the exclusively reserved file; lock must be absent |
+| Return success from resource cleanup failure                      | make exit 2, cleanup case failed            | Unexpected directory cleanup errors propagate after the write; exit must be 1 |
+| Omit cache empty-directory cleanup after failed owner creation    | make exit 2, creation case failed           | Save reports owner creation errors without leaving a lock                     |
+| Omit cache ownership tracking before PID write                    | make exit 2, write and cleanup cases failed | Save releases its owner when PID recording fails                              |
+| Return success from cache cleanup failure                         | make exit 2, cleanup case failed            | Save propagates unexpected lock-directory cleanup errors; exit must be 1      |

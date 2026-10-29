@@ -23,7 +23,7 @@ case "${0##*/}" in
     exec "${LOCK_TEST_REAL_RMDIR:?}" "$@"
     ;;
   *)
-    echo 'install this fixture as mkdir and sleep' >&2
+    echo 'install this fixture as mkdir, sleep and rmdir' >&2
     exit 1
     ;;
 esac
