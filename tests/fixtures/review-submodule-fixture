@@ -124,8 +124,27 @@ function main() {
       git -C module submodule deinit -q nested
     fi
   fi
+  if [[ "${scenario}" == raw-nested ]]; then
+    printf 'file text eol=lf\n' > module/nested/.gitattributes
+    git -C module/nested config core.safecrlf false
+    git -C module/nested add .gitattributes
+    git -C module/nested commit -qm attributes
+  fi
   "${scope}" --base "${base}" > "${fixture}/before"
   case "${scenario}" in
+    raw-nested)
+      consume_scope "${fixture}/before" "${fixture}" "${aspects}"
+      printf 'original\r\n' > module/nested/file
+      "${scope}" --base "${base}" > "${fixture}/after"
+      jq -es '.[0].snapshot != .[1].snapshot
+        and .[0].tree == .[1].tree and .[0].raw_tree == .[1].raw_tree
+        and .[0].submodules[0].scope.submodules[0].scope.raw_tree
+          != .[1].submodules[0].scope.submodules[0].scope.raw_tree' \
+        "${fixture}/before" "${fixture}/after"
+      "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" \
+        | jq -e '.changed == ["module/nested/file"] and .outside_scope == ["module/nested/file"] and .scope_changed'
+      return
+      ;;
     deleted | edit | embedded | embedded-uninitialized) printf 'edited\n' > module/file ;;
     removed)
       git config diff.ignoreSubmodules all
@@ -222,6 +241,16 @@ function main() {
         export REVIEW_RECORD_FAILURE_PATH=module/nested
       fi
       "${scope}" --base "${base}" > "${fixture}/after"
+      if [[ "${scenario}" == transition-write-failure ]]; then
+        # Legacy captures reach initialization reporting without a raw-tree
+        # deletion reporting the same path first.
+        local captured
+        for captured in before after; do
+          jq 'walk(if type == "object" then del(.raw_tree) else . end)' \
+            "${fixture}/${captured}" > "${fixture}/legacy"
+          mv "${fixture}/legacy" "${fixture}/${captured}"
+        done
+      fi
       function printf() {
         if [[ "${1:-}" == '%s\0' && "${2:-}" == "${REVIEW_RECORD_FAILURE_PATH}" ]]; then
           builtin printf 'printf: sample path-record write failure\n' >&2
