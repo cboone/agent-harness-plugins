@@ -31,7 +31,7 @@ Several issue numbers, as in `/address-issue 42 57`, share one plan and one appr
 - **Step 3:** unless `--dry-run` was specified, self-assign and label each open issue, recording the result for each one.
 - **Step 4:** show every issue's context, one block per issue.
 - **Step 5:** classify each issue and extract its sub-tasks, keeping track of which issue each sub-task came from.
-- **Step 6:** collect every issue's requirements into one plan, headed `## Plan for Issues #42, #57`, that says which change serves which issue. There is one approval gate for the whole plan, not one per issue.
+- **Step 6:** collect every issue's requirements into one plan, headed `## Plan for Issues #42, #57`, that says which change serves which issue and identifies overlapping files, requirements and shared changes. There is one approval gate for the whole plan, not one per issue.
 - **Step 8:** each commit references every issue its change addresses, as in `feat: add dark mode toggle (#42, #57)`, and together the commits reference every issue addressed on the current branch. The commit prefix follows the classification of the issue or issues the commit addresses.
 - **Steps 9 to 11:** report the status of every issue, including which are marked in progress and which sub-tasks remain for each.
 

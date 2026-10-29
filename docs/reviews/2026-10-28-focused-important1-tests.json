@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Criticality 7/10. The recursive prompt fixture checks only that a nested diff command appears; existing historical-guidance tests exercise a single repository. No test supplies distinct historical child instructions, so root-only guide lookup omits module/AGENTS.md while all prompt assertions pass. This retains the known historical-child-guidance issue under the explicit disposition to record it without fixing.",
+      "file": "tests/scrut/review-scope-submodules.md",
+      "fix": "Preserve the current disposition. When the follow-up is authorized, add child and nested historical-guide fixtures that distinguish the trusted parent gitlink revision from current checkout instructions.",
+      "line": 85,
+      "severity": "important",
+      "title": "write-scrut-tests: Structured output checks omit historical child guidance."
+    }
+  ],
+  "reviewed": "4420995611f18e86ce4b8c12a01e7fc5c458e01a",
+  "strengths": ["Consumer integration checks compare stored digest membership with prompts, validation, changes, gates and symlink discovery.", "Corrected negative fixtures isolate inventory validation, and deterministic mutation coverage checks recursive collection consistency.", "Write-failure fixtures require unsuccessful exit and empty output, including when later children could otherwise conceal failure.", "Regression cases cover precise gitlink membership, unrelated-file rejection, nested edits, missing objects and symlink boundaries."],
+  "summary": "Reviewed the complete committed scope against added and existing tests. No new Important or Critical coverage gaps were found; the known historical-child-guidance issue remains recorded without a change request. Runtime suites were not executed because their fixtures create files."
+}

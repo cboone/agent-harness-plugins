@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Issue reads for the combined-worktree fixture; all other calls are refused.
+set -euo pipefail
+
+function main() {
+  [[ "${1:-}" == issue && "${2:-}" == view ]] || exit 1
+  local number="${3:-}"
+  case "${number}" in 4523 | 4503) ;; *) exit 1 ;; esac
+  if [[ "${*: -1}" == *'.number'* ]]; then
+    printf '%s\n' "${number}"
+  else
+    jq -n --argjson number "${number}" \
+      '{number: $number, title: ("Issue " + ($number | tostring)), state: "OPEN", body: (("x" * 2000) + " discarded")}'
+  fi
+}
+
+main "$@"

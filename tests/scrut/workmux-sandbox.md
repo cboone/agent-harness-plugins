@@ -43,6 +43,20 @@ Codex executable config: resource, harness and failure retained
 Codex executable claim: resource, harness and failure retained
 ```
 
+## Upstream owner reservations retain their resource diagnostics
+
+```scrut
+$ for harness in 'Claude Code' Codex; do for invocation in bash executable; do for scenario in owner-reserve owner-write; do "${WORKMUX_SANDBOX_CASE_BIN}" "${harness}" "${invocation}" "${scenario}" check || exit 1; done; done; done
+Claude Code bash owner-reserve: resource, harness and failure retained
+Claude Code bash owner-write: resource, harness and failure retained
+Claude Code executable owner-reserve: resource, harness and failure retained
+Claude Code executable owner-write: resource, harness and failure retained
+Codex bash owner-reserve: resource, harness and failure retained
+Codex bash owner-write: resource, harness and failure retained
+Codex executable owner-reserve: resource, harness and failure retained
+Codex executable owner-write: resource, harness and failure retained
+```
+
 ## Alternate failure forms retain context without prescribing approval
 
 ```scrut
@@ -193,6 +207,7 @@ exit: 1
 
 ```scrut
 $ "${WORKMUX_SANDBOX_CASE_BIN}" Codex bash claim 2>&1
+mkdir: fixture access denied: FIXTURE/claims.json.lock
 manage-resource-claims: Codex: operation failed for claim lock FIXTURE/claims.json.lock; see the original error for the cause.
 manage-resource-claims: cannot create FIXTURE/claims.json.lock; check that FIXTURE is writable and that nothing else occupies that path
 exit: 1

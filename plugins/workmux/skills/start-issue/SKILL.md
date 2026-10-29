@@ -1,8 +1,9 @@
 ---
 name: start-issue
 description: >-
-  Open a workmux worktree and tmux window where a new session plans a GitHub
-  issue. Use for "start issue" or "work on #42 in a worktree"; for the current
+  Open a workmux worktree and tmux window to plan one or several GitHub
+  issues. Use for "start issue", "work on #42 in a worktree",
+  or "work on #42 and #43 together in a worktree"; for the current
   branch, use address-issue.
 argument-hint: "<issue-number...|description> [--no-approval] [--config <file>] [--agent <name>] [--resource <name>] [--fan-out|--each|--separate]"
 ---
@@ -62,7 +63,7 @@ Check these after removing duplicate issue numbers but before fetching or markin
 The single-issue workflow applies, with these changes:
 
 - **Step 1:** fetch every issue into its own `mktemp` file, and remove every one of them at each point the workflow removes `ISSUE_JSON`. Then warn about every closed issue and ask about them in one question, before anything is composed or marked. Drop each issue the user declines and remove its JSON file; stop if none remain. Every later step works with the remaining issues only.
-- **Primary issue:** the first remaining issue is the primary one. It supplies `--issue` to the launcher, so it owns the branch number and the lookup that reuses an existing branch.
+- **Primary issue:** the first remaining issue leads the branch name. Pass one `--issue` for every remaining number, in order. For example, `--generated-name fix/verify-email --issue 4523 --issue 4503` produces `fix/4523-4503-verify-email`. Each number in the leading numeric run identifies an issue to `pr` and `existing_branch_for_issue`; a rerun must match every requested issue on the same branch, even if their order changes. Do not fall back to a branch that names only the primary issue. If several branches match all the numbers, ask for an explicit choice.
 - **Step 3:** compose the prompt first, as step 5 below describes, so a failed composition stops the run before any issue is assigned or labeled. Then mark every open issue in progress, since the new session starts work on all of them.
 - **Step 4:** name the candidate for the combined work, not only the primary issue.
 - **Step 5:** before step 3's marking, run `compose-issue-prompt` once per issue, in the order given, join the outputs with a blank line, and write the result to a prompt file from `mktemp "${TMPDIR:-/tmp}/issue-prompt-XXXXXX"`. If any composition fails, stop and remove the prompt file and every issue JSON file; nothing has been marked yet. From here on, every stop removes the prompt file along with the issue JSON files. Pass `--chain-command` on the last call only; the helper emits the footer only when that option is present. The chained command lists every remaining number: `/address-issue 42 57`, plus `--no-approval` when the user passed it.
@@ -81,7 +82,7 @@ Run the parenthesized block as one command, so its variables stay in the same sh
 - **Step 6:** launch from the prompt file instead of piping a composition. Once the launcher exits, remove the prompt file and the issue JSON files whether or not the worktree was created; keep them only while retrying the launch with a revised candidate or a chosen branch:
 
 ```bash
-bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue 42 --base "BASE_BRANCH" < PROMPT_FILE
+bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue 42 --issue 57 --base "BASE_BRANCH" < PROMPT_FILE
 ```
 
 - **Step 7:** report every issue number and title, and whether each was marked in progress.
@@ -322,7 +323,7 @@ If the claim cannot be written, say so and carry on. The worktree exists and the
 .claude/worktree-resources.local.json*
 ```
 
-The trailing `*` matters. The script writes a `.lock` directory beside the file while it mutates, and an interrupted write can leave a `.XXXXXX` temporary file. Ignoring only the exact filename leaves both committable.
+Keep the trailing `*`: the script keeps a reusable `.lock` directory beside the file and exclusively creates its `owner` file while mutating. An interrupted write can leave a `.XXXXXX` temporary file. Ignoring only the exact filename leaves both committable.
 
 **Add it to the `.gitignore` beside the claim file**, which is the main worktree's, not the one in the worktree this skill was invoked from. The claim file lives in the main worktree, and an uncommitted `.gitignore` only applies within the tree it sits in, so a rule added in a linked worktree leaves the actual file untracked and committable where it is. Committing that `.gitignore` is what makes the rule apply in every worktree.
 
@@ -342,7 +343,7 @@ Then stop. The plan and its approval happen in the new session, so do not wait f
 
 ## Fan-Out Workflow
 
-With `--fan-out` (or `--each`, or `--separate`) and several distinct issues, loop over the single-issue steps in two phases. If duplicate removal leaves one issue, follow the ordinary single-issue workflow, including its resource check and claim. The loop lives here rather than in the scripts: each helper already handles one issue, and the launcher gains only what the loop needs to be safe.
+With `--fan-out` (or `--each`, or `--separate`) and several distinct issues, loop over the single-issue steps in two phases. If duplicate removal leaves one issue, follow the ordinary single-issue workflow, including its resource check and claim. The loop lives here rather than in the scripts. Each fan-out launch passes one issue; combined launches pass every issue to the same launcher.
 
 Run every phase 1 check before launching anything, so a problem with the third issue surfaces before the first two already have worktrees, assignments and labels.
 
@@ -361,7 +362,15 @@ Run every phase 1 check before launching anything, so a problem with the third i
 
    Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one. Exit 1 means git could not list local branches: stop, report the error, and remove every JSON file, since no branch choice can be trusted.
 
-1. **Ask every outstanding question in one batch:** whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file.
+1. **Ask every outstanding question in one batch:** whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file. Recheck the remaining branch choices for duplicates after any choice changes.
+
+1. **Check duplicate resolved branches before any launch or marking.** Pass every remaining issue and its resolved branch to the launcher; use an empty string when no branch exists:
+
+   ```bash
+   bash "SCRIPTS_DIR/launch-workmux" --check-fan-out-branches 42 "RESOLVED_BRANCH_42" 57 "RESOLVED_BRANCH_57"
+   ```
+
+   Exit 1 names the issues and shared branch and asks for distinct explicit branches. Stop, remove every issue JSON file and ask for those choices; do not select branches automatically. On resume, restart phase 1 to refetch and validate issue context. Then check the explicit choices with the same command before launching anything. Pass the chosen names positionally in phase 2 so singleton issue lookup cannot replace them with the combined branch again.
 
 Nothing has been assigned, labeled or launched yet, so stopping anywhere in this phase leaves nothing behind but the JSON files, which are removed on the way out.
 

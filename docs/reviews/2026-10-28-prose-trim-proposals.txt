@@ -1,0 +1,19 @@
+Files classified:
+
+| Absolute path | Profile |
+| --- | --- |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/docs/plugin-development.md | none |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/docs/reviews/2026-10-28-recursive-path-operand-design.md | none |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/docs/reviews/2026-10-28-submodule-gitlink-membership-design.md | none |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/docs/reviews/2026-10-28-submodule-historical-guidance-design.md | none |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/docs/reviews/2026-10-28-submodule-snapshot-ledger.md | none |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md | agent-instructions |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md | agent-instructions |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/plugins/review-until-clean/skills/review-until-clean/references/reviewers.md | agent-instructions |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md | agent-instructions |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/tests/scrut/review-scope-submodule-consumers.md | none |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/tests/scrut/review-scope-submodules.md | none |
+
+| Location | Action | Before | After |
+| --- | --- | --- | --- |
+| /Users/ctm/Work/projects/tooling/agent-harness-plugins/523-review-snapshot-submodules/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md:43 | Rewrite | Every untracked entry must belong to this inventory, and the common consumer validator checks that membership. | The common consumer validator requires every untracked entry to belong to this inventory. |

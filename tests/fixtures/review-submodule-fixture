@@ -1,0 +1,464 @@
+#!/usr/bin/env bash
+# Exercise recursive snapshots using only local repositories and fixture config.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/../../bin/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "$(dirname "${BASH_SOURCE[0]}")/../../bin/lib/capture-child.bash"
+
+FIXTURE_DIR=""
+trap '[[ -z "${FIXTURE_DIR}" ]] || rm -rf "${FIXTURE_DIR}"' EXIT
+
+# The protocol definitions are also used to construct intentionally altered inputs.
+# shellcheck source=plugins/review-until-clean/scripts/review-git.bash
+source "$(dirname "${REVIEW_SCOPE_BIN:?}")/review-git.bash"
+
+# Compare the actual stored digest with every consumer's observed membership.
+function assert_membership_contract() {
+  local captured="${1}" fixture="${2}" aspects="${3}" snapshot descriptor file pointer status_mode
+  snapshot="$(jq -r '.snapshot' "${captured}")"
+  git cat-file blob "${snapshot}" > "${fixture}/digest-inputs"
+  jq -cS '.membership' "${fixture}/digest-inputs" > "${fixture}/digest-members"
+  jq -cS '.membership' "${captured}" > "${fixture}/scope-members"
+  cmp "${fixture}/digest-members" "${fixture}/scope-members"
+  jq -c '[.membership[].path] | unique' "${fixture}/digest-inputs" > "${fixture}/expected-paths"
+  jq -c '[.membership[].path] | unique' "${captured}" > "${fixture}/scope-paths"
+  cmp "${fixture}/expected-paths" "${fixture}/scope-paths"
+  "${REVIEW_SCOPE_BIN}" --membership "${captured}" | jq -c 'map(.path) | unique' > "${fixture}/reader-paths"
+  cmp "${fixture}/expected-paths" "${fixture}/reader-paths"
+  for file in status gate; do
+    jq -c '.membership_paths | unique' "${fixture}/${file}" > "${fixture}/consumer-paths"
+    cmp "${fixture}/expected-paths" "${fixture}/consumer-paths"
+  done
+  jq -c '.accepted_paths | unique' "${fixture}/contract-changes" > "${fixture}/consumer-paths"
+  cmp "${fixture}/expected-paths" "${fixture}/consumer-paths"
+  descriptor="$(sed -n 's/^- Review membership (JSON): //p' "${fixture}/prompt")"
+  [[ -n "${descriptor}" ]] || return 1
+  file="$(jq -r '.file' <<< "${descriptor}")"
+  pointer="$(jq -c '.pointer | split("/") | .[1:]' <<< "${descriptor}")"
+  jq -c --argjson pointer "${pointer}" 'getpath($pointer) | map(if type == "object" then .path else . end) | unique' \
+    "${file}" > "${fixture}/prompt-paths"
+  cmp "${fixture}/expected-paths" "${fixture}/prompt-paths"
+  "${REVIEW_SCOPE_BIN}" --symlinks "${captured}" > "${fixture}/discovery"
+  jq -c '.membership_paths | unique' "${fixture}/discovery" > "${fixture}/discovery-paths"
+  cmp "${fixture}/expected-paths" "${fixture}/discovery-paths"
+  # Successful statuses must carry the same membership, including its presence.
+  for status_mode in changed missing; do
+    if [[ "${status_mode}" == changed ]]; then
+      jq '.[0].membership_paths += ["__status_outside__/file"]' "${fixture}/statuses" > "${fixture}/status-drift"
+    else
+      jq '.[0] |= del(.membership_paths)' "${fixture}/statuses" > "${fixture}/status-drift"
+    fi
+    "${aspects}" gate --scope "${captured}" --after "${captured}" \
+      --results "${fixture}/results" --statuses "${fixture}/status-drift" --aspect code \
+      | jq -e '.eligible == false and .reason == "a selected aspect status used different review membership"' > /dev/null
+  done
+  # Same snapshot string cannot conceal a changed membership payload.
+  jq "${REVIEW_MEMBERSHIP_DEFS}"'
+    .membership += [{path: "__contract_outside__/file", buckets: ["committed"]}]
+    | .membership |= sort_by(.path) | review_bucket_views
+  ' "${captured}" > "${fixture}/membership-drift"
+  "${aspects}" gate --scope "${captured}" --after "${fixture}/membership-drift" \
+    --results "${fixture}/results" --statuses "${fixture}/statuses" --aspect code \
+    | jq -e '.eligible == false and .reason == "the review membership changed"' > /dev/null
+}
+
+# Supply a schema-valid review result to exercise all consumers without starting a reviewer.
+function consume_scope() {
+  local captured="${1}" fixture="${2}" aspects="${3}"
+  "${aspects}" prompt --aspect code --scope "${captured}" > "${fixture}/prompt"
+  jq -n --slurpfile scope "${captured}" '[{aspect: "code", reviewed: $scope[0].snapshot,
+    summary: "Fixture review", strengths: [], findings: []}]' > "${fixture}/results"
+  jq '.[0]' "${fixture}/results" > "${fixture}/result"
+  "${aspects}" validate --aspect code --scope "${captured}" "${fixture}/result" > "${fixture}/status"
+  jq -e '.status == "ok"' "${fixture}/status" > /dev/null
+  jq '[.]' "${fixture}/status" > "${fixture}/statuses"
+  "${aspects}" changes --before "${captured}" --after "${captured}" > "${fixture}/contract-changes"
+  jq -e '.changed == [] and .outside_scope == [] and (.scope_changed | not)' "${fixture}/contract-changes" > /dev/null
+  "${aspects}" gate --scope "${captured}" --after "${captured}" --results "${fixture}/results" \
+    --statuses "${fixture}/statuses" --aspect code > "${fixture}/gate"
+  jq -e '.eligible' "${fixture}/gate" > /dev/null
+  assert_membership_contract "${captured}" "${fixture}" "${aspects}"
+}
+
+function main() {
+  local scenario="${1}" fixture scope repo base diagnostic
+  scope="${REVIEW_SCOPE_BIN:?}"
+  local aspects="${CODEX_ASPECTS_BIN:?}"
+  fixture="$(mktemp -d "${TMPDIR:-/tmp}/review-submodule.XXXXXX")"
+  FIXTURE_DIR="${fixture}"
+  export GIT_CONFIG_GLOBAL="${fixture}/config" GIT_CONFIG_SYSTEM=/dev/null
+  export GIT_CONFIG_NOSYSTEM=1
+  unset GIT_CONFIG_PARAMETERS GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+  printf '[user]\n name = Fixture\n email = fixture@example.invalid\n[commit]\n gpgsign = false\n[protocol "file"]\n allow = always\n' > "${GIT_CONFIG_GLOBAL}"
+  for repo in leaf child parent; do
+    git init -q --template= "${fixture}/${repo}"
+    printf 'original\n' > "${fixture}/${repo}/file"
+    printf 'unchanged\n' > "${fixture}/${repo}/other"
+    git -C "${fixture}/${repo}" add file other
+    git -C "${fixture}/${repo}" commit -qm initial
+  done
+  git -C "${fixture}/child" submodule add -q "${fixture}/leaf" nested
+  git -C "${fixture}/child" commit -qam nested
+  git -C "${fixture}/parent" submodule add -q "${fixture}/child" module
+  git -C "${fixture}/parent" submodule update --init --recursive -q
+  git -C "${fixture}/parent" commit -qam module
+  cd "${fixture}/parent"
+  base="$(git rev-parse HEAD)"
+  if [[ "${scenario}" == transition-write-failure ]]; then
+    git -C module submodule add -q "${fixture}/leaf" zlast
+    git -C module commit -qam topology
+    git add module
+    git commit -qm topology
+  fi
+  if [[ "${scenario}" == deleted || "${scenario}" == embedded || "${scenario}" == embedded-uninitialized ]]; then
+    git rm -q --cached module
+    git config advice.addEmbeddedRepo false
+    printf 'parent edit\n' > file
+    if [[ "${scenario}" == embedded || "${scenario}" == embedded-uninitialized ]]; then
+      git commit -qm remove
+    fi
+    if [[ "${scenario}" == embedded-uninitialized ]]; then
+      git -C module submodule deinit -q nested
+    fi
+  fi
+  "${scope}" --base "${base}" > "${fixture}/before"
+  case "${scenario}" in
+    deleted | edit | embedded | embedded-uninitialized) printf 'edited\n' > module/file ;;
+    removed)
+      git config diff.ignoreSubmodules all
+      git submodule deinit -q module
+      git rm -q module
+      git commit -qm deletion
+      "${scope}" --base "${base}" > "${fixture}/after"
+      jq -e '(.committed | index("module") != null) and .submodules == []' "${fixture}/after"
+      "${aspects}" prompt --aspect code --scope "${fixture}/after" > "${fixture}/prompt"
+      consume_scope "${fixture}/after" "${fixture}" "${aspects}"
+      local diff_command
+      diff_command="$(sed -n 's/^- Committed changes: //p' "${fixture}/prompt")"
+      [[ -n "${diff_command}" ]] || return 1
+      bash -c "${diff_command} --name-only" > "${fixture}/visible-paths"
+      grep -Fx module "${fixture}/visible-paths"
+      return
+      ;;
+    committed-consumption | staged-consumption)
+      local child_head
+      child_head="$(git -C module rev-parse HEAD)"
+      printf 'committed edit\n' > module/file
+      git -C module add file
+      git -C module commit -qm edit
+      git add module
+      if [[ "${scenario}" == committed-consumption ]]; then
+        git commit -qm pointer
+      else
+        git -C module checkout -q "${child_head}"
+      fi
+      "${scope}" --base "${base}" > "${fixture}/reviewed"
+      consume_scope "${fixture}/reviewed" "${fixture}" "${aspects}"
+      jq -e --arg scenario "${scenario}" '(.committed + .staged | index("module/file") != null)
+        and (if $scenario == "staged-consumption" then .unstaged | index("module/file") != null else true end)' \
+        "${fixture}/reviewed"
+      printf 'reviewer edit\n' > module/file
+      printf 'unrelated edit\n' > module/other
+      "${scope}" --base "${base}" > "${fixture}/edited"
+      "${aspects}" changes --before "${fixture}/reviewed" --after "${fixture}/edited" \
+        | jq -e '.changed == ["module/file", "module/other"] and .outside_scope == ["module/other"]'
+      return
+      ;;
+    nested-consumption)
+      printf 'nested commit\n' > module/nested/file
+      git -C module/nested add file
+      git -C module/nested commit -qm edit
+      git -C module add nested
+      git -C module commit -qm nested
+      git add module
+      git commit -qm pointer
+      "${scope}" --base "${base}" > "${fixture}/reviewed"
+      consume_scope "${fixture}/reviewed" "${fixture}" "${aspects}"
+      jq -e '.committed | index("module/nested/file") != null' "${fixture}/reviewed"
+      return
+      ;;
+    mutation)
+      consume_scope "${fixture}/before" "${fixture}" "${aspects}"
+      REVIEW_MUTATION_ROOT="$(pwd -P)"
+      export REVIEW_MUTATION_ROOT REVIEW_MUTATION_MARKER="${fixture}/mutation-fired"
+      local child_head
+      child_head="$(git -C module rev-parse HEAD)"
+      function git() {
+        local arg previous="" repo="" diff=false cached=false raw=false blob
+        for arg in "$@"; do
+          if [[ "${previous}" == -C ]]; then repo="${arg}"; fi
+          [[ "${arg}" != diff ]] || diff=true
+          [[ "${arg}" != --cached ]] || cached=true
+          [[ "${arg}" != --raw ]] || raw=true
+          previous="${arg}"
+        done
+        if [[ "${repo}" == "${REVIEW_MUTATION_ROOT}" && "${diff}" == true && "${cached}" == true && "${raw}" == true && ! -e "${REVIEW_MUTATION_MARKER}" ]]; then
+          blob="$(printf 'staged during collection\n' | command git -C "${repo}/module" hash-object -w --stdin)" || return
+          command git -C "${repo}/module" update-index --cacheinfo "100644,${blob},file" || return
+          : > "${REVIEW_MUTATION_MARKER}" || return
+        fi
+        command git "$@"
+      }
+      export -f git
+      [[ "$(type -t git)" == function ]] || return 1
+      local code=0
+      capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${scope}" --base "${base}" || code=$?
+      [[ "${code}" -ne 0 && ! -s "${fixture}/out" && -e "${REVIEW_MUTATION_MARKER}" ]] || return 1
+      [[ "$(command git -C module rev-parse HEAD)" == "${child_head}" ]] || return 1
+      [[ "$(command git rev-parse HEAD)" == "${base}" ]] || return 1
+      [[ "$(cat module/file)" == original ]] || return 1
+      return
+      ;;
+    record-write-failure | transition-write-failure)
+      consume_scope "${fixture}/before" "${fixture}" "${aspects}"
+      if [[ "${scenario}" == record-write-failure ]]; then
+        printf 'nested edit\n' > module/nested/file
+        export REVIEW_RECORD_FAILURE_PATH=module/nested/file
+      else
+        git -C module submodule deinit -q nested
+        export REVIEW_RECORD_FAILURE_PATH=module/nested
+      fi
+      "${scope}" --base "${base}" > "${fixture}/after"
+      function printf() {
+        if [[ "${1:-}" == '%s\0' && "${2:-}" == "${REVIEW_RECORD_FAILURE_PATH}" ]]; then
+          builtin printf 'printf: sample path-record write failure\n' >&2
+          return 1
+        fi
+        # shellcheck disable=SC2059 # Forward the real builtin format unchanged.
+        builtin printf "$@"
+      }
+      export -f printf
+      [[ "$(type -t printf)" == function ]] || return 1
+      local code=0
+      capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" || code=$?
+      [[ "${code}" -ne 0 && ! -s "${fixture}/out" ]] || return 1
+      return
+      ;;
+    replacement)
+      git config diff.ignoreSubmodules all
+      git submodule deinit -q module
+      rmdir module
+      ln -s ../child module
+      "${scope}" --base "${base}" > "${fixture}/linked"
+      consume_scope "${fixture}/linked" "${fixture}" "${aspects}"
+      jq -e '.submodules == [] and (.unstaged | index("module") != null)
+        and (.files | index("module") != null)' "${fixture}/linked"
+      printf 'changed outside bytes\n' > "${fixture}/child/file"
+      "${scope}" --base "${base}" > "${fixture}/target-edited"
+      jq -es '.[0].snapshot == .[1].snapshot' "${fixture}/linked" "${fixture}/target-edited"
+      rm module
+      ln -s ../another-target module
+      "${scope}" --base "${base}" > "${fixture}/link-edited"
+      "${aspects}" changes --before "${fixture}/linked" --after "${fixture}/link-edited" \
+        | jq -e '.changed == ["module"] and .outside_scope == [] and .scope_changed'
+      rm module
+      printf 'regular replacement\n' > module
+      "${scope}" --base "${base}" > "${fixture}/regular-replacement"
+      consume_scope "${fixture}/regular-replacement" "${fixture}" "${aspects}"
+      jq -e '.submodules == [] and (.unstaged | index("module") != null)' "${fixture}/regular-replacement"
+      return
+      ;;
+    ancestor-replacement)
+      mkdir container
+      git mv -- module container/inner
+      git commit -qm layout
+      mkdir "${fixture}/outside-root"
+      git clone -q "${fixture}/child" "${fixture}/outside-root/inner"
+      rm -r container
+      ln -s ../outside-root container
+      "${scope}" --base "${base}" > "${fixture}/ancestor-linked"
+      consume_scope "${fixture}/ancestor-linked" "${fixture}" "${aspects}"
+      jq -e '.submodules == [] and (.untracked | index("container") != null)' "${fixture}/ancestor-linked"
+      printf 'outside target changed\n' > "${fixture}/outside-root/inner/file"
+      "${scope}" --base "${base}" > "${fixture}/ancestor-target-edited"
+      jq -es '.[0].snapshot == .[1].snapshot' "${fixture}/ancestor-linked" "${fixture}/ancestor-target-edited"
+      return
+      ;;
+    option-path)
+      git mv -- module -vendor
+      git commit -qm rename
+      "${scope}" --base "${base}" > "${fixture}/option-reviewed"
+      consume_scope "${fixture}/option-reviewed" "${fixture}" "${aspects}"
+      jq -e '.submodules[0].path == "-vendor" and .submodules[0].initialized' "${fixture}/option-reviewed"
+      printf 'option-path edit\n' > ./-vendor/file
+      "${scope}" --base "${base}" > "${fixture}/option-edited"
+      "${aspects}" changes --before "${fixture}/option-reviewed" --after "${fixture}/option-edited" \
+        | jq -e '.changed == ["-vendor/file"] and .outside_scope == []'
+      printf 'original\n' > ./-vendor/file
+      # Create the empty checkout directly; Git filters option-like paths.
+      rm -r ./-vendor
+      mkdir ./-vendor
+      "${scope}" --base "${base}" > "${fixture}/option-uninitialized"
+      consume_scope "${fixture}/option-uninitialized" "${fixture}" "${aspects}"
+      jq -e '.submodules == [{path: "-vendor", initialized: false}]' "${fixture}/option-uninitialized"
+      return
+      ;;
+    contract-rejection)
+      consume_scope "${fixture}/before" "${fixture}" "${aspects}"
+      local entry consumer code checks=0
+      for entry in module/ module missing/file; do
+        jq --arg entry "${entry}" "${REVIEW_MEMBERSHIP_DEFS}"'.untracked = [$entry] | .membership = review_compile_membership | review_bucket_views' "${fixture}/before" > "${fixture}/invalid"
+        for consumer in prompt validate changes gate; do
+          code=0
+          case "${consumer}" in
+            prompt) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" prompt --aspect code --scope "${fixture}/invalid" || code=$? ;;
+            validate) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" validate --aspect code --scope "${fixture}/invalid" "${fixture}/result" || code=$? ;;
+            changes) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" changes --before "${fixture}/invalid" --after "${fixture}/before" || code=$? ;;
+            gate) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" gate --scope "${fixture}/invalid" --after "${fixture}/before" --results "${fixture}/results" --statuses "${fixture}/statuses" --aspect code || code=$? ;;
+            *)
+              echo "unexpected consumer: ${consumer}" >&2
+              return 1
+              ;;
+          esac
+          [[ "${code}" -eq 1 && ! -s "${fixture}/out" ]] || return 1
+          grep -F 'is not review-scope output' <<< "${diagnostic}" > /dev/null
+          checks=$((checks + 1))
+        done
+      done
+      [[ "${checks}" -eq 12 ]] || return 1
+      echo '12 contract rejections verified'
+      return
+      ;;
+    unavailable)
+      consume_scope "${fixture}/before" "${fixture}" "${aspects}"
+      local missing
+      missing="$(printf 'unavailable gitlink object' | git hash-object --stdin)"
+      git update-index --cacheinfo "160000,${missing},module"
+      "${scope}" --base "${base}"
+      return
+      ;;
+    symlink | symlink-option)
+      local link_path=module/new-link link_operand
+      if [[ "${scenario}" == symlink-option ]]; then
+        git mv -- module -vendor
+        git commit -qm layout
+        link_path=-vendor/new-link
+      fi
+      printf 'fixture target bytes\n' > "${fixture}/outside"
+      link_operand="${PWD}/${link_path}"
+      ln -s ../../outside "${link_operand}"
+      "${scope}" --base "${base}" > "${fixture}/linked"
+      consume_scope "${fixture}/linked" "${fixture}" "${aspects}"
+      sed -n 's/^- Symlink members (JSON): //p' "${fixture}/prompt" > "${fixture}/prompt-links"
+      jq -e --arg path "${link_path}" 'any(.[]; .path == $path and .target == "../../outside" and .kind == "symlink")' \
+        "${fixture}/prompt-links" > /dev/null
+      if grep -F 'fixture target bytes' "${fixture}/prompt"; then return 1; fi
+      local reference snippet
+      reference="$(dirname "${scope}")/../skills/review-until-clean/references/reviewers.md"
+      snippet="$(awk '
+        /^## An untracked symlink/ {section = 1; next}
+        section && /^```bash/ {code = 1; next}
+        code && /^```$/ {exit}
+        code {print}
+      ' "${reference}")"
+      [[ -n "${snippet}" ]] || return 1
+      scope_file="${fixture}/linked" review_scope_bin="${scope}" bash -c "${snippet}"
+      return
+      ;;
+    committed)
+      git config diff.ignoreSubmodules all
+      printf 'committed\n' > module/file
+      git -C module add file
+      git -C module commit -qm change
+      git add module
+      git commit -qm pointer
+      ;;
+    staged)
+      printf 'staged\n' > module/file
+      git -C module add file
+      printf 'original\n' > module/file
+      ;;
+    untracked) printf 'new\n' > module/new ;;
+    head)
+      printf 'committed\n' > module/file
+      git -C module add file
+      git -C module commit -qm change
+      ;;
+    nested) printf 'nested edit\n' > module/nested/file ;;
+    populated)
+      consume_scope "${fixture}/before" "${fixture}" "${aspects}"
+      git submodule deinit -q module
+      printf 'unavailable checkout\n' > module/leftover
+      "${scope}" --base "${base}"
+      return
+      ;;
+    uninitialized)
+      git submodule deinit -q module
+      "${scope}" --base "${base}" > "${fixture}/after"
+      consume_scope "${fixture}/after" "${fixture}" "${aspects}"
+      jq -er '.submodules == [{path: "module", initialized: false}] and .empty' "${fixture}/after"
+      return
+      ;;
+    prompt | changes) printf 'edited\n' > module/nested/file ;;
+    failure)
+      consume_scope "${fixture}/before" "${fixture}" "${aspects}"
+      printf 'invalid gitdir\n' > module/.git
+      "${scope}" --base "${base}"
+      return
+      ;;
+    ignored)
+      git config submodule.module.ignore all
+      printf 'edited\n' > module/file
+      ;;
+    stable) : ;;
+    *)
+      echo "unknown scenario: ${scenario}" >&2
+      return 1
+      ;;
+  esac
+  git -C module ls-files --stage -z > "${fixture}/index-before"
+  "${scope}" --base "${base}" > "${fixture}/after"
+  consume_scope "${fixture}/after" "${fixture}" "${aspects}"
+  if [[ "${scenario}" == prompt ]]; then
+    "${aspects}" prompt --aspect code --scope "${fixture}/after" > "${fixture}/prompt"
+    grep -F -- "${fixture}/parent/module/nested" "${fixture}/prompt" > /dev/null
+    echo 'nested diff command present'
+    return
+  fi
+  if [[ "${scenario}" == changes ]]; then
+    "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" \
+      | jq -e '.changed == ["module/nested/file"] and .outside_scope == ["module/nested/file"]'
+    return
+  fi
+  if [[ "${scenario}" == deleted || "${scenario}" == embedded || "${scenario}" == embedded-uninitialized ]]; then
+    consume_scope "${fixture}/after" "${fixture}" "${aspects}"
+    jq -e 'all(.untracked[]; endswith("/") | not)
+      and (.untracked | index("module/file") != null) and (.untracked | index("module") == null)' \
+      "${fixture}/after" > /dev/null
+    "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" \
+      | jq -e '.changed == ["module/file"] and .outside_scope == []' > /dev/null
+  fi
+  git -C module ls-files --stage -z > "${fixture}/index-after"
+  cmp "${fixture}/index-before" "${fixture}/index-after"
+  jq -es --arg scenario "${scenario}" '
+    if $scenario == "stable" then .[0] == .[1]
+    else .[0].snapshot != .[1].snapshot and (.[1].empty | not)
+      and (if $scenario == "staged" then
+        .[0].tree == .[1].tree
+        and .[0].submodules[0].scope.tree == .[1].submodules[0].scope.tree
+        and (.[1].staged | index("module/file") != null)
+      elif $scenario == "committed" then
+        .[1].committed | index("module/file") != null
+      elif $scenario == "untracked" then
+        .[1].untracked | index("module/new") != null
+      elif $scenario == "nested" then
+        .[1].unstaged | index("module/nested/file") != null
+      elif $scenario == "head" then
+        .[0].submodules[0].scope.head != .[1].submodules[0].scope.head
+        and (.[1].unstaged | index("module") != null)
+      else .[1].unstaged | index("module/file") != null end)
+    end' "${fixture}/before" "${fixture}/after"
+  # A second edit must invalidate the first dirty snapshot too.
+  if [[ "${scenario}" == edit || "${scenario}" == nested || "${scenario}" == deleted || "${scenario}" == embedded || "${scenario}" == embedded-uninitialized ]]; then
+    local edited_path=module/file
+    if [[ "${scenario}" == nested ]]; then edited_path=module/nested/file; fi
+    printf 'another edit\n' > "${edited_path}"
+    "${scope}" --base "${base}" > "${fixture}/again"
+    jq -es '.[0].snapshot != .[1].snapshot' "${fixture}/after" "${fixture}/again"
+  fi
+}
+
+main "$@"

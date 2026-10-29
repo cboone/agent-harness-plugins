@@ -63,15 +63,20 @@ function main() {
       printf '{"number":42,"title":"Scratch worktree","labels":[],"body":"","state":"OPEN"}\n'
       ;;
     mkdir)
-      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == claim && "${1:-}" == "${MATRIX_ROOT:?}/claims.json.lock" ]]; then
-        printf 'mkdir: fixture access denied: %s\n' "${1}" >&2
-        exit 1
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == claim ]]; then
+        local argument
+        for argument in "$@"; do
+          if [[ "${argument}" == "${MATRIX_ROOT:?}/claims.json.lock" ]]; then
+            printf 'mkdir: fixture access denied: %s\n' "${argument}" >&2
+            exit 1
+          fi
+        done
       fi
       exec /bin/mkdir "$@"
       ;;
     mktemp)
       case "${STUB_RESOURCE_SCENARIO:-success}:${*}" in
-        temp-prompt:*workmux-prompt-*.md.XXXXXX | temp-raw:*.raw.XXXXXX | temp-state:*workmux-launch-*)
+        temp-prompt:*workmux-prompt-*.md.XXXXXX | temp-raw:*.raw.XXXXXX | temp-state:*workmux-launch-* | owner-reserve:*claims.json.lock/owner.diagnostic.XXXXXX)
           printf 'mktemp: fixture access denied\n' >&2
           exit 1
           ;;
@@ -91,6 +96,12 @@ function main() {
         exit 2
       fi
       exec /usr/bin/sed "$@"
+      ;;
+    ls)
+      /bin/ls "$@"
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == owner-write && "${*}" == *'/dev/fd/8' ]]; then
+        chmod 400 "${MATRIX_ROOT:?}/claims.json.lock/owner"
+      fi
       ;;
     *) exit 2 ;;
   esac

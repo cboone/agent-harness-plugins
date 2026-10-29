@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Print the issue identities carried by leading numeric runs in branch path segments.
+set -euo pipefail
+
+function main() {
+  [[ $# -eq 1 ]] || {
+    echo 'Usage: branch-issues <branch>' >&2
+    return 1
+  }
+  local segment number seen="/"
+  local -a segments=()
+  IFS=/ read -r -a segments <<< "${1}"
+  for segment in "${segments[@]}"; do
+    while [[ "${segment}" =~ ^([1-9][0-9]*)(-|$) ]]; do
+      number="${BASH_REMATCH[1]}"
+      case "${seen}" in
+        *"/${number}/"*) ;;
+        *)
+          printf '%s\n' "${number}"
+          seen+="${number}/"
+          ;;
+      esac
+      segment="${segment#"${number}"}"
+      [[ "${segment}" == -* ]] || break
+      segment="${segment#-}"
+    done
+  done
+}
+
+main "$@"

@@ -326,7 +326,11 @@ Derive every rule from the guide. When a guide's rule changes, update its checkl
 
 A reference that skills in two plugins read lives in one plugin and is copied into the other, because a skill can read only files its own plugin ships. `bin/build-shared-references`, run by `make build`, keeps the copies byte for byte identical to their sources; its `SHARED_REFERENCES` list names each source and copy. Rule 22 of `bin/validate-plugins` fails when a copy is missing or differs from its source. Edit the source, never the copy, and bump the source's plugin and every copy's plugin forward when the source changes.
 
-The shared references are:
+The shared references and policy libraries are:
+
+- Review Git policy: `plugins/review-until-clean/scripts/review-git.bash`, copied into `review-pr-with-codex/scripts/`. Scope collectors and consumers source this library for call-local Git policy, exact recursive membership construction, validated membership reads and rooted link discovery. Generated policy copies cannot be edited independently.
+
+- The owner-file mutex helper: `plugins/workmux/scripts/owner-lock.bash`, copied into `plugins/attention-log/scripts/` and `plugins/publish-report-board/scripts/`. Acquire captures open-file identity before PID recording; every converted cleanup calls the same checked release helper. Edit only the workmux source and regenerate the other copies.
 
 - The progress model: `plugins/publish-report-board/skills/publish-report-board/references/progress-model.md`, copied to `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`.
 - The `codex exec` path: `plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md`, copied to the `references/` directories of `trim-comments` and `trim-text`. Each consumer's `SKILL.md` names its own model, effort, window, prompt additions and fallback.

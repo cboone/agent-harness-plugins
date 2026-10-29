@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Run only stubbed issue/worktree operations in a fixture-owned directory.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+: "${COMPOSE_ISSUE_PROMPT_BIN:?}" "${LAUNCH_WORKMUX_BIN:?}" "${PR_BRANCH_ISSUES_BIN:?}"
+scratch=""
+
+function main() {
+  local mode="${1:?}" tool output prompt_1 prompt_2
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+  trap 'rm -r -- "${scratch}"' EXIT
+  mkdir "${scratch}/bin" "${scratch}/tmp" "${scratch}/state"
+  cp "${WORKMUX_STUB_BIN:?}" "${scratch}/bin/workmux"
+  cp "${TMUX_STUB_BIN:?}" "${scratch}/bin/tmux"
+  cp "${WORKTREE_GIT_STUB_BIN:?}" "${scratch}/bin/git"
+  cp "${REPO_ROOT}/tests/fixtures/combined-gh-stub" "${scratch}/bin/gh"
+  export PATH="${scratch}/bin:${PATH}"
+  for tool in gh workmux tmux git; do
+    [[ "$(command -v "${tool}")" == "${scratch}/bin/${tool}" ]] || exit 1
+  done
+  export TMPDIR="${scratch}/tmp" STUB_STATE="${scratch}/state"
+  export STUB_GIT_WORKTREE_PORCELAIN_FILE="${scratch}/worktrees"
+  unset TMUX TMUX_TMPDIR WORKMUX_TMUX WORKMUX_TERM
+  cd "${scratch}"
+  case "${mode}" in
+    launch)
+      prompt_1="$(gh issue view 4523 --json number,title,body,state | "${COMPOSE_ISSUE_PROMPT_BIN}")"
+      prompt_2="$(gh issue view 4503 --json number,title,body,state | "${COMPOSE_ISSUE_PROMPT_BIN}" --chain-command '/address-issue 4523 4503')"
+      output="$(printf '%s\n\n%s\n' "${prompt_1}" "${prompt_2}" \
+        | bash "${LAUNCH_WORKMUX_BIN}" --generated-name fix/verify-email --issue 4523 --issue 4503 --await-completion)"
+      printf '%s\n' "${output}" | sed -n '/^Generated branch name:/p; /^Work on issue/p; /^\/address-issue/p; /^(Issue body truncated/p'
+      printf 'worktrees: %s\n' "$(awk '/^worktree / {n++} END {print n+0}' "${STUB_GIT_WORKTREE_PORCELAIN_FILE}")"
+      ;;
+    lookup)
+      export STUB_GIT_BRANCHES=$'fix/4523-unrelated\nfix/4523-4503-verify-email'
+      bash "${LAUNCH_WORKMUX_BIN}" --resolve-issue-branch 4503 --resolve-issue-branch 4523
+      ;;
+    reuse)
+      export STUB_GIT_BRANCHES=$'fix/4523-unrelated\nfix/4523-4503-verify-email'
+      output="$(printf 'Combined task\n' | bash "${LAUNCH_WORKMUX_BIN}" \
+        --generated-name fix/other-wording --issue 4503 --issue 4523 --await-completion)"
+      printf '%s\n' "${output}" | sed -n '/^Reusing branch/p; /^branch:/p'
+      ;;
+    partial-match)
+      export STUB_GIT_BRANCHES=fix/4503-unrelated
+      output="$(bash "${LAUNCH_WORKMUX_BIN}" --resolve-issue-branch 4503 --resolve-issue-branch 4523)"
+      [[ -z "${output}" ]]
+      echo 'combined lookup: none'
+      output="$(printf 'Combined task\n' | bash "${LAUNCH_WORKMUX_BIN}" \
+        --generated-name fix/verify-email --issue 4503 --issue 4523 --await-completion)"
+      printf '%s\n' "${output}" | sed -n '/^Generated branch name:/p; /^Reusing branch/p'
+      ;;
+    bare)
+      output="$(printf 'Task\n' | bash "${LAUNCH_WORKMUX_BIN}" \
+        --generated-name verify-email --issue 4523 --issue 4503 --issue 4523 --await-completion)"
+      printf '%s\n' "${output}" | sed -n '/^Generated branch name:/p'
+      ;;
+    budgets)
+      prompt_1="$(gh issue view 4523 --json number,title,body,state | "${COMPOSE_ISSUE_PROMPT_BIN}")"
+      prompt_2="$(gh issue view 4503 --json number,title,body,state | "${COMPOSE_ISSUE_PROMPT_BIN}")"
+      printf '%s\n%s\n' "${prompt_1}" "${prompt_2}" | awk '/^x+$/ {print "body characters: " length($0)}'
+      ;;
+    fan-out)
+      export STUB_GIT_BRANCHES=fix/4523-4503-verify-email
+      local first second status=0
+      first="$(bash "${LAUNCH_WORKMUX_BIN}" --resolve-issue-branch 4523)"
+      second="$(bash "${LAUNCH_WORKMUX_BIN}" --resolve-issue-branch 4503)"
+      capture_child - --error-stdout -- bash "${LAUNCH_WORKMUX_BIN}" \
+        --check-fan-out-branches 4523 "${first}" 4503 "${second}" || status=$?
+      printf 'preflight exit: %s\n' "${status}"
+      [[ "${status}" == 1 && ! -e "${STUB_STATE}/workmux_called" && ! -e "${STUB_GIT_WORKTREE_PORCELAIN_FILE}" ]]
+      printf 'launches: 0\n'
+      ;;
+    fan-out-clear)
+      bash "${LAUNCH_WORKMUX_BIN}" --check-fan-out-branches 4523 fix/4523-login 4503 fix/4503-logging
+      bash "${LAUNCH_WORKMUX_BIN}" --check-fan-out-branches 4523 '' 4503 ''
+      echo 'distinct or missing branches: accepted'
+      ;;
+    links)
+      local number numbers
+      numbers="$("${PR_BRANCH_ISSUES_BIN}" fix/4523-4503-verify-email)"
+      while IFS= read -r number; do
+        gh issue view "${number}" --repo fixture/repo --json number --jq '.number' > /dev/null
+        printf 'Closes #%s\n' "${number}"
+      done <<< "${numbers}"
+      ;;
+    parser)
+      "${PR_BRANCH_ISSUES_BIN}" user/fix/4523-4503-verify-email
+      "${PR_BRANCH_ISSUES_BIN}" 4523-4503-verify-email
+      "${PR_BRANCH_ISSUES_BIN}" fix/4523-single
+      "${PR_BRANCH_ISSUES_BIN}" fix/4523-4523-dedup
+      "${PR_BRANCH_ISSUES_BIN}" release/4523.1
+      "${PR_BRANCH_ISSUES_BIN}" fix/04523-invalid
+      ;;
+    *) exit 1 ;;
+  esac
+}
+
+main "$@"

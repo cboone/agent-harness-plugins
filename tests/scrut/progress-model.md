@@ -257,7 +257,7 @@ none
 ## Both gather scripts refuse to run without the shared definitions
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BACKLOG_GATHER_BIN}" "${BUGS_GATHER_BIN}" "${dir}/" && { "${dir}/backlog-gather" --help 2>&1; echo "exit ${?}"; "${dir}/bugs-gather" --help 2>&1; echo "exit ${?}"; }
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BACKLOG_GATHER_BIN}" "${BUGS_GATHER_BIN}" "${OWNER_LOCK_LIBRARY}" "${dir}/" && { "${dir}/backlog-gather" --help 2>&1; echo "exit ${?}"; "${dir}/bugs-gather" --help 2>&1; echo "exit ${?}"; }
 backlog-gather: */progress.jq is missing; reinstall publish-report-board (glob)
 exit 2
 bugs-gather: */progress.jq is missing; reinstall publish-report-board (glob)

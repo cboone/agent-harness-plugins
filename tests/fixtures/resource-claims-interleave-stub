@@ -6,17 +6,51 @@ set -euo pipefail
 # shellcheck source=bin/lib/git-environment.bash
 source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
 
-: "${CLAIMS_REAL_MKDIR:?}" "${CLAIMS_WRITER:?}" "${WORKTREE_RESOURCES_FILE:?}"
+CLAIMS_WRITER="${CLAIMS_WRITER:-controller}"
+: "${CLAIMS_REAL_MKDIR:?}" "${WORKTREE_RESOURCES_FILE:?}"
 : "${CLAIMS_BARRIER:?}" "${WORKTREE_GIT_STUB_BIN:?}"
+
+function await_release() {
+  local marker="${1}" message="${2}" attempt
+  for ((attempt = 0; attempt < 200; attempt++)); do
+    [[ ! -f "${CLAIMS_BARRIER}/${marker}" ]] || return 0
+    "${CLAIMS_REAL_SLEEP:?}" 0.05
+  done
+  echo "${message}" >&2
+  return 1
+}
 
 case "${0##*/}" in
   mkdir)
     status=0
     "${CLAIMS_REAL_MKDIR}" "$@" || status=$?
-    if [[ "${CLAIMS_WRITER}" == second && $# -eq 1 && "${1}" == "${WORKTREE_RESOURCES_FILE}.lock" && "${status}" -ne 0 ]]; then
-      touch "${CLAIMS_BARRIER}/second-blocked"
+    if [[ "${!#}" == "${WORKTREE_RESOURCES_FILE}.lock" && "${CLAIMS_INTERLEAVE_MODE:-snapshot}" != snapshot && -d "${!#}" ]]; then
+      status=0
     fi
     exit "${status}"
+    ;;
+  sleep)
+    if [[ "${CLAIMS_WRITER}" == second ]]; then
+      touch "${CLAIMS_BARRIER}/second-blocked"
+      if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == stale ]]; then
+        await_release release-waiter 'stale waiter barrier timed out'
+        exit 0
+      fi
+    fi
+    exec "${CLAIMS_REAL_SLEEP:?}" "$@"
+    ;;
+  rm)
+    "${CLAIMS_REAL_RM:?}" "$@"
+    if [[ ("${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release || "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == released-successor) && "${CLAIMS_WRITER}" == first && "${!#}" == "${WORKTREE_RESOURCES_FILE}.lock/owner" ]]; then
+      touch "${CLAIMS_BARRIER}/first-owner-removed"
+      await_release release-cleanup 'cleanup barrier timed out'
+      exit 0
+    fi
+    ;;
+  rmdir)
+    touch "${CLAIMS_BARRIER}/unexpected-rmdir"
+    echo 'writers must retain the preparation directory' >&2
+    exit 79
     ;;
   git)
     if [[ "${1:-}" == worktree ]]; then
@@ -35,11 +69,15 @@ case "${0##*/}" in
         exit 1
       fi
       touch "${CLAIMS_BARRIER}/second-read"
+      if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release ]]; then
+        await_release release-second 'second writer barrier timed out'
+        exec "${WORKTREE_GIT_STUB_BIN}" "$@"
+      fi
     fi
     exec "${WORKTREE_GIT_STUB_BIN}" "$@"
     ;;
   *)
-    echo 'install this fixture as git and mkdir' >&2
+    echo 'install this fixture as git, mkdir, sleep, rm and rmdir' >&2
     exit 1
     ;;
 esac

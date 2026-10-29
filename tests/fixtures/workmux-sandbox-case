@@ -51,7 +51,7 @@ function main() {
     *) die 'unknown harness' ;;
   esac
   case "${scenario}" in
-    success | guard | log | socket | config | claim | occupied | ordinary | disk | auth | generic | generic-lower | generic-typed | config-load | log-home | log-relative | log-no-home | temp-prompt | temp-raw | temp-state | temp-read | temp-render) ;;
+    success | guard | log | socket | config | claim | occupied | owner-reserve | owner-write | ordinary | disk | auth | generic | generic-lower | generic-typed | config-load | log-home | log-relative | log-no-home | temp-prompt | temp-raw | temp-state | temp-read | temp-render) ;;
     *) die 'unknown scenario' ;;
   esac
   fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
@@ -62,7 +62,7 @@ function main() {
   trap 'interrupt_fixture 143' TERM
   export MATRIX_INVOCATION="${invocation}"
   mkdir "${fixture}/bin" "${fixture}/tmp" "${fixture}/worktree"
-  for tool in workmux tmux gh mkdir mktemp cat sed; do
+  for tool in workmux tmux gh mkdir mktemp cat sed ls; do
     cp "${WORKMUX_RESOURCE_STUB_BIN:?}" "${fixture}/bin/${tool}"
     chmod +x "${fixture}/bin/${tool}"
   done
@@ -74,7 +74,7 @@ function main() {
   fi
   export PATH="${fixture}/bin:${PATH}"
   if [[ "${scenario}" == guard ]]; then export PATH="${fixture}/bin:${fixture}/other-bin:${PATH}"; fi
-  for tool in workmux tmux gh git mkdir mktemp cat sed; do
+  for tool in workmux tmux gh git mkdir mktemp cat sed ls; do
     [[ "$(command -v "${tool}" || true)" == "${fixture}/bin/${tool}" ]] ||
       die "refusing to run: ${tool} is not the fixture stub"
   done
@@ -109,7 +109,7 @@ function main() {
     log-no-home) unset HOME XDG_STATE_HOME ;;
     *) ;;
   esac
-  if [[ "${scenario}" == claim || "${scenario}" == occupied ]]; then
+  if [[ "${scenario}" == claim || "${scenario}" == occupied || "${scenario}" == owner-reserve || "${scenario}" == owner-write ]]; then
     export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
     if [[ "${scenario}" == occupied ]]; then : > "${WORKTREE_RESOURCES_FILE}.lock"; fi
     capture_child output --error-stdout invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
@@ -165,6 +165,14 @@ function main() {
       claim | occupied)
         resource="claim lock ${fixture}/claims.json.lock"
         original="cannot create ${fixture}/claims.json.lock"
+        ;;
+      owner-reserve)
+        resource="claim owner lock ${fixture}/claims.json.lock/owner"
+        original="owner-lock: cannot create ${fixture}/claims.json.lock/owner"
+        ;;
+      owner-write)
+        resource="claim owner file ${fixture}/claims.json.lock/owner"
+        original="cannot record the lock owner in ${fixture}/claims.json.lock"
         ;;
       generic | generic-lower | generic-typed | auth)
         resource='resource named in the command output'

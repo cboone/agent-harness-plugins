@@ -1,0 +1,17 @@
+{
+  "aspect": "simplify",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "The deleted and edit scenarios perform identical mutations, as do prompt and changes. Separate case arms duplicate setup without distinguishing behavior; the later assertions already use the unchanged scenario value.",
+      "file": "tests/fixtures/review-submodule-fixture",
+      "fix": "Combine the identical arms as deleted | edit and prompt | changes, preserving the scenario-specific preparation and assertions.",
+      "line": 38,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Consolidate identical scenario branches."
+    }
+  ],
+  "reviewed": "73c1b528b995c6815256f375e8ae500e87fbb5e2",
+  "strengths": ["Recursive snapshot collection and tree comparison have separate responsibilities.", "Fixtures cover nested changes, index-only edits and initialization states."],
+  "summary": "Reviewed all non-generated changed files and found one behavior-preserving simplification in fixture setup. No files were changed or repository code run."
+}

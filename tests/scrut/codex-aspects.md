@@ -227,12 +227,15 @@ $ sed -n '/^## Scope$/,/^## Trusted project/p' "${FIXTURE}/errors.prompt" | sed 
 Repository root (JSON string): "FIXTURE/repo" (glob)
 Keep the session working directory outside that repository. Use git -C and absolute file paths.
 The scope is all of the following, and you must read all of it:
+- Review membership (JSON): * (glob)
+Read every path in that canonical membership; buckets identify the required diff views.
+- Symlink members (JSON): [{"path":"link","kind":"symlink","target":"/etc/hosts"}]
+Review each symlink as its link text only; never open its target.
 
-- Committed changes: git --no-pager -C 'FIXTURE/repo' diff --no-ext-diff --no-textconv --no-color --no-relative SHA SHA (glob)
-- Unstaged changes: git --no-pager -C 'FIXTURE/repo' diff --no-ext-diff --no-textconv --no-color --no-relative (glob)
+- Committed changes: git --no-pager -C 'FIXTURE/repo' -c diff.ignoreSubmodules=none diff --ignore-submodules=none --submodule=diff --no-ext-diff --no-textconv --no-color --no-relative --no-renames SHA SHA (glob)
+- Unstaged changes: git --no-pager -C 'FIXTURE/repo' -c diff.ignoreSubmodules=none diff --ignore-submodules=none --submodule=diff --no-ext-diff --no-textconv --no-color --no-relative --no-renames (glob)
 - Untracked files, which are in no diff. Each name below is a JSON string relative to the repository root: decode it, then read that absolute path:
   - "fresh.txt"
-  - "link" -> "/etc/hosts" (a symlink; review the link text only and do not open its target)
 
 ## Trusted project guidelines at SHA
 ```
@@ -538,7 +541,8 @@ untracked paths can exceed that, and the helper must refuse before any run
 starts rather than fail partway with a raw shell error.
 
 ```scrut
-$ jq '.untracked = [range(0; 3000) | "generated/untracked-path-number-\(.)-with-some-padding.txt"]' \
+$ source "$(dirname "${REVIEW_SCOPE_BIN}")/review-git.bash" \
+>   && jq "${REVIEW_MEMBERSHIP_DEFS}"'.untracked = [range(0; 3000) | "generated/untracked-path-number-\(.)-with-some-padding.txt"] | .files = (.files + .untracked | unique) | .membership = review_compile_membership | review_bucket_views' \
 >      "${FIXTURE}/scope.json" > "${FIXTURE}/large-scope.json" \
 >   && mkdir "${FIXTURE}/large-out" \
 >   && { "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/large-scope.json" \
@@ -802,7 +806,7 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/staged" && cd "${FIXTURE}/staged" \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/staged-scope.json" \
 >   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/staged-scope.json" \
 >   | grep -e '^- Staged changes' -e '^- Unstaged changes'
-- Staged changes: git --no-pager -C '*' diff --no-ext-diff --no-textconv --no-color --no-relative --cached (glob)
+- Staged changes: git --no-pager -C '*' -c diff.ignoreSubmodules=none diff --ignore-submodules=none --submodule=diff --no-ext-diff --no-textconv --no-color --no-relative --no-renames --cached (glob)
 ```
 
 ## Changes covers the whole tree with diff.relative on, from a subdirectory
@@ -877,8 +881,9 @@ codex-aspects: the aspect instructions at FIXTURE/linked-aspects/code.md are a s
 $ cp -R "${FIXTURE}/repo" "${FIXTURE}/newline-link" && cd "${FIXTURE}/newline-link" \
 >   && link_text="$(printf "target\nx")" && ln -s "${link_text%x}" trailing \
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/newline-link-scope.json" \
->   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/newline-link-scope.json" | grep -F '"trailing" ->'
-  - "trailing" -> "target\n" (a symlink; review the link text only and do not open its target)
+>   && "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/newline-link-scope.json" \
+>     | sed -n 's/^- Symlink members (JSON): //p' | jq -c '.[] | select(.path == "trailing")'
+{"path":"trailing","kind":"symlink","target":"target\n"}
 ```
 
 ## A symlink planted in the output directory is replaced, not written through
@@ -909,6 +914,7 @@ would let the change rewrite the code its own review runs.
 ```scrut
 $ cp -R "${FIXTURE}/repo" "${FIXTURE}/self-helper" && cd "${FIXTURE}/self-helper" \
 >   && mkdir helper && cp "${CODEX_ASPECTS_BIN}" helper/codex-aspects \
+>   && cp "$(dirname "${CODEX_ASPECTS_BIN}")/review-git.bash" helper/review-git.bash \
 >   && { CODEX_ASPECTS_DIR="$(dirname "${CODEX_ASPECTS_BIN}")/../skills/review-pr-with-codex/references/aspects" \
 >        ./helper/codex-aspects prompt --aspect code --scope "${FIXTURE}/scope.json" > "${FIXTURE}/self-helper.err" 2>&1; echo "exit=$?"; } \
 >   && sed -e "s|^codex-aspects: codex-aspects at /private/|codex-aspects: codex-aspects at /|" -e "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/self-helper.err"
@@ -947,7 +953,7 @@ $ cd "${FIXTURE}/repo" \
 >   && "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" > "${FIXTURE}/gate-statuses.json" \
 >   && jq -s . "${FIXTURE}/out/code.json" > "${FIXTURE}/gate-results.json" \
 >   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
->     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c .
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c '{eligible,reason}'
 {"eligible":true,"reason":null}
 ```
 
@@ -957,7 +963,7 @@ $ cd "${FIXTURE}/repo" \
 $ jq '.[] |= (.findings = [{confidence: 90, detail: "data loss", file: "lib.sh", fix: "preserve data", line: 1, severity: "critical", title: "Data is lost"}])' \
 >     "${FIXTURE}/gate-results.json" > "${FIXTURE}/critical-results.json" \
 >   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
->     --results "${FIXTURE}/critical-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c .
+>     --results "${FIXTURE}/critical-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c '{eligible,reason}'
 {"eligible":false,"reason":"a review reported a Critical finding"}
 ```
 
@@ -966,9 +972,9 @@ $ jq '.[] |= (.findings = [{confidence: 90, detail: "data loss", file: "lib.sh",
 ```scrut
 $ jq '.[0].status = "failed"' "${FIXTURE}/gate-statuses.json" > "${FIXTURE}/failed-statuses.json" \
 >   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
->     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/failed-statuses.json" --aspect code | jq -c . \
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/failed-statuses.json" --aspect code | jq -c '{eligible,reason}' \
 >   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
->     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code --aspect tests | jq -c .
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code --aspect tests | jq -c '{eligible,reason}'
 {"eligible":false,"reason":"a selected review aspect failed or is missing"}
 {"eligible":false,"reason":"a selected review aspect failed or is missing"}
 ```
@@ -982,7 +988,7 @@ $ cp -R "${FIXTURE}/repo" "${FIXTURE}/index-only" && cd "${FIXTURE}/index-only" 
 >   && "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}" --base base > "${FIXTURE}/index-only.json" \
 >   && "${CODEX_ASPECTS_BIN}" changes --before "${FIXTURE}/scope.json" --after "${FIXTURE}/index-only.json" | jq -c '{scope_changed, changed}' \
 >   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/index-only.json" \
->     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c .
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c '{eligible,reason}'
 {"scope_changed":true,"changed":[]}
 {"eligible":false,"reason":"the review scope changed"}
 ```
@@ -1078,7 +1084,7 @@ $ printf '[]' > "${FIXTURE}/no-results.json" \
 >   && { "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
 >     --results "${FIXTURE}/no-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code 2>&1; echo "exit=$?"; } \
 >   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/scope.json" \
->     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code --aspect code | jq -c .
+>     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code --aspect code | jq -c '{eligible,reason}'
 codex-aspects: review results are incomplete or invalid
 exit=1
 {"eligible":false,"reason":"a selected aspect is duplicated"}
@@ -1136,4 +1142,14 @@ codex-aspects: simplify requires --reviewed-scope, --results, --statuses and --r
 exit=1
 codex-aspects: the scope changed after --scope was captured; capture it again and rerun the gate
 exit=1
+```
+
+## Recursive submodule paths cannot escape the scope root
+
+```scrut
+$ jq '.submodules = [{path: "../outside", initialized: true, scope: .}]' "${FIXTURE}/scope.json" > "${FIXTURE}/escaping-child.json" \
+>   && { "${CODEX_ASPECTS_BIN}" prompt --aspect code --scope "${FIXTURE}/escaping-child.json" 2> "${FIXTURE}/escaping-child.err"; echo "exit=$?"; } \
+>   && sed "s|${FIXTURE}|FIXTURE|" "${FIXTURE}/escaping-child.err"
+exit=1
+codex-aspects: scope file 'FIXTURE/escaping-child.json' is not review-scope output
 ```

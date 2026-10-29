@@ -8,14 +8,31 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 
+# Locate bundled dependencies through symlinks without requiring dirname for help.
+function owner_lock_script_directory() {
+  local path="${BASH_SOURCE[0]}" directory target
+  while :; do
+    directory="${path%/*}"
+    [[ "${directory}" != "${path}" ]] || directory=.
+    directory="$(CDPATH='' cd -P -- "${directory}" && pwd)" || return 1
+    path="${directory}/${path##*/}"
+    if [[ ! -L "${path}" ]]; then
+      printf '%s' "${directory}"
+      return 0
+    fi
+    target="$(readlink "${path}")" || return 1
+    if [[ "${target}" == /* ]]; then path="${target}"; else path="${directory}/${target}"; fi
+  done
+}
+OWNER_LOCK_LIBRARY_DIRECTORY="$(owner_lock_script_directory)"
+# shellcheck source=plugins/workmux/scripts/owner-lock.bash
+source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
+# shellcheck source=plugins/workmux/scripts/resource-diagnostics.bash
+source "${OWNER_LOCK_LIBRARY_DIRECTORY}/resource-diagnostics.bash"
+unset OWNER_LOCK_LIBRARY_DIRECTORY
+
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
-
-SCRIPT_DIRECTORY="${BASH_SOURCE[0]%/*}"
-if [[ "${BASH_SOURCE[0]}" != */* ]]; then SCRIPT_DIRECTORY=.; fi
-readonly SCRIPT_DIRECTORY
-# shellcheck source=plugins/workmux/scripts/resource-diagnostics.bash
-source "${SCRIPT_DIRECTORY}/resource-diagnostics.bash"
 
 CLAIM_FILE_NAME=".claude/worktree-resources.local.json"
 readonly CLAIM_FILE_NAME
@@ -33,6 +50,7 @@ readonly LOCK_WAIT_SECONDS
 
 # Set while a lock is held so the EXIT trap knows what to remove.
 LOCK_DIRECTORY=""
+LOCK_TOKEN=""
 
 function usage() {
   cat << 'USAGE_TEXT'
@@ -365,8 +383,11 @@ function read_claims() {
 function release_lock() {
   [[ -n "${LOCK_DIRECTORY}" ]] || return 0
 
-  rm -rf "${LOCK_DIRECTORY}"
+  if ! owner_lock_release "${LOCK_DIRECTORY}/owner" "${LOCK_TOKEN}"; then
+    return 1
+  fi
   LOCK_DIRECTORY=""
+  LOCK_TOKEN=""
 }
 
 # Describes a lock that outlasted the wait, so the message says whether
@@ -387,68 +408,60 @@ function held_lock_report() {
   fi
 
   if [[ -z "${owner}" ]]; then
-    printf '%s is held by an unrecorded process; remove that directory if no claim is in progress' "${lock}"
+    printf '%s/owner is held by an unrecorded process; remove that file if no claim is in progress' "${lock}"
     return
   fi
 
   if kill -0 "${owner}" 2> /dev/null; then
-    printf '%s is held by process %s, which is still running; wait for it to finish' "${lock}" "${owner}"
+    printf '%s/owner is held by process %s, which is still running; wait for it to finish' "${lock}" "${owner}"
     return
   fi
 
-  printf '%s is held by process %s, which has exited; remove that directory' "${lock}" "${owner}"
+  printf '%s/owner is held by process %s, which has exited; remove that file' "${lock}" "${owner}"
 }
 
-# Serializes a whole read-modify-write. Atomic replacement alone stops a reader
-# seeing half a document, but not two worktrees reading the same snapshot and
-# the later write discarding the earlier claim, which is a likely sequence here
-# because parallel worktrees are the case this feature exists for.
+# Serializes read-modify-write so concurrent writers cannot discard each other's claims.
+# Atomic replacement alone only prevents partial reads.
 #
-# A held lock is never broken automatically, and must not become so. Deciding
-# that another process has abandoned one cannot be made safe with mkdir, rm and
-# stat: the check and the removal are separate steps, so two waiters can both
-# decide to break the same lock and the second deletes the fresh one the first
-# just took, putting both inside the section. Neither an age threshold nor a
-# recorded owner nor a mutex around the reclamation closes that, because any
-# holder can be suspended past any threshold and any observation can go out of
-# date before it is acted on.
-#
-# So a lock still held when the wait expires is reported, with whatever is
-# known about its owner, and the user removes it. That is the bargain the rest
-# of this script already makes: a stale claim is cleared by an explicit prune
-# rather than silently, and a held resource is reported rather than taken.
-# Losing a claim without anyone noticing is the outcome worth avoiding; asking
-# for one rm is not.
-#
-# This serializes access to the file; it does not make the claim an enforced
-# lock on the resource, which stays advisory. mkdir is the portable mutex: it
-# is atomic everywhere this runs, and flock is absent on macOS.
+# Never reclaim automatically: an owner or age check can become stale before unlink,
+# removing a successor's lock and admitting concurrent writers. A reclaim mutex
+# cannot prevent a holder from being suspended past an age threshold.
+# Report held locks on timeout for manual removal. Resource claims remain advisory.
+# Bash noclobber creates the owner exclusively even if mkdir reports false success.
+function try_acquire_lock() {
+  local lock="${1}" result
+  if owner_lock_reserve "${lock}/owner" 8; then
+    LOCK_TOKEN="${OWNER_LOCK_TOKEN}"
+    LOCK_DIRECTORY="${lock}"
+    trap 'release_lock || exit 1' EXIT
+    printf '%s' "$$" > "${lock}/owner" ||
+      resource_die "claim owner file ${lock}/owner" "cannot record the lock owner in ${lock}"
+    return 0
+  else
+    result=$?
+  fi
+  return "${result}"
+}
+
 function acquire_lock() {
   local file="${1}"
   local lock="${file}.lock"
-  local directory waited=0
+  local directory result waited=0
 
   directory="$(dirname "${file}")"
-  mkdir -p "${directory}" || resource_die "claim directory ${directory}" "cannot create ${directory}"
+  mkdir -p "${lock}" ||
+    resource_die "claim lock ${lock}" "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
 
-  while ! mkdir "${lock}" 2> /dev/null; do
-    # mkdir fails for reasons other than contention: an unwritable parent, or
-    # something that is not a directory already at that path. Waiting those out
-    # and then reporting a held lock would be wrong twice over, since it costs
-    # the full timeout and tells the user to remove a directory that may not
-    # exist. Contention is the case where the lock directory is now there.
-    if [[ ! -d "${lock}" ]]; then
-      # It may have been released between the mkdir and this test, so try once
-      # more before concluding the failure was not contention.
-      if mkdir "${lock}" 2> /dev/null; then
-        break
-      fi
-
-      if [[ ! -d "${lock}" ]]; then
-        resource_die "claim lock ${lock}" "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
-      fi
+  while :; do
+    if try_acquire_lock "${lock}"; then
+      break
+    else
+      result=$?
     fi
-
+    if ((result != 1)); then
+      workmux_resource_failure "claim owner lock ${lock}/owner"
+      exit 1
+    fi
     if ((waited >= LOCK_WAIT_SECONDS)); then
       die "$(held_lock_report "${lock}")"
     fi
@@ -456,18 +469,6 @@ function acquire_lock() {
     sleep 1
     waited=$((waited + 1))
   done
-
-  # The trap goes on before the owner file is written, so a failure below
-  # still releases the directory instead of leaking it.
-  LOCK_DIRECTORY="${lock}"
-  trap release_lock EXIT
-
-  # The owner is what lets a waiter that times out say whether anything is
-  # still running, which is the difference between a message someone can act on
-  # and one that only says a directory exists. Refuse to hold a lock this
-  # cannot be recorded for.
-  printf '%s' "$$" > "${lock}/owner" ||
-    resource_die "claim lock ${lock}" "cannot record the lock owner in ${lock}"
 }
 
 # Replaces the file in one step so a reader never sees a half-written document.
