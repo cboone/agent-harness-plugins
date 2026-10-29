@@ -210,6 +210,8 @@ function tier_scenario() {
       local payload log_script
       cp -R "$(dirname "${ATTENTION_LOG_BIN:?}")/.." "${dir}/attention-plugin"
       log_script="${dir}/attention-plugin/scripts/attention-log"
+      ln -s "${log_script}" "${dir}/attention-entry"
+      log_script="${dir}/attention-entry"
       export ATTENTION_LOG_DIR="${dir}/attention-state"
       payload="$(jq -nc --arg path "${dir}/contract.jsonl" \
         '{session_id:"shared",transcript_path:$path,error:"invalid_request"}')"

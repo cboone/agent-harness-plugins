@@ -178,3 +178,17 @@ Lint-and-fix --no-push result: success; unresolved or skipped required lint work
 Pre-publication state: structural clean at Important (Nit 1/Important 2), focused clean at Nit (Nit 1), trims once each complete, eight targeted plants detected, baseline semgrep accepted with documented shell coverage limits, versions clear. The shared plan covers both harnesses; this PR implements Claude and shared classification, with the Codex watcher pending its separately placed follow-on. The paired issue stays open. No live configuration, installed hooks, new software or live banners changed.
 
 Next operations are exact-tree tidy, push to cboone/agent-harness-plugins, ready PR, green CI and TOOLING handoff. Tidy verification, PR identity and final CI status will be recorded in the worker mailbox/checkpoint after those operations, avoiding another content-changing commit solely to record a PR URL. TOOLING merges; the worker never merges.
+
+## Resource-fix integration after publication
+
+Ready PR 679 was created at https://github.com/cboone/agent-harness-plugins/pull/679 with head e8c9800284c2a95a485a596273165e4b62d21be9. Stored title/body, base main and non-draft state were verified. The paired issue remains open. The earlier exact-tree tidy produced three signed commits and tree eed7463cfed505b0c60e536fc7e55649fa8515d7, identical to its pre-tidy backup.
+
+Resource-claims cause PR 677 then landed on main at 26acdbfec2d70593d563f5fcc78d52f9680d4cd0, overlapping the shared-copy fixture and attention-log. GitHub reported the published PR conflicting, with no checks registered. This is the resource fix anticipated by the standing rebase instruction. Per that authorization, the local branch was rebased again, retaining a pre-resource-rebase backup and preserving all three signed commits. The fixture now retains seven shared-copy entries. The published remote head has not been rewritten.
+
+Main also advanced attention-log to 1.0.1, so this branch now advances it to 1.0.2. Its classifier loader reuses main's existing symlink-aware helper-directory resolver. The contract fixture runs attention-log through a symlink and passed 3/3. This integration preserves main's lock helper without editing its generated copies. A new negative control checks the loader's symlink boundary before final integrated validation.
+
+| Planted defect                                                                          | Instrument               | Observed result | Regression coverage           |
+| --------------------------------------------------------------------------------------- | ------------------------ | --------------- | ----------------------------- |
+| Resolve classifier from the symlink entry's parent instead of the real plugin directory | Shared-consumer contract | Pending         | Symlinked attention-log entry |
+
+After the integrated result is checked, updating the published PR following rebase needs force-with-lease permission under the no-force rule. Route that final publication action to TOOLING with the exact expected remote head; do not execute a force flag without explicit approval. No PR merge is authorized for the worker.

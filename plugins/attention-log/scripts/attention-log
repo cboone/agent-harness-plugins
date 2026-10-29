@@ -28,12 +28,10 @@ function owner_lock_script_directory() {
 OWNER_LOCK_LIBRARY_DIRECTORY="$(owner_lock_script_directory)"
 # shellcheck source=plugins/workmux/scripts/owner-lock.bash
 source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
+readonly SCRIPT_DIR="${OWNER_LOCK_LIBRARY_DIRECTORY}"
 unset OWNER_LOCK_LIBRARY_DIRECTORY
 
 readonly SCRIPT_NAME="${0##*/}"
-SCRIPT_DIR="${BASH_SOURCE[0]%/*}"
-[[ "${SCRIPT_DIR}" != "${BASH_SOURCE[0]}" ]] || SCRIPT_DIR=.
-readonly SCRIPT_DIR
 
 STATE_DIR="${ATTENTION_LOG_DIR:-${HOME}/.local/state/attention-log}"
 readonly STATE_DIR
