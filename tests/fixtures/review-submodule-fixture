@@ -5,11 +5,14 @@ set -euo pipefail
 # shellcheck source=bin/lib/git-environment.bash
 source "$(dirname "${BASH_SOURCE[0]}")/../../bin/lib/git-environment.bash"
 
+# shellcheck source=tests/fixtures/review-fixture-paths.bash
+source "$(dirname "${BASH_SOURCE[0]}")/review-fixture-paths.bash"
+
 # shellcheck source=bin/lib/capture-child.bash
 source "$(dirname "${BASH_SOURCE[0]}")/../../bin/lib/capture-child.bash"
 
 FIXTURE_DIR=""
-trap '[[ -z "${FIXTURE_DIR}" ]] || rm -rf "${FIXTURE_DIR}"' EXIT
+trap '[[ -z "${FIXTURE_DIR}" ]] || rm -rf -- "${FIXTURE_DIR}"' EXIT
 
 # The protocol definitions are also used to construct intentionally altered inputs.
 # shellcheck source=plugins/review-until-clean/scripts/review-git.bash
@@ -94,34 +97,34 @@ function main() {
   unset GIT_CONFIG_PARAMETERS GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
   printf '[user]\n name = Fixture\n email = fixture@example.invalid\n[commit]\n gpgsign = false\n[protocol "file"]\n allow = always\n' > "${GIT_CONFIG_GLOBAL}"
   for repo in leaf child parent; do
-    git init -q --template= "${fixture}/${repo}"
+    git init -q --template= -- "${fixture}/${repo}"
     printf 'original\n' > "${fixture}/${repo}/file"
     printf 'unchanged\n' > "${fixture}/${repo}/other"
-    git -C "${fixture}/${repo}" add file other
-    git -C "${fixture}/${repo}" commit -qm initial
+    git -C "$(fixture_path "${fixture}/${repo}")" add -- file other
+    git -C "$(fixture_path "${fixture}/${repo}")" commit -qm initial
   done
-  git -C "${fixture}/child" submodule add -q "${fixture}/leaf" nested
-  git -C "${fixture}/child" commit -qam nested
-  git -C "${fixture}/parent" submodule add -q "${fixture}/child" module
-  git -C "${fixture}/parent" submodule update --init --recursive -q
-  git -C "${fixture}/parent" commit -qam module
+  git -C "$(fixture_path "${fixture}/child")" submodule add -q -- "${fixture}/leaf" nested
+  git -C "$(fixture_path "${fixture}/child")" commit -qam nested
+  git -C "$(fixture_path "${fixture}/parent")" submodule add -q -- "${fixture}/child" module
+  git -C "$(fixture_path "${fixture}/parent")" submodule update --init --recursive -q
+  git -C "$(fixture_path "${fixture}/parent")" commit -qam module
   cd "${fixture}/parent"
   base="$(git rev-parse HEAD)"
   if [[ "${scenario}" == transition-write-failure ]]; then
-    git -C module submodule add -q "${fixture}/leaf" zlast
-    git -C module commit -qam topology
-    git add module
+    git -C "$(fixture_path module)" submodule add -q -- "${fixture}/leaf" zlast
+    git -C "$(fixture_path module)" commit -qam topology
+    git add -- module
     git commit -qm topology
   fi
   if [[ "${scenario}" == deleted || "${scenario}" == embedded || "${scenario}" == embedded-uninitialized ]]; then
-    git rm -q --cached module
+    git rm -q --cached -- module
     git config advice.addEmbeddedRepo false
     printf 'parent edit\n' > file
     if [[ "${scenario}" == embedded || "${scenario}" == embedded-uninitialized ]]; then
       git commit -qm remove
     fi
     if [[ "${scenario}" == embedded-uninitialized ]]; then
-      git -C module submodule deinit -q nested
+      git -C "$(fixture_path module)" submodule deinit -q -- nested
     fi
   fi
   "${scope}" --base "${base}" > "${fixture}/before"
@@ -129,8 +132,8 @@ function main() {
     deleted | edit | embedded | embedded-uninitialized) printf 'edited\n' > module/file ;;
     removed)
       git config diff.ignoreSubmodules all
-      git submodule deinit -q module
-      git rm -q module
+      git submodule deinit -q -- module
+      git rm -q -- module
       git commit -qm deletion
       "${scope}" --base "${base}" > "${fixture}/after"
       jq -e '(.committed | index("module") != null) and .submodules == []' "${fixture}/after"
@@ -145,15 +148,15 @@ function main() {
       ;;
     committed-consumption | staged-consumption)
       local child_head
-      child_head="$(git -C module rev-parse HEAD)"
+      child_head="$(git -C "$(fixture_path module)" rev-parse HEAD)"
       printf 'committed edit\n' > module/file
-      git -C module add file
-      git -C module commit -qm edit
-      git add module
+      git -C "$(fixture_path module)" add -- file
+      git -C "$(fixture_path module)" commit -qm edit
+      git add -- module
       if [[ "${scenario}" == committed-consumption ]]; then
         git commit -qm pointer
       else
-        git -C module checkout -q "${child_head}"
+        git -C "$(fixture_path module)" checkout -q "${child_head}"
       fi
       "${scope}" --base "${base}" > "${fixture}/reviewed"
       consume_scope "${fixture}/reviewed" "${fixture}" "${aspects}"
@@ -169,11 +172,11 @@ function main() {
       ;;
     nested-consumption)
       printf 'nested commit\n' > module/nested/file
-      git -C module/nested add file
-      git -C module/nested commit -qm edit
-      git -C module add nested
-      git -C module commit -qm nested
-      git add module
+      git -C "$(fixture_path module/nested)" add -- file
+      git -C "$(fixture_path module/nested)" commit -qm edit
+      git -C "$(fixture_path module)" add -- nested
+      git -C "$(fixture_path module)" commit -qm nested
+      git add -- module
       git commit -qm pointer
       "${scope}" --base "${base}" > "${fixture}/reviewed"
       consume_scope "${fixture}/reviewed" "${fixture}" "${aspects}"
@@ -185,7 +188,7 @@ function main() {
       REVIEW_MUTATION_ROOT="$(pwd -P)"
       export REVIEW_MUTATION_ROOT REVIEW_MUTATION_MARKER="${fixture}/mutation-fired"
       local child_head
-      child_head="$(git -C module rev-parse HEAD)"
+      child_head="$(git -C "$(fixture_path module)" rev-parse HEAD)"
       function git() {
         local arg previous="" repo="" diff=false cached=false raw=false blob
         for arg in "$@"; do
@@ -196,8 +199,8 @@ function main() {
           previous="${arg}"
         done
         if [[ "${repo}" == "${REVIEW_MUTATION_ROOT}" && "${diff}" == true && "${cached}" == true && "${raw}" == true && ! -e "${REVIEW_MUTATION_MARKER}" ]]; then
-          blob="$(printf 'staged during collection\n' | command git -C "${repo}/module" hash-object -w --stdin)" || return
-          command git -C "${repo}/module" update-index --cacheinfo "100644,${blob},file" || return
+          blob="$(printf 'staged during collection\n' | command git -C "$(fixture_path "${repo}/module")" hash-object -w --stdin)" || return
+          command git -C "$(fixture_path "${repo}/module")" update-index --cacheinfo "100644,${blob},file" || return
           : > "${REVIEW_MUTATION_MARKER}" || return
         fi
         command git "$@"
@@ -205,9 +208,9 @@ function main() {
       export -f git
       [[ "$(type -t git)" == function ]] || return 1
       local code=0
-      capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${scope}" --base "${base}" || code=$?
+      capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- bash -- "${scope}" --base "${base}" || code=$?
       [[ "${code}" -ne 0 && ! -s "${fixture}/out" && -e "${REVIEW_MUTATION_MARKER}" ]] || return 1
-      [[ "$(command git -C module rev-parse HEAD)" == "${child_head}" ]] || return 1
+      [[ "$(command git -C "$(fixture_path module)" rev-parse HEAD)" == "${child_head}" ]] || return 1
       [[ "$(command git rev-parse HEAD)" == "${base}" ]] || return 1
       [[ "$(cat module/file)" == original ]] || return 1
       return
@@ -218,7 +221,7 @@ function main() {
         printf 'nested edit\n' > module/nested/file
         export REVIEW_RECORD_FAILURE_PATH=module/nested/file
       else
-        git -C module submodule deinit -q nested
+        git -C "$(fixture_path module)" submodule deinit -q -- nested
         export REVIEW_RECORD_FAILURE_PATH=module/nested
       fi
       "${scope}" --base "${base}" > "${fixture}/after"
@@ -233,15 +236,15 @@ function main() {
       export -f printf
       [[ "$(type -t printf)" == function ]] || return 1
       local code=0
-      capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" || code=$?
+      capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- bash -- "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" || code=$?
       [[ "${code}" -ne 0 && ! -s "${fixture}/out" ]] || return 1
       return
       ;;
     replacement)
       git config diff.ignoreSubmodules all
-      git submodule deinit -q module
+      git submodule deinit -q -- module
       rmdir module
-      ln -s ../child module
+      ln -s -- ../child module
       "${scope}" --base "${base}" > "${fixture}/linked"
       consume_scope "${fixture}/linked" "${fixture}" "${aspects}"
       jq -e '.submodules == [] and (.unstaged | index("module") != null)
@@ -249,12 +252,12 @@ function main() {
       printf 'changed outside bytes\n' > "${fixture}/child/file"
       "${scope}" --base "${base}" > "${fixture}/target-edited"
       jq -es '.[0].snapshot == .[1].snapshot' "${fixture}/linked" "${fixture}/target-edited"
-      rm module
-      ln -s ../another-target module
+      rm -- module
+      ln -s -- ../another-target module
       "${scope}" --base "${base}" > "${fixture}/link-edited"
       "${aspects}" changes --before "${fixture}/linked" --after "${fixture}/link-edited" \
         | jq -e '.changed == ["module"] and .outside_scope == [] and .scope_changed'
-      rm module
+      rm -- module
       printf 'regular replacement\n' > module
       "${scope}" --base "${base}" > "${fixture}/regular-replacement"
       consume_scope "${fixture}/regular-replacement" "${fixture}" "${aspects}"
@@ -262,13 +265,13 @@ function main() {
       return
       ;;
     ancestor-replacement)
-      mkdir container
+      mkdir -- container
       git mv -- module container/inner
       git commit -qm layout
-      mkdir "${fixture}/outside-root"
-      git clone -q "${fixture}/child" "${fixture}/outside-root/inner"
-      rm -r container
-      ln -s ../outside-root container
+      mkdir -- "${fixture}/outside-root"
+      git clone -q -- "${fixture}/child" "${fixture}/outside-root/inner"
+      rm -r -- container
+      ln -s -- ../outside-root container
       "${scope}" --base "${base}" > "${fixture}/ancestor-linked"
       consume_scope "${fixture}/ancestor-linked" "${fixture}" "${aspects}"
       jq -e '.submodules == [] and (.untracked | index("container") != null)' "${fixture}/ancestor-linked"
@@ -289,8 +292,8 @@ function main() {
         | jq -e '.changed == ["-vendor/file"] and .outside_scope == []'
       printf 'original\n' > ./-vendor/file
       # Create the empty checkout directly; Git filters option-like paths.
-      rm -r ./-vendor
-      mkdir ./-vendor
+      rm -r -- ./-vendor
+      mkdir -- ./-vendor
       "${scope}" --base "${base}" > "${fixture}/option-uninitialized"
       consume_scope "${fixture}/option-uninitialized" "${fixture}" "${aspects}"
       jq -e '.submodules == [{path: "-vendor", initialized: false}]' "${fixture}/option-uninitialized"
@@ -304,10 +307,10 @@ function main() {
         for consumer in prompt validate changes gate; do
           code=0
           case "${consumer}" in
-            prompt) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" prompt --aspect code --scope "${fixture}/invalid" || code=$? ;;
-            validate) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" validate --aspect code --scope "${fixture}/invalid" "${fixture}/result" || code=$? ;;
-            changes) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" changes --before "${fixture}/invalid" --after "${fixture}/before" || code=$? ;;
-            gate) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" gate --scope "${fixture}/invalid" --after "${fixture}/before" --results "${fixture}/results" --statuses "${fixture}/statuses" --aspect code || code=$? ;;
+            prompt) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- bash -- "${aspects}" prompt --aspect code --scope "${fixture}/invalid" || code=$? ;;
+            validate) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- bash -- "${aspects}" validate --aspect code --scope "${fixture}/invalid" "${fixture}/result" || code=$? ;;
+            changes) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- bash -- "${aspects}" changes --before "${fixture}/invalid" --after "${fixture}/before" || code=$? ;;
+            gate) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- bash -- "${aspects}" gate --scope "${fixture}/invalid" --after "${fixture}/before" --results "${fixture}/results" --statuses "${fixture}/statuses" --aspect code || code=$? ;;
             *)
               echo "unexpected consumer: ${consumer}" >&2
               return 1
@@ -331,15 +334,14 @@ function main() {
       return
       ;;
     symlink | symlink-option)
-      local link_path=module/new-link link_operand
+      local link_path=module/new-link
       if [[ "${scenario}" == symlink-option ]]; then
         git mv -- module -vendor
         git commit -qm layout
         link_path=-vendor/new-link
       fi
       printf 'fixture target bytes\n' > "${fixture}/outside"
-      link_operand="${PWD}/${link_path}"
-      ln -s ../../outside "${link_operand}"
+      ln -s -- ../../outside "${link_path}"
       "${scope}" --base "${base}" > "${fixture}/linked"
       consume_scope "${fixture}/linked" "${fixture}" "${aspects}"
       sed -n 's/^- Symlink members (JSON): //p' "${fixture}/prompt" > "${fixture}/prompt-links"
@@ -361,32 +363,32 @@ function main() {
     committed)
       git config diff.ignoreSubmodules all
       printf 'committed\n' > module/file
-      git -C module add file
-      git -C module commit -qm change
-      git add module
+      git -C "$(fixture_path module)" add -- file
+      git -C "$(fixture_path module)" commit -qm change
+      git add -- module
       git commit -qm pointer
       ;;
     staged)
       printf 'staged\n' > module/file
-      git -C module add file
+      git -C "$(fixture_path module)" add -- file
       printf 'original\n' > module/file
       ;;
     untracked) printf 'new\n' > module/new ;;
     head)
       printf 'committed\n' > module/file
-      git -C module add file
-      git -C module commit -qm change
+      git -C "$(fixture_path module)" add -- file
+      git -C "$(fixture_path module)" commit -qm change
       ;;
     nested) printf 'nested edit\n' > module/nested/file ;;
     populated)
       consume_scope "${fixture}/before" "${fixture}" "${aspects}"
-      git submodule deinit -q module
+      git submodule deinit -q -- module
       printf 'unavailable checkout\n' > module/leftover
       "${scope}" --base "${base}"
       return
       ;;
     uninitialized)
-      git submodule deinit -q module
+      git submodule deinit -q -- module
       "${scope}" --base "${base}" > "${fixture}/after"
       consume_scope "${fixture}/after" "${fixture}" "${aspects}"
       jq -er '.submodules == [{path: "module", initialized: false}] and .empty' "${fixture}/after"
@@ -409,7 +411,7 @@ function main() {
       return 1
       ;;
   esac
-  git -C module ls-files --stage -z > "${fixture}/index-before"
+  git -C "$(fixture_path module)" ls-files --stage -z > "${fixture}/index-before"
   "${scope}" --base "${base}" > "${fixture}/after"
   consume_scope "${fixture}/after" "${fixture}" "${aspects}"
   if [[ "${scenario}" == prompt ]]; then
@@ -431,7 +433,7 @@ function main() {
     "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" \
       | jq -e '.changed == ["module/file"] and .outside_scope == []' > /dev/null
   fi
-  git -C module ls-files --stage -z > "${fixture}/index-after"
+  git -C "$(fixture_path module)" ls-files --stage -z > "${fixture}/index-after"
   cmp "${fixture}/index-before" "${fixture}/index-after"
   jq -es --arg scenario "${scenario}" '
     if $scenario == "stable" then .[0] == .[1]

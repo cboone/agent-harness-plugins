@@ -5,6 +5,9 @@ set -euo pipefail
 # shellcheck source=bin/lib/git-environment.bash
 source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
 
+# shellcheck source=tests/fixtures/review-fixture-paths.bash
+source "$(dirname "${BASH_SOURCE[0]}")/review-fixture-paths.bash"
+
 # shellcheck source=bin/lib/capture-child.bash
 source "${REPO_ROOT}/bin/lib/capture-child.bash"
 
@@ -16,9 +19,146 @@ function main() {
   local scenario="${1}" root output=''
   root="$(mktemp -d "${TMPDIR:-/tmp}/environment-isolation.XXXXXX")"
   readonly ISOLATION_TEST_ROOT="${root}"
-  trap 'rm -r "${ISOLATION_TEST_ROOT}"' EXIT
+  trap 'rm -r -- "${ISOLATION_TEST_ROOT}"' EXIT
 
   case "${scenario}" in
+    review-path-contract)
+      local program diagnostic_status count=0 operand_failures=0
+      # shellcheck disable=SC2016 # Programs are parser input, never executed.
+      local -a programs=(
+        'git -C "$path" status' 'git --git-dir "$path" status'
+        'git --work-tree "$path" status' 'git init "$path"'
+        'git add "$path"' 'git submodule update "$path"'
+        'git hash-object "$path"'
+        'command rm "$path"' 'exec rm "$path"'
+        'env SAMPLE=value /bin/rm "$path"' 'rm -rf "$path"'
+        'git -c sample=value -C "$path" status'
+        'command -p rm "$path"' 'exec -a fixture /bin/rm "$path"'
+        'env --unset=SAMPLE rm "$path"'
+        "bash -ec 'rm \"\${path}\"'" "sh -ec 'rm \"\${path}\"'"
+        "trap -- 'rm \"\${path}\"' EXIT"
+        'git ls-files "$path"' 'git status "$path"'
+        'git commit -qm sample "$path"'
+        'cp ./source "$path"' 'mv ./source "$path"' 'ln -s ./source "$path"'
+        'rm ./safe "$path"' 'mkdir ./safe "$path"' 'touch ./safe "$path"'
+        'git add ./safe "$path"'
+      )
+      for program in ln cp mv mkdir rm touch; do
+        programs+=("${program} \"\${path}\"")
+        programs+=("result=\"\$(${program} \"\${path}\")\"")
+        programs+=("trap '${program} \"\${path}\"' EXIT")
+        programs+=("bash -c '${program} \"\${path}\"'")
+      done
+      for program in "${programs[@]}"; do
+        printf '%s\n' "${program}" > "${root}/program"
+        diagnostic_status=0
+        capture_child - --stdout "${root}/diagnostics" -- \
+          check_review_shell_paths "${root}/program" plant || diagnostic_status=$?
+        if [[ "${diagnostic_status}" != 1 ]] || ! grep -q 'needs a rooted operand or --' "${root}/diagnostics"; then
+          printf 'missing operand rejection: %s (status %s)\n' "${program}" "${diagnostic_status}" >&2
+          cat "${root}/diagnostics" >&2
+          operand_failures=$((operand_failures + 1))
+        fi
+        count=$((count + 1))
+      done
+      [[ "${operand_failures}" == 0 ]] || return 1
+      printf '%s omission plants rejected\n' "${count}"
+      # shellcheck disable=SC2016 # Unsupported forms are parser input.
+      for program in 'git unclassified "$path"' 'command -x rm -- "$path"' 'exec -x rm -- "$path"' \
+        'env -S "rm -- path"' "bash --unknown -c 'rm -- path'" "bash +z -c 'rm -- path'" \
+        "trap -x 'rm -- path' EXIT" 'git config --file "$path" key value' \
+        'git diff "$path"' 'git update-index --add "$path"' \
+        'git checkout' 'git checkout -q' 'git checkout HEAD another' 'git checkout HEAD "$path"' 'git checkout -- "$path"'; do
+        printf '%s\n' "${program}" > "${root}/program"
+        diagnostic_status=0
+        capture_child - --stdout "${root}/diagnostics" -- \
+          check_review_shell_paths "${root}/program" unsupported || diagnostic_status=$?
+        [[ "${diagnostic_status}" == 1 ]]
+        grep -q 'unsupported argument form:' "${root}/diagnostics"
+      done
+      printf 'unsupported option and ambiguous Git forms rejected\n'
+
+      # Controls keep quoted data separate from executable statements.
+      # shellcheck disable=SC2016 # Programs are parser input, never executed.
+      printf '%s\n' 'rm -- "$path"' 'cp ./source ./target' \
+        'mv ./source ./target' 'ln -s ./source ./target' 'rm ./first ./second' \
+        'mkdir ./first ./second' 'touch ./first ./second' 'git add ./first ./second' \
+        'cp -- ./source "$path"' 'mv -- ./source "$path"' 'ln -s -- ./source "$path"' \
+        'rm -- ./safe "$path"' 'mkdir -- ./safe "$path"' 'touch -- ./safe "$path"' \
+        'git add -- ./safe "$path"' \
+        'git -C "$(fixture_path "$path")" add -- "$file"' \
+        'git update-index --cacheinfo "100644,$oid,$path"' \
+        'command -p rm -- "$path"' 'exec -a fixture /bin/rm -- "$path"' \
+        'env --unset=SAMPLE rm -- "$path"' \
+        "bash -ec 'rm -- \"\${path}\"'" "sh -ec 'rm -- \"\${path}\"'" \
+        "trap -- 'rm -- \"\${path}\"' EXIT" \
+        'git checkout "$revision"' 'git checkout HEAD -- "$path"' \
+        'git checkout -q -b branch' 'git ls-files -- "$path"' \
+        'git diff HEAD HEAD~1 -- "$path"' 'git commit -qm sample -- "$path"' \
+        'printf "%s" '\''rm "$path"'\''' > "${root}/program"
+      capture_child - --stdout "${root}/diagnostics" -- \
+        check_review_shell_paths "${root}/program" control
+      [[ ! -s "${root}/diagnostics" ]]
+      output='protected operands and quoted data accepted'
+      ;;
+    review-wrapper-grammar)
+      local label expected program diagnostic_status count=0 failures=0
+      jq -n --arg mode grammar -f "${REPO_ROOT}/tests/fixtures/review-path-contract.jq" > "${root}/grammar"
+      jq -e 'keys == ["bash", "builtin", "capture_child", "command", "env", "exec", "nohup", "sh", "time", "trap"]' \
+        "${root}/grammar" > /dev/null
+      jq -n --arg mode matrix -f "${REPO_ROOT}/tests/fixtures/review-path-contract.jq" > "${root}/matrix"
+      jq -j '.[] | .label, "\u0000", .expected, "\u0000", .program, "\u0000"' "${root}/matrix" > "${root}/cases"
+      while IFS= read -r -d '' label && IFS= read -r -d '' expected && IFS= read -r -d '' program; do
+        printf '%s\n' "${program}" > "${root}/program"
+        diagnostic_status=0
+        capture_child - --stdout "${root}/diagnostics" -- \
+          check_review_shell_paths "${root}/program" "${label}" || diagnostic_status=$?
+        case "${expected}" in
+          pass) [[ "${diagnostic_status}" == 0 && ! -s "${root}/diagnostics" ]] ;;
+          operand) [[ "${diagnostic_status}" == 1 ]] && grep -q 'needs a rooted operand or --' "${root}/diagnostics" ;;
+          unsupported) [[ "${diagnostic_status}" == 1 ]] && grep -q 'unsupported argument form:' "${root}/diagnostics" ;;
+          *) return 2 ;;
+        esac || {
+          printf 'wrapper matrix failed: %s expected %s, status %s\n' "${label}" "${expected}" "${diagnostic_status}" >&2
+          cat "${root}/diagnostics" >&2
+          failures=$((failures + 1))
+        }
+        count=$((count + 1))
+      done < "${root}/cases"
+      [[ "${failures}" == 0 ]] || return 1
+      output="wrapper grammar: $(jq 'length' "${root}/grammar") wrappers, ${count} generated cases passed"
+      ;;
+    review-path-public)
+      local diagnostic_status=0
+      mkdir -p -- "${root}/tree/bin/lib" "${root}/tree/tests/fixtures" "${root}/tree/tests/scrut"
+      cp -- "${REPO_ROOT}/bin/check-fixture-environments" "${root}/tree/bin/"
+      cp -- "${REPO_ROOT}/bin/lib/git-environment.bash" "${root}/tree/bin/lib/"
+      cp -- "${REPO_ROOT}/tests/fixtures/review-fixture-paths.bash" \
+        "${REPO_ROOT}/tests/fixtures/review-path-contract.jq" "${root}/tree/tests/fixtures/"
+      # shellcheck disable=SC2016 # These lines are parser input, never executed.
+      printf '%s\n' '# Operand contract' '' '```scrut' '$ rm "${path}"' \
+        'rm "${expected_output}"' '```' '' '```bash' '$ rm "${non_scrut}"' '```' \
+        > "${root}/tree/tests/scrut/operand-contract.md"
+      capture_child - --stdout "${root}/diagnostics" -- bash -- \
+        "${root}/tree/bin/check-fixture-environments" --review-paths tests/scrut/operand-contract.md || diagnostic_status=$?
+      if [[ "${diagnostic_status}" != 1 ]]; then
+        echo 'public checker accepted an unprotected Scrut command' >&2
+        return 1
+      fi
+      if [[ "$(cat "${root}/diagnostics")" != 'tests/scrut/operand-contract.md:4: rm needs a rooted operand or --' ]]; then
+        echo 'public checker lost its source line diagnostic' >&2
+        return 1
+      fi
+      printf 'public Scrut omission rejected at line 4\n'
+      # shellcheck disable=SC2016 # Expected output and non-Scrut fences stay data.
+      printf '%s\n' '# Operand contract' '' '```scrut' '$ rm -- "${path}"' \
+        'rm "${expected_output}"' '```' '' '```bash' '$ rm "${non_scrut}"' '```' \
+        > "${root}/tree/tests/scrut/operand-contract.md"
+      capture_child - --stdout "${root}/diagnostics" -- bash -- \
+        "${root}/tree/bin/check-fixture-environments" --review-paths tests/scrut/operand-contract.md
+      [[ "$(cat "${root}/diagnostics")" == 'Review fixture operands are protected.' ]]
+      output='public protected Scrut commands accepted'
+      ;;
     capture-background-pid)
       # shellcheck disable=SC2016 # The executed child prints its own PID.
       capture_child - --exec-log "${root}/child.log" -- bash -c 'printf "%s\n" "$$"' &
@@ -35,19 +175,23 @@ function main() {
       # shellcheck disable=SC2016 # The child sources the helper in its own shell.
       capture_child raw_error --stdout "${root}/report" -- bash -c '
         source "${REPO_ROOT}/bin/lib/capture-child.bash"
-        capture_child - --error-stdout-prefix "Error: " -- bash -c '\''printf "raw detail\nError: structured\n" >&2; exit 7'\''
+        function channel_report() {
+          printf "raw detail\nError: structured\n" >&2
+          return 7
+        }
+        capture_child - --error-stdout-prefix "Error: " -- channel_report
       ' || child_status=$?
       [[ "${child_status}" -eq 7 && "${raw_error}" == 'raw detail' ]]
       [[ "$(cat "${root}/report")" == 'Error: structured' ]]
       output='structured-report-and-raw-detail-preserved=true'
       ;;
     capture-background-failure)
-      capture_child - --exec-log "${root}/child.log" -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" &
+      capture_child - --exec-log "${root}/child.log" -- bash -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" &
       local child=$!
       capture_child output --wait-log "${root}/child.log" "${child}"
       ;;
     capture-completion-order)
-      capture_child - --on-complete report_capture_status --error-stdout -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub"
+      capture_child - --on-complete report_capture_status --error-stdout -- bash -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub"
       ;;
     git-maintenance)
       # shellcheck disable=SC2016 # REPO_ROOT expands in the child shell.
@@ -58,12 +202,12 @@ function main() {
     scrut-persistence)
       capture_child output -- env GIT_DIR="${root}/caller-git-dir" CODEX_REFERENCE_CONTEXT_WINDOW=1 \
         CODEX_ENABLED_SKILL_PERCENT=101 CODEX_OTHER_SKILL_RESERVE_TOKENS=999999999 \
-        "${REPO_ROOT}/bin/run-scrut" --shell bash test "${REPO_ROOT}/tests/data/environment-isolation/persistence.md"
+        bash -- "${REPO_ROOT}/bin/run-scrut" --shell bash test "${REPO_ROOT}/tests/data/environment-isolation/persistence.md"
       ;;
     guard-missing-reset | guard-new-consumer | guard-late-reset | guard-indirect | guard-registered | guard-scrut-runner | guard-scrut-update | guard-scrut-ci | guard-scrut-ci-reusable | guard-scrut-new | guard-wrapper-reset | guard-capture | guard-stderr | guard-capture-library | guard-git-namespace | guard-four-fence | guard-copy-only | guard-copy-execution)
-      mkdir "${root}/tree"
-      cp -R "${REPO_ROOT}/bin" "${REPO_ROOT}/plugins" "${REPO_ROOT}/tests" "${REPO_ROOT}/.github" "${root}/tree/"
-      cp "${REPO_ROOT}/Makefile" "${root}/tree/Makefile"
+      mkdir -- "${root}/tree"
+      cp -R -- "${REPO_ROOT}/bin" "${REPO_ROOT}/plugins" "${REPO_ROOT}/tests" "${REPO_ROOT}/.github" "${root}/tree/"
+      cp -- "${REPO_ROOT}/Makefile" "${root}/tree/Makefile"
       if [[ "${scenario}" == guard-copy-only ]]; then
         : # The shared-library copy entry already present must not imply execution.
       elif [[ "${scenario}" == guard-copy-execution ]]; then
@@ -71,13 +215,13 @@ function main() {
       elif [[ "${scenario}" == guard-missing-reset ]]; then
         perl -ni -e 'print unless /^source .*git-environment[.]bash/' "${root}/tree/tests/fixtures/review-corpus-fixture"
       elif [[ "${scenario}" == guard-four-fence ]]; then
-        cp "${REPO_ROOT}/tests/data/environment-isolation/unguarded-four-fence.md" "${root}/tree/tests/scrut/new-four-fence.md"
+        cp -- "${REPO_ROOT}/tests/data/environment-isolation/unguarded-four-fence.md" "${root}/tree/tests/scrut/new-four-fence.md"
       elif [[ "${scenario}" == guard-capture || "${scenario}" == guard-stderr ]]; then
         local template=unguarded-capture.bash
         [[ "${scenario}" != guard-stderr ]] || template=unguarded-stderr.bash
-        cp "${REPO_ROOT}/tests/data/environment-isolation/${template}" "${root}/tree/tests/fixtures/new-capture-consumer"
+        cp -- "${REPO_ROOT}/tests/data/environment-isolation/${template}" "${root}/tree/tests/fixtures/new-capture-consumer"
       elif [[ "${scenario}" == guard-capture-library ]]; then
-        cp "${REPO_ROOT}/tests/data/environment-isolation/unguarded-capture.bash" "${root}/tree/bin/lib/new-capture.bash"
+        cp -- "${REPO_ROOT}/tests/data/environment-isolation/unguarded-capture.bash" "${root}/tree/bin/lib/new-capture.bash"
       elif [[ "${scenario}" == guard-git-namespace ]]; then
         perl -pi -e 's/WORKTREE_GIT_STUB_BIN/GIT_WORKTREE_STUB_BIN/g' "${root}/tree/Makefile"
       elif [[ "${scenario}" == guard-wrapper-reset ]]; then
@@ -111,12 +255,12 @@ function main() {
       return
       ;;
     failure-maintenance)
-      mkdir "${root}/bin"
-      cp "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" "${root}/bin/git"
+      mkdir -- "${root}/bin"
+      cp -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" "${root}/bin/git"
       # shellcheck disable=SC2016 # The child verifies its own tool resolution.
       env PATH="${root}/bin:${PATH}" EXPECTED_STUB="${root}/bin/git" \
         HELPER="${REPO_ROOT}/tests/fixtures/environment-isolation" \
-        bash -c '[[ "$(command -v git)" == "${EXPECTED_STUB}" ]] || exit 2; exec "${HELPER}" git-maintenance'
+        bash -c '[[ "$(command -v git)" == "${EXPECTED_STUB}" ]] || exit 2; exec bash -- "${HELPER}" git-maintenance'
       return
       ;;
     capture-forward-failure)
@@ -129,7 +273,7 @@ function main() {
       if [[ "${scenario}" == capture-readonly ]]; then
         capture_child captured -- printf value
       else
-        capture_child captured -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub"
+        capture_child captured -- bash -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub"
       fi
       ;;
     capture-replace-failure)
@@ -137,8 +281,8 @@ function main() {
       capture_child - --replace "${root}/path[1]" '<path>' -- bash -c 'printf "failure %s\n" "$1" >&2; exit 7' probe "${root}/path[1]"
       ;;
     failure-catalog | failure-budget)
-      mkdir -p "${root}/failed-repo/tests/fixtures" "${root}/failed-repo/bin/lib"
-      cp "${REPO_ROOT}/bin/lib/git-environment.bash" "${REPO_ROOT}/bin/lib/capture-child.bash" "${root}/failed-repo/bin/lib/"
+      mkdir -p -- "${root}/failed-repo/tests/fixtures" "${root}/failed-repo/bin/lib"
+      cp -- "${REPO_ROOT}/bin/lib/git-environment.bash" "${REPO_ROOT}/bin/lib/capture-child.bash" "${root}/failed-repo/bin/lib/"
       local child_scenario child_name
       if [[ "${scenario}" == failure-catalog ]]; then
         child_scenario=catalog-commit
@@ -147,12 +291,12 @@ function main() {
         child_scenario=fixture-budget
         child_name=validate-plugin-fixture
       fi
-      cp "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" "${root}/failed-repo/tests/fixtures/${child_name}"
-      env REPO_ROOT="${root}/failed-repo" "${REPO_ROOT}/tests/fixtures/environment-isolation" "${child_scenario}"
+      cp -- "${REPO_ROOT}/tests/fixtures/failing-fixture-stub" "${root}/failed-repo/tests/fixtures/${child_name}"
+      env REPO_ROOT="${root}/failed-repo" bash -- "${REPO_ROOT}/tests/fixtures/environment-isolation" "${child_scenario}"
       return
       ;;
     fixture-paths)
-      mkdir -p "${root}/paths/dist" "${root}/paths/checklists"
+      mkdir -p -- "${root}/paths/dist" "${root}/paths/checklists"
       jq '.metadata.description = "caller catalog"' "${REPO_ROOT}/.claude-plugin/marketplace.json" > "${root}/paths/source.json"
       printf 'preserved\n' > "${root}/paths/marketplace.json"
       printf 'preserved\n' > "${root}/paths/dist/sample"
@@ -160,19 +304,19 @@ function main() {
       find "${root}/paths" -type f -exec cksum {} + | sort > "${root}/before"
       capture_child output -- env CLAUDE_MARKETPLACE="${root}/paths/source.json" CODEX_MARKETPLACE="${root}/paths/marketplace.json" \
         CODEX_DIST_DIR="${root}/paths/dist" CODEX_DIST_LABEL=caller-dist REVIEW_CHECKLISTS_DIR="${root}/paths/checklists" \
-        "${REPO_ROOT}/tests/fixtures/validate-plugin-fixture" valid
+        bash -- "${REPO_ROOT}/tests/fixtures/validate-plugin-fixture" valid
       find "${root}/paths" -type f -exec cksum {} + | sort > "${root}/after"
       cmp "${root}/before" "${root}/after"
       output+=$'\ngenerator-paths-unchanged=true'
       ;;
     outer-git-dir | outer-git-dir-mutated)
-      git init --quiet --template= "${root}/caller"
+      git init --quiet --template= -- "${root}/caller"
       printf 'preserved\n' > "${root}/caller/sample"
-      git -C "${root}/caller" add sample
-      git -C "${root}/caller" -c user.name=Fixture -c user.email=fixture@example.invalid commit --quiet -m sample
+      git -C "$(fixture_path "${root}/caller")" add -- sample
+      git -C "$(fixture_path "${root}/caller")" -c user.name=Fixture -c user.email=fixture@example.invalid commit --quiet -m sample
       find "${root}/caller" -type f -exec cksum {} + | sort > "${root}/before"
       export GIT_DIR="${root}/caller/.git"
-      capture_child output -- "${REPO_ROOT:?}/tests/fixtures/environment-isolation" corpus-hooks
+      capture_child output -- bash -- "${REPO_ROOT:?}/tests/fixtures/environment-isolation" corpus-hooks
       if [[ "${scenario}" == outer-git-dir-mutated ]]; then
         printf 'changed\n' > "${root}/caller/sample"
       fi
@@ -187,7 +331,7 @@ function main() {
       printf '[user]\n signingkey = unusable-fixture-key\n[gpg]\n program = /usr/bin/false\n' > "${root}/gitconfig"
       if [[ "${scenario}" == catalog-config-file ]]; then
         printf '[sample]\n value = preserved\n' > "${root}/caller-gitconfig"
-        cp "${root}/caller-gitconfig" "${root}/expected-gitconfig"
+        cp -- "${root}/caller-gitconfig" "${root}/expected-gitconfig"
         export GIT_CONFIG="${root}/caller-gitconfig"
       elif [[ "${scenario}" == catalog-command-config ]]; then
         export GIT_CONFIG_COUNT=3
@@ -201,32 +345,32 @@ function main() {
       fi
       export GIT_CONFIG_GLOBAL="${root}/gitconfig" GIT_CONFIG_SYSTEM="${root}/gitconfig"
       export GIT_CONFIG_NOSYSTEM=0
-      capture_child output -- "${REPO_ROOT:?}/tests/fixtures/catalog-release-fixture" plugin-change
+      capture_child output -- bash -- "${REPO_ROOT:?}/tests/fixtures/catalog-release-fixture" plugin-change
       if [[ "${scenario}" == catalog-config-file ]]; then
         cmp "${root}/expected-gitconfig" "${root}/caller-gitconfig"
       fi
       ;;
     corpus-hooks | corpus-template)
-      mkdir "${root}/hooks"
+      mkdir -- "${root}/hooks"
       printf '#!/usr/bin/env bash\nexit 1\n' > "${root}/hooks/pre-commit"
       chmod +x "${root}/hooks/pre-commit"
       if [[ "${scenario}" == corpus-hooks ]]; then
         printf '[core]\n hooksPath = %s\n' "${root}/hooks" > "${root}/gitconfig"
       else
         : > "${root}/gitconfig"
-        mkdir "${root}/template"
-        cp -R "${root}/hooks" "${root}/template/hooks"
+        mkdir -- "${root}/template"
+        cp -R -- "${root}/hooks" "${root}/template/hooks"
         export GIT_TEMPLATE_DIR="${root}/template"
       fi
       export GIT_CONFIG_GLOBAL="${root}/gitconfig" GIT_CONFIG_SYSTEM="${root}/gitconfig"
       export TMPDIR="${root}"
       local corpus_root
       corpus_root="$("${REPO_ROOT:?}/tests/fixtures/review-corpus-fixture")"
-      if [[ "$(git -C "${corpus_root}/corpus" rev-parse --absolute-git-dir)" != "$(cd "${corpus_root}/corpus/.git" && pwd -P)" ]]; then
+      if [[ "$(git -C "$(fixture_path "${corpus_root}/corpus")" rev-parse --absolute-git-dir)" != "$(cd "${corpus_root}/corpus/.git" && pwd -P)" ]]; then
         echo 'corpus used the caller Git directory' >&2
         return 1
       fi
-      git -C "${corpus_root}/corpus" rev-parse --verify HEAD > /dev/null
+      git -C "$(fixture_path "${corpus_root}/corpus")" rev-parse --verify HEAD > /dev/null
       output='corpus-created=true'
       ;;
     validate-context | validate-percent | validate-reserve | fixture-budget)
@@ -243,7 +387,7 @@ function main() {
         *) return 2 ;;
       esac
       if [[ "${scenario}" == fixture-budget ]]; then
-        capture_child output -- "${REPO_ROOT:?}/tests/fixtures/validate-plugin-fixture" valid
+        capture_child output -- bash -- "${REPO_ROOT:?}/tests/fixtures/validate-plugin-fixture" valid
       else
         capture_child output -- make --no-print-directory -C "${REPO_ROOT:?}" validate
       fi

@@ -22,6 +22,7 @@ since a commit still needs one.
 
 ```scrut
 $ source "${REPO_ROOT}/bin/lib/git-environment.bash" \
+>   && source "${REPO_ROOT}/tests/fixtures/review-fixture-paths.bash" \
 >   && "${REVIEW_SCOPE_BIN}" --help
 Usage: review-scope [--base <ref>]
        review-scope --schema
@@ -134,10 +135,10 @@ review-scope: --base requires a ref
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && "${REVIEW_SCOPE_BIN}" --base no-such-ref 2>&1
 fatal: Needed a single revision
@@ -157,10 +158,10 @@ review-scope: not inside a git work tree
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '{empty, committed, staged, unstaged, untracked}'
 {"empty":true,"committed":[],"staged":[],"unstaged":[],"untracked":[]}
@@ -170,19 +171,19 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
 >   && printf 'one\n' > staged.txt \
 >   && printf 'one\n' > gone.txt \
->   && git add . \
+>   && git add -- . \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && git checkout -q -b feature \
 >   && printf 'two\n' >> tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qam committed \
->   && printf 'three\n' >> staged.txt && git add staged.txt \
+>   && printf 'three\n' >> staged.txt && git add -- staged.txt \
 >   && printf 'four\n' >> tracked.txt \
->   && rm gone.txt \
+>   && rm -- gone.txt \
 >   && printf 'new\n' > fresh.txt \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '{empty, committed, staged, unstaged, untracked}'
 {"empty":false,"committed":["tracked.txt"],"staged":["staged.txt"],"unstaged":["gone.txt","tracked.txt"],"untracked":["fresh.txt"]}
@@ -192,10 +193,10 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'ignored.txt\n' > .gitignore \
->   && git add .gitignore \
+>   && git add -- .gitignore \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'noise\n' > ignored.txt \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '{empty, untracked}'
@@ -206,10 +207,10 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'odd\n' > "$(printf 'we\nird.txt')" \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '.untracked'
@@ -223,14 +224,14 @@ without changing disk content.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'two\n' >> tracked.txt \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && [[ -n "${before}" && "${before}" != "${after}" ]] && printf 'snapshot moved: %s\n' "${before}"
 snapshot moved: * (glob)
@@ -243,14 +244,14 @@ it before capturing the round snapshot.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'new\n' > fresh.txt \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && git add -N fresh.txt \
+>   && git add -N -- fresh.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && [[ -n "${before}" && "${before}" != "${after}" ]] && printf 'snapshot moved: %s\n' "${before}"
 snapshot moved: * (glob)
@@ -260,10 +261,10 @@ snapshot moved: * (glob)
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'new\n' > fresh.txt \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
@@ -280,10 +281,10 @@ bound to the earlier snapshot no longer applies.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'new\n' > fresh.txt \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
@@ -298,13 +299,13 @@ snapshot moved: yes
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && rm tracked.txt \
+>   && rm -- tracked.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && [[ -n "${before}" && -n "${after}" && "${before}" != "${after}" ]] && echo "snapshot moved: yes"
 snapshot moved: yes
@@ -317,13 +318,13 @@ staged work would make the loop unsafe to run on a partly staged tree.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
 >   && printf 'one\n' > staged.txt \
->   && git add . \
+>   && git add -- . \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
->   && printf 'two\n' >> staged.txt && git add staged.txt \
+>   && printf 'two\n' >> staged.txt && git add -- staged.txt \
 >   && printf 'two\n' >> tracked.txt \
 >   && printf 'new\n' > fresh.txt \
 >   && before="$(git status --porcelain=v1 --untracked-files=all)" \
@@ -343,10 +344,10 @@ rather than failing, so the loop still reviews uncommitted work.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b solo \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'new\n' > fresh.txt \
 >   && "${REVIEW_SCOPE_BIN}" | jq -c '{base, base_ref, committed, untracked, empty}'
@@ -357,10 +358,10 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b main \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && git update-ref refs/remotes/origin/main HEAD \
 >   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main \
@@ -376,10 +377,10 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -r '[.head, .base, .tree, .snapshot] | map(test("^[0-9a-f]{40}$")) | join(" ")'
 true true true true
@@ -394,12 +395,12 @@ bank a clean result over code no reviewer was shown.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
->   && mkdir -p sub \
+>   && mkdir -p -- sub \
 >   && printf 'x\n' > top-untracked.txt \
 >   && printf 'y\n' > sub/sub-untracked.txt \
 >   && from_root="$("${REVIEW_SCOPE_BIN}" --base base | jq -c '.untracked')" \
@@ -418,13 +419,13 @@ rewriting it would not move the snapshot and a stale clean result would stand.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'secret.env\n' > .gitignore \
->   && git add .gitignore \
+>   && git add -- .gitignore \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'AAAA\n' > secret.env \
->   && git add -f secret.env \
+>   && git add -f -- secret.env \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && printf 'BBBB-different\n' > secret.env \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
@@ -440,15 +441,15 @@ having nothing to review.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && git checkout -q --orphan other \
->   && git rm -q -rf . \
+>   && git rm -q -rf -- . \
 >   && printf 'z\n' > other.txt \
->   && git add other.txt \
+>   && git add -- other.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm orphan \
 >   && git checkout -q base \
 >   && "${REVIEW_SCOPE_BIN}" --base other 2>&1
@@ -465,10 +466,10 @@ report clean for code that changed.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'secret\n' > unreadable.txt \
 >   && chmod 000 unreadable.txt \
@@ -483,13 +484,13 @@ exit=1
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'two\n' >> tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && git reset -q -- tracked.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
@@ -501,7 +502,7 @@ snapshot moved: * (glob)
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && "${REVIEW_SCOPE_BIN}" 2>&1
 review-scope: HEAD does not resolve to a commit; the repository has no commits yet
 [1]
@@ -515,13 +516,13 @@ inferred a changed worktree from those buckets rejected this valid state.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > f.txt \
->   && git add f.txt \
+>   && git add -- f.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'two\n' > f.txt \
->   && git add f.txt \
+>   && git add -- f.txt \
 >   && printf 'one\n' > f.txt \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '{staged, unstaged, empty}'
 {"staged":["f.txt"],"unstaged":["f.txt"],"empty":false}
@@ -537,13 +538,13 @@ caller's index is what keeps these two trees equal.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > f.txt \
->   && git add f.txt \
+>   && git add -- f.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && printf 'two\n' > f.txt \
->   && git add f.txt \
+>   && git add -- f.txt \
 >   && printf 'one\n' > f.txt \
 >   && tree="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .tree)" \
 >   && [[ "${tree}" == "$(git rev-parse 'HEAD^{tree}')" ]] \
@@ -560,14 +561,14 @@ tree, so the staged state must not reach it.
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && for r in clean staged; do \
->        git init -q --template= "${r}" \
+>        git init -q --template= -- "${r}" \
 >          && ( cd "${r}" \
 >            && git checkout -q -b base \
 >            && printf 'one\n' > f.txt \
->            && git add f.txt \
+>            && git add -- f.txt \
 >            && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init ); \
 >      done \
->   && ( cd staged && printf 'two\n' > f.txt && git add f.txt && printf 'one\n' > f.txt ) \
+>   && ( cd staged && printf 'two\n' > f.txt && git add -- f.txt && printf 'one\n' > f.txt ) \
 >   && a="$(cd clean && "${REVIEW_SCOPE_BIN}" --base base | jq -r .tree)" \
 >   && b="$(cd staged && "${REVIEW_SCOPE_BIN}" --base base | jq -r .tree)" \
 >   && [[ "${a}" == "${b}" ]] && echo "identical: ${a}"
@@ -581,17 +582,17 @@ history leave the scope while the run still looked complete.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b main \
 >   && printf 'one\n' > a.txt \
->   && git add a.txt \
+>   && git add -- a.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && git update-ref refs/remotes/origin/main HEAD \
 >   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main \
 >   && git checkout -q --orphan feature \
->   && git rm -q -rf . \
+>   && git rm -q -rf -- . \
 >   && printf 'work\n' > b.txt \
->   && git add b.txt \
+>   && git add -- b.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm orphan \
 >   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, base, base_unrelated, committed}'
 {"base_ref":"origin/main","base":null,"base_unrelated":true,"committed":[]}
@@ -601,10 +602,10 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '.base_unrelated'
 false
@@ -618,10 +619,10 @@ branch's history could leave the scope while the run still looked complete.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b solo \
 >   && printf 'one\n' > a.txt \
->   && git add a.txt \
+>   && git add -- a.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm first \
 >   && printf 'two\n' >> a.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qam second \
@@ -633,17 +634,17 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b main \
 >   && printf 'one\n' > a.txt \
->   && git add a.txt \
+>   && git add -- a.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && git update-ref refs/remotes/origin/main HEAD \
 >   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main \
 >   && git checkout -q --orphan feature \
->   && git rm -q -rf . \
+>   && git rm -q -rf -- . \
 >   && printf 'work\n' > b.txt \
->   && git add b.txt \
+>   && git add -- b.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm orphan \
 >   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, base_unrelated, committed_covered}'
 {"base_ref":"origin/main","base_unrelated":true,"committed_covered":false}
@@ -653,10 +654,10 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b base \
 >   && printf 'one\n' > tracked.txt \
->   && git add tracked.txt \
+>   && git add -- tracked.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '{base_unrelated, committed_covered}'
 {"base_unrelated":false,"committed_covered":true}
@@ -678,7 +679,7 @@ $ cd "${work}" && "${REVIEW_SCOPE_BIN}" --base base > "${work}/../scope-before.j
 
 ```scrut
 $ cd "${work}" && saved="$(git ls-files --stage -z | git hash-object --stdin)" \
->   && printf 'new\n' > coverage.txt && git add -N coverage.txt \
+>   && printf 'new\n' > coverage.txt && git add -N -- coverage.txt \
 >   && round="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .snapshot)" \
 >   && confirm="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .snapshot)" \
 >   && test "${round}" = "${confirm}" && echo "confirming snapshot held" \
@@ -691,7 +692,7 @@ pre-existing index preserved
 ## An unrelated index edit invalidates a prepared round
 
 ```scrut
-$ cd "${work}" && git add -N coverage.txt \
+$ cd "${work}" && git add -N -- coverage.txt \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .snapshot)" \
 >   && blob="$(printf 'another indexed version\n' | git hash-object -w --stdin)" \
 >   && git update-index --cacheinfo "100644,${blob},tracked.txt" \
@@ -719,7 +720,7 @@ review-scope: the index, HEAD or base changed while the scope was being read; re
 ## Temporary index files must remain outside the scope
 
 ```scrut
-$ cd "${work}" && mkdir internal-tmp \
+$ cd "${work}" && mkdir -- internal-tmp \
 >   && TMPDIR="${work}/internal-tmp" "${REVIEW_SCOPE_BIN}" --base base 2>&1
 review-scope: TMPDIR must point outside the working tree
 [1]
@@ -732,7 +733,7 @@ exported only inside this subshell. Each invocation verifies its resolution.
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . && git checkout -q -b main \
+>   && git init -q --template= -- . && git checkout -q -b main \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init --allow-empty \
 >   && git update-ref refs/remotes/origin/main HEAD \
 >   && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main \
@@ -759,9 +760,9 @@ review-scope: git merge-base '*' '*' failed (exit 128) (glob)
 
 ```scrut
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
->   && git init -q --template= . \
+>   && git init -q --template= -- . \
 >   && git checkout -q -b main \
->   && printf 'one\n' > a.txt && git add a.txt \
+>   && printf 'one\n' > a.txt && git add -- a.txt \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && git remote add origin https://example.invalid/repo.git \
 >   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, committed_covered}'

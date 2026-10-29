@@ -7,7 +7,8 @@ local repositories and isolated configuration; no reviewer is launched.
 ## Setup
 
 ```scrut {fail_fast: true}
-$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash" \
+>   && source "${REPO_ROOT}/tests/fixtures/review-fixture-paths.bash"
 ```
 
 ## Untracked embedded checkouts expand to reviewable files
