@@ -18,6 +18,10 @@ long as the text matched.
 
 ## A clean corpus validates, and says how much it checked
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ "${VALIDATE_CORPUS_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}")/corpus"
 Review corpus: 2 case(s), 2 defect(s), 0 warning(s).

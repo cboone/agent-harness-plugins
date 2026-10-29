@@ -1,0 +1,137 @@
+{
+  "baseline": "5a5a4cf5cd44078cd33e3d46ec5209ed3419143d",
+  "checked_head": "ecbc3e0290578d52e79b9ed79294a0491060665d",
+  "scan_version": "1.180.0",
+  "method": "Intersect git diff --unified=0 added/modified lines with raw spans and enclosing regions; require each full enclosing region to match one baseline equal block.",
+  "files": [
+    {
+      "path": "bin/run-scrut-documents",
+      "source_sha256": "26f224686c4beb80c1a436bb5d8046c1a0aba623328d013f538511152104d8ae",
+      "matches_scan_source": true,
+      "added_or_modified_line_ranges": [
+        [13, 13],
+        [25, 31],
+        [162, 162],
+        [328, 328]
+      ],
+      "protected_regions": [
+        {
+          "kind": "raw JSON span",
+          "start": {
+            "line": 87,
+            "col": 14,
+            "offset": 0
+          },
+          "end": {
+            "line": 87,
+            "col": 16,
+            "offset": 2
+          },
+          "changed_lines_inside": []
+        },
+        {
+          "kind": "entire stop_workers function",
+          "head_lines": [83, 106],
+          "baseline_lines": [76, 99],
+          "baseline_identical": true,
+          "region_sha256": "fbdec8e239107a9e12932559935ed5e34ebe62245cbc8846d43b0eb75abf5fdb",
+          "changed_lines_inside": []
+        }
+      ]
+    },
+    {
+      "path": "bin/validate-plugins",
+      "source_sha256": "ce137622895c2a4d939397ac203c221e141eae97815e5a937eec988b1d069e86",
+      "matches_scan_source": true,
+      "added_or_modified_line_ranges": [
+        [5, 7],
+        [835, 836],
+        [838, 839],
+        [868, 868],
+        [1034, 1035]
+      ],
+      "protected_regions": [
+        {
+          "kind": "raw JSON span",
+          "start": {
+            "line": 749,
+            "col": 3,
+            "offset": 0
+          },
+          "end": {
+            "line": 749,
+            "col": 84,
+            "offset": 81
+          },
+          "changed_lines_inside": []
+        },
+        {
+          "kind": "raw JSON span",
+          "start": {
+            "line": 762,
+            "col": 3,
+            "offset": 0
+          },
+          "end": {
+            "line": 763,
+            "col": 4,
+            "offset": 81
+          },
+          "changed_lines_inside": []
+        },
+        {
+          "kind": "raw JSON span",
+          "start": {
+            "line": 782,
+            "col": 38,
+            "offset": 0
+          },
+          "end": {
+            "line": 782,
+            "col": 39,
+            "offset": 1
+          },
+          "changed_lines_inside": []
+        },
+        {
+          "kind": "raw JSON span",
+          "start": {
+            "line": 782,
+            "col": 79,
+            "offset": 0
+          },
+          "end": {
+            "line": 782,
+            "col": 102,
+            "offset": 23
+          },
+          "changed_lines_inside": []
+        },
+        {
+          "kind": "raw JSON span",
+          "start": {
+            "line": 782,
+            "col": 103,
+            "offset": 0
+          },
+          "end": {
+            "line": 782,
+            "col": 104,
+            "offset": 1
+          },
+          "changed_lines_inside": []
+        },
+        {
+          "kind": "entire top-level inventory budget section, including all affected arithmetic expressions and surrounding control flow",
+          "head_lines": [513, 795],
+          "baseline_lines": [510, 792],
+          "baseline_identical": true,
+          "region_sha256": "9f13312910fc98c97f2c2225aca004bbee664ee236162f4fc1d6fb83abeb6636",
+          "changed_lines_inside": []
+        }
+      ]
+    }
+  ],
+  "overlap": false,
+  "result": "PASS: no added or modified line intersects any raw span or enclosing region; enclosing regions are byte-identical to the baseline."
+}

@@ -8,11 +8,15 @@ Staleness is derived from `git worktree list --porcelain`, so every testcase dri
 
 `claims_tail` and `claims_check_report` exist because a pipeline reports the exit code of its last command. Piping straight into `tail` or `sed` would replace the script's status with the filter's, and every error case here asserts a status.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ function setup_claims() {
 >   claim_file="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/.claude/worktree-resources.local.json"
 >   stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
->   cp "${GIT_WORKTREE_STUB_BIN}" "${stub_dir}/git"
+>   cp "${WORKTREE_GIT_STUB_BIN}" "${stub_dir}/git"
 >   chmod +x "${stub_dir}/git"
 >   live_porcelain="$(printf 'worktree /repo/main\nHEAD aaa\nbranch refs/heads/main\n\nworktree /repo/wt-live\nHEAD bbb\nbranch refs/heads/feature/live\n\nworktree /repo/wt-prunable\nHEAD ccc\nbranch refs/heads/feature/prunable\nprunable gitdir file points to non-existent location\n')"
 > }
@@ -97,7 +101,7 @@ $ function setup_claims() {
 > function claims_no_identity() {
 >   local blind
 >   blind="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
->   printf '#!/usr/bin/env bash\nif [[ "${3:-}" == "rev-parse" ]]; then exit 128; fi\nexec "%s" "$@"\n' "${GIT_WORKTREE_STUB_BIN}" > "${blind}/git"
+>   printf '#!/usr/bin/env bash\nif [[ "${3:-}" == "rev-parse" ]]; then exit 128; fi\nexec "%s" "$@"\n' "${WORKTREE_GIT_STUB_BIN}" > "${blind}/git"
 >   chmod +x "${blind}/git"
 >   env PATH="${blind}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" "$@"
 > }

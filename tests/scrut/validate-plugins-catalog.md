@@ -13,6 +13,10 @@ Each plugin manifest remains the SemVer source. Both marketplace files omit
 entry and aggregate versions, so a plugin bump leaves catalog registration
 metadata unchanged.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ cd "${REPO_ROOT}" && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .claude-plugin/marketplace.json > /dev/null && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .agents/plugins/marketplace.json > /dev/null && for manifest in plugins/*/.claude-plugin/plugin.json; do jq -e '.version | strings | test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")' "${manifest}" > /dev/null || exit 1; done && bin/validate-plugins && echo version-state-clean
 Codex skill inventory: * (glob)
@@ -66,7 +70,7 @@ against 2 percent of the reference model's context window, less a reserve for
 skills from other sources. Every normal run reports the cost against that
 budget.
 
-The limits below are exercised through overrides; the recorded budget is never
+The limits below use explicit fixture arguments; the recorded budget is never
 raised to fit content.
 
 ```scrut
@@ -83,7 +87,7 @@ a whole one, and that the counted skill is the most expensive one: no other
 line, even with the 18-token roots table row, reaches 256 tokens.
 
 ```scrut
-$ { CODEX_ENABLED_SKILL_PERCENT=1 "${VALIDATE_PLUGIN_FIXTURE_BIN}" oversized-description 2>&1; echo "exit ${?}"; } | awk '{ print } /^Codex skill inventory:/ { verdict = ($5 == 1 && $14 >= 256) ? "the most expensive skill is counted" : "unexpected selection: " $5 " costing " $14 } END { print verdict }'
+$ { "${VALIDATE_PLUGIN_FIXTURE_BIN}" oversized-description --enabled-percent 1 2>&1; echo "exit ${?}"; } | awk '{ print } /^Codex skill inventory:/ { verdict = ($5 == 1 && $14 >= 256) ? "the most expensive skill is counted" : "unexpected selection: " $5 " costing " $14 } END { print verdict }'
 ::error::Skill 'plugins/release/skills/release/SKILL.md' description is 1100 characters, exceeding the 1024-character limit
 Codex skill inventory: the 1 most expensive of * skills (1 percent) cost * (glob)
 1 plugin validation error(s) found.
@@ -140,7 +144,7 @@ enabled share wraps to 10 percent, and this reserve is not valid octal. Each
 invalid override is an error, and none reaches the budget check.
 
 ```scrut
-$ CODEX_ENABLED_SKILL_PERCENT=18446744073709551626 CODEX_OTHER_SKILL_RESERVE_TOKENS=0900 "${VALIDATE_PLUGIN_FIXTURE_BIN}" empty-context-window 2>&1
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" empty-context-window --enabled-percent 18446744073709551626 --reserve-tokens 0900 2>&1
 ::error::CODEX_REFERENCE_CONTEXT_WINDOW must be a positive decimal integer below 1000000000
 ::error::CODEX_ENABLED_SKILL_PERCENT must be a decimal integer from 1 to 100
 ::error::CODEX_OTHER_SKILL_RESERVE_TOKENS must be a non-negative decimal integer below 1000000000
@@ -155,7 +159,7 @@ the withheld skills. Charging the whole catalog keeps another skill from taking
 its place among the counted share.
 
 ```scrut
-$ charged() { CODEX_ENABLED_SKILL_PERCENT=100 "${VALIDATE_PLUGIN_FIXTURE_BIN}" "${1}" 2>&1 | awk '/^Codex skill inventory:/ { withheld = 0; if (match($0, /not charged: [0-9]+/)) withheld = substr($0, RSTART + 13, RLENGTH - 13); print $9, $14, withheld }'; }
+$ charged() { "${VALIDATE_PLUGIN_FIXTURE_BIN}" "${1}" --enabled-percent 100 2>&1 | awk '/^Codex skill inventory:/ { withheld = 0; if (match($0, /not charged: [0-9]+/)) withheld = substr($0, RSTART + 13, RLENGTH - 13); print $9, $14, withheld }'; }
 > read -r count tokens withheld <<< "$(charged valid)"
 > read -r count_after tokens_after withheld_after <<< "$(charged translated-frontmatter)"
 > [[ ${count_after} -eq $((count - 1)) && ${tokens_after} -lt ${tokens} && ${withheld_after} -eq $((withheld + 1)) ]] && echo "withheld skill is not charged"

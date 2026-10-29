@@ -374,3 +374,23 @@ Final checks are repeated after these test/prose edits before tidy. The Semgrep 
 The post-focused make test-all invocation exited 0: all 42 Scrut documents passed, with zero failed/skipped cases. Its lint, JSON/plugin and generated-copy checks all passed. Full log: /tmp/523-post-focused-test-all.log. Lint-and-fix --no-push remains successful with no additional formatting fixes or skipped required checks. Version checks were repeated after fetch and remain clear against the same actual origin/main merge base, with both intended minor bumps and all 60 catalog entries consistent.
 
 TOOLING explicitly authorized applying the shell-only Semgrep rule, then final checks, tidy, push and a ready-for-review PR. All preceding gates are satisfied. Tidy retains a pre-tidy backup and rebuilds signed implementation, test and documentation commits; exact tree equality is required before push. Historical guidance follow-up 674 remains open and must appear in the PR body without a closing keyword. Copilot is paused; no request or wait is authorized. TOOLING merges; this worker never merges.
+
+## Publication and main integration stop
+
+Ready-for-review PR: https://github.com/cboone/agent-harness-plugins/pull/675. Tidy produced three valid signed commits and exact tree equality with fix/523-review-snapshot-submodules-pre-tidy. Stored PR body, head and non-draft status were verified; historical guidance follow-up 674 is cited without closing it. GitHub reported conflicts with newer main and no checks registered.
+
+The merge of origin/main a2e56c53 is uncommitted. Its sole CI conflict is resolved with main's Make-based Scrut job, preserving the merged fixture registration. The owned fixture and two new documents source main's Git-environment reset. Integration validation now fails on retained diagnostics in the owned fixture and on textual Git-consumer classification in build-shared-references, build-review-checklists, validate-plugins and their Scrut callers. The shared-library copy reference is propagated as execution by the inherited static checker. No unrelated generator or checker was changed.
+
+Stop for TOOLING's scope/design decision before broadening the validator fix. Exact failures and state are in the conductor question/checkpoint. No live commands; no merge commit or integration push yet. Pre-integration full tests passed; integrated tests and CI are not claimed green. This ledger entry remains uncommitted with the pending merge, since a partial commit during merge is not available.
+
+## Signed main integration continuation and validator stop
+
+TOOLING explicitly requires a signed merge of origin/main, preserving pushed history, and a focused Critical-only round on the merged tree before final checks/push. The pending merge remains uncommitted because the previously reported checker scope decision is unresolved. No rebase, force push or PR reopen is used.
+
+The owned fixture integration is now concrete: Git-environment reset occurs first, retained child diagnostics use capture_child and remain visible, and expected rejection snapshots include those diagnostics. Both affected integrated suites passed through main's checked runner: 17 submodule cases and 15 consumer cases, zero failed/skipped. ShellCheck on the fixture and git diff --check passed. Logs: /tmp/523-integrated-submodules.log and /tmp/523-integrated-consumers.log.
+
+Remaining check-fixture-environments failures require resets in bin/build-shared-references, bin/build-review-checklists, bin/validate-plugins and the build-shared-references/build-review-checklists Scrut documents. Its textual reference closure treats the shared library's copy-table entry as execution and propagates the classification. The fixture capture failure is fixed. No checker or unrelated generator change has been made. TOOLING has the scope question; no active command remains. The newly ordered Critical-only reviews, fresh baseline scan, integrated full checks and push remain pending resolution of that named scope stop.
+
+## TOOLING checker scope authorization
+
+TOOLING authorized a narrow checker refinement in its own commit: literal shared-reference copy data must not imply execution by build-shared-references, while real execution references retain reset requirements. Positive and negative plants are required. No environment resets are added to unrelated tools. Complete the signed main merge with the already validated owned fixture integration, then commit the checker refinement separately. The known checker failure remains explicit until that commit is validated. Next is one focused Critical-only round on the merged tree, followed by remaining scans/checks and push; stop if checker scope grows.

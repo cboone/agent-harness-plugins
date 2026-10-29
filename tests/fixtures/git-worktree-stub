@@ -2,6 +2,9 @@
 # git-worktree-stub -- Test stub for git worktree list and for-each-ref.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 

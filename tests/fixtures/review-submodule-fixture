@@ -2,6 +2,12 @@
 # Exercise recursive snapshots using only local repositories and fixture config.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/../../bin/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "$(dirname "${BASH_SOURCE[0]}")/../../bin/lib/capture-child.bash"
+
 FIXTURE_DIR=""
 trap '[[ -z "${FIXTURE_DIR}" ]] || rm -rf "${FIXTURE_DIR}"' EXIT
 
@@ -78,14 +84,14 @@ function consume_scope() {
 }
 
 function main() {
-  local scenario="${1}" fixture scope repo base
+  local scenario="${1}" fixture scope repo base diagnostic
   scope="${REVIEW_SCOPE_BIN:?}"
   local aspects="${CODEX_ASPECTS_BIN:?}"
   fixture="$(mktemp -d "${TMPDIR:-/tmp}/review-submodule.XXXXXX")"
   FIXTURE_DIR="${fixture}"
   export GIT_CONFIG_GLOBAL="${fixture}/config" GIT_CONFIG_SYSTEM=/dev/null
   export GIT_CONFIG_NOSYSTEM=1
-  unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+  unset GIT_CONFIG_PARAMETERS GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
   printf '[user]\n name = Fixture\n email = fixture@example.invalid\n[commit]\n gpgsign = false\n[protocol "file"]\n allow = always\n' > "${GIT_CONFIG_GLOBAL}"
   for repo in leaf child parent; do
     git init -q --template= "${fixture}/${repo}"
@@ -199,12 +205,11 @@ function main() {
       export -f git
       [[ "$(type -t git)" == function ]] || return 1
       local code=0
-      "${scope}" --base "${base}" > "${fixture}/out" 2> "${fixture}/err" || code=$?
+      capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${scope}" --base "${base}" || code=$?
       [[ "${code}" -ne 0 && ! -s "${fixture}/out" && -e "${REVIEW_MUTATION_MARKER}" ]] || return 1
       [[ "$(command git -C module rev-parse HEAD)" == "${child_head}" ]] || return 1
       [[ "$(command git rev-parse HEAD)" == "${base}" ]] || return 1
       [[ "$(cat module/file)" == original ]] || return 1
-      cat "${fixture}/err"
       return
       ;;
     record-write-failure | transition-write-failure)
@@ -228,9 +233,8 @@ function main() {
       export -f printf
       [[ "$(type -t printf)" == function ]] || return 1
       local code=0
-      "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" > "${fixture}/out" 2> "${fixture}/err" || code=$?
+      capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" changes --before "${fixture}/before" --after "${fixture}/after" || code=$?
       [[ "${code}" -ne 0 && ! -s "${fixture}/out" ]] || return 1
-      cat "${fixture}/err"
       return
       ;;
     replacement)
@@ -300,17 +304,17 @@ function main() {
         for consumer in prompt validate changes gate; do
           code=0
           case "${consumer}" in
-            prompt) "${aspects}" prompt --aspect code --scope "${fixture}/invalid" > "${fixture}/out" 2> "${fixture}/err" || code=$? ;;
-            validate) "${aspects}" validate --aspect code --scope "${fixture}/invalid" "${fixture}/result" > "${fixture}/out" 2> "${fixture}/err" || code=$? ;;
-            changes) "${aspects}" changes --before "${fixture}/invalid" --after "${fixture}/before" > "${fixture}/out" 2> "${fixture}/err" || code=$? ;;
-            gate) "${aspects}" gate --scope "${fixture}/invalid" --after "${fixture}/before" --results "${fixture}/results" --statuses "${fixture}/statuses" --aspect code > "${fixture}/out" 2> "${fixture}/err" || code=$? ;;
+            prompt) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" prompt --aspect code --scope "${fixture}/invalid" || code=$? ;;
+            validate) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" validate --aspect code --scope "${fixture}/invalid" "${fixture}/result" || code=$? ;;
+            changes) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" changes --before "${fixture}/invalid" --after "${fixture}/before" || code=$? ;;
+            gate) capture_child diagnostic --stdout "${fixture}/out" --error-stdout -- "${aspects}" gate --scope "${fixture}/invalid" --after "${fixture}/before" --results "${fixture}/results" --statuses "${fixture}/statuses" --aspect code || code=$? ;;
             *)
               echo "unexpected consumer: ${consumer}" >&2
               return 1
               ;;
           esac
           [[ "${code}" -eq 1 && ! -s "${fixture}/out" ]] || return 1
-          grep -F 'is not review-scope output' "${fixture}/err" > /dev/null
+          grep -F 'is not review-scope output' <<< "${diagnostic}" > /dev/null
           checks=$((checks + 1))
         done
       done

@@ -13,6 +13,9 @@
 # twice and cannot be fixed in place.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
+
 # Resolve the repository from this script's own location rather than the caller's
 # working directory, so `git ls-files` works no matter where the script is run
 # from. scrut, for one, executes each testcase in a temporary directory.

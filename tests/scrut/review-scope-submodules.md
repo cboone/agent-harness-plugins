@@ -5,6 +5,12 @@ The fixture allows file transport only in that config and checks that the
 helper preserves the child index. Each case checks snapshot movement and the
 reported path; the staged-only case also checks that disk content stays equal.
 
+## Setup
+
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ## Unchanged recursive scans are stable
 
 ```scrut

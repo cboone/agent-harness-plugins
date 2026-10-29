@@ -4,6 +4,10 @@
 
 These driver cases require zsh, matching the measured host's login shell. Linux CI runs the portable helper and checker cases below; the driver is an opt-in macOS procedure.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ if ! command -v zsh >/dev/null; then echo 'zsh driver check skipped'; else root="$(mktemp -d "${TMPDIR:-/tmp}/chain-driver.XXXXXX")" && mkdir "${root}/bin" && cp "${CHAIN_CODEX_STUB_BIN}" "${root}/bin/codex" && chmod +x "${root}/bin/codex" && export PATH="${root}/bin:${PATH}" && test "$(command -v codex)" = "${root}/bin/codex" && printf '[]\n' > "${root}/overrides.json" && node "${REPO_ROOT}/tests/data/git-review-chain-evals/run.mjs" after "${root}" "${root}/overrides.json" activation-negative | jq -e '.exit == 0 and .nonempty == true'; fi
 true|zsh driver check skipped (regex)

@@ -4,6 +4,10 @@ Each scenario captures Claude and Codex completion, permission, Claude and Codex
 
 ## POSIX checksum vectors without a trailing newline
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ for name in sample-repo another-repo outside-repo; do printf '%s' "${name}" | cksum; done
 419135404 11

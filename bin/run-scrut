@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Reset the caller environment before Scrut creates any testcase shells.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
+
+function main() {
+  exec scrut "$@"
+}
+
+main "$@"

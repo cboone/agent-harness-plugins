@@ -8,6 +8,10 @@ Copilot files some findings in a review body instead of an inline thread. Those 
 
 Whatever the layout, the body a caller reads is exactly the body Copilot wrote. This is the property that keeps a new layout from changing what the command reports.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ for f in format-a format-b format-c format-d format-d-bold-votes format-d-open-findings-block format-d-zero-open-line format-d-previously-missed format-d-missed-badges format-d-moderate-labels notice-error notice-no-files; do printf '%s ' "${f}"; "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/${f}.json" | jq -c --slurpfile raw "${COPILOT_REVIEW_DATA_DIR}/${f}.json" '[.[] as $o | $raw[0][] | select(.id == $o.id) | .body == $o.body] | (length > 0 and all)'; done
 format-a true

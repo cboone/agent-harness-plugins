@@ -35,6 +35,9 @@
 #   2 - Usage error, or a corpus that is not a git repository
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
+
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 

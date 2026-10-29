@@ -10,6 +10,10 @@ signals compete.
 an issue for `#12`, its pull requests, and its branches. The gather time is
 2026-10-15T12:00:00Z.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ function model() {
 >   jq -n -r -L "$(dirname "${BACKLOG_GATHER_BIN}")" 'include "progress";

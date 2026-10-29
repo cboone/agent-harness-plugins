@@ -4,6 +4,12 @@ The single shared membership contract assertion runs for every fixture. It reads
 change reporting and the gate using the same captured file paths. Fixtures use
 local repositories and isolated configuration; no reviewer is launched.
 
+## Setup
+
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ## Untracked embedded checkouts expand to reviewable files
 
 ```scrut
@@ -63,6 +69,18 @@ review-scope: could not read current gitlink object: module
 
 ```scrut
 $ "${REVIEW_SUBMODULE_FIXTURE_BIN}" contract-rejection
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
+codex-aspects: scope file '*' is not review-scope output (glob)
 12 contract rejections verified
 ```
 

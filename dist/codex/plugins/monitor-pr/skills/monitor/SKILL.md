@@ -170,7 +170,19 @@ Prepare the mechanism choice here, but do not arm a scheduler or start a wait un
 
 Choose exactly one mechanism and name it on the first tick:
 
-1. **Accepted wake-up tool**: Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small. Select this mechanism only when the tool is available and accepts the wakeup.
+1. **Background change watch on Claude Code**: Prefer a background command that notifies this conversation when it exits, such as `Bash` with `run_in_background`. After a permitted step 4 dispatch, freeze `{snapshot, latestReview}` from this tick in a separate baseline JSON file. `latestReview` is the step 3 metadata object or explicit `null`. Run:
+
+   ```bash
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" --watch-state WATCH_STATE_JSON watch-changes OWNER REPO PR_NUMBER HEAD_SHA BASELINE_JSON
+   ```
+
+   Record the returned task ID, baseline path, expected head, start time and selected cadence in watch state before ending the turn. One watch runs at a time; cancel and confirm the previous task stopped before replacing it, repairing, or entering step 8. Never add a recurring session loop or repeatedly re-arm an unchanged wait. The command stays silent until a check completes or fails, a new Copilot review appears at this head, the head changes, the PR merges or closes, or a known mergeability value changes. Queued/running transitions and transient `UNKNOWN` values stay quiet. The watch reuses `merge-flow watch`'s polling, failure backoff and lifetime. Set `MERGE_FLOW_INTERVAL` to the selected `--interval` in seconds for a fixed override; otherwise the watch adapts internally at 120 seconds for running checks, 300 while awaiting a review, and 1200 otherwise. Each watch has a 24-hour lifetime, including during repairs.
+
+   Preserve existing finite quiet-tick decisions: when step 7a, a notice retry, or a Dependabot rebase needs a decision after quiet ticks, pass `--quiet-polls N` with the full decision threshold and `--quiet-count C` with the current counter. Add `--review-wait` for step 7a or a notice retry; include `snapshot.headRefName` in the baseline. This known-end wait returns `quiet` at that boundary, rather than waking for every unchanged poll. The startup read detects material changes immediately but spends no quiet tick. During `--review-wait`, the shared current-head Copilot workflow query runs under `read-axis`; queued or in-progress runs reset the quiet counter and stay silent. Only an elapsed, non-working quiet poll spends the budget. On any event, replace the applicable quiet counter with its `quietPolls` before taking the fresh snapshot; do not count that snapshot as another quiet tick. Do not use the change watch to delay a helper-owned pending-read retry: perform the step 4 bounded retry through the selected fallback, since an unchanged response may satisfy that read.
+
+   A completion is a new entry: clear the finished task ID, enter step 1 policy preparation and consult the fresh restrictions before reading or acting. `checks`, `review`, `mergeability`, `head` and `quiet` resume at step 3, which snapshots and dispatches as usual. A terminal `merged` or `closed` event remains terminal through lifecycle resolution, even if metadata is stale. `failed`, missing JSON, or a failed task escalates per step 9 with its diagnostic. `expired` reports the lifetime bound and stops with a resumable checkpoint; never automatically re-arm it. The event is a notification, never a readiness verdict or permission to act. If background creation fails or completion cannot resume this conversation, select a fallback below and retain Codex's existing scheduler/foreground behavior.
+
+1. **Accepted wake-up tool fallback**: Use `ScheduleWakeup` when no usable background completion exists. Select this mechanism only when the tool is available and accepts the wakeup.
 1. **Conversation-resume scheduler**: Create a task that resumes this conversation after the selected interval. Select this mechanism only after successful task creation, and retain its task ID for updates and cancellation. Its prompt must say to enter step 1 policy preparation with the retained watch state, then resume this `monitor-pr:monitor` watch at step 3, retain the recorded PR identity, options, counters, and action guards, and stop the task on escalation, on a terminal report, or at readiness, where step 8c replaces it. Use the watch-state fields in [Checkpoint and Resume](./references/checkpoint.md). On each nonterminal tick, schedule or update the next wakeup using the selected interval. A scheduled task is a new tick, not a delayed final response.
 1. **Interruptible foreground polling**: When no scheduler is available, or scheduling is rejected or fails, announce the fallback and run a foreground polling loop. If replacing an existing scheduled watch, cancel its pending task or wakeup first; if cancellation fails, escalate rather than start a second loop. A blocking `sleep` by itself is not a continuation mechanism: after every sleep, take the step 3 snapshot and dispatch it in the same active turn. Do not print a terminal response merely because a tick is waiting. Stop only on a terminal condition, an escalation, or the `--ticks` foreground limit.
 
@@ -188,11 +200,11 @@ Adaptive intervals by phase, unless `--interval` overrides them:
 
 When more than one row applies, take the shorter wait. The step 4 fallthrough can reach a tick with checks still running and a Copilot review outstanding at once, and the shorter interval is the one that governs.
 
-During the repair loop on scheduler-backed surfaces there is no wall-clock cap or tick limit. The only budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. On every foreground path, `--ticks` additionally bounds an individual invocation. After readiness, the step 8c merge watch has its own lifetime of 24 hours. The user can interrupt at any point.
+During the repair loop on scheduler-backed fallbacks there is no wall-clock cap or tick limit. Each background change watch is bounded as above. The review budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. On every foreground path, `--ticks` additionally bounds an individual invocation. After readiness, the step 8c merge watch has its own lifetime of 24 hours. The user can interrupt at any point.
 
 ### 3. Take a State Snapshot
 
-On the first tick, reuse step 1's opening metadata and lifecycle. On later ticks, consult `read-axis` before re-running the metadata-only `gh pr view` call and latest-review projection. Consult `read-review` before any feedback/body probe and `classify-review` before entering classification below. A blocked probe is recorded as paused/unavailable, without incrementing failure counters, inventing an empty result or entering a review route. These gates also apply to cached bodies and Dependabot observations.
+After a background change event, take fresh metadata and review projections; never dispatch the baseline or event as a snapshot. On the first tick, reuse step 1's opening metadata and lifecycle. On later ticks, consult `read-axis` before re-running the metadata-only `gh pr view` call and latest-review projection. Consult `read-review` before any feedback/body probe and `classify-review` before entering classification below. A blocked probe is recorded as paused/unavailable, without incrementing failure counters, inventing an empty result or entering a review route. These gates also apply to cached bodies and Dependabot observations.
 
 After each fresh metadata read, store `snapshot`, run `merge-flow lifecycle` once and retain its result. Terminal lifecycles skip all OPEN-only observations below and proceed to step 4. Rebuild observation outcomes from this tick, never cached results.
 
@@ -200,8 +212,10 @@ The latest-review command projects metadata only:
 
 ```bash
 gh api --paginate --slurp repos/OWNER/REPO/pulls/PR_NUMBER/reviews |
-  jq '[.[][] | select((.user.login? // "") as $login | ($login | type) == "string" and (["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == ($login | ascii_downcase))))] | last | {id, url: .html_url, commit_id, submitted_at, state}'
+  jq '[.[][] | select((.user.login? // "") as $login | ($login | type) == "string" and (["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == ($login | ascii_downcase))))] | last | if . == null then null else {id, url: .html_url, commit_id, submitted_at, state} end'
 ```
+
+Store this value as `latestReview`; successful absence is `null`, while a failed read or projection remains pending.
 
 Three details in that command are load-bearing:
 
@@ -271,6 +285,34 @@ The resolver reads the same body in full during its own run, which makes it a se
 
 The probe and the classification answer exactly four questions, and step 4 asks no more of them than these: is the current-head review a review, a notice, or unclear, are there open Copilot threads, has step 7b processed this review `id` and with what outcome, and does the audit report Copilot feedback the other two cannot reach. What a review body says, whether a finding is real, already handled, or needs no code change, is `monitor-pr:resolve-copilot-feedback`'s judgment, not this skill's, except on the Dependabot path, where no resolver runs.
 
+#### Collect review-status observations
+
+Before step 4 dispatch, collect the shared `copilot-status` result when an
+allowed step 7a or notice-retry decision needs it. Consult `read-axis` and use
+that helper's command from step 7a. Retain its `status` and `working` for this
+tick; step 7a consumes the result without a second read or dispatch.
+
+Submit exactly one `review-metadata` observation per tick for the latest-review
+and required workflow-status reads together. Set `review_pending` and
+`workflow_pending` from their actual outcomes, and retain each diagnostic;
+set a not-needed workflow read to false with an empty diagnostic. Combine them:
+
+```bash
+jq -nc --argjson review_pending "${review_pending}" \
+  --argjson workflow_pending "${workflow_pending}" \
+  --arg review_diagnostic "${review_diagnostic}" \
+  --arg workflow_diagnostic "${workflow_diagnostic}" '
+  {name: "review-metadata", pending: ($review_pending or $workflow_pending),
+   diagnostic: ([$review_diagnostic, $workflow_diagnostic] | map(select(length > 0)) | join("; "))}'
+```
+
+Append this one observation before dispatch; never dispatch a successful
+latest-review result separately before a failed workflow result. Otherwise the
+successful read resets the shared counter on every tick and the workflow
+failure never reaches its two-tick bound. A failed combined observation retries
+through the existing common handler; do not enter step 7a from that tick.
+The background watch keeps its existing consecutive-poll failure bound.
+
 Reduce the snapshot to the four axes in [Ready Criteria](#ready-criteria).
 
 ### 4. Classify and Dispatch
@@ -302,16 +344,16 @@ Print every returned `wouldDo` item as data. Persist the helper's returned `obse
 
 The closed registry returned by `merge-flow observation-kinds < WATCH_STATE_JSON` is the only kind-to-permission/diagnostic mapping. Supply `{name, pending, diagnostic}` for every applicable read attempted this tick:
 
-| Kind              | Read outcome                                                                                  |
-| ----------------- | --------------------------------------------------------------------------------------------- |
-| `snapshot`        | Failed opening or later PR metadata, terminal before lifecycle as above                       |
-| `review-metadata` | Latest-review API or metadata projection failed; a successful no-review result is not pending |
-| `triage`          | Earlier-review batch/count read failed; leave the count unknown                               |
-| `threads`         | Thread fetch or projection failed or emitted no result                                        |
-| `review-id`       | Review identity fetch/projection failed or selected `id` is null                              |
-| `review-body`     | Full classification-body fetch failed or selected identity/body is absent                     |
-| `audit`           | Audit failed or lacks its required result fields                                              |
-| `mergeability`    | Mergeability remains unknown                                                                  |
+| Kind              | Read outcome                                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `snapshot`        | Failed opening or later PR metadata, terminal before lifecycle as above                                                                          |
+| `review-metadata` | Latest-review API/projection or required workflow-status read failed; combine once before dispatch. A successful no-review result is not pending |
+| `triage`          | Earlier-review batch/count read failed; leave the count unknown                                                                                  |
+| `threads`         | Thread fetch or projection failed or emitted no result                                                                                           |
+| `review-id`       | Review identity fetch/projection failed or selected `id` is null                                                                                 |
+| `review-body`     | Full classification-body fetch failed or selected identity/body is absent                                                                        |
+| `audit`           | Audit failed or lacks its required result fields                                                                                                 |
+| `mergeability`    | Mergeability remains unknown                                                                                                                     |
 
 The registry maps `snapshot`, `review-metadata` and `mergeability` to `read-axis`, and other kinds to `read-review`. Existing triage/classification gates remain required; a retry never grants them. For each fresh OPEN snapshot, submit all applicable successful or pending outcomes through the same handler. A successful/known observation has `pending: false`. Preserve the actual diagnostic, including audit stderr. A forbidden observation is a would-do item, never a reason to wait and never an attempted read. No duplicate name is allowed within one tick.
 
@@ -431,17 +473,19 @@ Wait and return to step 3. Copilot re-reviews automatically on push in most repo
 Before deciding whether to request one, check whether Copilot is already working. Its review runs as a workflow named `Copilot`, so an in-progress run against the current head means a review is coming and requesting another would only duplicate it:
 
 ```bash
-gh run list --branch <branch> --workflow Copilot --limit 10 --json headSha,status 2> /dev/null |
-  jq -r --arg head <head-sha> 'first(.[] | select(.headSha == $head) | .status)'
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" --watch-state WATCH_STATE_JSON copilot-status OWNER REPO BRANCH HEAD_SHA
 ```
 
-That command answers with exactly one line, or none. Three details make it so:
-
-- **`--workflow Copilot`, not a client-side name filter.** `--limit` applies to runs across every workflow on the branch, so on a repository with several workflows the Copilot run for the current head can fall outside the window and look like no run at all, which then triggers a redundant review request. Narrowing server-side makes the limit count Copilot runs alone.
-- **Filter on the head SHA**, using the `headRefOid` from the step 3 snapshot. A completed run for a superseded commit otherwise reads as though it belonged to the current head, which is precisely the distinction this check exists to draw.
-- **`first(...)`, because a SHA can have several runs.** A re-run adds another Copilot run for the same commit, and a bare `select` emits one line per match, so the reader gets `completed` and `in_progress` together with no way to tell which governs. `gh run list` returns newest-first, so the first match is the current one. `first` over an empty stream emits nothing and still exits 0.
-
-Empty output means no run for this head. The discarded stderr matters for that: on a repository where Copilot review is not enabled there is no `Copilot` workflow at all, and `gh` then exits non-zero with `could not find any workflows named Copilot`. That is the no-run case, not a failure, so let it read as empty rather than treating it as an error.
+The helper owns the query for foreground decisions and background
+`watch-changes --review-wait`. A background completion replaces the counter;
+foreground ticks collect it before step 4 as specified above, without spending
+an additional quiet tick on a background completion. It selects the
+`Copilot` workflow server-side with a limit of 10, filters the current head,
+and uses the newest matching run. The result is `{status, working}`; an empty
+status means no current-head run. A missing `Copilot` workflow is also no run.
+Other failed or malformed reads return `error`, never quiet. Collect that
+failure with the latest-review outcome before dispatch, as step 3 specifies;
+step 7a never performs a later observation dispatch.
 
 Classify each Copilot-phase tick as **working** or **quiet**, and count only the quiet ones:
 
@@ -543,7 +587,7 @@ If the plugin-root path was not substituted, use `${plugin_root}/scripts/merge-f
 
 The deferred-issue batch below is shared by readiness and step 9 escalation. When this monitor has a parent and a batch needs user approval, return `Status: needs-decision` with the proposed concerns, resolver summary URL, destination constraints and preserved watch state **before** invoking the child. The parent can invoke `create-deferred-issues` in its own user-facing context, obtain the child's mandatory proposal approval and resume the monitor with the recorded outcome. Never turn a continuation block or a monitor readiness result into filing approval. This return takes precedence over step 8's success return. In a standalone monitor, preserve the child's explicit approval exception and its existing continuation.
 
-1. Stop the wait loop. On the `ScheduleWakeup` path, that means `ScheduleWakeup({stop: true})`; on the scheduled-task path, stop the task that resumes this conversation. Step 8c replaces it with a merge watch.
+1. Stop the wait loop, including the background change task and its recorded task ID. On the `ScheduleWakeup` path, that means `ScheduleWakeup({stop: true})`; on the scheduled-task path, stop the task that resumes this conversation. Step 8c replaces it with a merge watch.
 1. Record `READY_HEAD`, the `headRefOid` readiness was declared on. Every later step compares against it.
 1. Print the full status table: every check with its state, the Copilot verdict with the SHA it was rendered against, `mergeable`, `mergeStateStatus`, and `reviewDecision` labelled as informational.
 1. If review-body findings were processed or previously handled during this watch, include the resolver's final summary comment URL and each originating Copilot review URL. State whether each finding was actionable, previously handled, or required no code change; do not make the user search unrelated PR comments for the disposition.
@@ -683,7 +727,7 @@ Steps 8a through 8f remain subject to the shared restriction filter before entry
 
 ### 9. Escalate
 
-When an escalation rule fires, stop the wait loop, including any scheduled task that resumes this conversation and any step 8c merge watch, and report:
+When an escalation rule fires, stop the wait loop, including any background change watch, any scheduled task that resumes this conversation and any step 8c merge watch, and report:
 
 1. What is blocking, in one sentence.
 1. What was already tried, including any commits pushed during this watch.
@@ -694,7 +738,7 @@ Then tell the user that `/monitor-pr:monitor` resumes the watch once they have d
 
 ## Reporting Format
 
-Every tick prints one compact line. On the `ScheduleWakeup` path, pass `noop: true` on a tick where nothing changed, so quiet ticks collapse in the user's terminal. On a scheduled task, report only a material state change; otherwise use the task's quiet-result mechanism if it has one.
+A background change watch prints nothing on unchanged internal polls; its completion triggers one snapshot report. Fallbacks retain their quiet-tick reporting. Every tick prints one compact line. On the `ScheduleWakeup` path, pass `noop: true` on a tick where nothing changed, so quiet ticks collapse in the user's terminal. On a scheduled task, report only a material state change; otherwise use the task's quiet-result mechanism if it has one.
 
 ```text
 ▸ 361 · checks 4/5 · copilot stale · mergeable CLEAN · review NONE · round 3/10

@@ -19,6 +19,10 @@ copies the GitHub fixtures with a jq filter applied to every open bug the open
 searches return, and prints the copy's directory. The gather time is fixed at
 2026-10-15T16:00:00Z.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ function bugs() {
 >   local -a settings=()

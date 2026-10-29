@@ -347,7 +347,7 @@ A skill or helper that runs `codex exec` passes `--config 'approval_policy="neve
 1. Register the plugin in `.claude-plugin/marketplace.json`.
 1. Create a per-plugin `README.md` in the plugin directory.
 1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
-1. If the plugin bundles a script, add scrut coverage under `tests/scrut/` and register any needed binary path in the `SCRUT_ENV` block in the `Makefile` and the matching `scrut-env` list in `.github/workflows/ci.yml`.
+1. If the plugin bundles a script, add scrut coverage under `tests/scrut/`. Register needed binary paths in the `Makefile`’s `SCRUT_ENV` block, shared by local runs and CI.
 1. Regenerate the bundled review checklists and the Codex mirror with `make build`, and commit the results.
 1. If the plugin ships a skill, read the `Codex skill inventory` line that `make validate` prints. Every counted skill's line, name and versioned install path included, shares one Codex discovery budget, so a new skill can push the catalog over it even when its own description is short. Skills withheld from implicit invocation are not charged. If rule 17 fails, tighten the largest routing descriptions its error lists rather than raising the budget; see [Routing descriptions and catalog summaries](#routing-descriptions-and-catalog-summaries).
 1. Run `make test-all` and fix anything it reports before opening a PR.

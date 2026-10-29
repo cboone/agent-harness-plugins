@@ -24,7 +24,7 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 
 - **Brace expansion after a closing quote expands.** In `"${dir}/${name}".{json,log}`, the braces sit outside the quotes, so Bash produces `${dir}/${name}.json` and `${dir}/${name}.log` on 3.2 and 5 alike. Only braces inside the quotes stay literal. Confirm with `printf '%s\n' "/x/a".{b,c}`. Do not ask for the paths to be spelled out.
 
-- **A fixture may `cd` after reading a `*_BIN` variable.** Those variables are absolute wherever scrut runs: the Makefile builds them from `$(CURDIR)`, and in CI the reusable `run-scrut-tests.yml` rewrites every `./`-prefixed `scrut-env` value in `.github/workflows/ci.yml` into an absolute path before exporting it. A `./plugins/...` value there never reaches a fixture as a relative path.
+- **A fixture may `cd` after reading a `*_BIN` variable.** Those variables are absolute wherever scrut runs: the shared Makefile builds them from `$(CURDIR)` for both local runs and CI. Fixture paths therefore do not depend on the fixture's working directory.
 
 Two checks are disabled in `.shellcheckrc` by design and should not be raised in review: `check-extra-masked-returns` (SC2312) and `check-set-e-suppressed` (SC2310).
 

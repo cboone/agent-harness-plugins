@@ -6,12 +6,11 @@ and a content snapshot of it.
 Cases that need a repository build their own in a temporary directory; the
 help, schema and argument-parsing cases need none.
 
-The suite runs with `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` pointed at
-`/dev/null`, registered in the `Makefile` and in CI, so the developer's own git
-configuration cannot change the result. That matters here beyond the usual
-flakiness: a global `core.excludesFile` would remove files from the untracked
-bucket, and `diff.relative` would make every reported path relative to the
-current directory.
+Before Scrut starts, `bin/run-scrut` clears inherited Git inputs and points
+`GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` at `/dev/null`, preventing developer
+Git configuration from changing results. A global `core.excludesFile` would
+remove files from the untracked bucket; `diff.relative` would make every reported
+path relative to the current directory.
 
 Each fixture also passes `--template=`, `-c commit.gpgsign=false` and an
 explicit `user.name` and `user.email`, and creates its base branch with `git
@@ -22,7 +21,8 @@ since a commit still needs one.
 ## Help
 
 ```scrut
-$ "${REVIEW_SCOPE_BIN}" --help
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash" \
+>   && "${REVIEW_SCOPE_BIN}" --help
 Usage: review-scope [--base <ref>]
        review-scope --schema
        review-scope --membership <scope.json>

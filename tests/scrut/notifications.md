@@ -4,6 +4,10 @@
 
 On macOS, `/bin/bash` is bash 3.2, which `env bash` finds without Homebrew on `PATH`. A parse failure exits 2, which Claude Code treats as blocking. CI runs on Linux, where `/bin/bash` is bash 5, so this case guards bash 3.2 only in local macOS runs.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ /bin/bash -n "${NOTIFY_BIN}" && echo "Parses"
 Parses

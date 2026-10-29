@@ -6,6 +6,10 @@ Completed launches collect the detached child's full log and remove its prompt. 
 
 ## Missing generated candidate
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ bash "${LAUNCH_WORKMUX_BIN}" --generated-name 2>&1
 launch-workmux: --generated-name requires a nonempty candidate
@@ -68,7 +72,7 @@ $ function prepare_stubs() {
 >   stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux"
 >   cp "${TMUX_STUB_BIN}" "${stub_dir}/tmux"
->   cp "${GIT_WORKTREE_STUB_BIN}" "${stub_dir}/git"
+>   cp "${WORKTREE_GIT_STUB_BIN}" "${stub_dir}/git"
 >   chmod +x "${stub_dir}/workmux" "${stub_dir}/tmux" "${stub_dir}/git"
 >   local tool
 >   for tool in workmux tmux git; do
