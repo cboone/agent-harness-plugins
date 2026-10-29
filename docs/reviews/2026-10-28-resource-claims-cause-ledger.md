@@ -314,3 +314,29 @@ Fresh origin/main is 04a4fd87, including the merged [combined-worktree change](h
 TOOLING received a go-ahead request to integrate origin/main, resolve integration-only conflicts, bump workmux, rebuild, and rerun the exact new merge-base scan/checks. Also requested a tidy boundary that preserves both published diagnostic head 45bf08b9 and the new main ancestry. No merge, rebase or pushed-history rewrite has occurred. Existing review counts and outcomes remain recorded; no new protocol finding is present. Worker waits only at this named integration gate, with the fixture correction committed and source tree otherwise clean.
 
 A non-mutating branch integration probe, git merge-tree --write-tree HEAD origin/main, completed without conflicts and produced tree 2c46e640b35d57bbdba29ce57ed3b5b96d1a69c9. It changed no refs or worktree files. The signed main merge and forward version update remain pending TOOLING's call; no force or override is needed for the integration.
+
+## Approved main integration and fixed tidy points
+
+TOOLING authorized the signed main merge, integration-only conflict resolution, workmux 1.1.3, rebuild, new-base Semgrep, make test-all and version verification. Tidy must preserve published 45bf08b9 and the signed main merge, regrouping only subsequent unpushed commits and comparing against a pre-tidy backup. Earlier local audit commits remain unchanged.
+
+The fresh fetch advanced main again to e8667c85, including the recursive-review snapshot change. Signed merge 2ce5a04a (verified good signature) incorporates that head. Two conflicts were integration-only: retain both owner-helper copy mappings and the new review-git mapping in bin/build-shared-references, and combine the matching fixture expectations at six copies. No lock implementation changed. The actual origin/main merge base is now e8667c85610d10882e7c33078748c7113b1c4a8e. Workmux is bumped to 1.1.3 and generated mirrors are rebuilt before final checks.
+
+## Final integrated acceptance
+
+The new-baseline Semgrep scan ran in `/tmp/656-integrated-semgrep.diEx1v/repo` at head 0d5d8ddf with SEMGREP_REPO_NAME=cboone/agent-harness-plugins, config auto and baseline e8667c85610d10882e7c33078748c7113b1c4a8e; metrics were not disabled. Exit 0, 131 rules, 18 targets, 0 findings, approximately 86.3% parsed lines, 27 ignored paths. Only Bash partial parsing was reported:
+
+| Bash file                                        | Unparsed spans          | Exact-clone ShellCheck |
+| ------------------------------------------------ | ----------------------- | ---------------------- |
+| bin/build-shared-references                      | lines 60, 61, 80 and 81 | Passed                 |
+| plugins/attention-log/scripts/attention-log      | lines 10 through 820    | Passed                 |
+| plugins/publish-report-board/scripts/bugs-gather | line 961                | Passed                 |
+
+No non-shell partial parsing occurred. This satisfies the relayed shell-only standing exception, with the coverage limitation retained. Raw scan files are in `/tmp/656-integrated-semgrep.diEx1v/`.
+
+Final make test-all exited 0: all 47 documents passed, 1,752 cases succeeded, zero failed and zero skipped. This includes the corrected partial-install case and inherited combined-worktree/submodule tests. The same run passed Markdownlint, Prettier, ShellCheck, shfmt, actionlint, JSON validation, fixture-environment validation and all plugin/mirror checks. Log: `/tmp/656-integrated-test-all.log`.
+
+check-versions is all clear against the actual new merge base: attention-log 1.0.0 to 1.0.1, publish-report-board 1.3.1 to 1.3.2, workmux 1.1.2 to 1.1.3. All 60 catalog entries/directories, manifest semvers and present Codex version mirrors were checked; marketplace has no version property. Log: `/tmp/656-integrated-version-check.log`.
+
+lint-and-fix --no-push result: Status success; lint status success; fixture-convention fixes already committed; unresolved or skipped none. Markdownlint and global Prettier writes were check-only by the explicit Scrut no-reformat policy, with no required check omitted. Parent continuation: fixed-point tidy, push without force, ready PR and green CI. No runtime source change followed the successful integrated suite; only this result record is added and formatted.
+
+Tidy must retain 45bf08b9 and signed merge 2ce5a04a, back up the current tree, regroup only post-merge unpushed changes into logical signed commits, and verify git diff --quiet against that backup. The PR closes the resource-claims lost-update issue and lists the attention-log reclaim race as the known follow-up. TOOLING merges; the worker stops after green checks and its review précis.
