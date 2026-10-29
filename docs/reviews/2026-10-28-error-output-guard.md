@@ -1242,3 +1242,28 @@ backup, rebuilds the unpublished history as signed feature, test and documentati
 commits, and verifies an identical stored tree before publication. No pushed
 history is rewritten. The PR will close the discarded-error-output issue and
 remain for TOOLING to merge.
+
+## Published PR: incoming-main integration stop
+
+The unpublished tidy created three signed commits and verified stored tree
+`cbf9aee10eb0e71de11f617c2d2eccd0cb3f4cd8` identical to the pre-tidy backup.
+Backup branch: `fix/672-guard-error-discards-pre-tidy-20261029191301`.
+Published head `736147778a71db99d4c3774c2ec06b27f5e34361` is open ready for review
+as [the error-output guard PR](https://github.com/cboone/agent-harness-plugins/pull/690).
+No history was rewritten after publication.
+
+GitHub reports CONFLICTING and DIRTY against the newer main; its opening snapshot
+reports no checks. A read-only merge-tree preview against frozen incoming main
+`5205fada80635f7d9dd4a1967c94a256e60a99cb` exits 1 with nine conflict paths.
+[The integration record](2026-10-29-error-output-published-integration-stop.json)
+retains the paths, preview tree, GitHub state and verified local checks.
+
+Main adds a fixed review-fixture manifest check under `--review-paths` in the
+same checker, changes fixture-operand handling and CI coverage, and deletes the
+rollout mkdir stub this branch annotated. Reconciliation must preserve that
+entry point, every fixture rule, the AST guard, new CI coverage and the guard's
+unconditional shfmt dependency. Generated conflicts require regeneration.
+These are reported to TOOLING before selecting an integration or review-base
+continuation. No actual merge or source resolution has begun. The published
+source remains unchanged; this local documentation records the stop without a
+further push. The PR is not green or ready for the final review précis yet.
