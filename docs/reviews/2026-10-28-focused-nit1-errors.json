@@ -1,0 +1,26 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "Recursive calls run compare_scope_trees under `|| die`, which disables Bash errexit throughout the called function. If appending a child path fails because of a quota or filesystem error, the unchecked printf can be followed by successful commands. The helper can then return success with incomplete changed and outside_scope lists, despite the write diagnostic on stderr. The initialization-transition append at line 1133 has the same problem.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "Check both path-record appends explicitly with `|| die`, including the affected path and output filename in the diagnostic.",
+      "line": 1115,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: Recursive path-write failures can produce successful partial reports."
+    },
+    {
+      "confidence": 99,
+      "detail": "For newly included recursive paths such as module/src/file.go, historical_guide still queries module/AGENTS.md using the superproject repository and baseline. Git cannot traverse the gitlink into the child's tree, so the empty result becomes an expected absence rather than a guidance-resolution failure. The prompt reports no historical guide even when the child has mandatory instructions, and review can succeed without applying them.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "Resolve each existing child's trusted revision from the parent baseline gitlink, then load historical guides from that child's object database recursively. Distinguish unavailable guidance from absent guides and report incomplete coverage when resolution fails.",
+      "line": 539,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: Child guidance lookup failures are treated as expected absence."
+    }
+  ],
+  "reviewed": "5fc102fb97bf1883469ab948e6a0889d14aa7b53",
+  "strengths": ["Missing required initialized-child objects preserve Git diagnostics and stop collection.", "Populated uninitialized checkouts fail explicitly instead of silently excluding files.", "Membership mismatches produce explicit gate rejection reasons."],
+  "summary": "Reviewed the full specified committed scope for error handling. Two Important issues remain in recursive failure propagation and historical-guidance lookup. The review was read-only; runtime suites were not run."
+}
