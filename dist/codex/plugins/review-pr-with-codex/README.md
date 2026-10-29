@@ -39,6 +39,8 @@ An aspect whose run failed, timed out, or returned nothing or something unparsea
 
 `simplify` edits files last and alone. It requires explicit selection alongside review aspects, successful selected reviews, no Critical findings and an unchanged review scope. Omitted arguments and `all` never authorize edits. After edits, run relevant project checks and a final read-only review; actionable findings refer to the final snapshot. The report lists measured working-tree changes rather than Codex's account. Nothing is committed or pushed.
 
+Before editing, four independent read-only cleanup reviewers cover reuse, simplification, efficiency and altitude. Altitude checks abstraction levels using this project's checklist. If independent reviewers are unavailable, one inline pass covers every angle and discloses the fallback. The editor deduplicates findings by mechanism, names each concrete cost, and reports skipped fixes with reasons. Cleanup stays separate from correctness review.
+
 ### The report
 
 ```text
