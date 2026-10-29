@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# Guarded helper matrix: HARNESS INVOCATION SCENARIO [print|check].
+# Check mode asserts resource diagnostics; print mode exposes child output.
+# Exits 1 on assertion failure; preserves fixtures only for uncertain launches.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+
+preserve_fixture=no
+
+function cleanup_fixture() {
+  if [[ "${preserve_fixture}" == no && -n "${MATRIX_ROOT:-}" ]]; then
+    rm -r -- "${MATRIX_ROOT}"
+  fi
+}
+
+function interrupt_fixture() {
+  preserve_fixture=yes
+  printf 'matrix: interrupted; fixture retained at %s\n' "${MATRIX_ROOT}" >&2
+  exit "${1}"
+}
+
+function die() {
+  if [[ -n "${output:-}" ]]; then
+    printf '%s\n' "${output}" >&2
+  fi
+  printf 'matrix: %s\n' "${1}" >&2
+  exit 1
+}
+
+function invoke_helper() {
+  local helper="${1}"
+  shift
+  if [[ "${MATRIX_INVOCATION}" == bash ]]; then
+    bash "${helper}" "$@"
+  elif [[ "${MATRIX_INVOCATION}" == symlink ]]; then
+    "${MATRIX_ROOT}/helpers with space/${helper##*/}" "$@"
+  else
+    "${helper}" "$@"
+  fi
+}
+
+function main() {
+  local harness="${1:?}" invocation="${2:?}" scenario="${3:?}" mode="${4:-print}"
+  local fixture tool prompt status=0 claim_output output resource original expected_status=1
+  [[ "${mode}" == print || "${mode}" == check ]] || die 'unknown mode'
+  [[ "${invocation}" == bash || "${invocation}" == executable || "${invocation}" == symlink ]] || die 'unknown invocation'
+  case "${harness}" in
+    'Claude Code' | Codex) ;;
+    *) die 'unknown harness' ;;
+  esac
+  case "${scenario}" in
+    success | guard | log | socket | config | claim | occupied | claim-temp | claim-move | owner-reserve | owner-write | ordinary | disk | auth | generic | generic-lower | generic-typed | config-load | log-home | log-relative | log-no-home | temp-prompt | temp-raw | temp-state | temp-read | temp-render) ;;
+    *) die 'unknown scenario' ;;
+  esac
+  fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+  export MATRIX_ROOT="${fixture}"
+  trap cleanup_fixture EXIT
+  trap 'interrupt_fixture 129' HUP
+  trap 'interrupt_fixture 130' INT
+  trap 'interrupt_fixture 143' TERM
+  export MATRIX_INVOCATION="${invocation}"
+  mkdir "${fixture}/bin" "${fixture}/tmp" "${fixture}/worktree" "${fixture}/helpers with space"
+  local helper
+  for helper in "${COMPOSE_ISSUE_PROMPT_BIN:?}" "${LAUNCH_WORKMUX_BIN:?}" "${MANAGE_RESOURCE_CLAIMS_BIN:?}"; do
+    ln -s "${helper}" "${fixture}/helpers with space/target-${helper##*/}"
+    ln -s "target-${helper##*/}" "${fixture}/helpers with space/${helper##*/}"
+  done
+  for tool in workmux tmux gh mkdir mktemp cat sed ls mv; do
+    cp "${WORKMUX_RESOURCE_STUB_BIN:?}" "${fixture}/bin/${tool}"
+    chmod +x "${fixture}/bin/${tool}"
+  done
+  cp "${WORKTREE_GIT_STUB_BIN:?}" "${fixture}/bin/git"
+  chmod +x "${fixture}/bin/git"
+  if [[ "${scenario}" == guard ]]; then
+    mkdir "${fixture}/other-bin"
+    mv "${fixture}/bin/gh" "${fixture}/other-bin/gh"
+  fi
+  export PATH="${fixture}/bin:${PATH}"
+  if [[ "${scenario}" == guard ]]; then export PATH="${fixture}/bin:${fixture}/other-bin:${PATH}"; fi
+  for tool in workmux tmux gh git mkdir mktemp cat sed ls mv; do
+    [[ "$(command -v "${tool}" || true)" == "${fixture}/bin/${tool}" ]] \
+      || die "refusing to run: ${tool} is not the fixture stub"
+  done
+  unset CODEX_THREAD_ID CLAUDECODE WORKMUX_CALLER_HARNESS TMUX WORKMUX_TMUX TMUX_TMPDIR
+  case "${harness}" in
+    'Claude Code') export CLAUDECODE=1 ;;
+    Codex) export CODEX_THREAD_ID=matrix ;;
+    *) die 'unknown harness' ;;
+  esac
+  export TMPDIR="${fixture}/tmp"
+  unset STUB_STATE STUB_WORKMUX_EXIT STUB_WORKMUX_RELEASE_FIFO STUB_WORKMUX_SLEEP STUB_WORKMUX_SKIP_WORKTREE STUB_GIT_FAIL STUB_GIT_INVALID_REF
+  export STUB_GIT_BRANCHES=''
+  export STUB_GIT_WORKTREE_PORCELAIN_FILE="${fixture}/worktrees"
+  export STUB_GIT_WORKTREE_PORCELAIN=''
+  export WORKMUX_LAUNCH_TIMEOUT_SECONDS=5
+  export WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0
+  export WORKMUX_TMUX="${fixture}/tmux/socket,1,1"
+  export XDG_STATE_HOME="${fixture}/state"
+  export STUB_RESOURCE_SCENARIO=success
+  : > "${STUB_GIT_WORKTREE_PORCELAIN_FILE}"
+  prompt="$(gh issue view 42 | invoke_helper "${COMPOSE_ISSUE_PROMPT_BIN:?}")"
+  [[ "${prompt}" == 'Work on issue #42: Scratch worktree' ]] || die 'prompt did not compose'
+  export STUB_RESOURCE_SCENARIO="${scenario}"
+  case "${scenario}" in
+    log-home)
+      export HOME="${fixture}/home"
+      unset XDG_STATE_HOME
+      ;;
+    log-relative)
+      export HOME="${fixture}/home" XDG_STATE_HOME=relative
+      ;;
+    log-no-home) unset HOME XDG_STATE_HOME ;;
+    *) ;;
+  esac
+  if [[ "${scenario}" == claim || "${scenario}" == occupied || "${scenario}" == owner-reserve || "${scenario}" == owner-write || "${scenario}" == claim-temp || "${scenario}" == claim-move ]]; then
+    export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
+    if [[ "${scenario}" == claim-temp || "${scenario}" == claim-move ]]; then
+      STUB_RESOURCE_SCENARIO=success invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN}" claim held \
+        --worktree "${fixture}/worktree" --branch feature/held > /dev/null
+      cp "${WORKTREE_RESOURCES_FILE}" "${fixture}/before.json"
+    fi
+    if [[ "${scenario}" == occupied ]]; then : > "${WORKTREE_RESOURCES_FILE}.lock"; fi
+    capture_child output --error-stdout invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
+      --worktree "${fixture}/worktree" --branch feature/test > "${fixture}/output" || status=$?
+    if [[ "${scenario}" == claim ]]; then
+      [[ ! -e "${WORKTREE_RESOURCES_FILE}.lock" ]] || die 'denial fixture created a lock'
+    fi
+    if [[ "${scenario}" == claim-temp || "${scenario}" == claim-move ]]; then
+      cmp -s "${fixture}/before.json" "${WORKTREE_RESOURCES_FILE}" || die 'existing claims changed after denied publication'
+      [[ ! -e "${WORKTREE_RESOURCES_FILE}.lock/owner" ]] || die 'owned claim lock left behind'
+      local temporary
+      for temporary in "${WORKTREE_RESOURCES_FILE}."*; do
+        [[ ! -f "${temporary}" ]] || die 'temporary claim file left behind'
+      done
+    fi
+  else
+    export STUB_RESOURCE_SCENARIO="${scenario}"
+    capture_child output --error-stdout invoke_helper "${LAUNCH_WORKMUX_BIN:?}" --generated-name feature/test --issue 42 \
+      --base origin/main --await-completion <<< "${prompt}" > "${fixture}/output" || status=$?
+  fi
+  if [[ "${status}" == 124 ]]; then
+    preserve_fixture=yes
+    die "uncertain launch; fixture retained at ${fixture}"
+  fi
+  if [[ "${scenario}" == success ]]; then
+    [[ "${status}" == 0 ]] || die 'launch failed'
+    [[ "${output##*$'\n'}" == 'Worktree ready: /worktrees/feature-42-test' ]] \
+      || die 'worktree was not confirmed'
+    export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
+    claim_output="$(invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
+      --worktree "${fixture}/worktree" --branch feature/test)"
+    [[ -n "${claim_output}" ]] || die 'claim output missing'
+    jq -e '.claims | length == 1' "${WORKTREE_RESOURCES_FILE}" > /dev/null || die 'claim not recorded'
+    printf '%s %s: compose, launch and claim passed\n' "${harness}" "${invocation}"
+  elif [[ "${mode}" == check ]]; then
+    case "${scenario}" in
+      log | disk)
+        resource="workmux log ${fixture}/state/workmux/workmux.log"
+        original='failed to create initial log file:'
+        ;;
+      log-home | log-relative)
+        resource="workmux log ${fixture}/home/.local/state/workmux/workmux.log"
+        original='failed to create initial log file:'
+        ;;
+      log-no-home)
+        resource='workmux log (default state directory; HOME unset)'
+        original='failed to create initial log file:'
+        ;;
+      socket)
+        resource='tmux socket named in the command output'
+        original="error connecting to ${fixture}/tmux/socket (Operation not permitted)"
+        ;;
+      config | config-load)
+        resource='GitHub CLI config named in the command output'
+        if [[ "${scenario}" == config-load ]]; then
+          original="open ${fixture}/gh/hosts.yml: Permission denied"
+        else
+          original="open ${fixture}/gh/hosts.yml: operation not permitted"
+        fi
+        ;;
+      claim | occupied)
+        resource="claim lock ${fixture}/claims.json.lock"
+        original="cannot create ${fixture}/claims.json.lock"
+        ;;
+      claim-temp | claim-move)
+        resource="claim file ${fixture}/claims.json"
+        if [[ "${scenario}" == claim-temp ]]; then
+          original="cannot write next to ${fixture}/claims.json"
+        else
+          original="cannot replace ${fixture}/claims.json"
+        fi
+        ;;
+      owner-reserve)
+        resource="claim owner lock ${fixture}/claims.json.lock/owner"
+        original="owner-lock: cannot create ${fixture}/claims.json.lock/owner"
+        ;;
+      owner-write)
+        resource="claim owner file ${fixture}/claims.json.lock/owner"
+        original="cannot record the lock owner in ${fixture}/claims.json.lock"
+        ;;
+      generic | generic-lower | generic-typed | auth)
+        resource='resource named in the command output'
+        case "${scenario}" in
+          generic-lower) original='permission denied' ;;
+          generic-typed) original='PermissionDenied' ;;
+          *) original='Permission denied' ;;
+        esac
+        ;;
+      temp-prompt)
+        resource="prompt temporary directory ${fixture}/tmp"
+        original='mktemp: fixture access denied'
+        ;;
+      temp-raw)
+        resource="temporary prompt next to ${fixture}/tmp/workmux-prompt-issue-42.md."
+        original='mktemp: fixture access denied'
+        ;;
+      temp-state)
+        resource="launch state directory ${fixture}/tmp"
+        original='mktemp: fixture access denied'
+        ;;
+      temp-read)
+        resource="prompt input or temporary file ${fixture}/tmp/workmux-prompt-issue-42.md."
+        original='cat: fixture input failure'
+        ;;
+      temp-render)
+        resource="prompt file ${fixture}/tmp/workmux-prompt-issue-42.md."
+        original='sed: fixture output failure'
+        expected_status=2
+        ;;
+      *) die 'unknown denial scenario' ;;
+    esac
+    [[ "${status}" == "${expected_status}" ]] || die 'resource failure exit status changed'
+    [[ "${output}" == *"${harness}: operation failed for ${resource}"* ]] || die 'harness/resource diagnostic missing'
+    [[ "${output}" == *"${original}"* ]] || die 'original resource error missing'
+    [[ "${output}" != *'Use the host approval flow'* ]] || die 'error prescribed an approval'
+    if [[ "${scenario}" == temp-* ]]; then
+      [[ -z "$(ls -A "${fixture}/tmp")" ]] || die 'prompt files left after failed creation'
+    fi
+    printf '%s %s %s: resource, harness and failure retained\n' "${harness}" "${invocation}" "${scenario}"
+  else
+    sed "s|${fixture}|FIXTURE|g" "${fixture}/output"
+    printf 'exit: %s\n' "${status}"
+  fi
+}
+
+main "$@"

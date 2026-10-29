@@ -256,7 +256,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims"
 
 These show the path form only. The runnable invocations, with their arguments, are further down.
 
-Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
+Before this file reaches you, Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory. No search or shell variable is needed. Use the documented invocation when checking command permissions in the active harness. A command permission does not establish access to files, sockets or the network. Do not assume `sandbox.excludedCommands`, a matching command name or a permitted child command exempts a wrapper or pipeline from the sandbox. If access is denied, report the harness, the command and the resource named in the error; stop dependent steps and use the host's approval flow only when authorized. Never add a broad shell exemption or change user settings to make the helper run.
 
 **If the paths were not substituted**, they still begin with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands. In that case locate the scripts with `**/workmux/**/scripts/compose-issue-prompt`, `**/workmux/**/scripts/launch-workmux` and `**/workmux/**/scripts/manage-resource-claims`, prefer matches inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm each with `test -x`, and use those absolute paths for the rest of the session.
 
@@ -416,6 +416,7 @@ Give the error text for any issue that failed, and the state directory for an un
 
 ## Error Handling
 
+- For an access failure, report the calling harness and the exact resource named in the error: workmux's log, the tmux socket, gh configuration, Git metadata, the destination or the claim file. Retain the original error. Do not retry a blocked command without authorization through the host's approval flow. Stop dependent steps; preserve the existing best-effort status marking, advisory claim-write and fan-out failure rules. Do not add a command exemption or change settings. A denied gh config read is not an authentication failure. The prompt composer reads stdin and jq only, so a failed gh query must be handled before composing or launching.
 - If `gh` is not authenticated, instruct the user to run `gh auth login`
 - If `workmux` is not installed, inform the user
 - If the launcher rejects the candidate, revise it in this session using the naming rules and retry with `--generated-name "CANDIDATE"`. For obsolete `--auto-name` errors, switch to this interface; do not invoke a naming command.

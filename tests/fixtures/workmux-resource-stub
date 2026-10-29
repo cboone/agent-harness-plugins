@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# Stub commands to test launches and resource failures without live services.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+
+function main() {
+  local tool
+  tool="$(basename "$0")"
+  case "${tool}" in
+    workmux)
+      case "${STUB_RESOURCE_SCENARIO:-success}" in
+        log | log-home | log-relative | log-no-home)
+          printf 'initializing rolling file appender failed: failed to create initial log file: PermissionDenied\n' >&2
+          exit 101
+          ;;
+        disk)
+          printf 'failed to create initial log file: No space left on device\n' >&2
+          exit 1
+          ;;
+        generic)
+          printf 'Permission denied: %s\n' "${MATRIX_ROOT:?}/resource" >&2
+          exit 1
+          ;;
+        generic-lower)
+          printf 'permission denied: %s\n' "${MATRIX_ROOT:?}/resource" >&2
+          exit 1
+          ;;
+        generic-typed)
+          printf 'PermissionDenied: %s\n' "${MATRIX_ROOT:?}/resource" >&2
+          exit 1
+          ;;
+        auth)
+          printf 'git@github.com: Permission denied (publickey).\n' >&2
+          exit 1
+          ;;
+        socket) exec tmux list-sessions ;;
+        config | config-load) exec gh config get editor ;;
+        ordinary)
+          printf 'workmux: unsupported configuration\n' >&2
+          exit 2
+          ;;
+        success) exec "${WORKMUX_STUB_BIN:?}" "$@" ;;
+        *) exit 2 ;;
+      esac
+      ;;
+    tmux)
+      printf 'error connecting to %s (Operation not permitted)\n' "${MATRIX_ROOT:?}/tmux/socket" >&2
+      exit 1
+      ;;
+    gh)
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == config || "${STUB_RESOURCE_SCENARIO:-success}" == config-load ]]; then
+        if [[ "${STUB_RESOURCE_SCENARIO}" == config-load ]]; then
+          printf 'failed to load config: open %s: Permission denied\n' "${MATRIX_ROOT:?}/gh/hosts.yml" >&2
+          exit 1
+        fi
+        printf 'failed to read configuration: open %s: operation not permitted\n' "${MATRIX_ROOT:?}/gh/hosts.yml" >&2
+        exit 1
+      fi
+      [[ "${1:-}" == issue && "${2:-}" == view ]] || exit 2
+      printf '{"number":42,"title":"Scratch worktree","labels":[],"body":"","state":"OPEN"}\n'
+      ;;
+    mkdir)
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == claim ]]; then
+        local argument
+        for argument in "$@"; do
+          if [[ "${argument}" == "${MATRIX_ROOT:?}/claims.json.lock" ]]; then
+            printf 'mkdir: fixture access denied: %s\n' "${argument}" >&2
+            exit 1
+          fi
+        done
+      fi
+      exec /bin/mkdir "$@"
+      ;;
+    mktemp)
+      case "${STUB_RESOURCE_SCENARIO:-success}:${*}" in
+        temp-prompt:*workmux-prompt-*.md.XXXXXX | temp-raw:*.raw.XXXXXX | temp-state:*workmux-launch-* | owner-reserve:*claims.json.lock/owner.diagnostic.XXXXXX | claim-temp:*claims.json.XXXXXX)
+          printf 'mktemp: fixture access denied\n' >&2
+          exit 1
+          ;;
+        *) exec /usr/bin/mktemp "$@" ;;
+      esac
+      ;;
+    cat)
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == temp-read && $# -eq 0 ]]; then
+        printf 'cat: fixture input failure\n' >&2
+        exit 1
+      fi
+      exec /bin/cat "$@"
+      ;;
+    sed)
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == temp-render && "${1:-}" == -e ]]; then
+        printf 'sed: fixture output failure\n' >&2
+        exit 2
+      fi
+      exec /usr/bin/sed "$@"
+      ;;
+    mv)
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == claim-move ]]; then
+        local argument
+        for argument in "$@"; do
+          if [[ "${argument}" == "${MATRIX_ROOT:?}/claims.json" ]]; then
+            printf 'mv: fixture replacement denied: %s\n' "${argument}" >&2
+            exit 1
+          fi
+        done
+      fi
+      exec /bin/mv "$@"
+      ;;
+    ls)
+      /bin/ls "$@"
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == owner-write && "${*}" == *'/dev/fd/8' ]]; then
+        chmod 400 "${MATRIX_ROOT:?}/claims.json.lock/owner"
+      fi
+      ;;
+    *) exit 2 ;;
+  esac
+}
+
+main "$@"

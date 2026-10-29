@@ -27,6 +27,8 @@ function owner_lock_script_directory() {
 OWNER_LOCK_LIBRARY_DIRECTORY="$(owner_lock_script_directory)"
 # shellcheck source=plugins/workmux/scripts/owner-lock.bash
 source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
+# shellcheck source=plugins/workmux/scripts/resource-diagnostics.bash
+source "${OWNER_LOCK_LIBRARY_DIRECTORY}/resource-diagnostics.bash"
 unset OWNER_LOCK_LIBRARY_DIRECTORY
 
 SCRIPT_NAME="$(basename "$0")"
@@ -106,6 +108,11 @@ USAGE_TEXT
 function die() {
   echo "${SCRIPT_NAME}: ${1}" >&2
   exit "${2:-1}"
+}
+
+function resource_die() {
+  workmux_resource_failure "${1}"
+  die "${2}"
 }
 
 # Identifies one claim event. A timestamp cannot: it has second resolution, so
@@ -292,7 +299,7 @@ function read_claims() {
   fi
 
   if [[ ! -r "${file}" ]]; then
-    die "${file} exists but cannot be read"
+    resource_die "claim file ${file}" "${file} exists but cannot be read"
   fi
 
   # Every inspection below hands the file to jq by path. Command substitution
@@ -428,7 +435,7 @@ function try_acquire_lock() {
     LOCK_DIRECTORY="${lock}"
     trap 'release_lock || exit 1' EXIT
     printf '%s' "$$" > "${lock}/owner" \
-      || die "cannot record the lock owner in ${lock}"
+      || resource_die "claim owner file ${lock}/owner" "cannot record the lock owner in ${lock}"
     return 0
   else
     result=$?
@@ -443,7 +450,7 @@ function acquire_lock() {
 
   directory="$(dirname "${file}")"
   mkdir -p "${lock}" \
-    || die "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
+    || resource_die "claim lock ${lock}" "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
 
   while :; do
     if try_acquire_lock "${lock}"; then
@@ -451,7 +458,10 @@ function acquire_lock() {
     else
       result=$?
     fi
-    ((result == 1)) || exit 1
+    if ((result != 1)); then
+      workmux_resource_failure "claim owner lock ${lock}/owner"
+      exit 1
+    fi
     if ((waited >= LOCK_WAIT_SECONDS)); then
       die "$(held_lock_report "${lock}")"
     fi
@@ -470,9 +480,9 @@ function write_claims() {
   local directory temp_file
 
   directory="$(dirname "${file}")"
-  mkdir -p "${directory}" || die "cannot create ${directory}"
+  mkdir -p "${directory}" || resource_die "claim directory ${directory}" "cannot create ${directory}"
 
-  temp_file="$(mktemp "${file}.XXXXXX")" || die "cannot write next to ${file}"
+  temp_file="$(mktemp "${file}.XXXXXX")" || resource_die "claim file ${file}" "cannot write next to ${file}"
 
   if ! jq -n --argjson claims "${claims}" --argjson version "${SCHEMA_VERSION}" \
     '{version: $version, claims: ($claims | map(del(.stale)))}' > "${temp_file}"; then
@@ -482,7 +492,7 @@ function write_claims() {
 
   if ! mv "${temp_file}" "${file}"; then
     rm -f "${temp_file}"
-    die "cannot replace ${file}"
+    resource_die "claim file ${file}" "cannot replace ${file}"
   fi
 }
 

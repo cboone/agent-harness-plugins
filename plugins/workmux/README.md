@@ -91,9 +91,39 @@ Where a project declares its resources under an "exclusive resources" heading in
 
 Without either flag, the destination uses the global workmux agent, subject to repository config, regardless of the invoking agent. A live run with workmux `0.1.277` showed that `--config` replaces `.workmux.yaml` and still merges global config: an agent-only profile omitted repository hooks, copies and symlinks. A complete profile inside the repository applied its own hook and file operations; an identical external profile omitted files whose sources existed only in the repository. Include needed settings and verify file source paths and provisioned files, or use `--agent` to retain repository setup. These options apply to both skills, including combined and fan-out launches.
 
+### Sandbox and resource access
+
+Command approval and resource access are separate. Keep the documented helper
+invocation; neither a permitted child command nor `sandbox.excludedCommands`
+establishes that a wrapper or pipeline can access a resource in either harness.
+Do not exclude `bash` to run these helpers.
+
+The launch needs writes to the worktree destination and shared Git metadata,
+the workmux log (`$XDG_STATE_HOME/workmux/workmux.log`, defaulting to
+`~/.local/state/workmux/workmux.log`), and access to the selected tmux socket.
+Issue queries also need GitHub network access and readable gh configuration.
+Claim updates need the main worktree's `.claude/worktree-resources.local.json`
+and its adjacent lock and temporary files. Temporary prompt and launch files
+use `${TMPDIR:-/tmp}`. The prompt composer itself reads only its input and
+uses jq; it does not run gh, workmux or tmux.
+
+The helper labels the failed operation and caller without guessing its cause. On an access failure, retain the original error and report the calling harness
+and named resource. A `Generated branch name:` line does not confirm creation.
+Use the host's approval flow for the specific command only when authorized;
+otherwise stop and preserve the failed or uncertain launch state. Never change
+user settings to make the helper run, and do not retry a timed-out launch while
+its child may still be running. Permission-denied gh configuration reads are
+resource failures, not evidence that login credentials need replacing.
+
+The helpers identify the caller from `CODEX_THREAD_ID` or `CLAUDECODE`. When both
+are present they report a nested environment; when neither is present they
+report an unidentified harness. `WORKMUX_CALLER_HARNESS=Codex` or
+`WORKMUX_CALLER_HARNESS='Claude Code'` can identify an embedding caller for
+diagnostics. This variable grants no access and changes no sandbox policy.
+
 ### Recommended Permissions
 
-This skill runs workmux, git, and (for the issue path) GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+This skill runs workmux, git, and (for the issue path) GitHub CLI commands that trigger permission prompts. The following optional Claude Code rules concern command approval only; they do not grant filesystem, socket or network access. Codex uses its own command policy. To configure these rules separately from running the skill, add them to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
@@ -179,7 +209,7 @@ With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its
 
 ### Recommended Permissions
 
-This skill runs GitHub CLI, workmux, and git commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+These optional Claude Code rules concern command approval only; they do not grant filesystem, socket or network access. Codex uses its own command policy. Read [Sandbox and resource access](#sandbox-and-resource-access) before configuring these rules separately from running the skill in `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
