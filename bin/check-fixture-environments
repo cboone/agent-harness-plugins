@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
-# Check Git environment resets in tests and repository tooling.
+# Check fixture Git resets; --review-paths checks a fixed review-fixture manifest.
 set -euo pipefail
 
 # shellcheck source=bin/lib/git-environment.bash
 source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
 
 function main() {
+  if [[ "${1:-}" == --review-paths ]]; then
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    export REPO_ROOT
+    # shellcheck source=tests/fixtures/review-fixture-paths.bash
+    source "${REPO_ROOT}/tests/fixtures/review-fixture-paths.bash"
+    shift
+    check_review_fixture_paths "$@"
+    return
+  fi
   local root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}" file scripts documents workflows first_line
   local -a files=(Makefile)
   cd "${root}"

@@ -166,6 +166,7 @@ lint-shell:
 	@command -v shfmt > /dev/null || { echo "shfmt is required: https://github.com/mvdan/sh" >&2; exit 1; }
 	shellcheck $(SHELL_SCRIPTS)
 	shfmt -d $(SHELL_SCRIPTS)
+	bin/check-fixture-environments --review-paths
 
 format:
 	yarn lint:fix
