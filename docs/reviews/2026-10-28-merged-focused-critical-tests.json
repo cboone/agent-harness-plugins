@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Criticality 7/10. The recursive prompt case checks only that a nested diff command appears; existing historical-guidance tests use a single repository. No fixture supplies child instructions. Consequently, render_guides can omit module/AGENTS.md by looking it up in the superproject's object database while all prompt assertions pass, allowing review without required child checks.",
+      "file": "tests/scrut/review-scope-submodules.md",
+      "fix": "Add child and nested historical-guide fixtures alongside the resolution fix. Assert inclusion of instructions from the trusted parent gitlink revisions and exclusion of changed checkout instructions.",
+      "line": 91,
+      "severity": "important",
+      "title": "write-scrut-tests: Structured output checks omit historical child guidance."
+    }
+  ],
+  "reviewed": "00f501bd558884e6e55f32500c754a5fd415096f",
+  "strengths": ["Fixtures compare stored digest membership with prompts, validation, changes, gates and symlink discovery.", "Coverage includes nested edits, staged-only content, precise gitlink membership and unrelated-file rejection.", "Negative cases cover missing objects, malformed membership, mismatched or missing status membership, concurrent child mutation and path-record write failures.", "Existing integration tests cover reviewer failures, concurrent aspects, cancellation and rename reporting."],
+  "summary": "Reviewed the full specified committed scope and mapped changed behavior to added and existing tests. Coverage is broad, with one important gap in historical child guidance. Runtime suites were not executed because their fixtures create and delete files."
+}
