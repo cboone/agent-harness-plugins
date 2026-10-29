@@ -1,0 +1,17 @@
+{
+  "aspect": "code",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Recursive review now includes paths such as module/src/file.go, but render_guides still resolves module/AGENTS.md using the superproject's baseline and object database. Git cannot traverse that gitlink, so mandatory child instructions are silently omitted. The prompt also prohibits loading checkout instructions, allowing review to succeed without applying the child's required checks. This is the known deferred historical-guidance defect.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "Resolve each child's trusted revision from the parent baseline gitlink and load historical guides from the child's object database recursively. Explicitly handle absent baseline children and unavailable required objects.",
+      "line": 448,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: Recursive guide lookup silently omits historical child instructions."
+    }
+  ],
+  "reviewed": "0fdf085555b9350c44f31ebd7629836b4b0ceb29",
+  "strengths": ["Canonical membership keeps scope collection and consumers consistent.", "Regression fixtures cover nested edits, staged content, symlink replacements and membership rejection."],
+  "summary": "Reviewed the complete committed scope under the trusted guidelines; one Important historical-guidance defect remains. Bash syntax checks and shared-copy comparisons passed. Runtime suites were not run because their fixtures create files."
+}

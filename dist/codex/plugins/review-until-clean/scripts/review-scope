@@ -9,6 +9,10 @@ shopt -s inherit_errexit 2> /dev/null || true
 
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
+SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd -P)/${SCRIPT_NAME}"
+readonly SCRIPT_PATH
+# shellcheck source=plugins/review-until-clean/scripts/review-git.bash
+source "$(dirname "${SCRIPT_PATH}")/review-git.bash"
 
 # Set once the temporary index directory exists. The EXIT trap runs after main
 # returns, so this cannot be one of main's locals.
@@ -28,6 +32,8 @@ function usage() {
   cat << 'USAGETEXT'
 Usage: review-scope [--base <ref>]
        review-scope --schema
+       review-scope --membership <scope.json>
+       review-scope --symlinks <scope.json>
 
 Print one JSON object describing every local change and a snapshot identifier
 bound to their content: committed branch changes, staged changes, unstaged
@@ -42,6 +48,8 @@ Options:
   --base <ref>  Take the merge base with this ref instead of with the default
                 branch; committed changes are those from the merge base to HEAD
   --schema      Print review-until-clean's findings schema and exit
+  --membership <file>  Print the captured canonical path records
+  --symlinks <file>    Describe links from canonical membership without following targets
   -h, --help    Show this help
 USAGETEXT
 }
@@ -295,20 +303,70 @@ function write_empty_bucket() {
 # never refreshed or rewritten by this read.
 function index_digest() {
   local output="${1}"
-  git --no-optional-locks ls-files --stage -z > "${output}" \
+  review_git --no-optional-locks ls-files --stage -z > "${output}" \
     || die "could not read the index entries"
   git hash-object "${output}" || die "could not hash the index entries"
 }
 
+# Capture gitlinks from the real and disk indexes, including retained
+# checkouts staged for deletion and untracked embedded repositories. Each
+# child runs the same stability checks in its own temporary directory. An
+# uninitialized, empty checkout has only the gitlink as review input.
+function collect_submodules() {
+  local output="${1}" entries="${2}" disk_index="${3}"
+  local path child root child_repo
+  review_git ls-files --stage -z > "${entries}" || die "could not list submodules"
+  GIT_INDEX_FILE="${disk_index}" review_git ls-files --stage -z >> "${entries}" \
+    || die "could not list working-tree submodules"
+  jq -jRs 'split("\u0000") | map(select(startswith("160000 "))
+    | .[index("\t") + 1:]) | unique[] | ., "\u0000"' "${entries}" > "${entries}.paths" \
+    || die "could not extract submodule paths"
+  : > "${output}.jsonl"
+  while IFS= read -r -d '' path; do
+    child_repo="${top_level}/${path}"
+    if review_has_non_directory_parent "${top_level}" "${path}"; then continue; fi
+    # Non-directory replacements belong to the parent tree, not a checkout.
+    [[ ! -L "${child_repo}" ]] || continue
+    if [[ -e "${child_repo}" && ! -d "${child_repo}" ]]; then continue; fi
+    if [[ -e "${child_repo}/.git" ]]; then
+      root="$(git -C "${child_repo}" rev-parse --show-toplevel)" \
+        || die "could not resolve submodule: ${path}"
+      [[ "${root}" == "$(cd "${child_repo}" && pwd -P)" ]] \
+        || die "submodule resolves to another working tree: ${path}"
+      (cd "${child_repo}" && "${SCRIPT_PATH}" --base HEAD) > "${output}.child" \
+        || die "could not snapshot submodule: ${path}"
+      jq -cn --arg path "${path}" --slurpfile scope "${output}.child" \
+        '{path: $path, initialized: true, scope: $scope[0]}' >> "${output}.jsonl" \
+        || die "could not record submodule: ${path}"
+    else
+      if [[ -d "${child_repo}" ]]; then
+        child="$(find "${child_repo}" -mindepth 1 -print -quit)" \
+          || die "could not inspect uninitialized submodule: ${path}"
+        [[ -z "${child}" ]] || die "uninitialized submodule contains files: ${path}"
+      fi
+      jq -cn --arg path "${path}" '{path: $path, initialized: false}' \
+        >> "${output}.jsonl" || die "could not record submodule: ${path}"
+    fi
+  done < "${entries}.paths"
+  jq -s 'sort_by(.path)' "${output}.jsonl" > "${output}" \
+    || die "could not collect submodule records"
+}
+
 function main() {
   local requested_base=""
-  local mode="scope"
+  local mode="scope" captured=""
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       -h | --help)
         usage
         exit 0
+        ;;
+      --membership | --symlinks)
+        [[ $# -ge 2 && -n "${2}" ]] || die "${1} requires a captured scope file"
+        mode="${1#--}"
+        captured="${2}"
+        shift 2
         ;;
       --schema)
         mode="schema"
@@ -333,18 +391,31 @@ function main() {
     return 0
   fi
 
-  require_command git
   require_command jq
+  if [[ "${mode}" == membership ]]; then
+    review_read_membership "${captured}"
+    return
+  fi
+  if [[ "${mode}" == symlinks ]]; then
+    require_command git
+    local discovery_root
+    discovery_root="$(git rev-parse --show-toplevel)" || die "could not resolve discovery root"
+    TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/review-links.XXXXXX")" || die "could not create discovery workspace"
+    local discovery_temp
+    discovery_temp="$(cd "${TMP_DIR}" && pwd -P)" || die "could not resolve discovery workspace"
+    [[ "${discovery_temp}" != "${discovery_root}" && "${discovery_temp}" != "${discovery_root}/"* ]] \
+      || die "TMPDIR must point outside the working tree"
+    review_symlinks "${captured}" "${discovery_root}" "${TMP_DIR}"
+    return
+  fi
+  require_command git
 
   git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
     || die "not inside a git work tree"
 
-  # Run from the top level. `git ls-files` is scoped to the current directory
-  # and prints cwd-relative paths, while `git diff` is whole-tree and prints
-  # repository-relative ones. Called from a subdirectory the two disagree, so
-  # untracked files above it vanish from the scope while the whole-tree digest
-  # still covers them: the loop would bank a clean result over code no reviewer
-  # was shown, and the paths it did report would not resolve from the root.
+  # Run from the repository root so ls-files includes every untracked path
+  # and uses the same repository-relative paths as diff.
+
   local top_level
   top_level="$(git rev-parse --show-toplevel)" \
     || die "could not resolve the repository top level"
@@ -424,18 +495,13 @@ function main() {
   index_before="$(index_digest "${TMP_DIR}/index-before.records")"
   tree="$(working_tree_digest "${TMP_DIR}/index")"
 
+  collect_submodules "${TMP_DIR}/submodules.json" "${TMP_DIR}/gitlinks" "${TMP_DIR}/index"
+
   # Each bucket goes to a file rather than into a jq argument. A large scope
   # makes the combined argument list exceed the execve limit, and on Linux a
   # single argument is capped far lower than the total, so a few thousand
   # untracked paths would abort the run with a raw shell error and no JSON.
-  if [[ -n "${merge_base}" && "${merge_base}" != "${head}" ]]; then
-    write_bucket committed git diff -z --name-only "${merge_base}" "${head}"
-  else
-    write_empty_bucket committed
-  fi
-  write_bucket staged git diff -z --cached --name-only
-  write_bucket unstaged git diff -z --name-only
-  write_bucket untracked git ls-files -z --others --exclude-standard
+  review_build_membership "${top_level}" "${TMP_DIR}" "${merge_base}" "${head}"
 
   # Read inside the bracket like the others, because it is another read of the
   # working tree and the guard below is only sound over one state. It compares
@@ -444,13 +510,16 @@ function main() {
   # and staging a file and then editing it back to its committed content fills
   # both while leaving the tree identical to HEAD, which is a legitimate state
   # this guard must not reject.
-  write_bucket worktree_vs_head git diff -z --name-only HEAD
+  write_bucket worktree_vs_head review_diff -z --name-only HEAD
 
   # The closing half of the bracket. A second index file is used rather than
   # reusing the first, so this is a genuinely independent read of the tree and
   # not a report on whatever the earlier run left behind.
   local tree_after
   tree_after="$(working_tree_digest "${TMP_DIR}/index-recheck")"
+  collect_submodules "${TMP_DIR}/submodules-after.json" "${TMP_DIR}/gitlinks-after" "${TMP_DIR}/index-recheck"
+  cmp -s "${TMP_DIR}/submodules.json" "${TMP_DIR}/submodules-after.json" \
+    || die "submodules changed while the scope was being read; rerun once settled"
   [[ "${tree_after}" == "${tree}" ]] \
     || die "the working tree changed while the scope was being read, so the file lists and the snapshot may describe different states; rerun once it has settled"
 
@@ -469,23 +538,10 @@ function main() {
   [[ "${index_before}" == "${index_after}" && "${head}" == "${head_after}" && "${base_tip}" == "${base_tip_after}" ]] \
     || die "the index, HEAD or base changed while the scope was being read; rerun once it has settled"
 
-  # Hash a canonical record of every review input, not the path's current
-  # bucket alone or the disk tree alone. Partly staged content is review input
-  # even when it never appears on disk.
-  digest="$(jq -cSn \
-    --arg head "${head}" --arg base "${merge_base}" --arg base_tip "${base_tip}" \
-    --arg tree "${tree}" --arg index "${index_before}" \
-    --slurpfile committed "${TMP_DIR}/committed.json" \
-    --slurpfile staged "${TMP_DIR}/staged.json" \
-    --slurpfile unstaged "${TMP_DIR}/unstaged.json" \
-    --slurpfile untracked "${TMP_DIR}/untracked.json" \
-    '{head: $head, base: $base, base_tip: $base_tip, tree: $tree, index: $index,
-      committed: $committed[0], staged: $staged[0], unstaged: $unstaged[0], untracked: $untracked[0]}' \
-    | git hash-object --stdin)"
-
-  # The tree must differ from HEAD's when worktree_vs_head or untracked paths
-  # differ. Staged and unstaged changes alone can cancel out on disk, so those
-  # buckets cannot establish this premise.
+  # The parent tree must differ when ordinary disk paths differ. Submodule
+  # directories have independent recursive records, and a retained checkout
+  # staged for deletion can leave the parent tree equal to HEAD. Staged and
+  # unstaged changes can cancel on disk, so their buckets do not prove a change.
   #
   # The committed bucket is deliberately excluded: a branch with commits ahead
   # of its base and a clean working tree legitimately has HEAD's own tree.
@@ -495,15 +551,34 @@ function main() {
 
   local worktree_differs
   worktree_differs="$(jq -n \
+    --slurpfile submodules "${TMP_DIR}/submodules.json" \
     --slurpfile changed "${TMP_DIR}/worktree_vs_head.json" \
-    --slurpfile untracked "${TMP_DIR}/untracked.json" \
-    '((($changed[0] + $untracked[0]) | length) > 0)')"
+    --slurpfile untracked "${TMP_DIR}/untracked-parent.json" \
+    '($submodules[0] | map(.path)) as $links
+    | [$changed[0][], $untracked[0][]
+       | . as $path | select(($links | index($path | rtrimstr("/"))) == null)]
+    | length > 0')"
 
   if [[ "${worktree_differs}" == "true" && "${tree}" == "${head_tree}" ]]; then
     die "the working-tree digest equals HEAD's tree while paths on disk differ from HEAD; the snapshot does not describe what is on disk"
   fi
 
+  # Hash a canonical record of every review input, not the path's current
+  # bucket alone or the disk tree alone. Partly staged content is review input
+  # even when it never appears on disk.
+  digest="$(jq -cSn \
+    --arg head "${head}" --arg base "${merge_base}" --arg base_tip "${base_tip}" \
+    --arg tree "${tree}" --arg index "${index_before}" \
+    --slurpfile submodules "${TMP_DIR}/submodules.json" --slurpfile files "${TMP_DIR}/files.json" \
+    --slurpfile membership "${TMP_DIR}/membership.json" \
+    '{head: $head, base: $base, base_tip: $base_tip, tree: $tree, index: $index,
+      submodules: $submodules[0], files: $files[0], membership: $membership[0]}' \
+    | git hash-object -w --stdin)"
+
   jq -n \
+    --slurpfile membership "${TMP_DIR}/membership.json" \
+    --slurpfile files "${TMP_DIR}/files.json" \
+    --slurpfile submodules "${TMP_DIR}/submodules.json" \
     --arg head "${head}" \
     --arg base_ref "${base_ref}" \
     --arg base "${merge_base}" \
@@ -513,11 +588,7 @@ function main() {
     --arg index "${index_before}" \
     --arg base_tip "${base_tip}" \
     --arg snapshot "${digest}" \
-    --slurpfile committed "${TMP_DIR}/committed.json" \
-    --slurpfile staged "${TMP_DIR}/staged.json" \
-    --slurpfile unstaged "${TMP_DIR}/unstaged.json" \
-    --slurpfile untracked "${TMP_DIR}/untracked.json" \
-    '{
+    "${REVIEW_MEMBERSHIP_DEFS}"'{
       head: $head,
       base_ref: (if $base_ref == "" then null else $base_ref end),
       base: (if $base == "" then null else $base end),
@@ -527,12 +598,10 @@ function main() {
       index: $index,
       base_tip: (if $base_tip == "" then null else $base_tip end),
       snapshot: $snapshot,
-      committed: $committed[0],
-      staged: $staged[0],
-      unstaged: $unstaged[0],
-      untracked: $untracked[0],
-      empty: ((($committed[0] + $staged[0] + $unstaged[0] + $untracked[0]) | length) == 0)
-    }'
+      submodules: $submodules[0],
+      files: $files[0],
+      membership: $membership[0]
+    } | review_bucket_views'
 }
 
 main "$@"

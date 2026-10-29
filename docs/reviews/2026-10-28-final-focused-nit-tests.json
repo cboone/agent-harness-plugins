@@ -1,0 +1,26 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Criticality 7/10. The recursive prompt fixture checks only that a nested diff command appears, while existing historical-guidance tests use a single repository. No fixture supplies distinct historical child instructions. Consequently, the current root-only guide lookup silently omits module/AGENTS.md while every prompt assertion passes, allowing review without mandatory child checks.",
+      "file": "tests/scrut/review-scope-submodules.md",
+      "fix": "Add child and nested historical-guide fixtures that assert inclusion from the trusted parent gitlink revision and exclusion of changed checkout instructions, alongside the guide-resolution fix.",
+      "line": 85,
+      "severity": "important",
+      "title": "write-scrut-tests: Structured output checks omit historical child guidance."
+    },
+    {
+      "confidence": 98,
+      "detail": "Criticality 7/10. The contract assertion tests changed membership in --after, but always supplies statuses with matching membership_paths. No negative case exercises the new status-membership rejection. Removing that guard would leave these assertions satisfied while permitting a successful status from another scope to authorize simplification.",
+      "file": "tests/fixtures/review-submodule-fixture",
+      "fix": "Keep scopes, snapshots and results unchanged, alter only a successful status's membership_paths, and assert that the gate rejects it with the status-membership mismatch reason. Also cover a missing membership_paths field.",
+      "line": 46,
+      "severity": "important",
+      "title": "write-scrut-tests: Structured output checks lack status-membership rejection coverage."
+    }
+  ],
+  "reviewed": "4bf2d596dd5361d0b3a6653b3e926dd201d44056",
+  "strengths": ["Fixtures connect stored digest membership to prompts, validation, change reporting, gates and symlink discovery.", "Coverage includes nested edits, staged content with restored disk bytes, exact gitlink membership and unrelated-file rejection.", "Deterministic mutation and write-failure fixtures require unsuccessful exit and empty output.", "Existing integration tests cover index preservation, reviewer failures, concurrent aspects and cancellation."],
+  "summary": "Reviewed the complete specified committed scope and mapped changed behavior to added and existing tests. Coverage is broad, with two important gaps in historical child guidance and status-membership rejection. Suites were not executed because their fixtures create and remove files."
+}

@@ -13,6 +13,8 @@ readonly SCRIPT_NAME
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
 ASPECTS_DIR="${CODEX_ASPECTS_DIR:-${SCRIPT_DIR}/../skills/review-pr-with-codex/references/aspects}"
 readonly SCRIPT_DIR ASPECTS_DIR
+# shellcheck source=plugins/review-pr-with-codex/scripts/review-git.bash
+source "${SCRIPT_DIR}/review-git.bash"
 
 KNOWN_ASPECTS=(code errors tests comments types simplify)
 readonly KNOWN_ASPECTS
@@ -38,7 +40,8 @@ EXIT_CANCELLATION_INCOMPLETE=4
 readonly EXIT_CANCELLATION_INCOMPLETE
 
 # The diff arguments the prompt tells reviewers to run. See render_scope.
-PROMPT_GIT_DIFF_ARGS="diff --no-ext-diff --no-textconv --no-color --no-relative"
+PROMPT_GIT_DIFF_ARGS="$(review_prompt_diff_args)"
+PROMPT_GIT_DIFF_ARGS="${PROMPT_GIT_DIFF_ARGS% }"
 readonly PROMPT_GIT_DIFF_ARGS
 
 # The `codex exec` processes `run` has started and not yet waited for. Global,
@@ -200,14 +203,7 @@ function require_value() {
 # - safe_path: relative_path, and also no leading `~` and no backslash. A
 #   finding's path is reviewer output that someone will act on, so it gets the
 #   stricter rule, matching the schema's pattern.
-JQ_PATH_DEFS='
-  def relative_path:
-    type == "string" and length > 0
-    and (startswith("/") | not)
-    and (split("/") | all(. != "" and . != "." and . != ".."));
-  def safe_path:
-    relative_path and (startswith("~") | not) and (test("\\\\") | not);
-'
+JQ_PATH_DEFS="${REVIEW_PATH_DEFS}"
 readonly JQ_PATH_DEFS
 
 function require_command() {
@@ -248,22 +244,22 @@ function require_scope_file() {
   # - Every path is repository-relative, since the prompt tells the reviewer to
   #   read untracked paths by name and `../` would point it outside the
   #   repository.
-  jq -e -n "${JQ_PATH_DEFS}"'
+  jq -e -n "${REVIEW_MEMBERSHIP_DEFS}"'
     def paths: type == "array" and all(relative_path);
-    [inputs] as $values
-    | ($values | length) == 1
-    and ($values[0]
-      | type == "object"
+    def valid_scope:
+      type == "object"
       and (.head | type == "string" and length > 0)
       and (.base == null or (.base | type == "string" and length > 0))
       and (.snapshot | type == "string" and length > 0)
       and (.tree | type == "string" and length > 0)
       and (.index | type == "string" and length > 0)
-      and (.committed | paths)
-      and (.staged | paths)
-      and (.unstaged | paths)
-      and (.untracked | paths)
-      and ((.committed | length) == 0 or .base != null))
+      and review_membership_valid
+      and ((.committed | length) == 0 or .base != null)
+      and ((.submodules // []) | type == "array" and all(
+        (.path | relative_path) and (.initialized | type == "boolean")
+        and (if .initialized then .scope | valid_scope else true end)));
+    [inputs] as $values
+    | ($values | length) == 1 and ($values[0] | valid_scope)
   ' "${scope}" > /dev/null 2>&1 \
     || die "scope file '${scope}' is not review-scope output"
 }
@@ -382,7 +378,7 @@ readonly VALIDATE_DEFS
 # `exit_code` is empty when the output came from a subagent, which has no
 # process status of its own; the remaining checks then carry the weight.
 function aspect_status() {
-  local aspect="${1}" output="${2}" snapshot="${3}" exit_code="${4}" log="${5}"
+  local aspect="${1}" output="${2}" snapshot="${3}" exit_code="${4}" log="${5}" members="${6}"
   local reason=""
 
   if [[ -n "${exit_code}" && "${exit_code}" != "0" ]]; then
@@ -412,13 +408,15 @@ function aspect_status() {
     --arg exit_code "${exit_code}" \
     --arg output "${output}" \
     --arg log "${log}" \
+    --slurpfile members "${members}" \
     '{
       aspect: $aspect,
       status: (if $reason == "" then "ok" else "failed" end),
       reason: (if $reason == "" then null else $reason end),
       exit_code: (if $exit_code == "" then null else ($exit_code | tonumber) end),
       output: $output,
-      log: (if $log == "" then null else $log end)
+      log: (if $log == "" then null else $log end),
+      membership_paths: ($members[0] | map(.path))
     }' \
     || die "could not build the status for the ${aspect} aspect"
 }
@@ -433,25 +431,36 @@ function aspect_status() {
 # conclude the scope is smaller than it is.
 function render_scope() {
   local scope="${1}" top_level="${2}"
-  local diff_lines
+  local diff_lines membership_file link_info scope_path="${scope}"
+  membership_file="$(mktemp "${TMP_DIR}/prompt-members.XXXXXX")" || die "could not create prompt membership"
+  review_read_membership "${scope}" > "${membership_file}" || die "could not read prompt membership"
+  [[ "${scope_path}" == /* ]] || scope_path="${PWD}/${scope_path}"
+  link_info="$(mktemp "${TMP_DIR}/prompt-links.XXXXXX")" || die "could not create link descriptions"
+  review_symlinks "${scope}" "${top_level}" "${TMP_DIR}" > "${link_info}" || die "could not describe member links"
 
   # require_scope_file has already guaranteed a base whenever the committed
   # bucket is non-empty, so the committed line always names one. The reviewer
   # runs these commands, so they disable external diff drivers, textconv
   # filters, color and diff.relative: a repository's configuration could
   # otherwise run a helper or show the reviewer something other than the change.
-  local quoted_root diff
-  quoted_root="$(jq -nr --arg root "${top_level}" '$root | @sh')" || die "could not quote the repository root"
-  # Concatenated, not substituted: a replacement value expands `&` on some Bash
-  # versions, which would corrupt a root containing an ampersand.
-  diff="git --no-pager -C ${quoted_root} ${PROMPT_GIT_DIFF_ARGS}"
-  diff_lines="$(jq -r --arg diff "${diff}" '
-    (if (.committed | length) > 0 then "- Committed changes: \($diff) \(.base) \(.head)" else empty end),
-    (if (.staged | length) > 0 then "- Staged changes: \($diff) --cached" else empty end),
-    (if (.unstaged | length) > 0 then "- Unstaged changes: \($diff)" else empty end)
-  ' "${scope}")" || die "could not read the scope buckets from ${scope}"
+  diff_lines="$(jq -r --arg root "${top_level}" --arg args "${PROMPT_GIT_DIFF_ARGS}" "${REVIEW_MEMBERSHIP_DEFS}"'
+    def scopes($root): {root: $root, scope: .},
+      ((.submodules // [])[] | select(.initialized) | .path as $path
+       | .scope | scopes($root + "/" + $path));
+    scopes($root) | .root as $root | .scope
+    | ("git --no-pager -C " + ($root | @sh) + " " + $args) as $diff
+    | (if (review_paths("committed") | length) > 0 then "- Committed changes: \($diff) \(.base) \(.head)" else empty end),
+      (if (review_paths("staged") | length) > 0 then "- Staged changes: \($diff) --cached" else empty end),
+      (if (review_paths("unstaged") | length) > 0 then "- Unstaged changes: \($diff)" else empty end)
+  ' "${scope}")" || die "could not read the recursive scope buckets from ${scope}"
 
   echo "The scope is all of the following, and you must read all of it:"
+  printf -- '- Review membership (JSON): %s\n' "$(jq -cn --arg file "${scope_path}" '{file: $file, pointer: "/membership"}')"
+  echo "Read every path in that canonical membership; buckets identify the required diff views."
+  jq -r 'if (.links | length) > 0 then
+    "- Symlink members (JSON): \(.links | @json)",
+    "Review each symlink as its link text only; never open its target."
+    else empty end' "${link_info}" || die "could not render member links"
   echo
   if [[ -n "${diff_lines}" ]]; then
     printf '%s\n' "${diff_lines}"
@@ -464,7 +473,7 @@ function render_scope() {
   local untracked_list
   untracked_list="$(mktemp "${TMP_DIR}/untracked.XXXXXX")" \
     || die "could not create a temporary file for the untracked paths"
-  if ! jq -j '.untracked[] | ., "\u0000"' "${scope}" > "${untracked_list}"; then
+  if ! jq -j --arg bucket untracked "${REVIEW_MEMBERSHIP_DEFS}"'{membership: .} | review_paths($bucket)[] | ., "\u0000"' "${membership_file}" > "${untracked_list}"; then
     die "could not read the untracked paths from ${scope}"
   fi
 
@@ -472,25 +481,37 @@ function render_scope() {
   # given as its link text and never as a path to open: following it would put
   # whatever it points at, possibly outside the repository, into the review.
   # Each record is path, kind and link target, NUL-separated.
-  local records path target unreadable_link=""
+  local gitlink_list gitlink_path pointer_only uninitialized_gitlinks=()
+  gitlink_list="$(mktemp "${TMP_DIR}/uninitialized.XXXXXX")" || die "could not create gitlink list"
+  jq -j 'def links($prefix): (.submodules // [])[] | .path as $path
+    | if .initialized then .scope | links($prefix + $path + "/") else $prefix + $path end;
+    links("") | ., "\u0000"' "${scope}" > "${gitlink_list}" || die "could not list uninitialized gitlinks"
+  while IFS= read -r -d '' gitlink_path; do
+    uninitialized_gitlinks+=("${gitlink_path}")
+  done < "${gitlink_list}"
+
+  local records path operand
   records="$(mktemp "${TMP_DIR}/untracked-records.XXXXXX")" \
     || die "could not create a temporary file for the untracked paths"
   while IFS= read -r -d '' path; do
-    if [[ -L "${top_level}/${path}" ]]; then
-      # The sentinel keeps a trailing newline in the link text, which command
-      # substitution would otherwise strip.
-      if ! target="$(readlink -n "${top_level}/${path}" && echo x)"; then
-        unreadable_link="${path}"
-        break
+    operand="${top_level}/${path}"
+    pointer_only=false
+    for gitlink_path in ${uninitialized_gitlinks[@]+"${uninitialized_gitlinks[@]}"}; do
+      if [[ "${path}" == "${gitlink_path}" && ! -f "${operand}" && ! -L "${operand}" ]]; then
+        pointer_only=true
       fi
-      target="${target%x}"
-      printf '%s\0link\0%s\0' "${path}" "${target}" >> "${records}"
+    done
+    if [[ "${pointer_only}" == true ]]; then
+      printf '%s\0gitlink\0\0' "${path}" >> "${records}"
+    elif [[ -L "${operand}" ]]; then
+      # The shared description above covers every current symlink member.
+      continue
+    elif [[ -d "${operand}" ]]; then
+      die "untracked scope contains a directory instead of reviewable files: ${path}"
     else
       printf '%s\0file\0\0' "${path}" >> "${records}"
     fi
   done < "${untracked_list}"
-
-  [[ -z "${unreadable_link}" ]] || die "could not read the symlink ${unreadable_link}"
 
   # Names and link targets are written as JSON strings. Git allows a newline in
   # either, so written raw, a crafted name could start a line of its own and
@@ -502,6 +523,9 @@ function render_scope() {
         "- Untracked files, which are in no diff. Each name below is a JSON string relative to the repository root: decode it, then read that absolute path:",
         (.[] | if .[1] == "link"
           then "  - \(.[0] | @json) -> \(.[2] | @json) (a symlink; review the link text only and do not open its target)"
+
+          elif .[1] == "gitlink"
+          then "  - \(.[0] | @json) (an uninitialized gitlink; inspect its pointer in the enclosing repository, not unavailable files)"
           else "  - \(.[0] | @json)" end)
       end
   ' < "${records}" || die "could not render the untracked paths"
@@ -513,7 +537,7 @@ function render_scope() {
 function historical_guide() {
   local ref="${1}" path="${2}" output="${3}" top_level="${4}" entry mode target depth=0
   while [[ "${depth}" -lt 16 ]]; do
-    entry="$(git --literal-pathspecs -C "${top_level}" ls-tree "${ref}" -- "${path}")" || die "could not locate historical guide ${path}"
+    entry="$(review_git --literal-pathspecs -C "${top_level}" ls-tree "${ref}" -- "${path}")" || die "could not locate historical guide ${path}"
     [[ -n "${entry}" ]] || return 1
     mode="${entry%% *}"
     if [[ "${mode}" != "120000" ]]; then
@@ -726,6 +750,11 @@ function cmd_gate() {
   require_scope_file "${after}"
   [[ -s "${results}" ]] || die "--results requires a non-empty review-results file"
   [[ -s "${statuses}" && ${#aspects[@]} -gt 0 ]] || die "--statuses and selected --aspect names are required"
+  local before_members after_members
+  before_members="$(mktemp "${TMP_DIR}/gate-before-members.XXXXXX")" || die "could not create gate membership"
+  after_members="$(mktemp "${TMP_DIR}/gate-after-members.XXXXXX")" || die "could not create gate membership"
+  review_read_membership "${scope}" > "${before_members}" || die "could not read gate membership"
+  review_read_membership "${after}" > "${after_members}" || die "could not read gate membership"
   local expected
   expected="$(printf '%s\n' "${aspects[@]}" | jq -Rs 'split("\n") | map(select(length > 0)) | sort')"
   jq -e -n "${VALIDATE_DEFS}"'
@@ -736,16 +765,20 @@ function cmd_gate() {
     and all(type == "object" and (.aspect | type == "string") and (.status | IN("ok", "failed"))))' \
     "${statuses}" > /dev/null 2>&1 || die "aspect statuses are invalid"
   jq -n --slurpfile before "${scope}" --slurpfile after "${after}" --slurpfile results "${results}" \
+    --slurpfile before_members "${before_members}" --slurpfile after_members "${after_members}" \
     --slurpfile statuses "${statuses}" --argjson expected "${expected}" '
     (if ($expected | unique | length) != ($expected | length) then "a selected aspect is duplicated"
      elif ($statuses[0] | map(.aspect) | sort) != $expected or any($statuses[0][]; .status != "ok")
        then "a selected review aspect failed or is missing"
+     elif any($statuses[0][]; .membership_paths != ($before_members[0] | map(.path)))
+       then "a selected aspect status used different review membership"
      elif ($results[0] | map(.aspect) | sort) != $expected then "review results do not match selected aspects"
      elif $before[0].snapshot != $after[0].snapshot then "the review scope changed"
+     elif $before_members[0] != $after_members[0] then "the review membership changed"
      elif any($results[0][]; .reviewed != $before[0].snapshot) then "a review names another snapshot"
      elif any($results[0][].findings[]; .severity == "critical") then "a review reported a Critical finding"
      else null end) as $reason
-    | {eligible: ($reason == null), reason: $reason}'
+    | {eligible: ($reason == null), reason: $reason, membership_paths: ($before_members[0] | map(.path))}'
 }
 
 # A final review can complete with Critical findings. Validation failure still
@@ -838,9 +871,11 @@ function cmd_validate() {
   require_scope_file "${scope}"
   [[ -n "${output}" ]] || die "an output file is required"
 
-  local snapshot status
+  local snapshot status members
+  members="$(mktemp "${TMP_DIR}/validate-members.XXXXXX")" || die "could not create validation membership"
+  review_read_membership "${scope}" > "${members}" || die "could not read validation membership"
   snapshot="$(jq -r '.snapshot' "${scope}")"
-  status="$(aspect_status "${aspect}" "${output}" "${snapshot}" "" "")"
+  status="$(aspect_status "${aspect}" "${output}" "${snapshot}" "" "" "${members}")"
   printf '%s\n' "${status}"
 
   if [[ "$(jq -r '.status' <<< "${status}")" != "ok" ]]; then
@@ -963,7 +998,9 @@ function cmd_run() {
     die "--out-dir must be outside the working tree"
   fi
 
-  local snapshot
+  local snapshot members
+  members="$(mktemp "${TMP_DIR}/run-members.XXXXXX")" || die "could not create run membership"
+  review_read_membership "${scope}" > "${members}" || die "could not read run membership"
   snapshot="$(jq -r '.snapshot' "${scope}")"
   # Each file is removed before it is written, because a write follows a
   # symlink already at that path and could land inside the working tree.
@@ -1052,7 +1089,7 @@ function cmd_run() {
     exit_code=0
     wait "${RUNNING_PIDS[${index}]}" || exit_code=$?
     statuses+=("$(aspect_status "${aspect}" "${out_physical}/${aspect}.json" "${snapshot}" \
-      "${exit_code}" "${out_physical}/${aspect}.log")")
+      "${exit_code}" "${out_physical}/${aspect}.log" "${members}")")
   done
   RUNNING_PIDS=()
 
@@ -1063,6 +1100,42 @@ function cmd_run() {
   if [[ "$(jq -r 'all(.status == "ok")' <<< "${combined}")" != "true" ]]; then
     exit "${EXIT_ASPECT_FAILED}"
   fi
+}
+
+# Tree objects belong to their repository, so compare initialized submodules
+# there and prefix their changed paths back into the superproject scope.
+function compare_scope_trees() {
+  local repo="${1}" before="${2}" after="${3}" prefix="${4}" output="${5}"
+  local before_tree after_tree path child_before child_after raw changed
+  before_tree="$(jq -r '.tree' "${before}")" || die "could not read prior tree"
+  after_tree="$(jq -r '.tree' "${after}")" || die "could not read current tree"
+  raw="$(mktemp "${TMP_DIR}/tree-changes.XXXXXX")" || die "could not create tree comparison"
+  review_git -C "${repo}" diff-tree "${REVIEW_DIFF_OPTIONS[@]}" -r -z --name-only "${before_tree}" "${after_tree}" > "${raw}" \
+    || die "could not compare tree ${before_tree} with ${after_tree}"
+  while IFS= read -r -d '' changed; do
+    printf '%s\0' "${prefix}${changed}" >> "${output}" \
+      || die "could not record changed path ${prefix}${changed} in ${output}"
+  done < "${raw}"
+  jq -j -s '[.[] | .submodules // [] | .[].path] | unique[] | ., "\u0000"' \
+    "${before}" "${after}" > "${raw}" || die "could not list submodule comparisons"
+  while IFS= read -r -d '' path; do
+    child_before="$(mktemp "${TMP_DIR}/scope-before.XXXXXX")" || die "could not create prior scope"
+    child_after="$(mktemp "${TMP_DIR}/scope-after.XXXXXX")" || die "could not create current scope"
+    jq --arg path "${path}" '.submodules // [] | .[] | select(.path == $path)' \
+      "${before}" > "${child_before}" || die "could not read prior submodule"
+    jq --arg path "${path}" '.submodules // [] | .[] | select(.path == $path)' \
+      "${after}" > "${child_after}" || die "could not read current submodule"
+    if jq -e '.initialized' "${child_before}" > /dev/null \
+      && jq -e '.initialized' "${child_after}" > /dev/null; then
+      jq '.scope' "${child_before}" > "${child_before}.scope" || die "could not read prior child scope"
+      jq '.scope' "${child_after}" > "${child_after}.scope" || die "could not read current child scope"
+      compare_scope_trees "${repo}/${path}" "${child_before}.scope" "${child_after}.scope" \
+        "${prefix}${path}/" "${output}" || die "could not compare submodule: ${path}"
+    elif ! cmp -s "${child_before}" "${child_after}"; then
+      printf '%s\0' "${prefix}${path}" >> "${output}" \
+        || die "could not record initialization path ${prefix}${path} in ${output}"
+    fi
+  done < "${raw}"
 }
 
 function cmd_changes() {
@@ -1092,7 +1165,11 @@ function cmd_changes() {
   git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
     || die "not inside a git work tree"
 
-  local before_tree after_tree raw
+  local before_tree after_tree raw members after_members
+  members="$(mktemp "${TMP_DIR}/changes-members.XXXXXX")" || die "could not create change membership"
+  after_members="$(mktemp "${TMP_DIR}/changes-after-members.XXXXXX")" || die "could not create change membership"
+  review_read_membership "${before}" > "${members}" || die "could not read change membership"
+  review_read_membership "${after}" > "${after_members}" || die "could not read change membership"
   before_tree="$(jq -r '.tree' "${before}")"
   after_tree="$(jq -r '.tree' "${after}")"
 
@@ -1104,21 +1181,22 @@ function cmd_changes() {
   # is checked, not hidden behind jq's.
   raw="$(mktemp "${TMP_DIR}/changes.XXXXXX")" \
     || die "could not create a temporary file for the tree comparison"
-  if ! git diff-tree -r -z --name-only "${before_tree}" "${after_tree}" > "${raw}"; then
-    die "could not compare tree ${before_tree} with ${after_tree}"
-  fi
+  compare_scope_trees "$(git rev-parse --show-toplevel)" "${before}" "${after}" "" "${raw}"
 
   jq -Rs \
     --slurpfile scope "${before}" \
     --arg before_tree "${before_tree}" \
     --arg after_tree "${after_tree}" \
+    --slurpfile members "${members}" --slurpfile after_members "${after_members}" \
     --slurpfile after "${after}" \
     '(split("\u0000") | map(select(length > 0)) | unique) as $changed
-    | ($scope[0] | .committed + .staged + .unstaged + .untracked | unique) as $in_scope
+    | ($members[0] | map(.path)) as $in_scope
+
     | {
         before_tree: $before_tree,
         after_tree: $after_tree,
-        scope_changed: ($scope[0].snapshot != $after[0].snapshot),
+        scope_changed: ($scope[0].snapshot != $after[0].snapshot or $members[0] != $after_members[0]),
+        accepted_paths: $in_scope,
         changed: $changed,
         outside_scope: ($changed - $in_scope)
       }' < "${raw}"

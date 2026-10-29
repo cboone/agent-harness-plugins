@@ -1,0 +1,17 @@
+{
+  "aspect": "code",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Recursive review now includes files such as module/src/file.go, but render_guides resolves module/AGENTS.md using only the superproject's baseline and object database. Git cannot traverse the gitlink, so historical child instructions are omitted. The prompt also prohibits loading checkout instructions, allowing review to succeed without mandatory child checks.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "Resolve historical child guides in each child's object database at the gitlink revision selected by the trusted parent baseline, recursively. Explicitly handle absent baseline children and unavailable historical objects.",
+      "line": 448,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: Recursive reviews omit historical child instructions."
+    }
+  ],
+  "reviewed": "00f501bd558884e6e55f32500c754a5fd415096f",
+  "strengths": ["Canonical membership keeps scope collection and consumers consistent.", "Fixtures cover nested changes, index-only edits, replacements and symlink handling."],
+  "summary": "Reviewed the full committed scope; one Important defect remains in historical guidance for recursive reviews. Bash syntax checks passed; runtime suites were not run because they create files.\n\n"
+}
