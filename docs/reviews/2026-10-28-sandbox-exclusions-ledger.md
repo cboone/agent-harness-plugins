@@ -2,12 +2,14 @@
 
 ## Current status
 
-Active through the ready PR. TOOLING selected the structural proposal and
-cleared the recurrence gate. The scoped tmpfile review instruction now defers
-to the canonical reference; the class-wide active-guidance inventory is
-recorded below. Structural loop: one Nit, one Important, **ended: fixes changed
-no behavior** after the instruction-only closure. Focused reviews are next.
-Resource tests pass 21/21. No push or PR has occurred.
+**Stopped at the base-sync merge gate.** Upstream advanced during focused
+review and introduced conflicts in workmux's manifest and claim-lock code.
+A signed merge of origin/main is needed before final review/publication, and
+no base-sync go-ahead for this thread is recorded. A concrete integration
+proposal is prepared but unapplied. No merge, rebase, push or PR occurred.
+Structural count: one Nit, one Important, ended: fixes changed no behavior.
+Focused Nit output exists but was invalidated by base-tip movement; it is not
+reported clean. Resource tests pass 21/21.
 
 ## Authority and status
 
@@ -635,3 +637,72 @@ independent focused loop starts its own Nit round.
 
 Scoped Markdown formatting/lint, make build and make validate passed after the
 closure. Product/helper/test code did not change during this correction.
+
+## Focused Nit attempt and upstream integration gate
+
+Focused input: head `8000c94f9a180bd64e99182f9fc62c3ae0139098`, actual merge
+base `a2e56c535ed6326cc8d531d945fbb6c627a9b335`, original snapshot
+`81b17e7432c6985bad2d9c7accfa79e9b0c591ba`. Installed codex-aspects 2.2.0 ran
+code/errors/tests/comments in parallel, explicit gpt-6.1-sol/high/872000,
+read-only, approval never, web disabled. All four exited 0, returned valid
+snapshot-matching outputs and no findings. Types was skipped because no types
+changed; simplify was already report-only in the structural loop.
+
+An initial helper invocation from the external artifact directory failed its
+repository-context preflight before starting any reviewer. It was corrected
+by running the installed helper from the worktree; its child reviewers still
+started externally as required. The preflight error is retained separately.
+
+The final scope comparison returned scope_changed=true, with changed=[] and
+outside_scope=[]. Only base_tip and snapshot differed: origin/main moved from
+`e8667c85610d10882e7c33078748c7113b1c4a8e` to
+`26acdbfec2d70593d563f5fcc78d52f9680d4cd0`. HEAD, index, content tree and actual
+merge base stayed identical. Under the helper's validity rule, these results
+are **not a clean review**. After integration, pin the freshly verified actual
+merge-base SHA for review so unrelated shared-remote tip movement cannot
+invalidate the run. Do not relabel or repair the old reviewer JSON.
+
+### Read-only integration assessment
+
+`git merge-tree --write-tree HEAD 26acdbfec2d70593d563f5fcc78d52f9680d4cd0`
+returned 1. It created an assessment tree only; it did not change the branch,
+index or worktree. Conflicts:
+
+- `plugins/workmux/.claude-plugin/plugin.json` and its generated mirror.
+- `plugins/workmux/scripts/manage-resource-claims` and its generated mirror.
+
+Upstream uses owner-token reservation and symlink-aware bundled-library
+resolution. Integration must retain that locking protocol rather than restore
+the branch's older mkdir-only lock. The branch's resource diagnostics must be
+attached to the new lock-directory, owner-file and abnormal reservation paths.
+The matrix's mkdir refusal stub must reflect the upstream `mkdir -p` shape.
+Generated conflicts must be rebuilt with make build, never hand-edited.
+
+| Plugin               | Branch | Upstream | Proposed forward patch |
+| -------------------- | ------ | -------- | ---------------------- |
+| workmux              | 1.1.2  | 1.1.3    | 1.1.4                  |
+| publish-report-board | 1.3.2  | 1.3.2    | 1.3.3                  |
+
+Other changed plugin versions remain forward relative to this upstream tip.
+Recheck versions if upstream changes again before the authorized sync.
+
+A concrete, unapplied canonical integration candidate is retained at
+`/private/tmp/sandbox512-live.dW1szP/main-sync-proposal.diff`, with pinned
+identities/version decisions in `main-sync-proposal.json`. The helper candidate
+passed Bash syntax checking only. It is not a tested merged tree and has not
+been applied. Full assessment: `upstream-merge-assessment.txt` in that root.
+
+### Closed gate and requested action
+
+The streamlined process lists merging as a separate gate. The project record's
+standing go-aheads and this workstream's decisions contain no named base-sync
+authority for this thread. Request TOOLING's go-ahead to merge current
+origin/main with a signed merge commit, preserve upstream owner locking,
+resolve the canonical conflicts, make forward version bumps, rebuild mirrors
+and renew the relevant tests/reviews using the pinned actual merge base.
+No force, rebase, amend or pushed-history rewrite is proposed. Review counts
+must remain intact; the invalidated focused Nit attempt is not a clean result.
+
+All four reviewer processes have finished. No background command or private
+tmux server remains. No base merge has been attempted. Trims, Semgrep, final
+lint/test-all/version audit, tidy and publication remain pending.
