@@ -5,6 +5,9 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
+# shellcheck source=plugins/workmux/scripts/resource-diagnostics.bash
+source "$(dirname "${BASH_SOURCE[0]}")/resource-diagnostics.bash"
+
 function usage() {
   cat << 'USAGE_TEXT'
 Usage: launch-workmux <branch-name> [--base <branch>] [--await-completion]
@@ -500,8 +503,8 @@ function run_detached_launch() {
   # Captured with `||`, not `set +e`: the helper re-enables errexit on return.
   run_workmux_and_cleanup_prompt "${prompt_file}" "${@}" > "${state_dir}/log" 2>&1 || status=$?
   {
-    printf '%s\n' "${status}" > "${state_dir}/status.tmp" \
-      && mv -- "${state_dir}/status.tmp" "${state_dir}/status"
+    printf '%s\n' "${status}" > "${state_dir}/status.tmp" &&
+      mv -- "${state_dir}/status.tmp" "${state_dir}/status"
   } || true
   mkdir "${state_dir}/handoff" 2> /dev/null || true
 }
@@ -533,6 +536,9 @@ function await_launch() {
 
   status="$(cat "${state_dir}/status" 2> /dev/null || true)"
   cat "${state_dir}/log" 2> /dev/null || true
+  if [[ "${status}" != "0" ]]; then
+    workmux_diagnose_launch_failure "${state_dir}/log"
+  fi
   rm -r -f -- "${state_dir}"
 
   if [[ "${status}" != "0" ]]; then

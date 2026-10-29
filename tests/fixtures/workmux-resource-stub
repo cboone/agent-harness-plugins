@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Installed as workmux, tmux and gh by the guarded resource matrix.
+set -euo pipefail
+
+function main() {
+  local tool
+  tool="$(basename "$0")"
+  case "${tool}" in
+    workmux)
+      case "${STUB_RESOURCE_SCENARIO:-success}" in
+        log)
+          printf 'initializing rolling file appender failed: failed to create initial log file: PermissionDenied\n' >&2
+          exit 101
+          ;;
+        socket) exec tmux list-sessions ;;
+        config) exec gh config get editor ;;
+        ordinary)
+          printf 'workmux: unsupported configuration\n' >&2
+          exit 2
+          ;;
+        success) exec "${WORKMUX_STUB_BIN:?}" "$@" ;;
+        *) exit 2 ;;
+      esac
+      ;;
+    tmux)
+      printf 'error connecting to %s (Operation not permitted)\n' "${MATRIX_ROOT:?}/tmux/socket" >&2
+      exit 1
+      ;;
+    gh)
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == config ]]; then
+        printf 'failed to read configuration: open %s: operation not permitted\n' "${MATRIX_ROOT:?}/gh/hosts.yml" >&2
+        exit 1
+      fi
+      [[ "${1:-}" == issue && "${2:-}" == view ]] || exit 2
+      printf '{"number":42,"title":"Scratch worktree","labels":[],"body":"","state":"OPEN"}\n'
+      ;;
+    *) exit 2 ;;
+  esac
+}
+
+main "$@"

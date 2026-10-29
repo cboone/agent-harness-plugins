@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Exercises helper launches using only guarded fixture tools.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+
+function die() {
+  printf 'matrix: %s\n' "${1}" >&2
+  exit 1
+}
+
+function invoke_helper() {
+  local helper="${1}"
+  shift
+  if [[ "${MATRIX_INVOCATION}" == bash ]]; then
+    bash "${helper}" "$@"
+  else
+    "${helper}" "$@"
+  fi
+}
+
+function main() {
+  local harness="${1:?}" invocation="${2:?}" scenario="${3:?}" mode="${4:-print}"
+  local fixture tool prompt status=0 claim_output output resource original
+  fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+  export MATRIX_ROOT="${fixture}"
+  export MATRIX_INVOCATION="${invocation}"
+  mkdir "${fixture}/bin" "${fixture}/tmp" "${fixture}/worktree"
+  for tool in workmux tmux gh; do
+    cp "${WORKMUX_RESOURCE_STUB_BIN:?}" "${fixture}/bin/${tool}"
+    chmod +x "${fixture}/bin/${tool}"
+  done
+  cp "${WORKTREE_GIT_STUB_BIN:?}" "${fixture}/bin/git"
+  chmod +x "${fixture}/bin/git"
+  if [[ "${scenario}" == guard ]]; then
+    mv "${fixture}/bin/gh" "${fixture}/bin/not-gh"
+  fi
+  export PATH="${fixture}/bin:${PATH}"
+  for tool in workmux tmux gh git; do
+    [[ "$(command -v "${tool}" || true)" == "${fixture}/bin/${tool}" ]] ||
+      die "refusing to run: ${tool} is not the fixture stub"
+  done
+  unset CODEX_THREAD_ID CLAUDECODE WORKMUX_CALLER_HARNESS TMUX WORKMUX_TMUX TMUX_TMPDIR
+  case "${harness}" in
+    'Claude Code') export CLAUDECODE=1 ;;
+    Codex) export CODEX_THREAD_ID=matrix ;;
+    *) die 'unknown harness' ;;
+  esac
+  [[ "${invocation}" == bash || "${invocation}" == executable ]] || die 'unknown invocation'
+  export TMPDIR="${fixture}/tmp"
+  export STUB_GIT_BRANCHES=''
+  export STUB_GIT_WORKTREE_PORCELAIN_FILE="${fixture}/worktrees"
+  export STUB_GIT_WORKTREE_PORCELAIN=''
+  export WORKMUX_LAUNCH_TIMEOUT_SECONDS=5
+  export WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0
+  export WORKMUX_TMUX="${fixture}/tmux/socket,1,1"
+  export XDG_STATE_HOME="${fixture}/state"
+  export STUB_RESOURCE_SCENARIO=success
+  : > "${STUB_GIT_WORKTREE_PORCELAIN_FILE}"
+  prompt="$(gh issue view 42 | invoke_helper "${COMPOSE_ISSUE_PROMPT_BIN:?}")"
+  [[ "${prompt}" == 'Work on issue #42: Scratch worktree' ]] || die 'prompt did not compose'
+  if [[ "${scenario}" == claim ]]; then
+    export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
+    : > "${WORKTREE_RESOURCES_FILE}.lock"
+    invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
+      --worktree "${fixture}/worktree" --branch feature/test > "${fixture}/output" 2>&1 || status=$?
+  else
+    export STUB_RESOURCE_SCENARIO="${scenario}"
+    invoke_helper "${LAUNCH_WORKMUX_BIN:?}" --generated-name feature/test --issue 42 \
+      --base origin/main --await-completion <<< "${prompt}" > "${fixture}/output" 2>&1 || status=$?
+  fi
+  if [[ "${scenario}" == success ]]; then
+    [[ "${status}" == 0 ]] || {
+      cat "${fixture}/output"
+      die 'launch failed'
+    }
+    [[ "$(tail -1 "${fixture}/output")" == 'Worktree ready: /worktrees/feature-42-test' ]] ||
+      die 'worktree was not confirmed'
+    export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
+    claim_output="$(invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
+      --worktree "${fixture}/worktree" --branch feature/test)"
+    [[ -n "${claim_output}" ]] || die 'claim output missing'
+    jq -e '.claims | length == 1' "${WORKTREE_RESOURCES_FILE}" > /dev/null || die 'claim not recorded'
+    printf '%s %s: compose, launch and claim passed\n' "${harness}" "${invocation}"
+  elif [[ "${mode}" == check ]]; then
+    output="$(cat "${fixture}/output")"
+    case "${scenario}" in
+      log)
+        resource="workmux log ${fixture}/state/workmux/workmux.log"
+        original='failed to create initial log file: PermissionDenied'
+        ;;
+      socket)
+        resource='tmux socket named in the command output'
+        original="error connecting to ${fixture}/tmux/socket (Operation not permitted)"
+        ;;
+      config)
+        resource='GitHub CLI config named in the command output'
+        original="open ${fixture}/gh/hosts.yml: operation not permitted"
+        ;;
+      claim)
+        resource="claim lock ${fixture}/claims.json.lock"
+        original="cannot create ${fixture}/claims.json.lock"
+        ;;
+      *) die 'unknown denial scenario' ;;
+    esac
+    [[ "${status}" == 1 ]] || die 'resource failure exit status changed'
+    [[ "${output}" == *"${harness}: access failed for ${resource};"* ]] || die 'harness/resource diagnostic missing'
+    [[ "${output}" == *"${original}"* ]] || die 'original resource error missing'
+    printf '%s %s %s: resource, harness and failure retained\n' "${harness}" "${invocation}" "${scenario}"
+  else
+    sed "s|${fixture}|FIXTURE|g" "${fixture}/output"
+    printf 'exit: %s\n' "${status}"
+  fi
+}
+
+main "$@"

@@ -24,15 +24,17 @@ mktemp -u "${TMPDIR:-/tmp}/gh-pr-body-XXXXXX"
 # Returns a unique path that does NOT exist on disk, e.g.: /tmp/claude-501/gh-pr-body-x4y5z6
 ```
 
-**Target `$TMPDIR`, never a literal `/tmp`.** When Bash runs inside the Claude Code sandbox, `/tmp` is unwritable and so is the per-user temp directory that `mktemp` picks by default, while `$TMPDIR` points at a directory the sandbox permits. Outside the sandbox `$TMPDIR` is the ordinary per-user temp directory, so the one form works in both cases. Three ways to get this wrong, all of which fail with `Operation not permitted` under the sandbox:
+**Use the active harness's writable temporary directory.** Prefer an explicit template under `${TMPDIR:-/tmp}`, but check the session's actual resource restrictions: neither the variable nor command approval grants filesystem access. If creation is denied, report the harness and the resolved directory and stop dependent commands. Do not assume a command exclusion exempts the wrapper or pipeline, and do not change user settings to make it run.
 
-| Form                               | Why it fails                                                              |
-| ---------------------------------- | ------------------------------------------------------------------------- |
-| `mktemp -u /tmp/gh-pr-body-XXXXXX` | macOS resolves `/tmp` to `/private/tmp`, which the sandbox denies         |
-| `mktemp -u`                        | no template, so macOS uses `confstr(_CS_DARWIN_USER_TEMP_DIR)`            |
-| `mktemp -ut gh-pr-body`            | `-t` also ignores `$TMPDIR` on macOS and uses the same per-user directory |
+On macOS, these forms can select a different directory from the one the harness supplied:
 
-Only an explicit template under `$TMPDIR` is safe. Use the `:-/tmp` fallback rather than bare `${TMPDIR}`: on the rare shell that leaves `$TMPDIR` unset, a bare expansion resolves to `/gh-pr-body-XXXXXX` and tries to write at the filesystem root. macOS usually sets `$TMPDIR` with a trailing slash, so the expansion can produce a doubled slash mid-path, which every POSIX filesystem treats as one separator.
+| Form                               | Directory selection                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| `mktemp -u /tmp/gh-pr-body-XXXXXX` | `/tmp` resolves to `/private/tmp`, whose access depends on the active sandbox        |
+| `mktemp -u`                        | macOS uses its per-user temporary directory                                          |
+| `mktemp -ut gh-pr-body`            | `-t` selects the same per-user directory rather than the explicit `$TMPDIR` template |
+
+An explicit template follows `$TMPDIR`. Use the `:-/tmp` fallback rather than bare `${TMPDIR}` so an unset variable does not resolve to `/gh-pr-body-XXXXXX` at the filesystem root. The fallback may itself be denied; it is not a portable write allowance. macOS commonly supplies a trailing slash, so the template can contain a doubled separator.
 
 **The `-u` flag is required.** Without it, `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first (`File has not been read yet. Read it first before writing to it.`). Since the file is empty by construction there is no reason to Read it, so plain `mktemp` forces a pointless Read or leaves the write to fail. With `-u`, the path is unique but unoccupied, so Write creates it fresh.
 

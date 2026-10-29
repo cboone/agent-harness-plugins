@@ -413,6 +413,7 @@ Give the error text for any issue that failed, and the state directory for an un
 
 ## Error Handling
 
+- For an access failure, report the calling harness and the exact resource named in the error: workmux's log, the tmux socket, gh configuration, Git metadata, the destination or the claim file. Retain the original error. Use the host's approval flow for this specific command only when authorized; otherwise stop. Do not add a command exemption or change settings. A denied gh config read is not an authentication failure. The prompt composer reads stdin and jq only, so a failed gh query must be handled before composing or launching.
 - If `workmux` is not installed, inform the user and suggest installing it
 - If an issue number was given and `gh` is not installed or not authenticated, say so and ask whether to treat the argument as a task description
 - If the issue is not found, report that and stop

@@ -230,3 +230,127 @@ Resume from this ledger and the plan, then:
 
 All created temporary files are under the single recorded probe directory.
 Keep it for resumption; do not remove files by a shared temporary-path pattern.
+
+## Overnight continuation
+
+TOOLING lifted the nighttime stop in this conversation at 9:39 PM ET and
+directed continuing overnight through the PR, stopping only at the ordinary
+process stops. This supersedes the parking/restart directions above.
+
+### Scratch-only Claude Code matrix
+
+Recorded fixture root: `/private/tmp/sandbox512-live.dW1szP`. It contains the
+workspace, blocked output directory, synthetic `gh/hosts.yml` containing only
+`github.com: {}`, the executable `bin/sandbox512-probe`, temporary settings,
+prompts and raw JSONL tool results under `results/`. The executable attempts a
+write, a private tmux connection, and a synthetic config read, reporting each
+status independently. Settings read-deny only that synthetic config, enable
+the sandbox, and supply the fixture's PATH. No tool allow rules were added.
+
+Every run: Claude Code 2.1.312, Sonnet at low effort, Bash only, `dontAsk`,
+`--setting-sources ''`, a distinct temporary `--settings` file, strict empty
+MCP configuration, no persistence, stdin from the recorded prompt. All eight
+variant/control processes exited 0 and produced nonempty JSONL including tool
+requests, tool results and final results. The table records tool outcomes,
+not merely the model's prose:
+
+| Settings variant                | Exact invocation form                            | Observed tool/resource result                 |
+| ------------------------------- | ------------------------------------------------ | --------------------------------------------- |
+| No exclusions                   | Absolute fixture executable                      | Executed; write, socket and config all denied |
+| `sandbox512-probe *`            | Bare fixture binary                              | Tool permission rejected before execution     |
+| Absolute fixture path plus `*` | Absolute fixture executable                      | Tool permission rejected before execution     |
+| `bash ABSOLUTE_FIXTURE_PATH *`  | `bash ABSOLUTE_FIXTURE_PATH bash`                | Tool permission rejected before execution     |
+| Absolute fixture path plus `*` | `printf probe \| ABSOLUTE_FIXTURE_PATH pipeline` | Executed; all three resources denied          |
+| No exclusions, binary control   | Same bare-binary command                         | Executed; all three resources denied          |
+| No exclusions, bash control     | Same bash-script command                         | Executed; all three resources denied          |
+| No exclusions, pipeline control | Same pipeline command                            | Executed; all three resources denied          |
+
+The absolute-path baseline is also the absolute-path control. Exclusions
+changed the direct commands' permission pathway, while the pipeline remained
+confined. Because the excluded direct commands were not approved, their
+resource operations did not execute; this is not proof they could access any
+resource. No permission grant or broad shell exemption was used. This limited,
+measured result is sufficient to reject a universal wrapper/pipeline exemption
+assumption, not to recommend a replacement exemption pattern.
+
+Installed-runtime text was read directly from the Claude executable, marked
+as supplementary runtime text: it describes excludedCommands as Bash
+permission-rule syntax, excluded commands still passing permission checks,
+and strict mode accepting only trusted settings tiers, including `--settings`.
+`claude --help` separately confirms the meaning of setting sources and settings.
+These strings supplement the live controls; they are not execution results.
+
+Private server name: `sandbox512-dW1szP`; socket:
+`/private/tmp/tmux-502/sandbox512-dW1szP`. Server PIDs were recorded on creation
+and stopped individually with TERM: 43129 (initial matrix), 78167 (controls),
+11262 (native resource probes), 30877 (Codex worker resource probe). Each server
+was newly created for these experiments with empty tmux configuration and a
+scratch sleep pane. No real server was used by this matrix.
+
+### Native tools and resource confirmation
+
+A further isolated Sonnet run set XDG_STATE_HOME and GH_CONFIG_DIR through its
+temporary settings environment, removing command-prefix permission ambiguity.
+It executed exactly bare `workmux --version`, private-socket `tmux list-sessions`
+and `gh config get editor`, once each. Raw tool results in
+`results/resources.jsonl`: workmux exit 101 with the rolling-log PermissionDenied
+panic; tmux exit 1 naming the private denied socket; gh exit 1 explicitly
+naming the scratch `gh/hosts.yml` and operation not permitted. No real gh
+configuration was read. The process exited 0 and completed its JSONL result.
+
+This Codex worker's actual full-access tools ran the same scratch probe through
+Bash: write, private socket and synthetic config all succeeded, exit 0.
+That confirms this configured worker's resource behavior only, not a default
+policy for every Codex installation. Its earlier execpolicy checker results
+remain limited to the native checker's command-token input; no portable
+command exemption is inferred.
+
+The worker also ran `workmux --version` with XDG_STATE_HOME pointing at the
+recorded scratch `workmux-state` directory. Exit 0, version 0.1.277; file listing
+confirmed `workmux-state/workmux/workmux.log`. Installed workmux runtime text
+also names workmux.log, XDG_STATE_HOME and fallback for nonabsolute XDG paths.
+This confirms the diagnostic's log-location rule without touching real state.
+
+The optional native Codex sandbox driver investigation used only
+`codex-native/config.toml` under the scratch root and `/usr/bin/true` as the
+subject. `--strict-config` is unsupported by that driver; a filesystem string
+is rejected because a FilesystemPermissionsToml struct is required; empty
+filesystem/network tables exited 134 with no output. No sandbox-resource
+conclusion is drawn from those failed driver experiments. No real config was
+loaded or custom profile installed.
+
+### Implementation and scope decisions
+
+`launch-workmux` adds resource/harness diagnostics to completed failed launch
+logs, retaining original output and the original failure status. The shared
+diagnostic library recognizes workmux log initialization, tmux socket and gh
+config failures, plus other permission-denied output. It identifies native
+Claude/Codex environment markers, explicitly labels nested/unknown contexts,
+and accepts an optional diagnostic-only caller label.
+
+Claim resource failures now add the harness and claim file/directory/lock
+context before the original error. Minimal-PATH help initially exposed an
+unnecessary new dirname dependency; pure Bash source-directory resolution
+removed it. The existing 100-case claim suite then passed. The prompt composer
+has no workmux/tmux/gh access and needs no behavioral change: it reads stdin
+and jq. Its behavior is exercised for both harness identities and both Bash
+and direct-executable entry points.
+
+The catalog sweep also replaces use-git's unconditional tmpdir sandbox claims
+with active-resource checks. Its patch bump is 1.3.5 to 1.3.6. Other sandbox
+hits were classified: review/trim settings enforce their separate read-only
+contracts; notify/attention-log recognize hook events or CLI flags; Homebrew's
+formula sandbox guidance concerns formula tests; clean-up-agent-config lists
+configuration surfaces; style references discuss lint/runtime environments;
+repository validators check links and explicit review flags. None depends on
+excludedCommands to exempt a helper. Generated copies follow canonical edits
+through make build; completed plans remain historical evidence.
+
+The new guarded fixture installs committed workmux/tmux/gh/git stubs and refuses
+to proceed unless each resolves to its fixture path. The initial eight-case
+Scrut document passed: four success cells for composing/launching/claiming;
+sixteen resource/harness/invocation cells; a real-tool refusal; pinned
+log/socket/config/claim diagnostics; and an unrelated failure control. Existing
+launch-options suite passed 16/16. ShellCheck and shfmt passed for new helpers
+and fixtures. The existing launcher suite is still running and is not yet
+reported as passed. Plants and reviews have not started.

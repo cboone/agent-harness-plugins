@@ -34,5 +34,6 @@ together, including both issues' 2026-10-28 parity amendments.
 
 Follow the process stops for recurring findings, unavailable Semgrep baseline,
 unresolved lint or missing tools, closed gates and scope questions. Stop before
-any real settings change. At about 9:40 PM ET on 2026-10-28, commit the current
-work, record its resume point and report to TOOLING for nighttime parking.
+any real settings change. TOOLING lifted the 2026-10-28 nighttime stop and
+authorized continuing overnight through the PR; the ordinary process stops
+still apply.

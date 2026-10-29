@@ -10,6 +10,7 @@ SCRUT_TEST_DIR := tests/scrut/
 SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u WORKMUX_LAUNCH_WAIT_SECONDS -u WORKMUX_LAUNCH_TIMEOUT_SECONDS \
 	-u WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS \
+	-u CODEX_THREAD_ID -u CLAUDECODE -u WORKMUX_CALLER_HARNESS -u STUB_RESOURCE_SCENARIO \
 	-u STUB_CAPTURE_TERM -u STUB_CAPTURE_TMUX \
 	-u STUB_GH_API_FAIL -u STUB_GH_AUTH_FAIL -u STUB_GH_DIR -u STUB_GH_LOG -u STUB_COPILOT_GH_DIR \
 	-u WATCH_TEST_COUNT -u WATCH_TEST_SEQUENCE -u WATCH_TEST_SLEEP_LOG -u WATCH_TEST_CALLS -u WATCH_TEST_READ_DELAY \
@@ -109,6 +110,8 @@ SCRUT_ENV := \
 	TMUX_STUB_BIN="$(CURDIR)/tests/fixtures/tmux-stub" \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
 	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub" \
+	WORKMUX_RESOURCE_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-resource-stub" \
+	WORKMUX_SANDBOX_CASE_BIN="$(CURDIR)/tests/fixtures/workmux-sandbox-case" \
 	LAUNCH_SLEEP_STUB_BIN="$(CURDIR)/tests/fixtures/launch-sleep-stub"
 
 # Resolved by bin/list-shell-scripts so a newly added script is linted without

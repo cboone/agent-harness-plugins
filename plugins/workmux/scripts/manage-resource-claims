@@ -11,6 +11,12 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
+SCRIPT_DIRECTORY="${BASH_SOURCE[0]%/*}"
+if [[ "${BASH_SOURCE[0]}" != */* ]]; then SCRIPT_DIRECTORY=.; fi
+readonly SCRIPT_DIRECTORY
+# shellcheck source=plugins/workmux/scripts/resource-diagnostics.bash
+source "${SCRIPT_DIRECTORY}/resource-diagnostics.bash"
+
 CLAIM_FILE_NAME=".claude/worktree-resources.local.json"
 readonly CLAIM_FILE_NAME
 
@@ -84,6 +90,11 @@ USAGE_TEXT
 function die() {
   echo "${SCRIPT_NAME}: ${1}" >&2
   exit "${2:-1}"
+}
+
+function resource_die() {
+  workmux_resource_failure "${1}"
+  die "${2}"
 }
 
 # Identifies one claim event. A timestamp cannot: it has second resolution, so
@@ -171,8 +182,8 @@ function claim_file_path() {
   # may end in one, so capturing the path bare would undo the -z parsing that
   # read it correctly and resolve the shared file to a different directory.
   # The sentinel gives the substitution something else to strip.
-  main_worktree="$(main_worktree_path && printf 'x')" \
-    || die "not inside a git repository; set WORKTREE_RESOURCES_FILE to override"
+  main_worktree="$(main_worktree_path && printf 'x')" ||
+    die "not inside a git repository; set WORKTREE_RESOURCES_FILE to override"
   main_worktree="${main_worktree%x}"
 
   printf '%s/%s' "${main_worktree}" "${CLAIM_FILE_NAME}"
@@ -270,7 +281,7 @@ function read_claims() {
   fi
 
   if [[ ! -r "${file}" ]]; then
-    die "${file} exists but cannot be read"
+    resource_die "claim file ${file}" "${file} exists but cannot be read"
   fi
 
   # Every inspection below hands the file to jq by path. Command substitution
@@ -418,7 +429,7 @@ function acquire_lock() {
   local directory waited=0
 
   directory="$(dirname "${file}")"
-  mkdir -p "${directory}" || die "cannot create ${directory}"
+  mkdir -p "${directory}" || resource_die "claim directory ${directory}" "cannot create ${directory}"
 
   while ! mkdir "${lock}" 2> /dev/null; do
     # mkdir fails for reasons other than contention: an unwritable parent, or
@@ -434,7 +445,7 @@ function acquire_lock() {
       fi
 
       if [[ ! -d "${lock}" ]]; then
-        die "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
+        resource_die "claim lock ${lock}" "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
       fi
     fi
 
@@ -455,8 +466,8 @@ function acquire_lock() {
   # still running, which is the difference between a message someone can act on
   # and one that only says a directory exists. Refuse to hold a lock this
   # cannot be recorded for.
-  printf '%s' "$$" > "${lock}/owner" \
-    || die "cannot record the lock owner in ${lock}"
+  printf '%s' "$$" > "${lock}/owner" ||
+    resource_die "claim lock ${lock}" "cannot record the lock owner in ${lock}"
 }
 
 # Replaces the file in one step so a reader never sees a half-written document.
@@ -468,9 +479,9 @@ function write_claims() {
   local directory temp_file
 
   directory="$(dirname "${file}")"
-  mkdir -p "${directory}" || die "cannot create ${directory}"
+  mkdir -p "${directory}" || resource_die "claim directory ${directory}" "cannot create ${directory}"
 
-  temp_file="$(mktemp "${file}.XXXXXX")" || die "cannot write next to ${file}"
+  temp_file="$(mktemp "${file}.XXXXXX")" || resource_die "claim file ${file}" "cannot write next to ${file}"
 
   if ! jq -n --argjson claims "${claims}" --argjson version "${SCHEMA_VERSION}" \
     '{version: $version, claims: ($claims | map(del(.stale)))}' > "${temp_file}"; then
@@ -480,7 +491,7 @@ function write_claims() {
 
   if ! mv "${temp_file}" "${file}"; then
     rm -f "${temp_file}"
-    die "cannot replace ${file}"
+    resource_die "claim file ${file}" "cannot replace ${file}"
   fi
 }
 
@@ -823,8 +834,8 @@ function cmd_claim() {
   # than a bare yes. Approval is about a particular claim: if a third worktree
   # took the resource in the meantime, consent to displace the first says
   # nothing about displacing it, and a boolean flag could not tell them apart.
-  if holder_is_live_and_foreign "${existing}" "${worktree}" "${branch}" "${gitdir}" \
-    && ! holder_matches "${existing}" "${take_over}"; then
+  if holder_is_live_and_foreign "${existing}" "${worktree}" "${branch}" "${gitdir}" &&
+    ! holder_matches "${existing}" "${take_over}"; then
     jq -r --arg resource "${resource}" --arg approved "${take_over}" \
       '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at), id \(.id)"
        + (if $approved == "" then "; pass --take-over \(.id) to claim it anyway"
@@ -945,8 +956,8 @@ function cmd_prune() {
     die "unexpected argument: ${1}"
   fi
 
-  live_worktrees_json > /dev/null \
-    || die "cannot list worktrees; run prune inside a git repository"
+  live_worktrees_json > /dev/null ||
+    die "cannot list worktrees; run prune inside a git repository"
 
   file="$(claim_file_path)"
   acquire_lock "${file}"
