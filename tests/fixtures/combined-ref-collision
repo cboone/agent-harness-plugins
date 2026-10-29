@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Exercise ref namespace collisions only inside a fixture-owned bare repository.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+scratch=""
+
+function expect_collision() {
+  local ref="${1}" commit="${2}" error
+  # Retain expected failures in error; replay an unexpected diagnostic below.
+  if capture_child error -- git update-ref "${ref}" "${commit}" 2> /dev/null; then
+    echo "expected namespace collision for ${ref}" >&2
+    return 1
+  fi
+  [[ "${error}" == *"refs/heads/fix/4523"* && "${error}" == *"refs/heads/fix/4523/4503-slug"* && "${error}" == *"exists; cannot create"* ]] || {
+    printf '%s\n' "${error}" >&2
+    return 1
+  }
+}
+
+function main() {
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+  trap 'rm -r -- "${scratch}"' EXIT
+  git init --quiet --bare --initial-branch=main "${scratch}/repo"
+  cd "${scratch}/repo"
+  git fetch --quiet --no-tags "${REPO_ROOT}" HEAD
+  local commit
+  commit="$(git rev-parse FETCH_HEAD)"
+
+  git update-ref refs/heads/fix/4523 "${commit}"
+  expect_collision refs/heads/fix/4523/4503-slug "${commit}"
+  echo 'parent branch blocks combined child: yes'
+  git update-ref -d refs/heads/fix/4523 "${commit}"
+
+  git update-ref refs/heads/fix/4523/4503-slug "${commit}"
+  expect_collision refs/heads/fix/4523 "${commit}"
+  echo 'combined child blocks parent branch: yes'
+
+  git update-ref refs/heads/fix/4523-4503-slug "${commit}"
+  git update-ref -d refs/heads/fix/4523/4503-slug "${commit}"
+  git update-ref refs/heads/fix/4523 "${commit}"
+  [[ "$(git rev-parse refs/heads/fix/4523-4503-slug)" == "${commit}" ]]
+  echo 'hyphen-separated combined branch coexists: yes'
+}
+
+main "$@"
