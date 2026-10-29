@@ -77,13 +77,14 @@ On cancellation, stop and observe launched workers before measuring scope. If co
 
 ## Checking the tree
 
-`review-scope` records a full review-input `snapshot` and a separate `tree`, a content digest of every path git tracks or would track. Initialized submodules carry recursive scope records with their own trees and indexes. Scope collection and rendered commands source one bundled `review-git.bash` policy that unconditionally overrides submodule ignore settings for each call. The rendered review prompt includes their staged and unstaged diff commands and uses expanded submodule diffs for gitlink changes. `codex-aspects changes` diffs each repository's trees there and prefixes internal paths back to the root scope. It lists every path whose content, as Git would store it, changed between the two scope reads, in any bucket, and marks the ones outside the first read's scope. Untracked files excluded by ignore rules are outside the digest, which matches the scope rule. A tracked file stays covered even when its path matches an ignore rule.
+`review-scope` records a full review-input `snapshot`, a normalized Git `tree` and a `raw_tree` that bypasses clean filters and EOL conversion. Initialized submodules carry recursive scope records with their own trees and indexes. Scope collection and rendered commands source one bundled `review-git.bash` policy that unconditionally overrides submodule ignore settings for each call. The rendered review prompt includes their staged and unstaged diff commands and uses expanded submodule diffs for gitlink changes. `codex-aspects changes` unions each repository's normalized and raw tree comparisons and prefixes internal paths back to the root scope. It lists raw edits, additions and deletions, including edits normalized away by Git, and marks paths outside the first read's membership. If either side lacks `raw_tree`, that repository comparison uses both normalized trees; older captures cannot recover uncaptured bytes. Untracked files excluded by ignore rules are outside the digest. A tracked file stays covered even when its path matches an ignore rule.
 
 The comparison detects lasting changes to that stored content between two scans, and nothing more. It cannot see:
 
 - a write to an ignored, untracked file, because those are outside the digest;
-- an edit reverted before the second scan, because only the two end states are compared;
-- an edit that Git normalizes away, such as a line-ending change under text normalization or one a clean filter undoes, because the digest is built from the content Git would store, not the bytes on disk.
+- an edit reverted before the second scan, because only the two end states are compared.
+
+Raw trees detect edits removed by normalization. Intentionally absent skip-worktree ordinary files and symlinks contribute no raw entry; materialization changes raw availability. Present sparse files and symlinks contribute current bytes or link text. Their normalized tree and file inventory retain existing Git-index semantics.
 
 Index content, HEAD, base-tip and bucket changes are detected separately by `scope_changed`, even when `changed` is empty. A changed snapshot invalidates findings and blocks edits. So an empty disk-change result means no lasting content changes were found, not that nothing was written. On the `codex exec` path the read-only sandbox is what prevents writes, and the comparison is a second check. On the subagent path the comparison is the only check, with those blind spots.
 
