@@ -449,3 +449,16 @@ TOOLING authorized fixing the branch-owned CI failure and identified the resourc
 The symlink fixture now derives one absolute ln destination from PWD and its canonical relative link_path. JSON and scope paths retain their relative strings. Local Linux-like verification uses the already-installed GNU coreutils ln 9.12 via a temporary PATH link, with macOS Bash 3.2 selected. The exact combined Scrut case passed; restoring the raw relative operand failed with exit 50; restored control passed. No software was installed and no real configuration changed. Logs are /tmp/523-gnu-ln-control.log, mutant.log and restored.log; the owned temporary PATH directory is recorded in /tmp/523-gnu-ln-location.
 
 The pending order is structural Critical-only, focused Critical-only, fresh baseline Semgrep under the shell parsing rule, then final lint/test-all/version checks and non-force push. Record Important/Nit findings without taking them at these explicit thresholds. Resource claims is not fixed or retried independently. Preserve all earlier review evidence and history; no tidy rewrite.
+
+## Requested final structural Critical-only round
+
+Anti-patterns completed exit 0 with valid complete step-7 JSON, no unread files and no Critical finding. Report-only simplify completed exit 0 with a valid reply and no findings. Both standalone runs used gpt-6.1-sol/high/872000 from the trusted Git checkout in the built-in read-only sandbox. The before/after snapshot matched; no lasting changes found. Reports were copied only after that check.
+
+The first simplify attempt inherited the installed helper's generic editing language. Recorded PID 91018 was stopped and exited 143; it is incomplete evidence only, not a round. The corrected prompt explicitly overrode editing with report-only instructions, retaining the same read-only sandbox. Corrected PID 28401 completed successfully; anti-patterns PID 91016 was allowed to finish, without rerun. No trust or sandbox override was used.
+
+- **Reviewer's label:** important, Parallel paths: recursive review omits historical child guidance.
+- **Our severity:** Important, the known reduction in review quality does not cause serious harm.
+- **Take or record:** Recorded, not taken, under the explicit follow-up 674 disposition. No new membership or operand recurrence was reported.
+- **Review again:** No edit and no Critical finding taken. Structural round ends **clean at Critical**.
+
+The reviewer's standalone ShellCheck --norc produced informational source-following/quoted-jq diagnostics; it is not a claimed project lint pass. Required configured project checks remain separate. The one focused Critical-only round follows, then fresh baseline scanning and final checks. Resource claims remains untouched under TOOLING's known-flake disposition.
