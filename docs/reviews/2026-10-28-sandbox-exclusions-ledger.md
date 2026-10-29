@@ -905,3 +905,20 @@ isolation, catalog and mirror validations passed. Markdown fixers remained
 check-only by project policy; scoped shfmt fixed only permitted files. No
 required tool was skipped or failed at this point. A baseline Semgrep rescan
 will check the final configured-format tree before full test-all verification.
+
+The configured-format baseline rescan completed at `59548593`, exit 0: 131
+rules, 19 targets, zero findings, about 85.2% parsed lines. The only partial
+parse remains the Bash launcher; no other-language error occurred. ShellCheck
+and /bin/bash -n passed that exact file in the rescan clone. Standing shell
+coverage exception applies. Raw rescan JSON and summary are retained alongside
+the first scan. This rescan is a verification check, not another review round.
+
+Upstream was refreshed before final verification to `e2dfde13`; the actual
+merge base remains `26acdbfe`. All five affected plugin versions remain one
+patch above upstream, and read-only merge-tree returned 0 (clean integration).
+No additional sync was needed. Assessment: `final-checks/latest-integration.txt`.
+
+Final lint-and-fix verification now runs make test-all with SCRUT_JOBS=4 to
+limit shared-machine contention while executing the full suite. All documented
+linters/validators are included; Markdown autofix stays downgraded under the
+protected-snapshot policy. No push is performed by this child workflow.
