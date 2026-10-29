@@ -853,3 +853,34 @@ Scoped check-mode Prettier, Markdownlint, shfmt and ShellCheck passed after the
 edits; make build and make validate passed. Generated mirrors were rebuilt
 rather than edited. No further code review round is required for these
 comment/prose-only changes. Next: actual baseline scan in a disposable clone.
+
+## Baseline Semgrep scan: complete with documented shell coverage gap
+
+Semgrep 1.180.0 ran to completion, exit 0, in disposable shared clone
+`/private/tmp/sandbox512-live.dW1szP/semgrep/repo` at `c823fd85`. Invocation:
+`SEMGREP_REPO_NAME=cboone/agent-harness-plugins semgrep scan --config auto
+--baseline-commit 26acdbfec2d70593d563f5fcc78d52f9680d4cd0 --json` with output
+saved outside the clone. No metrics-off flag. This was the actual baseline
+mode, not a full scan matched to changed lines. The tool limited targets to
+changed files; with zero current findings it skipped its separate baseline
+checkout/comparison phase as an optimization.
+
+Result: 131 rules run on 19 targets, zero findings, about 85.0% parsed lines.
+Eighteen paths were skipped under the existing ignore policy. The only error
+was a warning-level PartialParsing span in the Bash launcher,
+`plugins/workmux/scripts/launch-workmux:3-872`. No other language had a partial
+parse or error. This counts under the explicit TOOLING/Chris (he/him) standing
+rule recorded above. It is not claimed as full parsing or errors=[].
+
+ShellCheck and /bin/bash -n both passed on that exact unparsed file inside the
+scanned clone, with no new suppression. The clone remained clean at the scanned
+commit. JSON/summary: `semgrep/scan.json` and `semgrep/stderr.log` in the recorded
+scratch root. No executable code has changed since the scan.
+
+Next: lint-and-fix --no-push and full project checks. Project-wide Markdown
+fixers reach protected Scrut snapshots, so Markdownlint/Prettier use the
+project's documented check mode under the provided AGENTS rule: "Scrut files
+under tests/scrut/ ... are never reformatted". Required tools are not skipped.
+The documented make lint sequence includes ShellCheck, shfmt check and
+Actionlint; final verification uses make test-all. Unresolved findings, if any,
+are fixed only in allowed branch-owned paths, never generated copies.
