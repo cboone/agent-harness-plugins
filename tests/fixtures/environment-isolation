@@ -17,6 +17,10 @@ function report_capture_status() {
 
 function main() {
   local scenario="${1}" root output=''
+  case "${scenario}" in
+    review-path-contract | review-wrapper-grammar | review-path-public) require_review_shfmt || return ;;
+    *) ;;
+  esac
   root="$(mktemp -d "${TMPDIR:-/tmp}/environment-isolation.XXXXXX")"
   readonly ISOLATION_TEST_ROOT="${root}"
   trap 'rm -r -- "${ISOLATION_TEST_ROOT}"' EXIT

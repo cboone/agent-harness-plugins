@@ -12,6 +12,13 @@ function fixture_path() {
 
 export -f fixture_path
 
+function require_review_shfmt() {
+  command -v shfmt > /dev/null || {
+    printf 'shfmt required for review operand checks\n' >&2
+    return 1
+  }
+}
+
 # Check constant trap and shell programs recursively without executing them.
 function check_review_shell_paths() {
   local source="${1}" label="${2}" scratch script status=0
@@ -43,6 +50,7 @@ function check_review_shell_paths() {
 }
 
 function check_review_fixture_paths() {
+  require_review_shfmt || return
   local file scratch status=0
   local -a files=(
     tests/fixtures/review-fixture-paths.bash
