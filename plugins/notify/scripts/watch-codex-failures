@@ -84,7 +84,7 @@ function main() {
   initial_bytes="$(LC_ALL=C wc -c < "${rollout}")"
   cd -- "${cwd}"
 
-  local line line_bytes partial="" record identity="" subagent=false state=startup action turn kind message key marker payload alerter_path
+  local line line_bytes partial="" record identity="" subagent=false state=startup action turn kind message key marker payload alerter_path claim_error
   [[ "${once}" == false ]] || state=final-drain
   while true; do
     if [[ "${state}" == owner-exit ]]; then
@@ -123,20 +123,23 @@ function main() {
       message="$(printf '%s' "${record}" | jq -r '.message')"
       key="$(jq -nc --arg id "${identity}" --arg turn "${turn}" '[$id,$turn]' | shasum -a 256 | cut -d ' ' -f 1)"
       marker="${XDG_CACHE_HOME:-${HOME}/.cache}/agent-harness-notify/codex-failures/${key}"
-      [[ ! -d "${marker}" ]] || continue
+      [[ ! -e "${marker}" && ! -L "${marker}" ]] || continue
       if ! alerter_path="$(command -v alerter)" || [[ ! -f "${alerter_path}" || ! -x "${alerter_path}" ]]; then
         die "alerter is not executable (thread ${identity}, turn ${turn})"
       fi
       mkdir -p "$(dirname "${marker}")"
       # Claim delivery once across concurrent readers and restarts. Never retry an uncertain delivery.
-      if mkdir "${marker}" 2> /dev/null; then # error-output-allow: exclusive delivery claim diagnoses failure unless another reader already owns the marker
+      if claim_error="$( (
+        set -o noclobber
+        : > "${marker}"
+      ) 2>&1)"; then # error-output-allow: exclusive file claim retains errors for non-contention failure diagnostics
         payload="$(jq -nc --arg kind "${kind}" --arg message "${message}" --arg session_id "${identity}" --arg turn_id "${turn}" \
           --arg session_name "${name}" --arg tmux_session "${tmux_session}" --arg tmux_window "${tmux_window}" \
           '{kind:$kind,message:$message,session_id:$session_id,turn_id:$turn_id,session_name:$session_name,
             tmux_session:$tmux_session,tmux_window:$tmux_window}')"
         printf '%s' "${payload}" | NOTIFY_TIER="${tier}" "${script_dir}/notify" codex-failure
-      elif [[ ! -d "${marker}" ]]; then
-        die 'cannot claim failure delivery'
+      elif [[ ! -e "${marker}" && ! -L "${marker}" ]]; then
+        die "cannot claim failure delivery: ${claim_error}"
       fi
     else
       partial="${partial}${line}"

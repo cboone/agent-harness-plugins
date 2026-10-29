@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check fixture environments and retained child diagnostics.
+# Check fixture environments, review paths and retained child diagnostics.
 set -euo pipefail
 
 # shellcheck source=bin/lib/git-environment.bash
@@ -143,6 +143,15 @@ function check_fixture_graph() {
 }
 
 function main() {
+  if [[ "${1:-}" == --review-paths ]]; then
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    export REPO_ROOT
+    # shellcheck source=tests/fixtures/review-fixture-paths.bash
+    source "${REPO_ROOT}/tests/fixtures/review-fixture-paths.bash"
+    shift
+    check_review_fixture_paths "$@"
+    return
+  fi
   local ast_scope=false
   if [[ "${1:-}" == --ast-scope ]]; then
     ast_scope=true
@@ -150,6 +159,7 @@ function main() {
   fi
   [[ $# -le 1 ]] || {
     echo 'Usage: check-fixture-environments [--ast-scope] [root]' >&2
+    echo '       check-fixture-environments --review-paths [options]' >&2
     return 2
   }
   local root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}" file scripts documents workflows first_line

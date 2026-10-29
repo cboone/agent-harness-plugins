@@ -67,6 +67,10 @@
     {
       "name": "plugins/notify/scripts/codex-failure.jq",
       "reason": "jq rollout-failure classifier, not a shell program; watch-codex-failures is its Bash caller."
+    },
+    {
+      "name": "tests/fixtures/review-path-contract.jq",
+      "reason": "jq syntax contract for fixed review-fixture paths; check_review_fixture_paths invokes it through jq, not Bash."
     }
   ],
   "parse_exceptions": []

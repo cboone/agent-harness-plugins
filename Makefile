@@ -139,7 +139,7 @@ SHELL_SCRIPTS = $(shell ./bin/list-shell-scripts)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help lint lint-markdown lint-shell format validate validate-corpus build test-scrut test-scrut-update test-all
+.PHONY: help lint lint-markdown lint-shell format validate validate-corpus build test-scrut test-scrut-update test-bash32 test-all
 
 help:
 	@echo "Targets:"
@@ -153,6 +153,7 @@ help:
 	@echo "  test-scrut         Run the scrut documents in parallel (SCRUT_JOBS=N to limit)"
 	@echo "  test-scrut-update  Re-record scrut expectations"
 	@echo "  test-all           lint + validate + test-scrut"
+	@echo "  test-bash32        Empty-list regressions under macOS /bin/bash 3.2"
 	@echo ""
 	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut."
 	@echo "validate-corpus additionally needs jq and mikefarah yq v4."
@@ -169,6 +170,7 @@ lint-shell:
 	@command -v shfmt > /dev/null || { echo "shfmt is required: https://github.com/mvdan/sh" >&2; exit 1; }
 	shellcheck $(SHELL_SCRIPTS)
 	shfmt -d $(SHELL_SCRIPTS)
+	bin/check-fixture-environments --review-paths
 
 format:
 	yarn lint:fix
@@ -203,5 +205,10 @@ test-scrut-update:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
 	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"
 	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut-documents "$(SCRUT_TEST_DIR)"
+
+test-bash32:
+	@/bin/bash -c '[[ $${BASH_VERSINFO[0]} == 3 && $${BASH_VERSINFO[1]} == 2 ]]' || \
+		{ echo 'test-bash32 requires /bin/bash 3.2' >&2; exit 1; }
+	$(MAKE) test-scrut SCRUT_TEST_DIR=tests/scrut/bash-empty-lists.md
 
 test-all: lint validate test-scrut

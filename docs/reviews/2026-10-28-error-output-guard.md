@@ -1267,3 +1267,56 @@ These are reported to TOOLING before selecting an integration or review-base
 continuation. No actual merge or source resolution has begun. The published
 source remains unchanged; this local documentation records the stop without a
 further push. The PR is not green or ready for the final review précis yet.
+
+### Authorized integration: additional rare-site gate
+
+TOOLING authorized one signed merge of incoming main, preserving both checker
+modes, all rules, unconditional shfmt and new CI coverage, fixture hardening and
+main's fixture deletion. The resolved tree keeps the exact incoming
+`--review-paths` dispatch alongside the existing graph and AST guard. Generated
+copies were regenerated; five plugin versions advance above main. The new jq
+review-path contract has a named language-specific exclusion. Resolution
+automation was corrected before any commit; original conflict inputs were
+restored, the resolved Bash programs passed Bash 3.2 syntax checks and the build
+completed. No published source was changed.
+
+The complete native AST inventory finds four additional rare-form commands,
+all in `tests/fixtures/check-codex-failures`: read/write FIFO opens on descriptors
+4, 5 and 6, and a combined closure after both children are reaped. These are four
+canonical and physical sites, with no generated repetitions. No new reasons
+were added to them. The earlier instruction requires a stop for any additional
+rare-form site beyond the five approved, so the signed merge is held pending
+TOOLING's direction. [The gate record](2026-10-29-error-output-integration-rare-site-gate.json)
+retains actual sites, proposed reasons and the eleven ordinary capture findings
+still awaiting review and seeding. The rule was not weakened.
+
+The merge remains in progress against `5205fada`, with all textual/index conflicts
+resolved but no merge commit. This record stays uncommitted with that merge;
+a partial documentation commit cannot preserve the requested single signed merge.
+No focused review has started and no review count advances. The known upstream
+lint-shell operand-contract failure is unchanged. TOOLING receives the new-site count before any
+further exception or source change.
+
+TOOLING approved the four FIFO reasons as proposed, without a classifier change.
+The five previously approved source sites plus these four make nine; any further
+rare-form site stops again. Each FIFO open and the closure now carries its own
+written reason. Eleven ordinary captures were reviewed: two GNU-stat dialect
+probes select a checked BSD fallback, seven native-Bash snapshots assert failure
+diagnostics and status, and two mutation snapshots retain diagnostics while
+asserting failure and empty stdout. Each receives its actual reason. The
+review-scope copies remain byte-identical. These are annotations for existing
+protocols, with no executable weakening or hidden follow-up.
+
+The accepted AST inventory passes across 2,088 units with eighteen named
+non-Bash exclusions and zero findings; the fixture graph passes too. Both
+checker modes are preserved. Under Bash 3.2, the review-path mode passes all
+eight other fixed-manifest files and reports only the known incoming-main
+operand-contract failures in the unchanged review-submodule fixture at lines
+132–134 and 254. This is the reported lint-shell failure, not a ShellCheck
+parser failure. The upstream file is byte-identical to main and remains untouched.
+
+The integration is recorded as one signed merge, without rebasing or rewriting
+published history. Its focused review uses immutable base `5205fada` and the
+existing Important-round count advances to round 2, as directed for this behavior
+change. Full checks follow the review. No additional rare site appeared beyond
+the nine approved.
