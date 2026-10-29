@@ -789,3 +789,20 @@ left behind. The revised resource document passes 23/23; ShellCheck and fixture
 validation pass. Tests are committed before the new boundary plants.
 The behavior-changing fix advances this focused loop to its first Important
 round; no second Nit round will run.
+
+Focused Nit fixes were committed at `b241fa8b` before planting. New controls:
+
+| Planted defect                                  | Instrument                  | Observed result                                             | Regression coverage                                  |
+| ----------------------------------------------- | --------------------------- | ----------------------------------------------------------- | ---------------------------------------------------- |
+| Restore directory lookup beside the symlink     | Linked success case         | Failed before launch with missing resource-diagnostics.bash | Absolute/relative helper chain in a path with spaces |
+| Remove claim-file temporary diagnostic          | claim-temp check            | Missing harness/resource context caught                     | Claim temporary-publication denial                   |
+| Remove claim-file replacement diagnostic        | claim-move check            | Missing harness/resource context caught                     | Claim replacement denial                             |
+| Omit failed-replacement temporary cleanup       | claim-move state assertions | Temporary claim file left behind caught                     | Publication temporary cleanup                        |
+| Clear existing claims after replacement failure | claim-move byte comparison  | Existing claims changed caught                              | Prior claim preservation                             |
+| Disable the EXIT handler only in resource_die   | claim-move state assertions | Owned claim lock left behind caught                         | Owner-token release after publication failure        |
+
+Each plant passed Bash syntax checks, had a passing positive control, and was
+restored before the next plant. The restored controls passed. The upstream
+owner-lock library was never modified. Exact results: `focused-fix-plants/`.
+The last full resource document passed 23/23; no temporary mutation remains.
+Next: focused Important round 1 on the pinned actual merge-base SHA.
