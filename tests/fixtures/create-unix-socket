@@ -1,63 +1,83 @@
 #!/usr/bin/env bash
-# create-unix-socket -- Create a live Unix socket for launcher tests.
+# create-unix-socket -- Probe socket creation and connection, then retain a live server.
+# Exit 80 skips socket-dependent Scrut tests when the environment denies sockets.
 set -euo pipefail
-
-SCRIPT_NAME="$(basename "$0")"
-readonly SCRIPT_NAME
-
-function die() {
-  echo "${SCRIPT_NAME}: ${1}" >&2
-  exit "${2:-1}"
-}
-
-function start_socket_server() {
-  local socket_path="${1}"
-
-  if command -v ruby > /dev/null; then
-    ruby -rsocket -e 'socket_path = ARGV.fetch(0); server = UNIXServer.new(socket_path); cleanup = proc { server.close rescue nil; File.unlink(socket_path) rescue nil; exit 0 }; trap("TERM", &cleanup); trap("INT", &cleanup); sleep' "${socket_path}" > /dev/null 2>&1 &
-    printf '%s\n' "$!"
-    return 0
-  fi
-
-  if command -v perl > /dev/null; then
-    perl -MIO::Socket::UNIX -MSocket=SOCK_STREAM -e 'use strict; use warnings; my $socket_path = shift @ARGV; my $server = IO::Socket::UNIX->new(Type => SOCK_STREAM, Local => $socket_path, Listen => 1) or die "$!\n"; $SIG{TERM} = sub { close $server; unlink $socket_path; exit 0 }; $SIG{INT} = $SIG{TERM}; sleep 1 while 1;' "${socket_path}" > /dev/null 2>&1 &
-    printf '%s\n' "$!"
-    return 0
-  fi
-
-  die "ruby or perl is required to create a Unix socket"
-}
 
 function main() {
   if [[ $# -ne 1 ]]; then
-    die "usage: ${SCRIPT_NAME} <socket-path>"
+    echo 'create-unix-socket: usage: create-unix-socket <socket-path>' >&2
+    exit 1
   fi
 
-  local socket_path="${1}"
-  local socket_dir pid attempts_remaining
+  local socket_path="${1}" socket_dir
   socket_dir="${socket_path%/*}"
-  if [[ "${socket_dir}" == "${socket_path}" ]]; then
-    socket_dir="."
-  fi
-
+  [[ "${socket_dir}" != "${socket_path}" ]] || socket_dir='.'
   mkdir -p "${socket_dir}"
   if [[ -e "${socket_path}" || -L "${socket_path}" ]]; then
-    die "socket path already exists: ${socket_path}"
+    echo "create-unix-socket: socket path already exists: ${socket_path}" >&2
+    exit 1
   fi
 
-  pid="$(start_socket_server "${socket_path}")"
-  attempts_remaining=50
-  while ((attempts_remaining > 0)); do
-    if [[ -S "${socket_path}" ]]; then
-      printf '%s\n' "${pid}"
-      return 0
-    fi
-    attempts_remaining=$((attempts_remaining - 1))
-    sleep 0.1
-  done
-
-  kill "${pid}" 2> /dev/null || true
-  die "socket was not created: ${socket_path}"
+  if command -v ruby > /dev/null; then
+    ruby -rsocket -e '
+      path = ARGV.fetch(0)
+      server = nil
+      begin
+        server = UNIXServer.new(path)
+        client = UNIXSocket.new(path)
+        server.accept.close
+        client.close
+      rescue Errno::EPERM, Errno::EACCES, Errno::EAFNOSUPPORT, Errno::EPROTONOSUPPORT => error
+        server.close if server
+        File.unlink(path) if server
+        warn "SKIP: Unix socket creation or connection unavailable: #{error.message}"
+        exit 80
+      end
+      pid = fork do
+        STDOUT.reopen(File::NULL, "w")
+        STDERR.reopen(File::NULL, "w")
+        cleanup = proc { server.close; File.unlink(path); exit 0 }
+        trap("TERM", &cleanup)
+        trap("INT", &cleanup)
+        sleep
+      end
+      server.close
+      puts pid
+    ' "${socket_path}"
+  elif command -v perl > /dev/null; then
+    perl -MIO::Socket::UNIX -MSocket=SOCK_STREAM -MErrno=EPERM,EACCES,EAFNOSUPPORT,EPROTONOSUPPORT -e '
+      use strict;
+      use warnings;
+      my $path = shift @ARGV;
+      my $server = IO::Socket::UNIX->new(Type => SOCK_STREAM, Local => $path, Listen => 1);
+      my $client = $server && IO::Socket::UNIX->new(Type => SOCK_STREAM, Peer => $path);
+      unless ($server && $client) {
+        my $denied = $! == EPERM || $! == EACCES || $! == EAFNOSUPPORT || $! == EPROTONOSUPPORT;
+        my $error = "$!";
+        if ($server) { close $server; unlink $path; }
+        die "create-unix-socket: $error\n" unless $denied;
+        warn "SKIP: Unix socket creation or connection unavailable: $error\n";
+        exit 80;
+      }
+      my $accepted = $server->accept() or die "create-unix-socket: accept: $!\n";
+      close $accepted;
+      close $client;
+      my $pid = fork();
+      die "create-unix-socket: fork: $!\n" unless defined $pid;
+      if ($pid == 0) {
+        open STDOUT, ">", "/dev/null" or die "$!\n";
+        open STDERR, ">", "/dev/null" or die "$!\n";
+        $SIG{TERM} = sub { close $server; unlink $path; exit 0 };
+        $SIG{INT} = $SIG{TERM};
+        sleep 1 while 1;
+      }
+      close $server;
+      print "$pid\n";
+    ' "${socket_path}"
+  else
+    echo 'create-unix-socket: ruby or perl is required to create a Unix socket' >&2
+    exit 1
+  fi
 }
 
 main "$@"

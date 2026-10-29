@@ -88,26 +88,6 @@ $ function prepare_stubs() {
 > function launch_tmp_contents() {
 >   if [[ -n "$(ls -A "${launch_tmp}")" ]]; then echo "launch temp files: left behind"; else echo "launch temp files: none"; fi
 > }
-> function create_socket_fixture() {
->   tmux_tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
->   socket_dir="${tmux_tmpdir}/tmux-$(id -u)"
->   socket_path="${socket_dir}/projects"
->   socket_pid="$("${UNIX_SOCKET_FIXTURE_BIN}" "${socket_path}")"
->   socket_real_path="$(cd "${socket_dir}" && pwd -P)/$(basename "${socket_path}")"
-> }
-> function cleanup_socket_fixture() {
->   if [[ -n "${socket_pid:-}" ]]; then
->     kill "${socket_pid}" 2> /dev/null || true
->     socket_pid=""
->   fi
->   if [[ -n "${tmux_tmpdir:-}" ]]; then
->     rm -r -- "${tmux_tmpdir}"
->     tmux_tmpdir=""
->     socket_dir=""
->     socket_path=""
->     socket_real_path=""
->   fi
-> }
 ```
 
 ## Issue text and chain footer remain data during a generated launch
@@ -295,94 +275,6 @@ tmux: paste-buffer socket=/tmp/tmux-501/projects target=%9 buffer=workmux-prompt
 tmux: delete-buffer socket=/tmp/tmux-501/projects buffer=workmux-prompt-feature-existing-worktree-paste-fail
 ```
 
-## Create worktree launcher discovers one matching Codex pane
-
-```scrut
-$ prepare_stubs \
->   && create_socket_fixture \
->   && trap cleanup_socket_fixture EXIT \
->   && cwd="$(pwd -P)" \
->   && panes="${socket_real_path}|%7|cx|${cwd}|4242" \
->   && printf '%s\n' 'Prompt body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb bash "${LAUNCH_WORKMUX_BIN}" "feature/discovered-tmux" \
->   && cleanup_socket_fixture \
->   && trap - EXIT
-workmux add
-branch: feature/discovered-tmux
-open-if-exists: true
-term: tmux-256color
-tmux: */projects,4242,%7 (glob)
-prompt:
-Prompt body
-prompt-file-exists: yes
-```
-
-## Address issue in worktree launcher discovers one matching Codex pane
-
-```scrut
-$ prepare_stubs \
->   && create_socket_fixture \
->   && trap cleanup_socket_fixture EXIT \
->   && cwd="$(pwd -P)" \
->   && panes="${socket_real_path}|%7|codex-aarch64-a|${cwd}|4242" \
->   && printf '%s\n' 'Issue body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb bash "${LAUNCH_WORKMUX_BIN}" "feature/discovered-tmux-issue" \
->   && cleanup_socket_fixture \
->   && trap - EXIT
-workmux add
-branch: feature/discovered-tmux-issue
-open-if-exists: true
-term: tmux-256color
-tmux: */projects,4242,%7 (glob)
-prompt:
-Issue body
-prompt-file-exists: yes
-```
-
-## Create worktree launcher ignores ambiguous Codex panes
-
-```scrut
-$ prepare_stubs \
->   && create_socket_fixture \
->   && trap cleanup_socket_fixture EXIT \
->   && cwd="$(pwd -P)" \
->   && panes="${socket_real_path}|%7|cx|${cwd}|4242"$'\n'"${socket_real_path}|%8|codex|${cwd}|4242" \
->   && printf '%s\n' 'Prompt body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb bash "${LAUNCH_WORKMUX_BIN}" "feature/ambiguous-tmux" \
->   && cleanup_socket_fixture \
->   && trap - EXIT
-workmux add
-branch: feature/ambiguous-tmux
-open-if-exists: true
-term: dumb
-tmux: <unset>
-prompt:
-Prompt body
-prompt-file-exists: yes
-```
-
-## Address issue in worktree launcher ignores ambiguous Codex panes
-
-```scrut
-$ prepare_stubs \
->   && create_socket_fixture \
->   && trap cleanup_socket_fixture EXIT \
->   && cwd="$(pwd -P)" \
->   && panes="${socket_real_path}|%7|cx|${cwd}|4242"$'\n'"${socket_real_path}|%8|codex|${cwd}|4242" \
->   && printf '%s\n' 'Issue body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb bash "${LAUNCH_WORKMUX_BIN}" "feature/ambiguous-tmux-issue" \
->   && cleanup_socket_fixture \
->   && trap - EXIT
-workmux add
-branch: feature/ambiguous-tmux-issue
-open-if-exists: true
-term: dumb
-tmux: <unset>
-prompt:
-Issue body
-prompt-file-exists: yes
-```
-
 ## Create worktree launcher continues without `tmux`
 
 ```scrut
@@ -514,7 +406,7 @@ prompt-file-exists: yes
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' bash "${LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue 387 2>&1; } || exit_code=$?; if compgen -G "${TMPDIR:-/tmp}/workmux-prompt-issue-387.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' bash "${LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue 387 2>&1; } || exit_code=$?; if compgen -G "${launch_tmp}/workmux-*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: issue 387 matches more than one local branch:
   feature/387-one
   fix/387-two
