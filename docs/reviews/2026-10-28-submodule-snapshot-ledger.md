@@ -428,3 +428,16 @@ The integrated make test-all command exited 0: all **44 Scrut documents passed**
 The repository check-versions skill was repeated after fetching origin/main. Against actual merge base a2e56c535ed6326cc8d531d945fbb6c627a9b335, intended bumps remain review-until-clean 3.2.0 to 3.3.0 and review-pr-with-codex 2.1.4 to 2.2.0. All 60 catalog entries/directories, valid manifest versions and present Codex manifest copies agree, with no marketplace duplicate version state. Structured evidence: /tmp/523-merged-version-report.json.
 
 The signed main merge and separate narrow checker fix preserve published history. No further tidy rewrite is performed. Push is authorized by TOOLING's through-PR instruction; PR 675 is ready for review and cites follow-up 674. CI and mergeability will be observed after the push. Copilot remains paused and TOOLING alone merges. The final review précis must include retained Important guidance findings and the shell parse-coverage limit.
+
+## CI stop: recurring option-like operand in fixture
+
+CI run 40808118209 on pushed head 606deef13cf03f8e444c0c9f156e71526af664c7 completed with 44 passing checks and two failed documents. The recursive consumer case symlink-option fails at the fixture ln call: link_path is -vendor/new-link and ln passes it directly as an operand. Linux ln reports unexpected argument -e. The macOS run passed, so local success did not establish fixture portability. Failed-job output: /tmp/523-ci-failures.log.
+
+- **Reviewer's label:** CI failure, recursive option-like checkout/untracked symlink fixture.
+- **Our severity:** Important. Required CI and the combined boundary regression cannot complete on Linux; no new production harm is established.
+- **Take or record:** Take pending the explicit operand recurrence decision. Stop under TOOLING's standing rule; no fix is applied. Proposed narrow direction is a rooted fixture filesystem operand while retaining relative JSON strings.
+- **Review again:** A fixture-only correction changes no production behavior; preserve completed review counts and TOOLING's continuation decision. Overall state is **stopped: recurring defect**.
+
+The other failed document is manage-resource-claims.md at its parallel-claims case: expected resource=logic is missing, while resource=simulator remains. This branch does not change resource-claims production code or that testcase. Report the observation to TOOLING for its owning workstream; no cause or flaky classification is inferred and no fix/retry is applied.
+
+The CI watch has ended; no background process remains. Keep the PR open and ready for review but explicitly failing checks. This record is committed locally without a retry push at the stopped gate.
