@@ -9,6 +9,37 @@ $ source "${REPO_ROOT}/bin/lib/git-environment.bash" \
 >   && source "${REPO_ROOT}/tests/fixtures/review-fixture-paths.bash"
 ```
 
+## Review operand contract rejects direct, nested and wrapped omissions
+
+```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" review-path-contract
+52 omission plants rejected
+unsupported option and ambiguous Git forms rejected
+protected operands and quoted data accepted
+```
+
+## Wrapper grammar drives protected, unprotected and rejected forms
+
+```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" review-wrapper-grammar
+wrapper grammar: 10 wrappers, 414 generated cases passed
+```
+
+## The public checker rejects executable Scrut input and preserves source lines
+
+```scrut
+$ "${ENVIRONMENT_ISOLATION_BIN}" review-path-public
+public Scrut omission rejected at line 4
+public protected Scrut commands accepted
+```
+
+## Review fixture manifest satisfies its operand contract
+
+```scrut
+$ "${CHECK_FIXTURE_ENVIRONMENTS_BIN}" --review-paths
+Review fixture operands are protected.
+```
+
 ## Every Git consumer resets at entry
 
 ```scrut

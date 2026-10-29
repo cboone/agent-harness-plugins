@@ -134,3 +134,33 @@ $ "${REVIEW_SUBMODULE_FIXTURE_BIN}" transition-write-failure
 printf: sample path-record write failure
 codex-aspects: could not record initialization path module/nested in * (glob)
 ```
+
+## Fixture filesystem operands retain canonical relative data
+
+```scrut
+$ printf '%s\n' "$(fixture_path -vendor/new-link)" "$(fixture_path module/new)" "$(fixture_path /absolute)"
+./-vendor/new-link
+module/new
+/absolute
+```
+
+## Rooted Git directories work with option-like names
+
+```scrut
+$ path_fixture="$(mktemp -d "${TMPDIR:-/tmp}/fixture-path.XXXXXX")" && cd "${path_fixture}" \
+>   && git init -q --template= -- -checkout \
+>   && git -C "$(fixture_path -checkout)" rev-parse --is-inside-work-tree \
+>   && cd "${REPO_ROOT}" && rm -r -- "${path_fixture}"
+true
+```
+
+## Filesystem commands accept option-like source and target names
+
+```scrut
+$ operand_fixture="$(mktemp -d "${TMPDIR:-/tmp}/fixture-operands.XXXXXX")" && cd "${operand_fixture}" \
+>   && mkdir -- -directory && touch -- -source && cp -- -source -copy \
+>   && mv -- -copy -moved && ln -s -- -source -link && test -L ./-link \
+>   && rm -- -source -moved -link && rmdir -- ./-directory \
+>   && cd "${REPO_ROOT}" && rm -r -- "${operand_fixture}" && echo 'option-like filesystem operands accepted'
+option-like filesystem operands accepted
+```
