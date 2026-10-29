@@ -27,6 +27,7 @@ readonly LOCK_WAIT_SECONDS
 
 # Set while a lock is held so the EXIT trap knows what to remove.
 LOCK_DIRECTORY=""
+LOCK_OWNER_ERROR=""
 
 function usage() {
   cat << 'USAGE_TEXT'
@@ -352,11 +353,18 @@ function read_claims() {
 }
 
 function release_lock() {
+  local diagnostic
   [[ -n "${LOCK_DIRECTORY}" ]] || return 0
 
   rm "${LOCK_DIRECTORY}/owner" || return 1
   # Another writer may create its owner file before this directory is removed.
-  rmdir "${LOCK_DIRECTORY}" 2> /dev/null || :
+  if ! diagnostic="$(rmdir "${LOCK_DIRECTORY}" 2>&1)"; then
+    if [[ ! -e "${LOCK_DIRECTORY}/owner" ]] \
+      && { [[ -e "${LOCK_DIRECTORY}" ]] || [[ ! -x "${LOCK_DIRECTORY%/*}" ]]; }; then
+      echo "${SCRIPT_NAME}: cannot remove ${LOCK_DIRECTORY}: ${diagnostic}; manual cleanup may be required" >&2
+      return 1
+    fi
+  fi
   LOCK_DIRECTORY=""
 }
 
@@ -415,11 +423,30 @@ function held_lock_report() {
 # lock on the resource, which stays advisory. Bash noclobber creates the owner
 # exclusively, even when mkdir incorrectly reports success on an existing path.
 function try_acquire_lock() {
-  local lock="${1}"
-  mkdir "${lock}" 2> /dev/null && (
-    set -o noclobber
-    printf '%s' "$$" > "${lock}/owner"
-  ) 2> /dev/null
+  local lock="${1}" diagnostic
+  mkdir "${lock}" 2> /dev/null || return 1
+  if LOCK_OWNER_ERROR="$(
+    (
+      set -o noclobber
+      : > "${lock}/owner"
+    ) 2>&1
+  )"; then
+    LOCK_DIRECTORY="${lock}"
+    trap 'release_lock || exit 1' EXIT
+    printf '%s' "$$" > "${lock}/owner" \
+      || die "cannot record the lock owner in ${lock}"
+    return 0
+  fi
+  # A failed reservation owns no file. rmdir can remove only an empty shell;
+  # an owner arriving meanwhile prevents that removal.
+  if [[ ! -e "${lock}/owner" && ! -L "${lock}/owner" ]]; then
+    if ! diagnostic="$(rmdir "${lock}" 2>&1)"; then
+      if [[ ! -e "${lock}/owner" ]] && { [[ -e "${lock}" ]] || [[ ! -x "${lock%/*}" ]]; }; then
+        die "cannot create ${lock}/owner: ${LOCK_OWNER_ERROR}; cannot remove ${lock}: ${diagnostic}; manual cleanup may be required"
+      fi
+    fi
+  fi
+  return 1
 }
 
 function acquire_lock() {
@@ -446,12 +473,15 @@ function acquire_lock() {
         break
       fi
 
-      if [[ ! -d "${lock}" ]]; then
+      if [[ ! -d "${lock}" && -z "${LOCK_OWNER_ERROR}" ]]; then
         die "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
       fi
     fi
 
     if ((waited >= LOCK_WAIT_SECONDS)); then
+      if [[ ! -e "${lock}/owner" && -n "${LOCK_OWNER_ERROR}" ]]; then
+        die "cannot create ${lock}/owner: ${LOCK_OWNER_ERROR}"
+      fi
       die "$(held_lock_report "${lock}")"
     fi
 
@@ -459,10 +489,6 @@ function acquire_lock() {
     waited=$((waited + 1))
   done
 
-  # Only the exclusive owner may install cleanup. Failed contenders leave the
-  # file untouched, including when its recorded PID no longer exists.
-  LOCK_DIRECTORY="${lock}"
-  trap release_lock EXIT
 }
 
 # Replaces the file in one step so a reader never sees a half-written document.

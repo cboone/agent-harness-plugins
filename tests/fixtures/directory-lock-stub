@@ -6,12 +6,22 @@ case "${0##*/}" in
   mkdir)
     status=0
     "${LOCK_TEST_REAL_MKDIR:?}" "$@" || status=$?
+    if [[ "${LOCK_TEST_MODE:-}" == create && "${status}" == 0 && "${!#}" == "${LOCK_TEST_DIRECTORY:?}" ]]; then
+      chmod 500 "${LOCK_TEST_DIRECTORY}"
+    fi
     if [[ -d "${LOCK_TEST_DIRECTORY:?}" && "${!#}" == "${LOCK_TEST_DIRECTORY}" ]]; then
       exit 0
     fi
     exit "${status}"
     ;;
   sleep) exit 0 ;;
+  rmdir)
+    if [[ "${LOCK_TEST_MODE:-}" == cleanup && "${!#}" == "${LOCK_TEST_DIRECTORY:?}" ]]; then
+      echo 'injected rmdir failure' >&2
+      exit 75
+    fi
+    exec "${LOCK_TEST_REAL_RMDIR:?}" "$@"
+    ;;
   *)
     echo 'install this fixture as mkdir and sleep' >&2
     exit 1
