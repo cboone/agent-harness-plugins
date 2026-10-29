@@ -674,7 +674,7 @@ function main() {
   local file skill_files candidate_files="" directive_files="" has_directives
   local -a files=() candidates=()
   if [[ ${#} -gt 0 ]]; then
-    for file in "${@}"; do
+    for file in "$@"; do
       check_file "${file}"
     done
   else
@@ -718,4 +718,4 @@ function main() {
   echo "All skill cross-references resolve."
 }
 
-main "${@}"
+main "$@"

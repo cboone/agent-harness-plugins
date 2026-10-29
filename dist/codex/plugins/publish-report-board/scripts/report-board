@@ -1056,7 +1056,7 @@ USAGE
 function die() {
   local exit_code="${1}"
   shift
-  printf '%s: %s\n' "${SCRIPT_NAME}" "${*}" >&2
+  printf '%s: %s\n' "${SCRIPT_NAME}" "$*" >&2
   exit "${exit_code}"
 }
 
@@ -1554,13 +1554,13 @@ function main() {
 
   require_jq
   case "${command}" in
-    validate) cmd_validate "${@}" ;;
-    render) cmd_render "${@}" ;;
-    extract) cmd_extract "${@}" ;;
-    compare) cmd_compare "${@}" ;;
-    starter) cmd_starter "${@}" ;;
+    validate) cmd_validate "$@" ;;
+    render) cmd_render "$@" ;;
+    extract) cmd_extract "$@" ;;
+    compare) cmd_compare "$@" ;;
+    starter) cmd_starter "$@" ;;
     *) usage_error "unknown command: ${command}" ;;
   esac
 }
 
-main "${@}"
+main "$@"

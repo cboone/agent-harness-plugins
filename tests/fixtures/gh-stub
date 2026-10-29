@@ -73,7 +73,7 @@ function api_key() {
 function do_api() {
   local endpoint=""
   local arg
-  for arg in "${@}"; do
+  for arg in "$@"; do
     case "${arg}" in
       --paginate | --slurp) ;;
       -*) die "unexpected gh api flag ${arg}" ;;
@@ -102,7 +102,7 @@ function do_api() {
 
 function do_pr_list() {
   local arg
-  for arg in "${@}"; do
+  for arg in "$@"; do
     if [[ "${arg}" == "app/dependabot" ]]; then
       respond "dependabot.json"
       return 0
@@ -227,7 +227,7 @@ function do_graphql() {
 
 function main() {
   if [[ -n "${STUB_GH_LOG:-}" && "${1:-} ${2:-}" != "api graphql" ]]; then
-    printf 'gh %s\n' "${*}" >> "${STUB_GH_LOG}"
+    printf 'gh %s\n' "$*" >> "${STUB_GH_LOG}"
   fi
 
   case "${1:-} ${2:-}" in
@@ -243,8 +243,8 @@ function main() {
     "pr list") do_pr_list "${@:3}" ;;
     "pr view") do_pr_view ;;
     api\ *) do_api "${@:2}" ;;
-    *) die "unexpected invocation: gh ${*}" ;;
+    *) die "unexpected invocation: gh $*" ;;
   esac
 }
 
-main "${@}"
+main "$@"

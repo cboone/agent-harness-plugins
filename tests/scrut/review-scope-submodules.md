@@ -8,7 +8,8 @@ reported path; the staged-only case also checks that disk content stays equal.
 ## Setup
 
 ```scrut {fail_fast: true}
-$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash" \
+>   && source "${REPO_ROOT}/tests/fixtures/review-fixture-paths.bash"
 ```
 
 ## Unchanged recursive scans are stable

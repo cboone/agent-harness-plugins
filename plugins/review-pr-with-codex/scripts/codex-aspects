@@ -259,6 +259,7 @@ function require_scope_file() {
       and (.base == null or (.base | type == "string" and length > 0))
       and (.snapshot | type == "string" and length > 0)
       and (.tree | type == "string" and length > 0)
+      and ((has("raw_tree") | not) or (.raw_tree | type == "string" and length > 0))
       and (.index | type == "string" and length > 0)
       and review_membership_valid
       and ((.committed | length) == 0 or .base != null)
@@ -1191,12 +1192,22 @@ function cmd_run() {
 # there and prefix their changed paths back into the superproject scope.
 function compare_scope_trees() {
   local repo="${1}" before="${2}" after="${3}" prefix="${4}" output="${5}"
-  local before_tree after_tree path child_before child_after raw changed
+  local before_tree after_tree before_raw after_raw path child_before child_after raw changed
   before_tree="$(jq -r '.tree' "${before}")" || die "could not read prior tree"
   after_tree="$(jq -r '.tree' "${after}")" || die "could not read current tree"
   raw="$(mktemp "${TMP_DIR}/tree-changes.XXXXXX")" || die "could not create tree comparison"
   review_git -C "${repo}" diff-tree "${REVIEW_DIFF_OPTIONS[@]}" -r -z --name-only "${before_tree}" "${after_tree}" > "${raw}" \
     || die "could not compare tree ${before_tree} with ${after_tree}"
+  # Older captures retain normalized-only comparisons. With both raw trees,
+  # include raw-only edits as well as changes to normalized filter output.
+  if jq -e -s 'all(has("raw_tree"))' "${before}" "${after}" > /dev/null; then
+    before_raw="$(jq -r '.raw_tree' "${before}")" || die "could not read prior raw tree"
+    after_raw="$(jq -r '.raw_tree' "${after}")" || die "could not read current raw tree"
+    if [[ "${before_raw}" != "${before_tree}" || "${after_raw}" != "${after_tree}" ]]; then
+      review_git -C "${repo}" diff-tree "${REVIEW_DIFF_OPTIONS[@]}" -r -z --name-only "${before_raw}" "${after_raw}" >> "${raw}" \
+        || die "could not compare raw tree ${before_raw} with ${after_raw}"
+    fi
+  fi
   while IFS= read -r -d '' changed; do
     printf '%s\0' "${prefix}${changed}" >> "${output}" \
       || die "could not record changed path ${prefix}${changed} in ${output}"
@@ -1258,8 +1269,7 @@ function cmd_changes() {
   before_tree="$(jq -r '.tree' "${before}")"
   after_tree="$(jq -r '.tree' "${after}")"
 
-  # review-scope's trees digest the whole working tree, so diffing them lists
-  # every path whose content, as Git would store it, changed in any bucket.
+  # Raw trees list disk edits even when Git normalizes their bytes away.
   # Plumbing `git diff-tree` ignores the user's diff.* settings: diff.renames
   # would hide a renamed file's old path, and diff.relative every change
   # outside the current directory. Output goes to a file so git's exit status
