@@ -2,13 +2,12 @@
 
 ## Current status
 
-Active through the ready PR. TOOLING authorized signed origin/main syncs as
-needed through this run, with no rebase or history rewrite. The upstream
-owner-token lock and symlink-aware loading are retained; diagnostics are
-integrated into its new failure paths. Resource tests pass 23/23, claims
-109/109, owner-lock 7/7 and owner-call contract 5/5. Focused Nit is next, pinned
-to the actual merge-base SHA. Its earlier attempt was invalidated, not failed;
-counts stand. No push or PR has occurred.
+Local review is complete. Structural loop: one Nit and one Important, ended:
+fixes changed no behavior after the approved instruction-only closure. Focused
+loop: one Nit and one Important, **clean at Important**. The base is pinned to
+`26acdbfec2d70593d563f5fcc78d52f9680d4cd0`. Resource tests pass 23/23; claim
+and owner-lock checks passed after signed base sync. Trims and the remaining
+verification/publication steps are next. No push or PR has occurred.
 
 ## Authority and status
 
@@ -806,3 +805,27 @@ restored before the next plant. The restored controls passed. The upstream
 owner-lock library was never modified. Exact results: `focused-fix-plants/`.
 The last full resource document passed 23/23; no temporary mutation remains.
 Next: focused Important round 1 on the pinned actual merge-base SHA.
+
+## Focused Important round 1: complete
+
+Reviewed head `3eca49676ad98c185f7a8edbc6af1f2561bb7df2`, fixed actual merge
+base `26acdbfec2d70593d563f5fcc78d52f9680d4cd0`, snapshot
+`3ef889342bb6e35ffa2109bfe85a7812b5a76c7f`. Code/errors/tests/comments ran in
+parallel through installed codex-aspects 2.2.0, fresh standalone gpt-6.1-sol,
+high, window 872000, read-only/approval-never/web-disabled. All four exited 0,
+returned nonempty schema/snapshot-valid results and no findings. After-scope
+comparison: scope_changed=false, changed=[], outside_scope=[]; no lasting
+changes found. Actual merge base reverified unchanged. No runtime fixture test
+was run by the read-only reviewers.
+
+**Focused loop end: clean at Important.** Count: one Nit and one Important.
+The earlier mutable-ref attempt remains invalidated, not failed or clean, and
+was completed within the same Nit round after the authorized base sync. No
+second Important or Critical-only focused round ran. Artifacts:
+`focused-important-1/` in the recorded scratch root.
+
+Next: one read-only trim-comments and trim-text run each, explicit
+gpt-6.1-sol/low/872000. Only changed comment/prose units are eligible; generated
+files and recorded evidence/quoted outputs are protected. The parent checks
+meaning and applies accepted proposals. No executable behavior change is
+planned after local review.
