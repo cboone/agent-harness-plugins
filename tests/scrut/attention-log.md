@@ -155,7 +155,7 @@ $ fresh
 ## Session end removes the session's files
 
 ```scrut
-$ hook SessionEnd && ls "${ATTENTION_LOG_DIR}/sessions" | wc -l | tr -d ' '
+$ hook SessionEnd && test -d "${ATTENTION_LOG_DIR}/sessions/s1.lock" && find "${ATTENTION_LOG_DIR}/sessions" -type f | wc -l | tr -d ' '
 0
 ```
 
@@ -270,11 +270,11 @@ $ fresh
 > (exit 0) &
 > stopped=$!
 > wait "${stopped}"
-> mkdir "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> mkdir -p "${ATTENTION_LOG_DIR}/sessions/s1.lock"
 > printf '%s\n' "${stopped}" > "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid"
 > hook PostToolUse '{"tool_name": "Bash", "tool_input": {}, "tool_response": {}, "tool_use_id": "t1"}'
 > events .event | tail -n 1
-> ls "${ATTENTION_LOG_DIR}/sessions" | grep -c lock
+> find "${ATTENTION_LOG_DIR}/sessions" -name pid | grep -c pid
 "cleared"
 0
 [1]
@@ -289,7 +289,7 @@ $ fresh
 > hook PermissionRequest '{"tool_name": "Bash", "tool_input": {"command": "x"}}'
 > sleep 30 &
 > holder=$!
-> mkdir "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> mkdir -p "${ATTENTION_LOG_DIR}/sessions/s1.lock"
 > printf '%s\n' "${holder}" > "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid"
 > hook PostToolUse '{"tool_name": "Bash", "tool_input": {}, "tool_response": {}, "tool_use_id": "t1"}'
 > [[ "$(cat "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid")" == "${holder}" ]] && echo "lock still held by its owner"
@@ -297,6 +297,117 @@ $ fresh
 > events .event
 lock still held by its owner
 "permission_request"
+```
+
+## A false successful mkdir does not replace a live session owner
+
+```scrut
+$ fresh
+> lock="${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> mkdir -p "${lock}" "${work}/lock-bin"
+> printf '%s\n' "$$" > "${lock}/pid"
+> cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/lock-bin/mkdir"
+> cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/lock-bin/sleep"
+> test "$(export PATH="${work}/lock-bin:${PATH}"; command -v mkdir)" = "${work}/lock-bin/mkdir" && test "$(export PATH="${work}/lock-bin:${PATH}"; command -v sleep)" = "${work}/lock-bin/sleep" || exit 1
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/lock-bin:${PATH}" LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionRequest
+> test "$(cat "${lock}/pid")" = "$$" && test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && echo 'live owner preserved'
+live owner preserved
+```
+
+## A false successful mkdir does not bypass the rotation owner
+
+```scrut
+$ fresh
+> lock="${ATTENTION_LOG_DIR}/rotate.lock"
+> mkdir -p "${lock}"
+> printf 'held\n' > "${lock}/owner"
+> head -c 5242880 /dev/zero > "${events_file}"
+> test "$(export PATH="${work}/lock-bin:${PATH}"; command -v mkdir)" = "${work}/lock-bin/mkdir" && test "$(export PATH="${work}/lock-bin:${PATH}"; command -v sleep)" = "${work}/lock-bin/sleep" || exit 1
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/lock-bin:${PATH}" LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied
+> test ! -e "${events_file}.1" && test "$(cat "${lock}/owner")" = held && echo 'rotation owner preserved'
+rotation owner preserved
+```
+
+## Failed PID recording releases the reservation before a later clear
+
+```scrut
+$ fresh
+> hook PermissionRequest '{"tool_name":"Bash"}'
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_MODE=write /bin/bash "${ATTENTION_LOG_BIN}" hook PostToolUse 2> "${work}/pid-write-error"
+> test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid" && test -f "${ATTENTION_LOG_DIR}/sessions/s1.open" && grep -q 'injected owner write failure' "${work}/pid-write-error" || exit 1
+> hook PostToolUse '{"tool_name":"Bash"}'
+> test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && echo 'reservation released; next hook cleared the state'
+reservation released; next hook cleared the state
+```
+
+## Rotation release failure is reported only after the event is saved
+
+```scrut
+$ fresh
+> lock="${ATTENTION_LOG_DIR}/rotate.lock"
+> mkdir -p "${lock}" "${work}/release-bin"
+> cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/release-bin/rm"
+> test "$(export PATH="${work}/release-bin:${PATH}"; command -v rm)" = "${work}/release-bin/rm" || exit 1
+> head -c 5242880 /dev/zero > "${events_file}"
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/release-bin:${PATH}" LOCK_TEST_REAL_RM="$(command -v rm)" LOCK_TEST_MODE=cleanup LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REPORT_ORDER=true BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/release-error"
+> test -f "${lock}/owner" && test ! -e "${lock}/reported-before-append" && grep -q 'owner-lock: cannot release.*injected owner unlink failure' "${work}/release-error" || exit 1
+> jq -r '.event' "${events_file}"
+auto_denied
+```
+
+## Rotation PID failure releases ownership and still saves the event
+
+```scrut
+$ fresh
+> mkdir -p "${ATTENTION_LOG_DIR}"
+> head -c 5242880 /dev/zero > "${events_file}"
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_MODE=write /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/rotation-pid-error"
+> test ! -e "${ATTENTION_LOG_DIR}/rotate.lock/owner" && grep -q 'injected owner write failure' "${work}/rotation-pid-error" || exit 1
+> tr -d '\000' < "${events_file}" | jq -r '.event'
+auto_denied
+```
+
+## Unexpected session reservation failures retain their diagnostic
+
+```scrut
+$ fresh
+> hook PermissionRequest '{"tool_name":"Bash"}'
+> chmod 500 "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> hook PostToolUse '{"tool_name":"Bash"}' 2> "${work}/session-reserve-error"
+> grep -q 'owner-lock: cannot create.*s1.lock/pid:.*Permission denied' "${work}/session-reserve-error" && test -e "${ATTENTION_LOG_DIR}/sessions/s1.open" || exit 1
+> chmod 700 "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> hook PostToolUse '{"tool_name":"Bash"}'
+> test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && echo 'reservation failure diagnosed; state cleared after repair'
+reservation failure diagnosed; state cleared after repair
+```
+
+## Unexpected rotation reservation failures retain the event and diagnostic
+
+```scrut
+$ fresh
+> mkdir -p "${ATTENTION_LOG_DIR}/rotate.lock"
+> chmod 500 "${ATTENTION_LOG_DIR}/rotate.lock"
+> head -c 5242880 /dev/zero > "${events_file}"
+> BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_REPORT_ORDER=true LOCK_TEST_DIRECTORY="${ATTENTION_LOG_DIR}/rotate.lock" LOCK_TEST_ORDER_MARKER="${ATTENTION_LOG_DIR}/early-report" hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/rotation-reserve-error"
+> grep -q 'owner-lock: cannot create.*rotate.lock/owner:.*Permission denied' "${work}/rotation-reserve-error" || exit 1
+> test ! -e "${ATTENTION_LOG_DIR}/early-report" || exit 1
+> chmod 700 "${ATTENTION_LOG_DIR}/rotate.lock"
+> tr -d '\000' < "${events_file}" | jq -r '.event'
+auto_denied
+```
+
+## A symlinked command loads the helper beside its real script
+
+```scrut
+$ ln -s "${ATTENTION_LOG_BIN}" "${work}/linked-attention" && /bin/bash "${work}/linked-attention" --help | head -1
+Usage: attention-log <command> [options]
+```
+
+## An exported CDPATH cannot pollute helper discovery
+
+```scrut
+$ (cd "${REPO_ROOT}" && CDPATH=. /bin/bash plugins/attention-log/scripts/attention-log --help) | head -1
+Usage: attention-log <command> [options]
 ```
 
 ## The next prompt clears every open state with "*"
@@ -550,10 +661,11 @@ lines: 20
 ```scrut
 $ fresh
 > mkdir -p "${ATTENTION_LOG_DIR}/rotate.lock"
-> touch -t 202001010000 "${ATTENTION_LOG_DIR}/rotate.lock"
+> touch "${ATTENTION_LOG_DIR}/rotate.lock/owner"
+> touch -t 202001010000 "${ATTENTION_LOG_DIR}/rotate.lock/owner"
 > head -c 5242880 /dev/zero > "${events_file}"
 > hook PermissionDenied '{"tool_name": "Bash", "tool_input": {"command": "x"}}'
-> echo "rotated: $(wc -c < "${events_file}.1" | tr -d ' '), new lines: $(wc -l < "${events_file}" | tr -d ' '), lock left: $(ls -d "${ATTENTION_LOG_DIR}/rotate.lock" 2> /dev/null | wc -l | tr -d ' ')"
+> echo "rotated: $(wc -c < "${events_file}.1" | tr -d ' '), new lines: $(wc -l < "${events_file}" | tr -d ' '), lock left: $(ls -d "${ATTENTION_LOG_DIR}/rotate.lock/owner" 2> /dev/null | wc -l | tr -d ' ')"
 rotated: 5242880, new lines: 1, lock left: 0
 ```
 
