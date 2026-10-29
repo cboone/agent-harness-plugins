@@ -637,7 +637,7 @@ independent focused loop starts its own Nit round.
 Scoped Markdown formatting/lint, make build and make validate passed after the
 closure. Product/helper/test code did not change during this correction.
 
-## Focused Nit attempt and upstream integration gate
+## Invalidated focused Nit attempt and resolved base-sync gate
 
 Focused input: head `8000c94f9a180bd64e99182f9fc62c3ae0139098`, actual merge
 base `a2e56c535ed6326cc8d531d945fbb6c627a9b335`, original snapshot
@@ -691,7 +691,7 @@ identities/version decisions in `main-sync-proposal.json`. The helper candidate
 passed Bash syntax checking only. It is not a tested merged tree and has not
 been applied. Full assessment: `upstream-merge-assessment.txt` in that root.
 
-### Closed gate and requested action
+### Base-sync gate before authority was granted
 
 The streamlined process lists merging as a separate gate. The project record's
 standing go-aheads and this workstream's decisions contain no named base-sync
@@ -735,3 +735,23 @@ The next focused review completes the same Nit round, not a fresh loop, using
 a fixed SHA verified as the actual merge base with origin/main. The earlier
 four no-finding outputs remain invalidated by base-tip metadata movement and
 are not reused or relabeled.
+
+Signed merge commit: `11f94d76`, signature status G, parents `dcd7b473` and
+`26acdbfe`. No rebase, amend or history rewrite. Post-merge repository
+check-versions is clean against actual merge base
+`26acdbfec2d70593d563f5fcc78d52f9680d4cd0`: dependabot 1.0.0→1.0.1,
+monitor-pr 3.4.0→3.4.1, publish-report-board 1.3.2→1.3.3,
+use-git 1.3.5→1.3.6, workmux 1.1.3→1.1.4. Catalog coverage, manifest-only
+version ownership and present Codex manifest matches passed. Detailed version
+report: `post-merge-version-check.json` under the recorded scratch root.
+
+New owner-path plants ran only after the merge/test commit. Removing the
+abnormal-reservation context caused the owner-reserve check to fail on missing
+harness/resource identity. Replacing owner-file resource_die with the original
+die preserved exit 1 but caused owner-write to fail on that same identity
+assertion. Both mutants passed Bash syntax checking; both positive/restored
+controls passed. No upstream owner-lock implementation was changed. Results:
+`post-merge-plants/results.json`; source bytes restored and tree clean.
+
+The focused Nit completion now uses that immutable, freshly verified merge-base
+SHA rather than the mutable origin/main ref. Its count remains unchanged.
