@@ -37,7 +37,7 @@ function await_count() {
   fi
   if [[ -d "${XDG_CACHE_HOME}/agent-harness-notify/codex-failures" ]]; then
     printf 'Delivery claims:\n' >&2
-    find "${XDG_CACHE_HOME}/agent-harness-notify/codex-failures" -type d >&2
+    find "${XDG_CACHE_HOME}/agent-harness-notify/codex-failures" -print >&2
   fi
   return 1
 }
@@ -56,6 +56,46 @@ function await_delivery() {
   return 1
 }
 
+function run_concurrent() {
+  local stub_dir="${1}" readiness_timeout="${2:-30}"
+  local first_status=0 second_status=0 ready_one="" ready_two="" readiness_ok=true
+  mkdir "${CASE_DIR}/claim-barrier"
+  export ROLLOUT_CLAIM_BARRIER="${CASE_DIR}/claim-barrier"
+  mkfifo "${ROLLOUT_CLAIM_BARRIER}/ready" "${ROLLOUT_CLAIM_BARRIER}/one" "${ROLLOUT_CLAIM_BARRIER}/two"
+  exec 4<> "${ROLLOUT_CLAIM_BARRIER}/ready"
+  exec 5<> "${ROLLOUT_CLAIM_BARRIER}/one"
+  exec 6<> "${ROLLOUT_CLAIM_BARRIER}/two"
+  BASH_ENV="${stub_dir}/claim-boundary.bash" ROLLOUT_READER=one capture_child - --replay-stdout -- run_case error &
+  CHILD_PID=$!
+  BASH_ENV="${stub_dir}/claim-boundary.bash" ROLLOUT_READER=two capture_child - --replay-stdout -- run_case error &
+  OTHER_PID=$!
+  if ! IFS= read -r -t "${readiness_timeout}" ready_one <&4; then
+    echo 'Concurrent claim readiness failed at first arrival' >&2
+    readiness_ok=false
+  elif ! IFS= read -r -t "${readiness_timeout}" ready_two <&4; then
+    echo 'Concurrent claim readiness failed at second arrival' >&2
+    readiness_ok=false
+  elif [[ "${ready_one}:${ready_two}" != one:two && "${ready_one}:${ready_two}" != two:one ]]; then
+    echo 'Concurrent claim readiness returned invalid reader identities' >&2
+    readiness_ok=false
+  fi
+  # Open endpoints let surviving readers finish even after a missing arrival.
+  printf 'go\n' >&5
+  printf 'go\n' >&6
+  wait "${CHILD_PID}" || first_status=$?
+  CHILD_PID=""
+  wait "${OTHER_PID}" || second_status=$?
+  OTHER_PID=""
+  exec 4>&- 5>&- 6>&-
+  if [[ "${readiness_ok}" != true ]] || ((first_status != 0 || second_status != 0)); then
+    printf 'Reader arrivals: %s %s\nReader statuses: %s %s\n' \
+      "${ready_one:-missing}" "${ready_two:-missing}" "${first_status}" "${second_status}" >&2
+    find "${ROLLOUT_CLAIM_BARRIER}" -print >&2
+    return 1
+  fi
+  await_count 1
+}
+
 function main() {
   local scenario="${1}" stub_dir
   CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-failure-test.XXXXXX")"
@@ -63,7 +103,7 @@ function main() {
   stub_dir="${REPO_ROOT:?}/tests/fixtures/notify-rollout"
   export PATH="${stub_dir}:${PATH}"
   local tool
-  for tool in alerter tmux sleep wc mkdir; do
+  for tool in alerter tmux sleep wc; do
     [[ "$(command -v "${tool}")" == "${stub_dir}/${tool}" ]] || return 1
   done
   export XDG_CACHE_HOME="${CASE_DIR}/cache" XDG_CONFIG_HOME="${CASE_DIR}/config"
@@ -73,7 +113,7 @@ function main() {
   unset NOTIFY_TIER NOTIFY_SOUND_SET CLAUDE_PROJECT_DIR CLAUDE_CODE_SESSION_ID
   unset ROLLOUT_BOUNDARY_READY ROLLOUT_BOUNDARY_RELEASE
   unset ROLLOUT_ALERTER_STATUS
-  unset ROLLOUT_CLAIM_BARRIER
+  unset ROLLOUT_CLAIM_BARRIER ROLLOUT_CLAIM_ERROR ROLLOUT_READER ROLLOUT_SKIP_READY
   export ROLLOUT_ATTEMPTS="${CASE_DIR}/attempts"
   export ROLLOUT_EXECUTIONS="${CASE_DIR}/executions"
   : > "${ROLLOUT_ALERTS}"
@@ -117,17 +157,44 @@ function main() {
       await_count 2
       ;;
     concurrent)
-      mkdir "${CASE_DIR}/claim-barrier"
-      export ROLLOUT_CLAIM_BARRIER="${CASE_DIR}/claim-barrier"
-      capture_child - --replay-stdout -- run_case error &
-      CHILD_PID=$!
-      capture_child - --replay-stdout -- run_case error &
-      OTHER_PID=$!
-      wait "${CHILD_PID}"
-      CHILD_PID=""
-      wait "${OTHER_PID}"
-      OTHER_PID=""
-      await_count 1
+      run_concurrent "${stub_dir}"
+      ;;
+    concurrent-timeout)
+      local readiness_diagnostics readiness_status
+      if ROLLOUT_SKIP_READY=two capture_child readiness_diagnostics -- run_concurrent "${stub_dir}" 1; then
+        return 1
+      else
+        readiness_status=$?
+      fi
+      [[ "${readiness_status}" == 1 ]]
+      [[ "${readiness_diagnostics}" == *'Concurrent claim readiness failed at second arrival'* ]]
+      [[ "${readiness_diagnostics}" == *'Reader arrivals: one missing'* ]]
+      [[ "${readiness_diagnostics}" == *'Reader statuses: 0 1'* ]]
+      echo 'readiness timeout identifies missing reader; both statuses retained'
+      return
+      ;;
+    legacy-claim)
+      local key
+      key="$(jq -nc '["thread-sample","turn-sample"]' | shasum -a 256 | cut -d ' ' -f 1)"
+      mkdir -p "${XDG_CACHE_HOME}/agent-harness-notify/codex-failures/${key}"
+      capture_child - --replay-stdout -- run_case error
+      count_is 0
+      [[ -d "${XDG_CACHE_HOME}/agent-harness-notify/codex-failures/${key}" ]]
+      echo 'legacy directory preserved; no replay'
+      return
+      ;;
+    claim-error)
+      local claim_status claim_diagnostics
+      if BASH_ENV="${stub_dir}/claim-boundary.bash" ROLLOUT_CLAIM_ERROR=true capture_child claim_diagnostics -- run_case error; then
+        return 1
+      else
+        claim_status=$?
+      fi
+      [[ "${claim_status}" == 1 && "${claim_diagnostics}" == *'cannot claim failure delivery:'* ]]
+      [[ "${claim_diagnostics}" == *'No such file or directory'* ]]
+      count_is 0
+      echo 'claim failed with filesystem diagnostic; no delivery'
+      return
       ;;
     identity)
       /bin/bash "${CODEX_FAILURE_WATCHER_BIN}" --rollout "${DATA}/identity.jsonl" --once \

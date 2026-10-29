@@ -18,7 +18,11 @@ description: >-
    required for consequential actions. Workers report through their conductor.
 1. **Make asks answerable.** Send one ask per message with `send_message`, using
    a question block per decision, never a bare link. Start a thread with a short
-   `thread` name and a single-line `subject`; continue it with `reply_to` naming
+   `thread` name and always pass a single-line plain-text `subject` naming the
+   whole piece of work, broad enough to still fit after several rounds. For
+   example, use "Plannotator fork setup" rather than "Should the fork be public
+   or private?" Without an explicit subject, the first question's prompt becomes
+   the subject and stops fitting once answered. Continue with `reply_to` naming
    a message in that thread. Give enough context to decide without the session's
    history. Use `:::question` for a single selection, `:::question-multi` for multiple selections,
    or `:::question-text` for free text. Put the question first, then context,
