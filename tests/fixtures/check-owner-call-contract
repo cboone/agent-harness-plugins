@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Require direct, checked helper calls with stderr left intact.
+set -euo pipefail
+
+function main() {
+  local root="${1:-${REPO_ROOT:?}}" file first_line
+  local -a files=()
+  while IFS= read -r -d '' file; do
+    IFS= read -r first_line < "${file}" || true
+    [[ "${first_line}" != '#!'*bash* ]] || files+=("${file}")
+  done < <(find "${root}/plugins/workmux" "${root}/plugins/attention-log" "${root}/plugins/publish-report-board" -type f -print0)
+  ((${#files[@]} > 0)) || return 1
+  awk '
+    /^[[:space:]]*#/ || /^[[:space:]]*function[[:space:]]/ {next}
+    /owner_lock_(reserve|release)([^[:alnum:]_]|$)/ {
+      calls++
+      if ($0 !~ /^[[:space:]]*(if|elif|while|until)[[:space:]]+(![[:space:]]+)?owner_lock_(reserve|release)[[:space:]]/ ||
+          $0 !~ /;[[:space:]]*(then|do)[[:space:]]*$/ || $0 ~ /[<>]/ || $0 ~ /\$\(/) {
+        print "owner-call-contract: unchecked, captured or redirected helper: " FILENAME ":" FNR
+        errors++
+      }
+    }
+    END {
+      if (calls != 9) {print "owner-call-contract: expected 9 literal call sites, found " calls; errors++}
+      if (errors) exit 1
+      print "Owner helper call contract: 9 checked calls"
+    }
+  ' "${files[@]}"
+}
+
+main "$@"

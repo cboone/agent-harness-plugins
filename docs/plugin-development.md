@@ -330,6 +330,8 @@ The shared references and policy libraries are:
 
 - Review Git policy: `plugins/review-until-clean/scripts/review-git.bash`, copied into `review-pr-with-codex/scripts/`. Scope collectors and consumers source this library for call-local Git policy, exact recursive membership construction, validated membership reads and rooted link discovery. Generated policy copies cannot be edited independently.
 
+- The owner-file mutex helper: `plugins/workmux/scripts/owner-lock.bash`, copied into `plugins/attention-log/scripts/` and `plugins/publish-report-board/scripts/`. Acquire captures open-file identity before PID recording; every converted cleanup calls the same checked release helper. Edit only the workmux source and regenerate the other copies.
+
 - The progress model: `plugins/publish-report-board/skills/publish-report-board/references/progress-model.md`, copied to `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`.
 - The `codex exec` path: `plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md`, copied to the `references/` directories of `trim-comments` and `trim-text`. Each consumer's `SKILL.md` names its own model, effort, window, prompt additions and fallback.
 - Claude transcript classification: `plugins/notify/scripts/claude-transcript.jq`, copied to `plugins/attention-log/scripts/claude-transcript.jq`. Both scripts use its prompt and refusal predicates. Edit only the notify source and rebuild; the contract test checks matching copies and both consumers' behavior.

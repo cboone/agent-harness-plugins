@@ -46,6 +46,38 @@ $ function bugs() {
 >   done
 >   printf '%s' "${dir}"
 > }
+> function bugs_fault() {
+>   local mode="${1}" cache lock tool output status=0
+>   cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   lock="${cache}/report-boards/bugs/github.com/acme/widgets/save.lock"
+>   mkdir "${cache}/bin"
+>   for tool in mkdir sleep rmdir rm; do
+>     cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/${tool}"
+>     test "$(export PATH="${cache}/bin:${PATH}"; command -v "${tool}")" = "${cache}/bin/${tool}" || return 1
+>   done
+>   output="$(bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_MODE="${mode}" LOCK_TEST_DIRECTORY="${lock}" \
+>     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" LOCK_TEST_REAL_RM="$(command -v rm)" \
+>     BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" XDG_CACHE_HOME="${cache}" save \
+>     "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1)" || status=$?
+>   if [[ "${status}" != 1 ]]; then printf '%s\nexit=%s\n' "${output}" "${status}"; return 1; fi
+>   case "${mode}" in
+>     create)
+>       [[ "${output}" == *"cannot create ${lock}/owner:"* && "${output}" == *"Permission denied"* ]] || { printf '%s\n' "${output}"; return 1; }
+>       ;;
+>     write)
+>       [[ "${output}" == *"injected owner write failure"* && "${output}" == *"cannot record the lock owner"* ]] || { printf '%s\n' "${output}"; return 1; }
+>       ;;
+>     cleanup)
+>       [[ "${output}" == *"injected owner unlink failure"* ]] || { printf '%s\n' "${output}"; return 1; }
+>       test -f "${lock}/owner" && test -e "${lock%/save.lock}/gather.json" || return 1
+>       echo 'cleanup: exit=1; cache saved; owner retained'
+>       return
+>       ;;
+>     *) return 1 ;;
+>   esac
+>   test -d "${lock}" && test ! -e "${lock}/owner" && test ! -e "${lock%/save.lock}/gather.json" || return 1
+>   printf '%s: exit=1; cache unchanged; owner absent\n' "${mode}"
+> }
 > function progress() {
 >   jq -r --argjson n "${2}" '.bugs[] | select(.number == $n) | .progress | if . == null then "none" else "\(.stage), \(.nextMove): \(.nextAction)\(if (.flags | length) > 0 then " [\(.flags | join(", "))]" else "" end)" end' "${1}"
 > }
@@ -64,6 +96,20 @@ $ function bugs() {
 > assessments="${BUGS_GATHER_DATA_DIR}/assessments.json"
 > bugs gather "${work}/config.json" "${work}/gather.json" > /dev/null
 > bugs score "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" > /dev/null
+```
+
+## Invocation through a symlink loads dependencies beside the real script
+
+```scrut
+$ ln -s "${BUGS_GATHER_BIN}" "${work}/linked-bugs" && "${work}/linked-bugs" --help | head -1
+Usage:
+```
+
+## An exported CDPATH cannot pollute dependency discovery
+
+```scrut
+$ (cd "${REPO_ROOT}" && CDPATH=. bash plugins/publish-report-board/scripts/bugs-gather --help) | head -1
+Usage:
 ```
 
 ## Gather reports its counts, and a first sync is a cold one
@@ -631,6 +677,7 @@ $ bugs save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work
 bugs-gather: saved the cache in WORK/cache/report-boards/bugs/github.com/acme/widgets
 assessments.json
 gather.json
+save.lock
 scored.json
 Previous gather: 2026-10-15T16:00:00Z
 This gather: 2026-10-15T16:00:00Z
@@ -641,10 +688,68 @@ This gather: 2026-10-15T16:00:00Z
 ## Save waits for another sync's save, then refuses and names the lock
 
 ```scrut
-$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${cache}|CACHE|g"; echo "exit ${PIPESTATUS[0]}"; ls "${cache}/report-boards/bugs/github.com/acme/widgets"
-bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" && touch "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock/owner" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${cache}|CACHE|g"; echo "exit ${PIPESTATUS[0]}"; ls "${cache}/report-boards/bugs/github.com/acme/widgets"
+bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock/owner
 exit 1
 save.lock
+```
+
+## Save refuses an owner even when mkdir incorrectly succeeds
+
+```scrut
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && lock="${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" \
+>   && mkdir -p "${lock}" "${cache}/bin" \
+>   && printf 'held\n' > "${lock}/owner" \
+>   && cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/mkdir" \
+>   && cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/sleep" \
+>   && test "$(export PATH="${cache}/bin:${PATH}"; command -v mkdir)" = "${cache}/bin/mkdir" \
+>   && test "$(export PATH="${cache}/bin:${PATH}"; command -v sleep)" = "${cache}/bin/sleep" \
+>   && { bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_DIRECTORY="${lock}" XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1; echo "exit=$?"; } | sed "s|${cache}|CACHE|g" \
+>   && cat "${lock}/owner" \
+>   && test ! -e "${lock%/save.lock}/gather.json"
+bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock/owner
+exit=1
+held
+```
+
+## Save reports owner creation errors without leaving a lock
+
+```scrut
+$ bugs_fault create
+create: exit=1; cache unchanged; owner absent
+```
+
+## Save releases its owner when PID recording fails
+
+```scrut
+$ bugs_fault write
+write: exit=1; cache unchanged; owner absent
+```
+
+## Save propagates owner unlink errors
+
+```scrut
+$ bugs_fault cleanup
+cleanup: exit=1; cache saved; owner retained
+```
+
+## Cache cleanup preserves a live successor
+
+```scrut
+$ real_bugs="${BUGS_GATHER_BIN}" \
+>   && BUGS_GATHER_BIN="${CACHE_LOCK_HANDOFF_BIN}" bugs BUGS_HANDOFF_SUBJECT_BIN="${real_bugs}" \
+>     "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json"
+both saves succeeded; successor preserved; cache consistent
+```
+
+## Cache cleanup succeeds after its successor has already released
+
+```scrut
+$ real_bugs="${BUGS_GATHER_BIN}" \
+>   && BUGS_GATHER_BIN="${CACHE_LOCK_HANDOFF_BIN}" bugs BUGS_HANDOFF_SUBJECT_BIN="${real_bugs}" --released-successor \
+>     "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json"
+both saves succeeded; successor preserved; cache consistent
 ```
 
 ## Reuse on a warm cache keeps every assessment that still matches its bug

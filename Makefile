@@ -19,6 +19,9 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u STUB_WORKMUX_SLEEP -u STUB_WORKMUX_RELEASE_FIFO \
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
 	-u TZDIR -u WORKTREE_RESOURCES_FILE -u CLAIMS_INTERRUPT_CONTROL -u REVIEW_CHECKLISTS_DIR \
+	-u LOCK_TEST_DIRECTORY -u LOCK_TEST_REAL_MKDIR -u LOCK_TEST_REAL_RMDIR -u LOCK_TEST_REAL_RM -u LOCK_TEST_MODE \
+	-u LOCK_TEST_BARRIER -u LOCK_TEST_ROLE -u LOCK_TEST_REAL_SLEEP -u BUGS_HANDOFF_SUBJECT_BIN \
+	-u LOCK_TEST_REPORT_ORDER -u LOCK_TEST_ORDER_MARKER \
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
 	-u CLAUDE_MARKETPLACE -u CODEX_MARKETPLACE -u CODEX_DIST_DIR -u CODEX_DIST_LABEL \
 	-u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
@@ -75,6 +78,12 @@ SCRUT_ENV := \
 	MANAGE_RESOURCE_CLAIMS_BIN="$(CURDIR)/plugins/workmux/scripts/manage-resource-claims" \
 	RESOURCE_CLAIMS_INTERLEAVE_BIN="$(CURDIR)/tests/fixtures/resource-claims-interleave" \
 	RESOURCE_CLAIMS_INTERLEAVE_STUB_BIN="$(CURDIR)/tests/fixtures/resource-claims-interleave-stub" \
+	DIRECTORY_LOCK_STUB_BIN="$(CURDIR)/tests/fixtures/directory-lock-stub" \
+	OWNER_WRITE_FAILURE_ENV="$(CURDIR)/tests/fixtures/owner-write-failure.bash" \
+	CACHE_LOCK_HANDOFF_BIN="$(CURDIR)/tests/fixtures/cache-lock-handoff" \
+	OWNER_LOCK_LIBRARY="$(CURDIR)/plugins/workmux/scripts/owner-lock.bash" \
+	OWNER_LOCK_PROBE_BIN="$(CURDIR)/tests/fixtures/owner-lock-probe" \
+	OWNER_CALL_CONTRACT_BIN="$(CURDIR)/tests/fixtures/check-owner-call-contract" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
 	COPILOT_ROUNDS_REPORT_BIN="$(CURDIR)/bin/copilot-rounds-report" \

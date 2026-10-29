@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Model mkdir reporting success on an existing lock. Accelerate bounded waits.
+set -euo pipefail
+
+case "${0##*/}" in
+  mkdir)
+    status=0
+    "${LOCK_TEST_REAL_MKDIR:?}" "$@" || status=$?
+    if [[ "${LOCK_TEST_MODE:-}" == create && "${status}" == 0 && "${!#}" == "${LOCK_TEST_DIRECTORY:?}" ]]; then
+      chmod 500 "${LOCK_TEST_DIRECTORY}"
+    fi
+    if [[ -d "${LOCK_TEST_DIRECTORY:?}" && "${!#}" == "${LOCK_TEST_DIRECTORY}" ]]; then
+      exit 0
+    fi
+    exit "${status}"
+    ;;
+  sleep) exit 0 ;;
+  rm)
+    if [[ "${LOCK_TEST_MODE:-}" == cleanup && "${!#}" == "${LOCK_TEST_DIRECTORY:?}/owner" ]]; then
+      echo 'injected owner unlink failure' >&2
+      exit 75
+    fi
+    "${LOCK_TEST_REAL_RM:?}" "$@"
+    if [[ "${LOCK_TEST_MODE:-}" == handoff && "${LOCK_TEST_ROLE:-}" == first && "${!#}" == "${LOCK_TEST_DIRECTORY:?}/owner" ]]; then
+      touch "${LOCK_TEST_BARRIER:?}/first-released"
+      for ((attempt = 0; attempt < 200; attempt++)); do
+        [[ ! -e "${LOCK_TEST_BARRIER}/release-first" ]] || exit 0
+        "${LOCK_TEST_REAL_SLEEP:?}" 0.05
+      done
+      echo 'first cache cleanup barrier timed out' >&2
+      exit 1
+    fi
+    ;;
+  rmdir)
+    if [[ "${LOCK_TEST_MODE:-}" == handoff && "${!#}" == "${LOCK_TEST_DIRECTORY:?}" ]]; then
+      touch "${LOCK_TEST_BARRIER:?}/unexpected-rmdir"
+      echo 'cache writers must retain the preparation directory' >&2
+      exit 79
+    fi
+    if [[ "${LOCK_TEST_MODE:-}" == cleanup && "${!#}" == "${LOCK_TEST_DIRECTORY:?}" ]]; then
+      echo 'injected rmdir failure' >&2
+      exit 75
+    fi
+    exec "${LOCK_TEST_REAL_RMDIR:?}" "$@"
+    ;;
+  *)
+    echo 'install this fixture as mkdir, sleep, rm and rmdir' >&2
+    exit 1
+    ;;
+esac

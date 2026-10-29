@@ -45,16 +45,18 @@ function resolve_script_dir() {
   local path="${BASH_SOURCE[0]}"
   local link_dir
   while [[ -L "${path}" ]]; do
-    link_dir="$(cd -P -- "$(dirname -- "${path}")" && pwd)"
+    link_dir="$(CDPATH='' cd -P -- "$(dirname -- "${path}")" && pwd)"
     path="$(readlink "${path}")"
     [[ "${path}" == /* ]] || path="${link_dir}/${path}"
   done
-  cd -P -- "$(dirname -- "${path}")" && pwd
+  CDPATH='' cd -P -- "$(dirname -- "${path}")" && pwd
 }
 
 SCRIPT_NAME="${0##*/}"
 readonly SCRIPT_NAME
 SCRIPT_DIR="$(resolve_script_dir)"
+# shellcheck source=plugins/workmux/scripts/owner-lock.bash
+source "${SCRIPT_DIR}/owner-lock.bash"
 readonly SCRIPT_DIR
 readonly QUERY_DIR="${SCRIPT_DIR}/bugs-gather-queries"
 
@@ -86,6 +88,7 @@ readonly DOT_SEGMENT_PATTERN='(^|/)\.\.?(/|$)'
 TEMP_DIR=""
 # Set by save while it holds the cache lock, so the EXIT trap releases it.
 SAVE_LOCK=""
+SAVE_LOCK_TOKEN=""
 # Set by load_config.
 CONFIG=""
 # Read from the variable the config names, once per gather.
@@ -840,33 +843,46 @@ function require_tools() {
 }
 
 function cleanup() {
+  local result=0
   if [[ -n "${TEMP_DIR}" && -d "${TEMP_DIR}" ]]; then
-    rm -rf -- "${TEMP_DIR}"
+    rm -rf -- "${TEMP_DIR}" || result=1
   fi
   if [[ -n "${SAVE_LOCK}" ]]; then
-    rmdir -- "${SAVE_LOCK}" 2> /dev/null || true
+    if ! owner_lock_release "${SAVE_LOCK}/owner" "${SAVE_LOCK_TOKEN}"; then
+      return 1
+    fi
   fi
+  return "${result}"
 }
 
-# Takes the cache lock for a repository: a directory, since mkdir either
-# creates it or fails and macOS has no flock. Two syncs saving at once would
-# otherwise interleave their writes and leave the three cache files from
-# different gathers. It waits about ten seconds for another save to finish.
+# Serializes cache saves so the three files come from one gather.
+# Waits about ten seconds for another save to finish.
 function acquire_save_lock() {
   local lock="${1}/save.lock"
+  local result
   local -i tries=0
-  until mkdir -- "${lock}" 2> /dev/null; do
+  mkdir -p -- "${lock}" || die "${E_INVALID}" "cannot create ${lock}"
+  while :; do
+    if owner_lock_reserve "${lock}/owner" 8; then
+      SAVE_LOCK="${lock}"
+      SAVE_LOCK_TOKEN="${OWNER_LOCK_TOKEN}"
+      printf '%s' "$$" > "${lock}/owner" \
+        || die "${E_INVALID}" "cannot record the lock owner in ${lock}"
+      return 0
+    else
+      result=$?
+    fi
+    ((result == 1)) || exit "${E_INVALID}"
     if ((tries >= 100)); then
-      die "${E_INVALID}" "another sync is saving the cache; if none is running, remove ${lock}"
+      die "${E_INVALID}" "another sync is saving the cache; if none is running, remove ${lock}/owner"
     fi
     tries=$((tries + 1))
     sleep 0.1
   done
-  SAVE_LOCK="${lock}"
 }
 
 function make_temp_dir() {
-  trap cleanup EXIT
+  trap 'cleanup || exit 1' EXIT
   TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bugs-gather.XXXXXX")" || die "${E_INVALID}" "cannot create a temporary directory"
 }
 
