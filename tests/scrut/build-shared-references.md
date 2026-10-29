@@ -19,6 +19,8 @@ $ function tree() {
 >   printf '%s\n' '# Running a Skill Through codex exec' > "${root}/plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md"
 >   mkdir -p "${root}/plugins/review-until-clean/scripts"
 >   printf '%s\n' '# Shared review Git policy' > "${root}/plugins/review-until-clean/scripts/review-git.bash"
+>   mkdir -p "${root}/plugins/notify/scripts"
+>   printf '%s\n' 'def shows_refusal: false;' > "${root}/plugins/notify/scripts/claude-transcript.jq"
 >   printf '%s\n' "${root}"
 > }
 > source_file=plugins/publish-report-board/skills/publish-report-board/references/progress-model.md
@@ -29,7 +31,7 @@ $ function tree() {
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" && cmp "${source_file}" "${copy_file}" && echo identical
-Shared references: 4 copied (4 written).
+Shared references: 5 copied (5 written).
 identical
 ```
 
@@ -37,14 +39,14 @@ identical
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" > /dev/null && "${BUILD_SHARED_REFERENCES_BIN}"
-Shared references: 4 copied (0 written).
+Shared references: 5 copied (0 written).
 ```
 
 ## Rewrites a copy edited by hand
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" > /dev/null && printf '%s\n' 'edited' >> "${copy_file}" && "${BUILD_SHARED_REFERENCES_BIN}" && cmp "${source_file}" "${copy_file}" && echo identical
-Shared references: 4 copied (1 written).
+Shared references: 5 copied (1 written).
 identical
 ```
 
@@ -63,7 +65,8 @@ $ cd "$(tree)" && { "${BUILD_SHARED_REFERENCES_BIN}" --check; echo "exit ${?}"; 
 ::error::Shared reference copy 'plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md' is missing; run make build
 ::error::Shared reference copy 'plugins/trim-comments/skills/trim-comments/references/codex-exec.md' is missing; run make build
 ::error::Shared reference copy 'plugins/trim-text/skills/trim-text/references/codex-exec.md' is missing; run make build
-4 shared reference error(s) found.
+::error::Shared reference copy 'plugins/attention-log/scripts/claude-transcript.jq' is missing; run make build
+5 shared reference error(s) found.
 exit 1
 not written
 ```

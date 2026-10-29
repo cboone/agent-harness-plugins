@@ -24,6 +24,7 @@ cc-permission
 cc-stop
 cc-turn-start
 cc-question
+cc-failure
 codex-stop
 codex-turn-start
 codex-question
