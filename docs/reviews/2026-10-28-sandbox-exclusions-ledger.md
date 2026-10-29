@@ -1,9 +1,17 @@
 # Sandbox exclusions ledger
 
+## Current status
+
+Active overnight through a ready PR; TOOLING retains merging. Helper diagnostics,
+the guarded matrix and initial plants are committed. The structural Nit round
+has completed with findings, and its fixes are being verified. The resource
+suite now passes 20 cases; the 17-case revision measured 45.94 seconds. No push or PR has occurred. Earlier
+checkpoint sections below are historical, not current task status.
+
 ## Authority and status
 
 Worker `512-sandbox-exclusions`, reporting only to TOOLING by `mailbox-post`.
-Chris's go-ahead: Inbox, 2026-10-28 at 7:38 PM ET, thread "Tooling next batch,
+Go-ahead from Chris (he/him): Inbox, 2026-10-28 at 7:38 PM ET, thread "Tooling next batch,
 Oct 28 evening", build through a PR ready for review. TOOLING merges.
 Branch `fix/512-sandbox-exclusions`; base `main`. Initial merge base with
 `origin/main`: `a2e56c535ed6326cc8d531d945fbb6c627a9b335`.
@@ -14,7 +22,7 @@ Repository metadata: active, not a fork, no parent; only origin is configured,
 pointing to `cboone/agent-harness-plugins`. Initial branch was clean.
 `corepack yarn install --immutable` passed with Yarn 4.18.0.
 
-## Source inventory
+## Initial source inventory
 
 The older `address-issue-in-worktree` plugin is now `workmux:start-issue`.
 All three helpers belong to `plugins/workmux/scripts/`: `compose-issue-prompt`,
@@ -145,7 +153,7 @@ the checker's default token matching only; the higher-level execution tool's
 shell decomposition and resolved-executable mode remain untested. A no-match
 result is not an allow decision and does not confer resource access.
 
-## Source changes and checks
+## Initial source-only checkpoint
 
 Replaced all five active stable-bash-token matching claims with guidance to
 check the active harness, distinguish command approval from resource access,
@@ -159,7 +167,7 @@ publish-report-board 1.3.1 to 1.3.2; dependabot 1.0.0 to 1.0.1.
 fix and Prettier checks passed; `git diff --check` passed. `make validate`
 completed with all JSON, fixture environments and plugin validations passing.
 
-## Remaining validation
+## Tasks pending at the initial checkpoint
 
 Helper diagnostics, the complete semantic catalog sweep, launch/resource
 matrix, plants, review loops, Semgrep, final lint, full tests, version audit,
@@ -192,7 +200,7 @@ those recorded resources. Do not leave a private tmux server running across
 the nighttime stop. TOOLING reiterated checkpoint/report by 9:40 PM ET and
 parking at 9:45 PM ET.
 
-## Nighttime checkpoint
+## Nighttime checkpoint (superseded)
 
 Checkpoint preparation at 9:37 PM ET, 2026-10-28, for the requested nighttime
 stop around 9:40 PM ET. TOOLING parks the worker and controls its restart after
@@ -377,3 +385,106 @@ Plant logs and `plants.json` are under the recorded scratch root's `results/`.
 The final restored run after the weakened-judge experiment passed 8/8. No
 temporary source mutation remains. All private servers and fact-finding
 processes have finished. Structural and focused review rounds remain unstarted.
+
+## Structural review: Nit round
+
+Fixed review input: base `a2e56c535ed6326cc8d531d945fbb6c627a9b335`, head
+`28f2c4386a5b79c30f2cd0966c6daa82cde4a5f8`, snapshot
+`a2f4250aeed463475e0efdf3cf00820b9be04df2`. Artifacts are under the recorded
+scratch root's `structural-nit/` directory.
+
+- Report-only simplify: fresh read-only Codex, gpt-6.1-sol, high, window 872000.
+  Exit 0, nonempty schema-valid result, no findings. The run could not write.
+- Anti-pattern Codex attempt: same explicit settings, made read progress and
+  exited 1 with "Selected model is at capacity"; no final result. Not clean.
+- Permitted fallback: one fresh Opus high reader per production/tests/docs
+  group. Read/Glob/Grep only, restricted mode, empty setting sources and MCP,
+  temporary settings. No shell or write tools. Initial CLI schema validation
+  rejected the draft-2020 dialect annotation before any model ran; the transport
+  copy removed only `$schema`, retaining every constraint, and canonical jq
+  validation remained required.
+- The first fallback packets placed the skill outside the restricted read
+  directory. Production/tests explicitly reported incomplete coverage; their
+  findings are input, not a clean review. Documentation reported complete,
+  but checklist availability was uncertain, so that attempt was not accepted
+  as completion either. The packets were corrected by copying the unchanged
+  public skill/references inside the permitted scope and including the directly
+  referenced sibling stubs and isolation helpers. No read permission was added.
+- Completion fallback: all three Opus high processes exited 0, read full files,
+  returned nonempty canonical-check-valid JSON with complete=true and no
+  unread files. Production: 5 findings; tests: 5; documentation: 3. Their
+  original results and prior incomplete attempts are retained separately.
+  This completes the same initial Nit round; no severity round was reset.
+- Before/after scope comparison: identical tree
+  `730c7b489002a531c4bb878add567df867b8aed3`, scope_changed=false, no lasting
+  tracked/unignored content changes found. No test/check was run by the readers.
+
+### Finding decisions
+
+Overlapping observations are grouped below; original labels and full evidence
+remain in `*-fallback.json` and `*-complete.json`. Every take is within the
+branch's resource-diagnostic concern. No Important label is downgraded.
+
+| Finding                                                                                         | Reviewer's label                 | Our severity and impact                                                                                                                        | Take or record                                                                                               | Review again                          |
+| ----------------------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| Access wording conflates denials, disk errors, authentication failures and occupied claim locks | `nit`; initial tests `important` | Important: advice can send an agent to an unrelated approval flow                                                                              | Take: neutral operation context, original errors retained; actual denial and ordinary occupied-lock controls | Yes, helper output behavior changes   |
+| Fixture leaves owned temporary trees                                                            | Initial tests `important`        | Important: standalone control retained a tree, and earlier Scrut execution directory also remained; repeated runs leave owned resources behind | Take: EXIT cleanup of recorded root, preserve uncertain/interrupted launches                                 | No separate round for test-only edits |
+| Raw retained stderr and missing document-level Git reset                                        | Tests `important` for each       | Important: bin/check-fixture-environments reproduced both failures, blocking make validate                                                     | Take: capture_child and first-command Git isolation                                                          | No separate round for test-only edits |
+| Unset HOME aborts failure reporting and cleanup                                                 | `nit`                            | Nit: edge-case error path aborts instead of reporting                                                                                          | Take: explicit unavailable-default-path context and fallback tests                                           | Yes, helper branch changes            |
+| Prompt/raw-prompt/state temporary failures lack harness context                                 | `nit`                            | Important: the required diagnostic contract is absent on reachable setup failures                                                              | Take: guarded creation/read/render paths, retained errors/status and cleanup tests                           | Yes, helper error handling changes    |
+| XDG_STATE_HOME omitted from ambient reset                                                       | `nit`                            | Nit: test-environment isolation rule missed                                                                                                    | Take: reset alongside other XDG inputs                                                                       | No, test-only                         |
+| Native caller override, nested and unknown labels untested                                      | `nit`                            | Nit: uncovered new caller forms                                                                                                                | Take: explicit marker and invalid-override cases                                                             | No, test-only                         |
+| Denial spellings and default/relative XDG paths untested                                        | `nit`                            | Nit: new diagnostic branches unguarded                                                                                                         | Take: alias, config-load, default/relative/missing HOME and unrelated-cause controls                         | No, test-only                         |
+| Fixture mode/argument contract unclear                                                          | Initial tests `nit`              | Nit: misspelled check mode silently prints instead                                                                                             | Take: reject unknown mode and document arguments/exits                                                       | No, test-only                         |
+| Sibling library lookup idioms differ                                                            | Initial production `nit`         | Nit: avoidable divergence after minimal-PATH correction                                                                                        | Take: pure Bash source-directory resolution in both callers                                                  | No independent behavioral change      |
+| create-worktree composes before a second gh query can be checked                                | Documentation `nit`              | Nit: failed query causes misleading dependent errors, though no launch succeeds                                                                | Take: cache the existing query using the start-issue pattern and compose only after success                  | Covered by next full round            |
+| New stop wording conflicts with best-effort and fan-out rules                                   | Initial documentation `nit`      | Nit: unnecessary stops can omit independent reports                                                                                            | Take: stop dependent steps and preserve existing continuation rules                                          | No, prose-only                        |
+| Parallel README permission text and link omitted                                                | Documentation `nit`              | Nit: sibling retains the removed approval/access implication                                                                                   | Take: qualify both sections and link resource guidance                                                       | No, prose-only                        |
+| Cleanup paragraph asserts one sandbox TMPDIR value                                              | Documentation `nit`              | Nit: unconfirmed universal path claim                                                                                                          | Take: runtime-dependent wording; examples remain examples                                                    | No, prose-only                        |
+| Historical checkpoint text looks current                                                        | Initial documentation `nit`      | Nit: ambiguous handoff state                                                                                                                   | Take: current summary and historical section labels                                                          | No, bookkeeping                       |
+| Log-path reconstruction duplicates workmux knowledge                                            | Initial production `nit`         | Not a demonstrated wrong path: live scratch workmux 0.1.277 confirmed the rule; HOME failure is handled separately                             | Record implementation coupling; retain required confirmed resource path                                      | No                                    |
+| Stat/open mismatch might mislabel a blocked claim file as malformed                             | Initial production `nit`         | Not established: live scratch check returned exists=yes, readable=no and jq open denied, not a contradictory access probe                      | Record unverified pre-existing path; do not change claim semantics without evidence                          | No                                    |
+| Unknown terminal caller receives agent-only approval text                                       | Initial production `nit`         | Nit: unnecessary policy text in stderr                                                                                                         | Take through neutral operation-only formatting; policy stays in skills                                       | Covered by helper-output follow-up    |
+
+No Critical findings. The Nit round took behavior-changing fixes, so the
+structural loop advances to its first Important round, including report-only
+simplify again. No class has yet been fixed in an earlier structural round;
+recurrence checks apply from the next round onward.
+
+### Added verification
+
+The revised Scrut resource document passes 17/17; measured standalone runtime
+45.94 seconds. It now exercises actual stubbed claim-lock refusal without
+creating a lock, occupied-lock/authentication/disk-space controls, all denial
+spellings, XDG/HOME fallback forms, caller overrides/nesting, prompt/raw/state
+creation, input/read rendering failures and owned fixture cleanup. New retained
+output uses capture_child, and the document sources Git isolation first.
+ShellCheck and the fixture-environment validator passed these edits.
+
+A live scratch helper probe initially included punctuation as an extra argument;
+it only exercised usage validation and is not diagnostic evidence. The corrected
+single pipeline ran the actual launcher in the isolated Claude sandbox and
+returned 1 after the workmux log panic, the Claude Code/resource-path diagnostic,
+and the original workmux status 101. Raw results are in
+`results/helper-live-corrected.jsonl`. This preceded the neutral-wording fix;
+resource identification was confirmed, not a final-string snapshot.
+
+The separate claim-read probe's direct call returned exists=yes, readable=no,
+then jq open denied. Its list call printed no output; the effective claim-path
+override was not confirmed, so that second result proves neither success nor
+failure against the intended file. It is not used as acceptance evidence.
+
+## Semgrep standing-rule update
+
+TOOLING relayed Chris (he/him)'s tooling-project rule from Inbox at 9:39 PM ET:
+a baseline scan that completes with partial parsing of shell files counts when
+parse coverage/unparsed files are recorded and ShellCheck passes on those files.
+Partial parsing in any other language still stops. The real baseline scan is
+still mandatory in a disposable shared clone, with no metrics-off flag.
+
+The fixture guard control now resolves a second committed gh stub outside the
+expected stub directory, rather than leaving a real gh fallback available. This
+allows a safe guard plant. Unknown harness, invocation, scenario and mode values
+are rejected. The resulting 20-case document passes. `make validate` also passes
+after the capture_child and Git-reset fixes. Tests are being committed before
+plants against the added temporary-file, fallback and cleanup boundaries.

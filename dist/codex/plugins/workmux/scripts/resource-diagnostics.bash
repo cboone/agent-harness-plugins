@@ -22,7 +22,7 @@ function workmux_caller_harness() {
 
 function workmux_resource_failure() {
   local resource="${1}"
-  printf '%s: %s: access failed for %s; check the active sandbox and filesystem/socket permissions. Use the host approval flow for this command only when authorized; do not exclude bash or change user settings.\n' \
+  printf '%s: %s: operation failed for %s; see the original error for the cause.\n' \
     "${SCRIPT_NAME:-workmux}" "$(workmux_caller_harness)" "${resource}" >&2
 }
 
@@ -34,7 +34,13 @@ function workmux_diagnose_launch_failure() {
     *'failed to create initial log file'*)
       case "${XDG_STATE_HOME:-}" in
         /*) log_path="${XDG_STATE_HOME}/workmux/workmux.log" ;;
-        *) log_path="${HOME}/.local/state/workmux/workmux.log" ;;
+        *)
+          if [[ -z "${HOME:-}" ]]; then
+            workmux_resource_failure 'workmux log (default state directory; HOME unset)'
+            return 0
+          fi
+          log_path="${HOME}/.local/state/workmux/workmux.log"
+          ;;
       esac
       workmux_resource_failure "workmux log ${log_path}"
       ;;

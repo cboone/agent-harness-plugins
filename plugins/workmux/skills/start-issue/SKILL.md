@@ -407,7 +407,7 @@ Give the error text for any issue that failed, and the state directory for an un
 
 ## Error Handling
 
-- For an access failure, report the calling harness and the exact resource named in the error: workmux's log, the tmux socket, gh configuration, Git metadata, the destination or the claim file. Retain the original error. Use the host's approval flow for this specific command only when authorized; otherwise stop. Do not add a command exemption or change settings. A denied gh config read is not an authentication failure. The prompt composer reads stdin and jq only, so a failed gh query must be handled before composing or launching.
+- For an access failure, report the calling harness and the exact resource named in the error: workmux's log, the tmux socket, gh configuration, Git metadata, the destination or the claim file. Retain the original error. Do not retry a blocked command without authorization through the host's approval flow. Stop dependent steps; preserve the existing best-effort status marking, advisory claim-write and fan-out failure rules. Do not add a command exemption or change settings. A denied gh config read is not an authentication failure. The prompt composer reads stdin and jq only, so a failed gh query must be handled before composing or launching.
 - If `gh` is not authenticated, instruct the user to run `gh auth login`
 - If `workmux` is not installed, inform the user
 - If the launcher rejects the candidate, revise it in this session using the naming rules and retry with `--generated-name "CANDIDATE"`. For obsolete `--auto-name` errors, switch to this interface; do not invoke a naming command.

@@ -113,7 +113,7 @@ In zsh (the macOS default shell), `status` and `pipestatus` are read-only built-
 "Bash(mktemp -u \"${TMPDIR:-/tmp}/gh-pr-body-*\")", "Bash(rm -f *gh-pr-body-*)"
 ```
 
-Pinning the cleanup rule to a directory does not work, because `$TMPDIR` differs between the sandbox and an ordinary shell: it is `/tmp/claude-501/` in one and something like `/var/folders/xx/.../T/` in the other. The filename prefix is the part that stays constant, so it is what the rule keys on.
+`$TMPDIR` can differ across harnesses and runs. Scope the cleanup rule to the distinctive filename prefix and check the actual expanded path against the active harness's permissions; the example directories are not guaranteed sandbox locations.
 
 ## Examples
 

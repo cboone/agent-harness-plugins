@@ -5,8 +5,11 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
+SCRIPT_DIRECTORY="${BASH_SOURCE[0]%/*}"
+if [[ "${BASH_SOURCE[0]}" != */* ]]; then SCRIPT_DIRECTORY=.; fi
+readonly SCRIPT_DIRECTORY
 # shellcheck source=plugins/workmux/scripts/resource-diagnostics.bash
-source "$(dirname "${BASH_SOURCE[0]}")/resource-diagnostics.bash"
+source "${SCRIPT_DIRECTORY}/resource-diagnostics.bash"
 
 function usage() {
   cat << 'USAGE_TEXT'
@@ -85,8 +88,17 @@ function write_escaped_prompt() {
     die "expected prompt content on stdin"
   fi
 
-  raw_prompt="$(mktemp "${prompt_file}.raw.XXXXXX")"
-  cat > "${raw_prompt}"
+  if ! raw_prompt="$(mktemp "${prompt_file}.raw.XXXXXX")"; then
+    workmux_resource_failure "temporary prompt next to ${prompt_file}"
+    remove_file_if_present "${prompt_file}" || true
+    return 1
+  fi
+  if ! cat > "${raw_prompt}"; then
+    workmux_resource_failure "prompt input or temporary file ${raw_prompt}"
+    remove_file_if_present "${raw_prompt}" || true
+    remove_file_if_present "${prompt_file}" || true
+    return 1
+  fi
 
   if [[ ! -s "${raw_prompt}" ]]; then
     remove_file_if_present "${raw_prompt}"
@@ -104,6 +116,7 @@ function write_escaped_prompt() {
 
   remove_file_if_present "${raw_prompt}"
   if ((status != 0)); then
+    workmux_resource_failure "prompt file ${prompt_file}"
     remove_file_if_present "${prompt_file}"
     return "${status}"
   fi
@@ -582,7 +595,10 @@ function do_launch() {
     provisional_name="${branch//\//-}"
   fi
 
-  prompt_file="$(mktemp "${TMPDIR:-/tmp}/workmux-prompt-${provisional_name}.md.XXXXXX")"
+  if ! prompt_file="$(mktemp "${TMPDIR:-/tmp}/workmux-prompt-${provisional_name}.md.XXXXXX")"; then
+    workmux_resource_failure "prompt temporary directory ${TMPDIR:-/tmp}"
+    return 1
+  fi
 
   write_escaped_prompt "${prompt_file}"
 
@@ -631,7 +647,11 @@ function do_launch() {
     cmd+=(--agent "${agent}")
   fi
 
-  state_dir="$(mktemp -d "${TMPDIR:-/tmp}/workmux-launch-${safe_name}.XXXXXX")"
+  if ! state_dir="$(mktemp -d "${TMPDIR:-/tmp}/workmux-launch-${safe_name}.XXXXXX")"; then
+    workmux_resource_failure "launch state directory ${TMPDIR:-/tmp}"
+    remove_file_if_present "${prompt_file}" || true
+    return 1
+  fi
   # Job control gives the launch its own process group, so a harness that
   # stops this launcher's group on a tool timeout does not stop `workmux add`.
   # stderr is discarded to hide a spurious bash "child setpgid" error, printed

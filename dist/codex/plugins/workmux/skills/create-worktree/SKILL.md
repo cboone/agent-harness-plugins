@@ -133,13 +133,21 @@ If an issue number was given but `gh` is not installed or not authenticated, say
 
 ### 3. Generate the Branch Name
 
-**From an issue number**, fetch the issue first:
+**From an issue number**, create a cache file and record the literal path it prints as `ISSUE_JSON`:
 
 ```bash
-gh issue view NUMBER --json number,title,labels,body,state
+mktemp "${TMPDIR:-/tmp}/workmux-issue-json-XXXXXX"
 ```
 
-If the issue is closed, warn the user and ask whether to proceed.
+Fetch into that recorded file, substituting its literal path:
+
+```bash
+gh issue view NUMBER --json number,title,labels,body,state > ISSUE_JSON
+```
+
+If the fetch fails, report its error, remove only that recorded file and stop before composing or launching. Reuse the successful JSON for naming and composition; do not fetch again in step 6. Remove the cache on every later stop or after the launch reports its result. The launcher owns separate prompt and state files, which this cleanup does not remove.
+
+If the issue is closed, warn the user and ask whether to proceed. Remove the cache if the user declines.
 
 #### Generate the candidate in this session
 
@@ -198,7 +206,7 @@ Branch on the exit code:
 
 ### 5. Compose the Prompt
 
-**From an issue number**, pipe the `gh issue view` output through the bundled `compose-issue-prompt` script, which produces:
+**From an issue number**, feed the successful cached `ISSUE_JSON` from step 3 through the bundled `compose-issue-prompt` script, which produces:
 
 ```text
 Work on issue #NUMBER: TITLE
@@ -262,11 +270,10 @@ When the user supplied a base, skip default-branch detection and use that exact 
 
 Then launch the worktree.
 
-**From an issue number**, pipe the issue JSON through both scripts:
+**From an issue number**, use the recorded `ISSUE_JSON` path from step 3 as input to both helpers:
 
 ```bash
-gh issue view NUMBER --json number,title,labels,body,state \
-  | bash "SCRIPTS_DIR/compose-issue-prompt" \
+bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON \
   | bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue NUMBER --base "BASE_BRANCH"
 ```
 
@@ -275,8 +282,7 @@ Do not pass `--chain-command` here. This skill creates the worktree and stops; `
 When the user also gave `--branch NAME`, keep the issue prompt but pass the explicit branch positionally, without `--generated-name` or the launcher's `--issue` option:
 
 ```bash
-gh issue view NUMBER --json number,title,labels,body,state \
-  | bash "SCRIPTS_DIR/compose-issue-prompt" \
+bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON \
   | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
 ```
 
@@ -413,7 +419,7 @@ Give the error text for any issue that failed, and the state directory for an un
 
 ## Error Handling
 
-- For an access failure, report the calling harness and the exact resource named in the error: workmux's log, the tmux socket, gh configuration, Git metadata, the destination or the claim file. Retain the original error. Use the host's approval flow for this specific command only when authorized; otherwise stop. Do not add a command exemption or change settings. A denied gh config read is not an authentication failure. The prompt composer reads stdin and jq only, so a failed gh query must be handled before composing or launching.
+- For an access failure, report the calling harness and the exact resource named in the error: workmux's log, the tmux socket, gh configuration, Git metadata, the destination or the claim file. Retain the original error. Do not retry a blocked command without authorization through the host's approval flow. Stop dependent steps; preserve the existing best-effort status marking, advisory claim-write and fan-out failure rules. Do not add a command exemption or change settings. A denied gh config read is not an authentication failure. The prompt composer reads stdin and jq only, so a failed gh query must be handled before composing or launching.
 - If `workmux` is not installed, inform the user and suggest installing it
 - If an issue number was given and `gh` is not installed or not authenticated, say so and ask whether to treat the argument as a task description
 - If the issue is not found, report that and stop

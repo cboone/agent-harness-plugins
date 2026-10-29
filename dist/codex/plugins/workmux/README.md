@@ -107,7 +107,7 @@ and its adjacent lock and temporary files. Temporary prompt and launch files
 use `${TMPDIR:-/tmp}`. The prompt composer itself reads only its input and
 uses jq; it does not run gh, workmux or tmux.
 
-On an access failure, retain the original error and report the calling harness
+The helper labels the failed operation and caller without guessing its cause. On an access failure, retain the original error and report the calling harness
 and named resource. A `Generated branch name:` line does not confirm creation.
 Use the host's approval flow for the specific command only when authorized;
 otherwise stop and preserve the failed or uncertain launch state. Never change
@@ -209,7 +209,7 @@ With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its
 
 ### Recommended Permissions
 
-This skill runs GitHub CLI, workmux, and git commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+These optional Claude Code rules concern command approval only; they do not grant filesystem, socket or network access. Codex uses its own command policy. Read [Sandbox and resource access](#sandbox-and-resource-access) before configuring these rules separately from running the skill in `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {

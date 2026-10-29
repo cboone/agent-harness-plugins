@@ -29,7 +29,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u EVAL_GH_AUTH -u EVAL_GH_LOG \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
 	-u BACKLOG_GATHER_NOW -u BACKLOG_GATHER_HOST \
-	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME \
+	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME -u XDG_STATE_HOME \
 	-u PUSH_NOTIFICATION_BACKEND -u PUSH_NOTIFICATION_CONFIG -u NTFY_SERVER -u NTFY_TOPIC -u NTFY_TOKEN
 
 # Every scrut test resolves the script or fixture it exercises through one of
@@ -111,6 +111,7 @@ SCRUT_ENV := \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
 	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub" \
 	WORKMUX_RESOURCE_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-resource-stub" \
+	WORKMUX_RESOURCE_DIAGNOSTICS_BIN="$(CURDIR)/plugins/workmux/scripts/resource-diagnostics.bash" \
 	WORKMUX_SANDBOX_CASE_BIN="$(CURDIR)/tests/fixtures/workmux-sandbox-case" \
 	LAUNCH_SLEEP_STUB_BIN="$(CURDIR)/tests/fixtures/launch-sleep-stub"
 

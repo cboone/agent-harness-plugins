@@ -1,9 +1,26 @@
 #!/usr/bin/env bash
-# Exercises helper launches using only guarded fixture tools.
+# Guarded helper matrix: HARNESS INVOCATION SCENARIO [print|check].
+# Exits 1 on assertion failure; preserves fixtures only for uncertain launches.
 set -euo pipefail
 
 # shellcheck source=bin/lib/git-environment.bash
 source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+
+preserve_fixture=no
+
+function cleanup_fixture() {
+  if [[ "${preserve_fixture}" == no && -n "${MATRIX_ROOT:-}" ]]; then
+    rm -r -- "${MATRIX_ROOT}"
+  fi
+}
+
+function interrupt_fixture() {
+  preserve_fixture=yes
+  printf 'matrix: interrupted; fixture retained at %s\n' "${MATRIX_ROOT}" >&2
+  exit "${1}"
+}
 
 function die() {
   printf 'matrix: %s\n' "${1}" >&2
@@ -22,22 +39,38 @@ function invoke_helper() {
 
 function main() {
   local harness="${1:?}" invocation="${2:?}" scenario="${3:?}" mode="${4:-print}"
-  local fixture tool prompt status=0 claim_output output resource original
+  local fixture tool prompt status=0 claim_output output resource original expected_status=1
+  [[ "${mode}" == print || "${mode}" == check ]] || die 'unknown mode'
+  [[ "${invocation}" == bash || "${invocation}" == executable ]] || die 'unknown invocation'
+  case "${harness}" in
+    'Claude Code' | Codex) ;;
+    *) die 'unknown harness' ;;
+  esac
+  case "${scenario}" in
+    success | guard | log | socket | config | claim | occupied | ordinary | disk | auth | generic | generic-lower | generic-typed | config-load | log-home | log-relative | log-no-home | temp-prompt | temp-raw | temp-state | temp-read | temp-render) ;;
+    *) die 'unknown scenario' ;;
+  esac
   fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
   export MATRIX_ROOT="${fixture}"
+  trap cleanup_fixture EXIT
+  trap 'interrupt_fixture 129' HUP
+  trap 'interrupt_fixture 130' INT
+  trap 'interrupt_fixture 143' TERM
   export MATRIX_INVOCATION="${invocation}"
   mkdir "${fixture}/bin" "${fixture}/tmp" "${fixture}/worktree"
-  for tool in workmux tmux gh; do
+  for tool in workmux tmux gh mkdir mktemp cat sed; do
     cp "${WORKMUX_RESOURCE_STUB_BIN:?}" "${fixture}/bin/${tool}"
     chmod +x "${fixture}/bin/${tool}"
   done
   cp "${WORKTREE_GIT_STUB_BIN:?}" "${fixture}/bin/git"
   chmod +x "${fixture}/bin/git"
   if [[ "${scenario}" == guard ]]; then
-    mv "${fixture}/bin/gh" "${fixture}/bin/not-gh"
+    mkdir "${fixture}/other-bin"
+    mv "${fixture}/bin/gh" "${fixture}/other-bin/gh"
   fi
   export PATH="${fixture}/bin:${PATH}"
-  for tool in workmux tmux gh git; do
+  if [[ "${scenario}" == guard ]]; then export PATH="${fixture}/bin:${fixture}/other-bin:${PATH}"; fi
+  for tool in workmux tmux gh git mkdir mktemp cat sed; do
     [[ "$(command -v "${tool}" || true)" == "${fixture}/bin/${tool}" ]] ||
       die "refusing to run: ${tool} is not the fixture stub"
   done
@@ -47,8 +80,8 @@ function main() {
     Codex) export CODEX_THREAD_ID=matrix ;;
     *) die 'unknown harness' ;;
   esac
-  [[ "${invocation}" == bash || "${invocation}" == executable ]] || die 'unknown invocation'
   export TMPDIR="${fixture}/tmp"
+  unset STUB_STATE STUB_WORKMUX_EXIT STUB_WORKMUX_RELEASE_FIFO STUB_WORKMUX_SLEEP STUB_WORKMUX_SKIP_WORKTREE STUB_GIT_FAIL STUB_GIT_INVALID_REF
   export STUB_GIT_BRANCHES=''
   export STUB_GIT_WORKTREE_PORCELAIN_FILE="${fixture}/worktrees"
   export STUB_GIT_WORKTREE_PORCELAIN=''
@@ -60,22 +93,42 @@ function main() {
   : > "${STUB_GIT_WORKTREE_PORCELAIN_FILE}"
   prompt="$(gh issue view 42 | invoke_helper "${COMPOSE_ISSUE_PROMPT_BIN:?}")"
   [[ "${prompt}" == 'Work on issue #42: Scratch worktree' ]] || die 'prompt did not compose'
-  if [[ "${scenario}" == claim ]]; then
+  export STUB_RESOURCE_SCENARIO="${scenario}"
+  case "${scenario}" in
+    log-home)
+      export HOME="${fixture}/home"
+      unset XDG_STATE_HOME
+      ;;
+    log-relative)
+      export HOME="${fixture}/home" XDG_STATE_HOME=relative
+      ;;
+    log-no-home) unset HOME XDG_STATE_HOME ;;
+    *) ;;
+  esac
+  if [[ "${scenario}" == claim || "${scenario}" == occupied ]]; then
     export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
-    : > "${WORKTREE_RESOURCES_FILE}.lock"
-    invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
-      --worktree "${fixture}/worktree" --branch feature/test > "${fixture}/output" 2>&1 || status=$?
+    if [[ "${scenario}" == occupied ]]; then : > "${WORKTREE_RESOURCES_FILE}.lock"; fi
+    capture_child output --error-stdout invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
+      --worktree "${fixture}/worktree" --branch feature/test > "${fixture}/output" || status=$?
+    if [[ "${scenario}" == claim ]]; then
+      [[ ! -e "${WORKTREE_RESOURCES_FILE}.lock" ]] || die 'denial fixture created a lock'
+    fi
   else
     export STUB_RESOURCE_SCENARIO="${scenario}"
-    invoke_helper "${LAUNCH_WORKMUX_BIN:?}" --generated-name feature/test --issue 42 \
-      --base origin/main --await-completion <<< "${prompt}" > "${fixture}/output" 2>&1 || status=$?
+    capture_child output --error-stdout invoke_helper "${LAUNCH_WORKMUX_BIN:?}" --generated-name feature/test --issue 42 \
+      --base origin/main --await-completion <<< "${prompt}" > "${fixture}/output" || status=$?
+  fi
+  if [[ "${status}" == 124 ]]; then
+    preserve_fixture=yes
+    cat "${fixture}/output" >&2
+    die "uncertain launch; fixture retained at ${fixture}"
   fi
   if [[ "${scenario}" == success ]]; then
     [[ "${status}" == 0 ]] || {
-      cat "${fixture}/output"
+      printf '%s\n' "${output}"
       die 'launch failed'
     }
-    [[ "$(tail -1 "${fixture}/output")" == 'Worktree ready: /worktrees/feature-42-test' ]] ||
+    [[ "${output##*$'\n'}" == 'Worktree ready: /worktrees/feature-42-test' ]] ||
       die 'worktree was not confirmed'
     export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
     claim_output="$(invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
@@ -84,29 +137,73 @@ function main() {
     jq -e '.claims | length == 1' "${WORKTREE_RESOURCES_FILE}" > /dev/null || die 'claim not recorded'
     printf '%s %s: compose, launch and claim passed\n' "${harness}" "${invocation}"
   elif [[ "${mode}" == check ]]; then
-    output="$(cat "${fixture}/output")"
     case "${scenario}" in
-      log)
+      log | disk)
         resource="workmux log ${fixture}/state/workmux/workmux.log"
-        original='failed to create initial log file: PermissionDenied'
+        original='failed to create initial log file:'
+        ;;
+      log-home | log-relative)
+        resource="workmux log ${fixture}/home/.local/state/workmux/workmux.log"
+        original='failed to create initial log file:'
+        ;;
+      log-no-home)
+        resource='workmux log (default state directory; HOME unset)'
+        original='failed to create initial log file:'
         ;;
       socket)
         resource='tmux socket named in the command output'
         original="error connecting to ${fixture}/tmux/socket (Operation not permitted)"
         ;;
-      config)
+      config | config-load)
         resource='GitHub CLI config named in the command output'
-        original="open ${fixture}/gh/hosts.yml: operation not permitted"
+        if [[ "${scenario}" == config-load ]]; then
+          original="open ${fixture}/gh/hosts.yml: Permission denied"
+        else
+          original="open ${fixture}/gh/hosts.yml: operation not permitted"
+        fi
         ;;
-      claim)
+      claim | occupied)
         resource="claim lock ${fixture}/claims.json.lock"
         original="cannot create ${fixture}/claims.json.lock"
         ;;
+      generic | generic-lower | generic-typed | auth)
+        resource='resource named in the command output'
+        case "${scenario}" in
+          generic-lower) original='permission denied' ;;
+          generic-typed) original='PermissionDenied' ;;
+          *) original='Permission denied' ;;
+        esac
+        ;;
+      temp-prompt)
+        resource="prompt temporary directory ${fixture}/tmp"
+        original='mktemp: fixture access denied'
+        ;;
+      temp-raw)
+        resource="temporary prompt next to ${fixture}/tmp/workmux-prompt-issue-42.md."
+        original='mktemp: fixture access denied'
+        ;;
+      temp-state)
+        resource="launch state directory ${fixture}/tmp"
+        original='mktemp: fixture access denied'
+        ;;
+      temp-read)
+        resource="prompt input or temporary file ${fixture}/tmp/workmux-prompt-issue-42.md."
+        original='cat: fixture input failure'
+        ;;
+      temp-render)
+        resource="prompt file ${fixture}/tmp/workmux-prompt-issue-42.md."
+        original='sed: fixture output failure'
+        expected_status=2
+        ;;
       *) die 'unknown denial scenario' ;;
     esac
-    [[ "${status}" == 1 ]] || die 'resource failure exit status changed'
-    [[ "${output}" == *"${harness}: access failed for ${resource};"* ]] || die 'harness/resource diagnostic missing'
+    [[ "${status}" == "${expected_status}" ]] || die 'resource failure exit status changed'
+    [[ "${output}" == *"${harness}: operation failed for ${resource}"* ]] || die 'harness/resource diagnostic missing'
     [[ "${output}" == *"${original}"* ]] || die 'original resource error missing'
+    [[ "${output}" != *'Use the host approval flow'* ]] || die 'error prescribed an approval'
+    if [[ "${scenario}" == temp-* ]]; then
+      [[ -z "$(ls -A "${fixture}/tmp")" ]] || die 'prompt files left after failed creation'
+    fi
     printf '%s %s %s: resource, harness and failure retained\n' "${harness}" "${invocation}" "${scenario}"
   else
     sed "s|${fixture}|FIXTURE|g" "${fixture}/output"
