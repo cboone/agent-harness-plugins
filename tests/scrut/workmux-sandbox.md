@@ -107,6 +107,17 @@ matrix: unknown mode
 [1]
 ```
 
+## A failed matrix assertion retains child diagnostics before cleanup
+
+```scrut
+$ "${WORKMUX_SANDBOX_CASE_BIN}" Codex bash ordinary check 2>&1
+Generated branch name: feature/42-test
+workmux: unsupported configuration
+launch-workmux: workmux add for feature/42-test failed with status 2
+matrix: unknown denial scenario
+[1]
+```
+
 ## A tool outside the expected stub directory is refused
 
 ```scrut

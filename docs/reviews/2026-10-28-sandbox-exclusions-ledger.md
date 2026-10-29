@@ -5,7 +5,7 @@
 Active overnight through a ready PR; TOOLING retains merging. Helper diagnostics,
 the guarded matrix and initial plants are committed. The structural Nit round
 has completed with findings, and its fixes are being verified. The resource
-suite now passes 20 cases; the 17-case revision measured 45.94 seconds. No push or PR has occurred. Earlier
+suite now passes 21 cases; the restored 20-case revision measured 60.46 seconds. No push or PR has occurred. Earlier
 checkpoint sections below are historical, not current task status.
 
 ## Authority and status
@@ -488,3 +488,30 @@ allows a safe guard plant. Unknown harness, invocation, scenario and mode values
 are rejected. The resulting 20-case document passes. `make validate` also passes
 after the capture_child and Git-reset fixes. Tests are being committed before
 plants against the added temporary-file, fallback and cleanup boundaries.
+
+### Final-boundary plants after the Nit fixes
+
+The committed 20-case revision was the baseline before these plants. Each
+subject passed Bash syntax checks, each scenario passed its positive control,
+and original bytes were restored between mutations. Targeted checks invoke
+the same committed fixture assertions used by Scrut; caller snapshots use the
+exact committed output contract. Detailed results are in `revision-plants/`.
+
+| Planted defect                                                        | Instrument                                              | Observed result                                                        | Regression coverage                   |
+| --------------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------- |
+| Remove each log/socket/config/claim resource identity                 | Guarded fixture check cases                             | Each failed on missing harness/resource context                        | Main resource matrix                  |
+| Remove each prompt/raw/state/input/render diagnostic separately       | Corresponding guarded fixture case                      | All five failed on missing harness/resource context                    | Temporary setup/read/render cases     |
+| Restore unguarded HOME expansion                                      | HOME-unset fixture case                                 | Failed on missing context after the aborted diagnostic                 | HOME-unset log case                   |
+| Reintroduce approval advice for all failures                          | Authentication, disk-space and occupied-lock controls   | All three rejected prescribed approval advice                          | Non-denial controls                   |
+| Remove typed-denial or config-load recognition separately             | Alias-specific fixture cases                            | Each rejected lost resource identity                                   | Denial spellings and config-load case |
+| Drop original completed-launch output                                 | Socket error fixture case                               | Rejected missing original error                                        | Original-error retention assertion    |
+| Break nested, explicit or invalid-override caller behavior separately | Exact caller snapshots                                  | All three changed the expected output                                  | Caller-form snapshots                 |
+| Remove the owned-fixture EXIT trap                                    | Empty-owned-parent oracle after a completed mock launch | Helper still exited 0, but the retained fixture made the oracle fail   | Standalone cleanup case               |
+| Skip the gh-path guard                                                | Full committed Scrut document                           | 19 passed, 1 failed; only an alternate committed gh stub was reachable | Unexpected-stub-location refusal      |
+
+The cleanup plant's retained directory was recorded before removing only that
+completed mock's owned directory. The full restored resource suite then passed
+20/20; `/usr/bin/time -p` measured 60.46 seconds (user 5.74, system 8.90).
+No temporary source mutation remained. Fixture assertion failures now replay
+retained child output before EXIT cleanup; its new snapshot brings the suite
+to 21/21. A final snapshot plant for that assertion follows its test commit.

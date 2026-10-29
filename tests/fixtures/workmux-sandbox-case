@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Guarded helper matrix: HARNESS INVOCATION SCENARIO [print|check].
+# Check mode asserts resource diagnostics; print mode exposes child output.
 # Exits 1 on assertion failure; preserves fixtures only for uncertain launches.
 set -euo pipefail
 
@@ -23,6 +24,9 @@ function interrupt_fixture() {
 }
 
 function die() {
+  if [[ -n "${output:-}" ]]; then
+    printf '%s\n' "${output}" >&2
+  fi
   printf 'matrix: %s\n' "${1}" >&2
   exit 1
 }
@@ -120,14 +124,10 @@ function main() {
   fi
   if [[ "${status}" == 124 ]]; then
     preserve_fixture=yes
-    cat "${fixture}/output" >&2
     die "uncertain launch; fixture retained at ${fixture}"
   fi
   if [[ "${scenario}" == success ]]; then
-    [[ "${status}" == 0 ]] || {
-      printf '%s\n' "${output}"
-      die 'launch failed'
-    }
+    [[ "${status}" == 0 ]] || die 'launch failed'
     [[ "${output##*$'\n'}" == 'Worktree ready: /worktrees/feature-42-test' ]] ||
       die 'worktree was not confirmed'
     export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
