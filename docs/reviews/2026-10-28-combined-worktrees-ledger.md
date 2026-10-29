@@ -110,3 +110,11 @@ Apply `lint-and-fix --no-push` using project check commands. Markdown auto-fix a
 - Refetched main before publication preparation: still the same base, active public non-fork repository. No overlapping sandbox change has landed, so no rebase is required.
 - Lint workflow: all required tools ran, no fixes needed, no push. Markdown write commands were check-only by protected-path policy; no required check was skipped. Final lint will verify this recorded tree before tidy.
 - Tidy plan: back up as `fix/544-combined-worktrees-pre-tidy`, reset softly to the verified merge base, rebuild as feature, tests and process-doc signed commits, then require exact tree equality with the backup. Publication follows only after that check; TOOLING merges.
+
+## Publication and CI fixture fix
+
+Initial tidy completed as three signed commits (`5688e361`, `e10c8671`, `59227938`), all verified `G`. Final and backup tree IDs both `703a2c6bfcbee04239779b3278c5484ba4c856bb`; final lint passed and the worktree was clean. Pushed and opened ready [PR 676](https://github.com/cboone/agent-harness-plugins/pull/676), with exact PR-body readback, issue 544 linked, no review requests and no auto-merge. TOOLING retains merging.
+
+First CI run `40808536453` failed only the combined regression document: 12/13 cases passed. The ref-collision fixture fetched from the runner's shallow checkout; Git rejected updating shallow roots and `FETCH_HEAD` was invalid. This is a test-fixture setup defect; runtime helper cases passed. Failed job: `123233173478`; local log `/tmp/544-ci-combined-failure.log`.
+
+Replaced the fixture history fetch with an exact copy of the existing commit object, preserving its object ID and signature. Added an explicit shallow-source fixture case. No force or shallow-update override, new software, runtime helper change or history rewrite. Local combined suite now passed 14/14; fixture ShellCheck, shfmt and fixture-environment validation passed. A shallow-fetch regression plant is next. This is a test-only follow-up from a locally reproduced CI boundary; review counts and end states carry forward, with no additional review round due under the test-only rule. Published commits stay unchanged.

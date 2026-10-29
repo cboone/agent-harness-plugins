@@ -126,3 +126,16 @@ parent branch blocks combined child: yes
 combined child blocks parent branch: yes
 hyphen-separated combined branch coexists: yes
 ```
+
+## Ref collisions are checked from shallow source checkouts
+
+The fixture copies the existing commit object rather than fetching history.
+The source repository in this case explicitly marks that commit as a shallow root.
+
+```scrut
+$ "${COMBINED_REF_COLLISION_BIN}" --shallow-source
+shallow source: true
+parent branch blocks combined child: yes
+combined child blocks parent branch: yes
+hyphen-separated combined branch coexists: yes
+```

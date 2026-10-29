@@ -24,11 +24,29 @@ function expect_collision() {
 function main() {
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
   trap 'rm -r -- "${scratch}"' EXIT
+  local commit git_source="${REPO_ROOT}" source_commit
+  capture_child - --stdout "${scratch}/commit" -- git -C "${git_source}" cat-file commit HEAD
+  case "${1:-}" in
+    --shallow-source)
+      git init --quiet --bare --initial-branch=main "${scratch}/source"
+      source_commit="$(git -C "${scratch}/source" hash-object -w -t commit --stdin < "${scratch}/commit")"
+      git -C "${scratch}/source" update-ref refs/heads/main "${source_commit}"
+      printf '%s\n' "${source_commit}" > "${scratch}/source/shallow"
+      git_source="${scratch}/source"
+      [[ "$(git -C "${git_source}" rev-parse --is-shallow-repository)" == true ]]
+      echo 'shallow source: true'
+      ;;
+    '') ;;
+    *)
+      echo 'Usage: combined-ref-collision [--shallow-source]' >&2
+      return 1
+      ;;
+  esac
   git init --quiet --bare --initial-branch=main "${scratch}/repo"
   cd "${scratch}/repo"
-  git fetch --quiet --no-tags "${REPO_ROOT}" HEAD
-  local commit
-  commit="$(git rev-parse FETCH_HEAD)"
+  capture_child - --stdout "${scratch}/commit" -- git -C "${git_source}" cat-file commit HEAD
+  commit="$(git hash-object -w -t commit --stdin < "${scratch}/commit")"
+  [[ "${commit}" == "$(git -C "${git_source}" rev-parse HEAD)" ]]
 
   git update-ref refs/heads/fix/4523 "${commit}"
   expect_collision refs/heads/fix/4523/4503-slug "${commit}"
