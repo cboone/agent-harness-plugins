@@ -252,3 +252,11 @@ The new contention actors both stop inside diagnostic mktemp, after the owner-ex
 ## Updated Semgrep standing rule
 
 TOOLING relayed Chris's tooling-project rule from the Inbox at 9:39 PM ET: a baseline scan that completes but partly parses shell files counts, provided the ledger records parse coverage and every unparsed shell file, and ShellCheck passes on those files. Partial parsing in any other language still stops. This supersedes the brief's blanket partial-parse stop for shell only; the disposable-clone baseline scan and all other scan requirements remain unchanged.
+
+### Combined diagnostic-order call and measured plants
+
+TOOLING confirmed the combined contract: helper-owned stderr, quiet expected exclusive contention, real diagnostics otherwise, rotation warnings after the append, call-site enforcement and its plant, and all three Critical-round takes. Rotation passes an idempotent pending-data callback to reserve; the helper invokes it before its own diagnostic, so no caller captures or buffers that diagnostic. The same append callback is used on the normal path and attempts the append only once. Rotation release occurs afterward. This preserves normal rotation layout while retaining the pending event on reservation, PID-recording or release failure. The callback is an ordering action, not a diagnostic-output channel.
+
+The direct canonical-source stderr-drop plant was rejected by the call-site checker with exit 1 and the exact offending call. The ordinary-redirection plant passed syntax validation but failed both descriptor-8 and descriptor-9 forced-contention cases, each reporting that two actors acquired the owner. Four other identity cases passed; make returned 2. Sources and generated copies were restored. The contract's three permanent negative cases also reject redirection, capture and ignored status. Artifacts: `/tmp/656-contract-plants.UiJlLv`.
+
+Updated targeted results before final-tree acceptance: resource 108/108, cache 92/92, attention 62/62, identity/contention 6/6 on Bash 5 and Bash 3.2, call-site contract 4/4. Final Linux validation and the next Critical-only round remain pending. Review counts remain Nit, Important 1, Important 2 and Critical 1; none restart.

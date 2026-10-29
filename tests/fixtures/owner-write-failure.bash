@@ -22,9 +22,9 @@ function printf() {
 }
 
 function echo() {
-  if [[ "${LOCK_TEST_REPORT_ORDER:-}" == true && "$*" == *'owner-lock: cannot release '* ]]; then
+  if [[ "${LOCK_TEST_REPORT_ORDER:-}" == true && "$*" == *'owner-lock:'* ]]; then
     if ! grep -q '"event":"auto_denied"' "${ATTENTION_LOG_DIR:?}/events.jsonl"; then
-      touch "${LOCK_TEST_DIRECTORY:?}/reported-before-append"
+      touch "${LOCK_TEST_ORDER_MARKER:-${LOCK_TEST_DIRECTORY:?}/reported-before-append}"
     fi
   fi
   builtin echo "$@"

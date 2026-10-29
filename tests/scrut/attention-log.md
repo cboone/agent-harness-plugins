@@ -388,8 +388,9 @@ $ fresh
 > mkdir -p "${ATTENTION_LOG_DIR}/rotate.lock"
 > chmod 500 "${ATTENTION_LOG_DIR}/rotate.lock"
 > head -c 5242880 /dev/zero > "${events_file}"
-> hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/rotation-reserve-error"
+> BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_REPORT_ORDER=true LOCK_TEST_DIRECTORY="${ATTENTION_LOG_DIR}/rotate.lock" LOCK_TEST_ORDER_MARKER="${ATTENTION_LOG_DIR}/early-report" hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/rotation-reserve-error"
 > grep -q 'owner-lock: cannot create.*rotate.lock/owner:.*Permission denied' "${work}/rotation-reserve-error" || exit 1
+> test ! -e "${ATTENTION_LOG_DIR}/early-report" || exit 1
 > chmod 700 "${ATTENTION_LOG_DIR}/rotate.lock"
 > tr -d '\000' < "${events_file}" | jq -r '.event'
 auto_denied

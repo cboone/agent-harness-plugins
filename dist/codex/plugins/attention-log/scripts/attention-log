@@ -178,6 +178,9 @@ LOCK_DIR=""
 LOCK_HELD=false
 SESSION_LOCK_TOKEN=""
 ROTATION_TOKEN=""
+PENDING_EVENT_LINE=""
+PENDING_EVENT_ATTEMPTED=false
+PENDING_EVENT_STATUS=0
 
 # Set by marker_take_request and marker_newest_wait.
 TAKEN_ID=""
@@ -248,10 +251,18 @@ function file_inode() {
 # Renames a full events file to events.jsonl.1 under a lock, so two writers
 # never rename twice and lose the first rotation. A lock left by a stopped
 # writer is taken over once it is a minute old.
+# Idempotent callback used before rotation diagnostics and at the normal append.
+function append_pending_event() {
+  [[ "${PENDING_EVENT_ATTEMPTED}" == false ]] || return 0
+  cat >> "${EVENTS_FILE}" <<< "${PENDING_EVENT_LINE}" || PENDING_EVENT_STATUS=$?
+  PENDING_EVENT_ATTEMPTED=true
+  return 0
+}
+
 function rotate_events() {
-  local result
+  local result diagnostic
   mkdir -p "${ROTATE_LOCK}" 2> /dev/null || return 0
-  if owner_lock_reserve "${ROTATE_LOCK}/owner" 9; then
+  if owner_lock_reserve "${ROTATE_LOCK}/owner" 9 append_pending_event; then
     ROTATION_TOKEN="${OWNER_LOCK_TOKEN}"
   else
     result=$?
@@ -259,14 +270,19 @@ function rotate_events() {
     [[ -n "$(find "${ROTATE_LOCK}/owner" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0
     # Age-based reclaim can remove a live successor's owner file.
     # https://github.com/cboone/agent-harness-plugins/issues/673
-    rm "${ROTATE_LOCK}/owner" || return 0
-    if owner_lock_reserve "${ROTATE_LOCK}/owner" 9; then
+    if ! diagnostic="$(rm "${ROTATE_LOCK}/owner" 2>&1)"; then
+      owner_lock_report "cannot reclaim ${ROTATE_LOCK}/owner: ${diagnostic}" append_pending_event
+      return 1
+    fi
+    if owner_lock_reserve "${ROTATE_LOCK}/owner" 9 append_pending_event; then
       ROTATION_TOKEN="${OWNER_LOCK_TOKEN}"
     else
       return "$?"
     fi
   fi
-  if ! printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; then
+  [[ "${PENDING_EVENT_ATTEMPTED}" == false ]] || return 1
+  if ! diagnostic="$({ printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; } 2>&1)"; then
+    owner_lock_report "cannot record rotation owner ${ROTATE_LOCK}/owner: ${diagnostic}" append_pending_event
     return 1
   fi
   file_size "${EVENTS_FILE}"
@@ -279,14 +295,16 @@ function rotate_events() {
 # Appends line $1 in one write: cat reads the here-string, complete before cat
 # starts, in one read, and O_APPEND places the write after every other writer's.
 function append_line() {
-  local line="${1}" append_status=0
+  PENDING_EVENT_LINE="${1}"
+  PENDING_EVENT_ATTEMPTED=false
+  PENDING_EVENT_STATUS=0
   local rotation_status=0
   ROTATION_TOKEN=""
   file_size "${EVENTS_FILE}"
   if ((FILE_SIZE >= ROTATE_BYTES)); then
     rotate_events || rotation_status=$?
   fi
-  cat >> "${EVENTS_FILE}" <<< "${line}" || append_status=$?
+  append_pending_event
   if [[ -n "${ROTATION_TOKEN}" ]]; then
     if owner_lock_release "${ROTATE_LOCK}/owner" "${ROTATION_TOKEN}"; then
       ROTATION_TOKEN=""
@@ -296,7 +314,7 @@ function append_line() {
     fi
   fi
   ((rotation_status == 0)) || return "${rotation_status}"
-  return "${append_status}"
+  return "${PENDING_EVENT_STATUS}"
 }
 
 # Writes event $1 with id $2, built from HOOK_INPUT, the session's name and its
