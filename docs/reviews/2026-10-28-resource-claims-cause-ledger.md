@@ -63,8 +63,18 @@ The sweep searched mkdir, noclobber, set -C, flock, lockfile, lock, mutex, semap
 
 Initial affected checks after implementation: resource claims 103/103 cases; bugs-gather 86/86 cases. ShellCheck passed for both production scripts and the three fixture scripts. No review rounds started.
 
-| Planted defect                          | Instrument expected                  | Measured result | Permanent test                                             |
-| --------------------------------------- | ------------------------------------ | --------------- | ---------------------------------------------------------- |
-| Restore mkdir-only resource acquisition | Forced false-success interleaving    | Pending         | A false successful mkdir cannot admit a second owner       |
-| Restore recursive resource release      | Paused release versus live successor | Pending         | Releasing a directory cannot remove a succeeding owner     |
-| Restore mkdir-only cache acquisition    | Existing-owner fixture               | Pending         | Save refuses an owner even when mkdir incorrectly succeeds |
+| Planted defect                          | Instrument expected                  | Measured result                         | Permanent test                                             |
+| --------------------------------------- | ------------------------------------ | --------------------------------------- | ---------------------------------------------------------- |
+| Restore mkdir-only resource acquisition | Forced false-success interleaving    | Scrut exit 50, only logic remained      | A false successful mkdir cannot admit a second owner       |
+| Restore recursive resource release      | Paused release versus live successor | Scrut exit 50, successor owner missing  | Releasing a directory cannot remove a succeeding owner     |
+| Restore mkdir-only cache acquisition    | Existing-owner fixture               | 85 passed, new case failed; make exit 2 | Save refuses an owner even when mkdir incorrectly succeeds |
+
+Both production sources were restored byte-for-byte after plants. The resource false-success and release fixtures then passed with PATH selecting macOS Bash 3.2 for every Bash process. Plant artifacts: `/tmp/656-plants.IPboSq`; logs retain each named assertion failure. No plant was committed or pushed.
+
+## Linux comparison after the fix
+
+[After run](https://github.com/cboone/agent-harness-plugins/actions/runs/40791026703), head `7bcd5928`: the same ten shards of 100 concurrent pairs completed with 0/1,000 lost claims and zero errors in 2,000 writers. Before: 368/1,000 losses (36.8%). After: 0/1,000 (0%). This measures the tested workload, not every possible interleaving.
+
+The direct mkdir positive-control arm still produced double success in every shard: 50, 5, 4, 6, 8, 11, 3, 8, 9, 3 per 1,000 mkdir pairs. Therefore the diagnostic workflow reports failure overall as intended; all ten resource-claim stress steps passed. That workflow is not a passing acceptance check. Full log: `/tmp/656-resource-claims-linux-after.log`. Both diagnostic watches completed.
+
+The temporary workflow was deleted in its own signed commit before starting local review. No debug workflow will be in the PR tree.
