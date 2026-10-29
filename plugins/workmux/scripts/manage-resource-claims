@@ -200,8 +200,8 @@ function claim_file_path() {
   # may end in one, so capturing the path bare would undo the -z parsing that
   # read it correctly and resolve the shared file to a different directory.
   # The sentinel gives the substitution something else to strip.
-  main_worktree="$(main_worktree_path && printf 'x')" ||
-    die "not inside a git repository; set WORKTREE_RESOURCES_FILE to override"
+  main_worktree="$(main_worktree_path && printf 'x')" \
+    || die "not inside a git repository; set WORKTREE_RESOURCES_FILE to override"
   main_worktree="${main_worktree%x}"
 
   printf '%s/%s' "${main_worktree}" "${CLAIM_FILE_NAME}"
@@ -434,8 +434,8 @@ function try_acquire_lock() {
     LOCK_TOKEN="${OWNER_LOCK_TOKEN}"
     LOCK_DIRECTORY="${lock}"
     trap 'release_lock || exit 1' EXIT
-    printf '%s' "$$" > "${lock}/owner" ||
-      resource_die "claim owner file ${lock}/owner" "cannot record the lock owner in ${lock}"
+    printf '%s' "$$" > "${lock}/owner" \
+      || resource_die "claim owner file ${lock}/owner" "cannot record the lock owner in ${lock}"
     return 0
   else
     result=$?
@@ -449,8 +449,8 @@ function acquire_lock() {
   local directory result waited=0
 
   directory="$(dirname "${file}")"
-  mkdir -p "${lock}" ||
-    resource_die "claim lock ${lock}" "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
+  mkdir -p "${lock}" \
+    || resource_die "claim lock ${lock}" "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
 
   while :; do
     if try_acquire_lock "${lock}"; then
@@ -835,8 +835,8 @@ function cmd_claim() {
   # than a bare yes. Approval is about a particular claim: if a third worktree
   # took the resource in the meantime, consent to displace the first says
   # nothing about displacing it, and a boolean flag could not tell them apart.
-  if holder_is_live_and_foreign "${existing}" "${worktree}" "${branch}" "${gitdir}" &&
-    ! holder_matches "${existing}" "${take_over}"; then
+  if holder_is_live_and_foreign "${existing}" "${worktree}" "${branch}" "${gitdir}" \
+    && ! holder_matches "${existing}" "${take_over}"; then
     jq -r --arg resource "${resource}" --arg approved "${take_over}" \
       '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at), id \(.id)"
        + (if $approved == "" then "; pass --take-over \(.id) to claim it anyway"
@@ -957,8 +957,8 @@ function cmd_prune() {
     die "unexpected argument: ${1}"
   fi
 
-  live_worktrees_json > /dev/null ||
-    die "cannot list worktrees; run prune inside a git repository"
+  live_worktrees_json > /dev/null \
+    || die "cannot list worktrees; run prune inside a git repository"
 
   file="$(claim_file_path)"
   acquire_lock "${file}"

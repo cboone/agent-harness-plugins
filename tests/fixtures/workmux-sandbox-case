@@ -82,8 +82,8 @@ function main() {
   export PATH="${fixture}/bin:${PATH}"
   if [[ "${scenario}" == guard ]]; then export PATH="${fixture}/bin:${fixture}/other-bin:${PATH}"; fi
   for tool in workmux tmux gh git mkdir mktemp cat sed ls mv; do
-    [[ "$(command -v "${tool}" || true)" == "${fixture}/bin/${tool}" ]] ||
-      die "refusing to run: ${tool} is not the fixture stub"
+    [[ "$(command -v "${tool}" || true)" == "${fixture}/bin/${tool}" ]] \
+      || die "refusing to run: ${tool} is not the fixture stub"
   done
   unset CODEX_THREAD_ID CLAUDECODE WORKMUX_CALLER_HARNESS TMUX WORKMUX_TMUX TMUX_TMPDIR
   case "${harness}" in
@@ -148,8 +148,8 @@ function main() {
   fi
   if [[ "${scenario}" == success ]]; then
     [[ "${status}" == 0 ]] || die 'launch failed'
-    [[ "${output##*$'\n'}" == 'Worktree ready: /worktrees/feature-42-test' ]] ||
-      die 'worktree was not confirmed'
+    [[ "${output##*$'\n'}" == 'Worktree ready: /worktrees/feature-42-test' ]] \
+      || die 'worktree was not confirmed'
     export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
     claim_output="$(invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
       --worktree "${fixture}/worktree" --branch feature/test)"

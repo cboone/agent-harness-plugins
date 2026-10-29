@@ -842,9 +842,11 @@ and links were protected. No lasting reviewer edits occurred.
 
 Accepted one comment trim: the resource stub header now states what it fakes
 and why. Kept the launcher bootstrap comment because the proposed replacement
-was longer. Rejected the manage-resource-claims proposals at the historical
-199/828 lines because those legacy comments were outside changed hunks; no
-unrelated comment was edited. Accepted the five listed plugin-root substitution
+was longer. Kept the manage-resource-claims proposals at the historical
+199/828 lines as legacy comments adjacent only to formatting changes; no
+unrelated comment was edited. The configured-format restoration below removes
+those formatting-only hunks, leaving these comments outside the final changed
+hunks. Accepted the five listed plugin-root substitution
 sentence rewrites; each preserved timing, absolute/version-correct location
 and the no-search/no-shell-variable distinction. No requirement or behavior
 changed. Raw proposals: `trims/comments.reply` and `trims/text.reply`.
@@ -884,3 +886,22 @@ under tests/scrut/ ... are never reformatted". Required tools are not skipped.
 The documented make lint sequence includes ShellCheck, shfmt check and
 Actionlint; final verification uses make test-all. Unresolved findings, if any,
 are fixed only in allowed branch-owned paths, never generated copies.
+
+## Final lint preparation and configured shell formatting
+
+The first documented make lint/validate pass failed on shfmt formatting in
+launch-workmux, manage-resource-claims and the resource fixture. Earlier
+explicit shfmt flags had bypassed EditorConfig's binary_next_line setting.
+Applied the configured formatter (`shfmt -w` without overriding its settings)
+only to those allowed canonical files and regenerated mirrors. This restored
+unrelated baseline operator placement as well as formatting new code. No
+executable behavior changed. The retained legacy trim-comment proposals are
+now outside the final changed hunks; the earlier outside-hunk description is
+qualified above rather than treated as an unverified scope claim.
+
+The recheck make lint/validate passed: Markdownlint checked 775 files with no
+issues; Prettier, ShellCheck, shfmt and Actionlint passed; JSON, fixture
+isolation, catalog and mirror validations passed. Markdown fixers remained
+check-only by project policy; scoped shfmt fixed only permitted files. No
+required tool was skipped or failed at this point. A baseline Semgrep rescan
+will check the final configured-format tree before full test-all verification.

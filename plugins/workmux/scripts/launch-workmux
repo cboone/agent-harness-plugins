@@ -545,8 +545,8 @@ function run_detached_launch() {
   # Captured with `||`, not `set +e`: the helper re-enables errexit on return.
   run_workmux_and_cleanup_prompt "${prompt_file}" "${@}" > "${state_dir}/log" 2>&1 || status=$?
   {
-    printf '%s\n' "${status}" > "${state_dir}/status.tmp" &&
-      mv -- "${state_dir}/status.tmp" "${state_dir}/status"
+    printf '%s\n' "${status}" > "${state_dir}/status.tmp" \
+      && mv -- "${state_dir}/status.tmp" "${state_dir}/status"
   } || true
   mkdir "${state_dir}/handoff" 2> /dev/null || true
 }
