@@ -462,3 +462,15 @@ The first simplify attempt inherited the installed helper's generic editing lang
 - **Review again:** No edit and no Critical finding taken. Structural round ends **clean at Critical**.
 
 The reviewer's standalone ShellCheck --norc produced informational source-following/quoted-jq diagnostics; it is not a claimed project lint pass. Required configured project checks remain separate. The one focused Critical-only round follows, then fresh baseline scanning and final checks. Resource claims remains untouched under TOOLING's known-flake disposition.
+
+## Requested final focused Critical-only round
+
+All five standalone aspects completed exit 0, valid nonempty schema replies and unchanged snapshot. Installed helper 2.1.4 rendered/validated; Codex gpt-6.1-sol/high/872000 ran from the trusted Git checkout, built-in read-only sandbox, no trust override. No lasting changes found; raw reports were copied afterward.
+
+| Reviewer's label                                             | Our severity                                                               | Take or record                                                   | Review again |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------ |
+| important: historical child guidance, code/errors/types      | Important, the known quality reduction does not meet serious-harm severity | Record, not taken, under follow-up 674 and TOOLING's disposition | No edits     |
+| important: historical child-guidance test coverage, tests    | Important, same known behavior lacks recursive guide fixtures              | Record with follow-up 674                                        | No edits     |
+| important: historical child-guidance documentation, comments | Important, reference omits the known limitation                            | Record with follow-up 674, disclosed in PR                       | No edits     |
+
+No Critical finding and no edit: focused round ends **clean at Critical**. The requested structural and focused rounds are now complete on the committed merged tree containing the rooted fixture fix. No further round is launched. Fresh baseline and final checks follow. The prior failed resource-claims job remains explicitly retained under TOOLING's known-flake disposition; no claims code/test change or independent retry is included.
