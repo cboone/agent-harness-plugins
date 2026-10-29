@@ -4,7 +4,7 @@
 
 Active overnight through a ready PR; TOOLING retains merging. Helper diagnostics,
 the guarded matrix and initial plants are committed. The structural Nit round
-has completed with findings, and its fixes are being verified. The resource
+has completed with findings, and its fixes and defect plants are verified; the first Important round is next. The resource
 suite now passes 21 cases; the restored 20-case revision measured 60.46 seconds. No push or PR has occurred. Earlier
 checkpoint sections below are historical, not current task status.
 
@@ -515,3 +515,11 @@ completed mock's owned directory. The full restored resource suite then passed
 No temporary source mutation remained. Fixture assertion failures now replay
 retained child output before EXIT cleanup; its new snapshot brings the suite
 to 21/21. A final snapshot plant for that assertion follows its test commit.
+
+The retained-output test was committed at `f78e9d3e` before its plant. Removing
+only the fixture's diagnostic replay made the exact committed Scrut snapshot
+fail while the subject still exited 1. Restoring it passed the same snapshot
+again. Results: `revision-plants/retained-output-plant.json`. The resource suite
+passed 21/21 before this plant; no source mutation remains. Structural round
+counts remain one Nit round, with the failed/partial completion attempts
+retained as such. The next round is Important, not another Nit round.
