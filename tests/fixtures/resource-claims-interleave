@@ -86,8 +86,8 @@ branch refs/heads/main
     second=$!
     SECOND_WRITER="${second}"
     await_event second-blocked || return 1
-    # Simulate explicit removal of this fixture's stale owner before a live
-    # writer takes over. The waiting subject must never remove the replacement.
+    # Remove the stale owner before a live writer takes over.
+    # The waiting writer must leave the replacement intact.
     rm "${WORKTREE_RESOURCES_FILE}.lock/owner"
     CLAIMS_WRITER=first capture_child - --exec-log "${root}/first.log" -- bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/live --branch main &
     first=$!

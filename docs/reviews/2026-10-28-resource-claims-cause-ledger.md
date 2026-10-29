@@ -46,7 +46,7 @@ TOOLING approved exclusive Bash noclobber owner-file creation, bounded wait and 
 
 The uutils mkdir 0.10.0 defect is success on EEXIST without `-p`. TOOLING reports it to Chris; no upstream filing is authorized or made. The temporary workflow will be removed in its own commit before the PR.
 
-The sweep searched mkdir, noclobber, set -C, flock, lockfile, lock, mutex, semaphore and reservation patterns across canonical scripts, skills, references, repository tools and generated Codex mirrors. Generated paths are rebuilt rather than edited.
+The sweep searched canonical scripts, skills, references, repository tools and generated Codex mirrors for mkdir, noclobber, set -C, flock, lockfile, lock, mutex, semaphore and reservation patterns. Generated paths are rebuilt rather than edited.
 
 | Surface                                               | Disposition                                                                                                                                                                                                                                                                                                                      |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -280,3 +280,7 @@ All four aspects exited 0, validated and returned nonempty output; before/after 
 The errors aspect found no findings. These takes do not change the lock design. The seven identity/contention/open-error probes pass under Bash 5 and Bash 3.2; all three relative CLI help checks pass with CDPATH exported. ShellCheck passes after the explicit empty-string assignment spelling. The focused loop ends **clean at Critical**, subject to the remaining required checks and new-boundary plant. No further focused round is authorized by the advancement rule.
 
 The open-error classification plant replaced unexpected-open failure handling with quiet contention. It passed syntax validation, then the new open-error case alone failed (6/7 passed; make exit 2). The helper and generated copies were restored. Artifacts: `/tmp/656-open-classification-plant.mCONOX`. The shared helper remains byte-identical to the successful Linux run at 45bf08b9; subsequent production takes only isolate directory discovery from CDPATH and correct a comment. Focused review end: **clean at Critical**. Proceed to the one-pass trims and remaining final checks.
+
+## One-pass trims
+
+trim-comments and trim-text each ran once, in parallel, through fresh read-only Codex contexts with explicit gpt-6.1-sol/low/872000, approval never, web search disabled and stdin closed. Both exited 0 with complete file-classification lists and proposal tables. Applied all eight comment proposals and four prose proposals after checking meaning and scope. Directives, executable fragments, API preconditions, test commands, the reclaim warning and all ledger evidence were preserved. Generated copies were rebuilt. Artifacts: `/tmp/656-trims.LitMpB`. No extra review round is created by these comment/prose-only edits.

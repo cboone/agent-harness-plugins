@@ -855,9 +855,8 @@ function cleanup() {
   return "${result}"
 }
 
-# Takes the cache lock with exclusive owner-file creation. Two syncs saving at once would
-# otherwise interleave their writes and leave the three cache files from
-# different gathers. It waits about ten seconds for another save to finish.
+# Serializes cache saves so the three files come from one gather.
+# Waits about ten seconds for another save to finish.
 function acquire_save_lock() {
   local lock="${1}/save.lock"
   local result

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Model mkdir reporting success on an existing lock; accelerate bounded waits.
+# Model mkdir reporting success on an existing lock. Accelerate bounded waits.
 set -euo pipefail
 
 case "${0##*/}" in

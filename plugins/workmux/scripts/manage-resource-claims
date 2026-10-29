@@ -413,30 +413,14 @@ function held_lock_report() {
   printf '%s/owner is held by process %s, which has exited; remove that file' "${lock}" "${owner}"
 }
 
-# Serializes a whole read-modify-write. Atomic replacement alone stops a reader
-# seeing half a document, but not two worktrees reading the same snapshot and
-# the later write discarding the earlier claim, which is a likely sequence here
-# because parallel worktrees are the case this feature exists for.
+# Serializes read-modify-write so concurrent writers cannot discard each other's claims.
+# Atomic replacement alone only prevents partial reads.
 #
-# A held lock is never broken automatically, and must not become so. Deciding
-# that another process has abandoned one cannot be made safe with mkdir, rm and
-# stat: the check and the removal are separate steps, so two waiters can both
-# decide to break the same lock and the second deletes the fresh one the first
-# just took, putting both inside the section. Neither an age threshold nor a
-# recorded owner nor a mutex around the reclamation closes that, because any
-# holder can be suspended past any threshold and any observation can go out of
-# date before it is acted on.
-#
-# So a lock still held when the wait expires is reported, with whatever is
-# known about its owner, and the user removes it. That is the bargain the rest
-# of this script already makes: a stale claim is cleared by an explicit prune
-# rather than silently, and a held resource is reported rather than taken.
-# Losing a claim without anyone noticing is the outcome worth avoiding; asking
-# for one rm is not.
-#
-# This serializes access to the file; it does not make the claim an enforced
-# lock on the resource, which stays advisory. Bash noclobber creates the owner
-# exclusively, even when mkdir incorrectly reports success on an existing path.
+# Never reclaim automatically: an owner or age check can become stale before unlink,
+# removing a successor's lock and admitting concurrent writers. A reclaim mutex
+# cannot prevent a holder from being suspended past an age threshold.
+# Report held locks on timeout for manual removal. Resource claims remain advisory.
+# Bash noclobber creates the owner exclusively even if mkdir reports false success.
 function try_acquire_lock() {
   local lock="${1}" result
   if owner_lock_reserve "${lock}/owner" 8; then

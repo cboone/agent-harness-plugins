@@ -248,7 +248,7 @@ function file_inode() {
 # Writing events
 # -----------------------------------------------------------------------------
 
-# Idempotent callback used before rotation diagnostics and at the normal append.
+# Appends the pending event at most once, including before rotation diagnostics.
 function append_pending_event() {
   [[ "${PENDING_EVENT_ATTEMPTED}" == false ]] || return 0
   cat >> "${EVENTS_FILE}" <<< "${PENDING_EVENT_LINE}" || PENDING_EVENT_STATUS=$?
@@ -256,8 +256,8 @@ function append_pending_event() {
   return 0
 }
 
-# Renames a full events file under the rotation owner. An abandoned owner is
-# reclaimed after a minute under the existing recovery policy.
+# Renames a full events file under the rotation owner.
+# Reclaims owners older than a minute.
 function rotate_events() {
   local result diagnostic
   mkdir -p "${ROTATE_LOCK}" 2> /dev/null || return 0
@@ -420,8 +420,8 @@ function transcript_shows_refusal() {
 # Changes run under the session lock, so a hook that closes a state writes after
 # the hook that opened it.
 
-# Reserves the session owner, retaining its file identity before PID recording.
-# Stopped-PID and age recovery retain their existing policy.
+# Retains the session owner's file identity before recording its PID.
+# Reclaims stopped-PID owners or PID-less owners older than a minute.
 function lock_session() {
   local tries=0 owner result
   LOCK_DIR="${SESSIONS_DIR}/${SESSION_ID}.lock"

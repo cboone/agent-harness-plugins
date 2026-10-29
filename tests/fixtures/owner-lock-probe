@@ -29,8 +29,7 @@ function probe_cleanup() {
 
 function contention_actor() {
   local root="${1}" role="${2}" slot="${3}" token result
-  # mktemp is reached after the helper owner-existence precheck. Both actors
-  # must reach it before either exclusive open is allowed to proceed.
+  # Pause both actors after the owner-existence precheck so they contend at the exclusive open.
   function mktemp() {
     local temporary
     temporary="$(command mktemp "$@")" || return 1
