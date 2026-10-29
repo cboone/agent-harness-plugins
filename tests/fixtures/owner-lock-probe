@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Check reservation identity without relying on PID contents.
 set -euo pipefail
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT:?}/bin/lib/capture-child.bash"
 # shellcheck source=plugins/workmux/scripts/owner-lock.bash
 source "${OWNER_LOCK_LIBRARY:?}"
 PROBE_DIRECTORY=""
@@ -52,9 +54,9 @@ function contention_actor() {
 
 function contention_probe() {
   local root="${1}" slot="${2}" first_status=0 second_status=0
-  "${BASH}" "${BASH_SOURCE[0]}" actor "${root}" first "${slot}" > "${root}/first.log" 2>&1 &
+  capture_child - --exec-log "${root}/first.log" -- "${BASH}" "${BASH_SOURCE[0]}" actor "${root}" first "${slot}" &
   FIRST_PID=$!
-  "${BASH}" "${BASH_SOURCE[0]}" actor "${root}" second "${slot}" > "${root}/second.log" 2>&1 &
+  capture_child - --exec-log "${root}/second.log" -- "${BASH}" "${BASH_SOURCE[0]}" actor "${root}" second "${slot}" &
   SECOND_PID=$!
   await_marker "${root}" ready-first || return 1
   await_marker "${root}" ready-second || return 1
@@ -66,14 +68,14 @@ function contention_probe() {
     echo 'two actors acquired the same owner' >&2
     return 1
   fi
-  wait "${SECOND_PID}" || second_status=$?
+  capture_child - --wait-log "${root}/second.log" "${SECOND_PID}" || second_status=$?
   SECOND_PID=""
   [[ "${second_status}" == 1 && "$(cat "${root}/result-second")" == 1 && ! -s "${root}/second.log" ]] || {
     cat "${root}/second.log"
     return 1
   }
   touch "${root}/release-first"
-  wait "${FIRST_PID}" || first_status=$?
+  capture_child - --wait-log "${root}/first.log" "${FIRST_PID}" || first_status=$?
   FIRST_PID=""
   [[ "${first_status}" == 0 && ! -e "${root}/owner" ]] || {
     cat "${root}/first.log"
@@ -82,28 +84,36 @@ function contention_probe() {
   echo "slot ${slot}: exclusive open refused the second actor without diagnostics"
 }
 
-function open_error_probe() {
-  local root="${1}" result error
+function open_error_actor() {
+  local root="${1}" result
   function mktemp() {
     local temporary
     temporary="$(command mktemp "$@")" || return 1
-    chmod 500 "${PROBE_DIRECTORY}"
+    chmod 500 "${root}"
     printf '%s' "${temporary}"
   }
-  if owner_lock_reserve "${root}/owner" 8 2> "${root}/error"; then
+  if owner_lock_reserve "${root}/owner" 8; then
     chmod 700 "${root}"
     return 1
   else
     result=$?
   fi
   chmod 700 "${root}"
-  error="$(cat "${root}/error")"
   [[ "${result}" == 2 && -z "${OWNER_LOCK_TOKEN}" && ! -e "${root}/owner" ]] || return 1
+}
+
+function open_error_probe() {
+  local root="${1}" error
+  capture_child error -- "${BASH}" "${BASH_SOURCE[0]}" open-error-actor "${root}" || return 1
   [[ "${error}" == *"cannot create ${root}/owner:"* && "${error}" == *'Permission denied'* ]] || return 1
   echo 'exclusive-open error: status 2; owner path and reason retained; no token'
 }
 
 function main() {
+  if [[ "${1:-}" == open-error-actor ]]; then
+    open_error_actor "${2}"
+    return "$?"
+  fi
   if [[ "${1:-}" == actor ]]; then
     contention_actor "${2}" "${3}" "${4}"
     return "$?"

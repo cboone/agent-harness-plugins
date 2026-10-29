@@ -2,6 +2,10 @@
 
 The contract scans every Bash file in the three converted plugins. Helper calls must be literal, single-line checked conditions with no redirection or command substitution. Nine current call sites are accounted for; additions require an explicit audit and updated count.
 
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+```
+
 ```scrut
 $ "${OWNER_CALL_CONTRACT_BIN}" "${REPO_ROOT}"
 Owner helper call contract: 9 checked calls

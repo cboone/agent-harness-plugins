@@ -3,10 +3,10 @@
 ## Authority and scope
 
 - Issue: [Concurrent resource claims lose an update](https://github.com/cboone/agent-harness-plugins/issues/656).
-- Go-ahead: Chris, Inbox, 2026-10-28 at 7:38 PM ET, thread "Tooling next batch, Oct 28 evening": build through a ready PR. TOOLING merges.
+- Go-ahead: Chris (he/him), Inbox, 2026-10-28 at 7:38 PM ET, thread "Tooling next batch, Oct 28 evening": build through a ready PR. TOOLING merges.
 - Branch: `fix/656-resource-claims-cause`, based on main at `a2e56c53`.
-- Full local review order required; no review rounds started.
-- Nighttime checkpoint: approximately 9:45 PM ET.
+- Full local review order required; completed rounds and remaining validation are recorded below.
+- The original nighttime stop was lifted by TOOLING; overnight work through the PR is authorized.
 
 ## Initial evidence
 
@@ -44,7 +44,7 @@ Created artifacts: `/tmp/656-resource-claims-ci-watch.log`, `/tmp/656-resource-c
 
 TOOLING approved exclusive Bash noclobber owner-file creation, bounded wait and existing diagnostics, and owner-file removal followed by rmdir. The directory operation no longer establishes ownership. Resource claims still never automatically reclaim an owner by PID or age. This avoids a stale observer deleting a live successor; the deterministic fixture waits at a stale owner, replaces it with a live owner, resumes the waiter and verifies refusal with that owner intact. The fixture also forces false mkdir success and acquisition between owner removal and rmdir.
 
-The uutils mkdir 0.10.0 defect is success on EEXIST without `-p`. TOOLING reports it to Chris; no upstream filing is authorized or made. The temporary workflow will be removed in its own commit before the PR.
+The uutils mkdir 0.10.0 defect is success on EEXIST without `-p`. TOOLING handles the upstream-defect report; no upstream filing is authorized or made here. The temporary workflow is removed in its own commit before the PR.
 
 The sweep searched canonical scripts, skills, references, repository tools and generated Codex mirrors for mkdir, noclobber, set -C, flock, lockfile, lock, mutex, semaphore and reservation patterns. Generated paths are rebuilt rather than edited.
 
@@ -251,7 +251,7 @@ The new contention actors both stop inside diagnostic mktemp, after the owner-ex
 
 ## Updated Semgrep standing rule
 
-TOOLING relayed Chris's tooling-project rule from the Inbox at 9:39 PM ET: a baseline scan that completes but partly parses shell files counts, provided the ledger records parse coverage and every unparsed shell file, and ShellCheck passes on those files. Partial parsing in any other language still stops. This supersedes the brief's blanket partial-parse stop for shell only; the disposable-clone baseline scan and all other scan requirements remain unchanged.
+TOOLING relayed the tooling-project rule from Chris (he/him), recorded in the Inbox at 9:39 PM ET: a baseline scan that completes but partly parses shell files counts, provided the ledger records parse coverage and every unparsed shell file, and ShellCheck passes on those files. Partial parsing in any other language still stops. This supersedes the brief's blanket partial-parse stop for shell only; the disposable-clone baseline scan and all other scan requirements remain unchanged.
 
 ### Combined diagnostic-order call and measured plants
 
@@ -297,8 +297,10 @@ Ran in disposable shared clone `/tmp/656-semgrep.4ALHLt/repo` at head 7af90b90, 
 | plugins/attention-log/scripts/attention-log      | lines 10 through 820, covering most of this script         | ShellCheck passed on the scanned clone |
 | plugins/publish-report-board/scripts/bugs-gather | line 961, compound atomic-write condition                  | ShellCheck passed on the scanned clone |
 
-All three files declare Bash shebangs. These are the only reported parse errors; none is another language. Under Chris's relayed tooling standing rule, this completed baseline scan counts with its coverage limitation recorded and all affected ShellCheck checks passing. It does not establish complete Semgrep coverage of attention-log or ignored test files. Raw outputs: `/tmp/656-semgrep.4ALHLt/scan.json`, `scan.log`, and `coverage.json`.
+All three files declare Bash shebangs. These are the only reported parse errors; none is another language. Under the relayed tooling standing rule, this completed baseline scan counts with its coverage limitation recorded and all affected ShellCheck checks passing. It does not establish complete Semgrep coverage of attention-log or ignored test files. Raw outputs: `/tmp/656-semgrep.4ALHLt/scan.json`, `scan.log`, and `coverage.json`.
 
 ## Final lint plan
 
 Apply lint-and-fix --no-push using project commands. Global Markdown auto-fix and Prettier write commands are downgraded to their check modes because the project rule says Scrut files are never reformatted; narrowed markdownlint --fix is also unsafe because its configured globs can widen the write. Existing scoped prose formatting and canonical shell formatting have already run, with generated copies rebuilt. Remaining findings will be fixed only in the branch's own unprotected sources, with mirrors regenerated. Required tools: Markdownlint, Prettier, ShellCheck, shfmt, actionlint, JSON/fixture/plugin validation. Run make test-all afterward and verify versions before tidy/publication. No check is skipped by the policy downgrade.
+
+The first lint check passed. Repository validation identified two fixture conventions: retained actor logs must use capture_child, and the call-contract document must reset the fixture environment. Fixed both in test code only. The non-contention error probe now runs its current-shell identity assertions inside a child actor whose diagnostics are retained by capture_child, preserving the actual status and token assertions. Final targeted probes passed 7/7, contract cases 5/5, and make validate passed. The changed fixture paths were among Semgrep's ignored test paths; scanned production code did not change. The full make test-all run is the final verification for the lint workflow and required suite.
