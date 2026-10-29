@@ -83,6 +83,27 @@ function contention_probe() {
   echo "slot ${slot}: exclusive open refused the second actor without diagnostics"
 }
 
+function open_error_probe() {
+  local root="${1}" result error
+  function mktemp() {
+    local temporary
+    temporary="$(command mktemp "$@")" || return 1
+    chmod 500 "${PROBE_DIRECTORY}"
+    printf '%s' "${temporary}"
+  }
+  if owner_lock_reserve "${root}/owner" 8 2> "${root}/error"; then
+    chmod 700 "${root}"
+    return 1
+  else
+    result=$?
+  fi
+  chmod 700 "${root}"
+  error="$(cat "${root}/error")"
+  [[ "${result}" == 2 && -z "${OWNER_LOCK_TOKEN}" && ! -e "${root}/owner" ]] || return 1
+  [[ "${error}" == *"cannot create ${root}/owner:"* && "${error}" == *'Permission denied'* ]] || return 1
+  echo 'exclusive-open error: status 2; owner path and reason retained; no token'
+}
+
 function main() {
   if [[ "${1:-}" == actor ]]; then
     contention_actor "${2}" "${3}" "${4}"
@@ -92,6 +113,10 @@ function main() {
   root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
   PROBE_DIRECTORY="${root}"
   trap probe_cleanup EXIT
+  if [[ "${1}" == open-error ]]; then
+    open_error_probe "${root}"
+    return "$?"
+  fi
   if [[ "${1}" == contend8 || "${1}" == contend9 ]]; then
     contention_probe "${root}" "${1#contend}"
     return "$?"

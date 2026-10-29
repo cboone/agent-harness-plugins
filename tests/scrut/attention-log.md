@@ -403,6 +403,13 @@ $ ln -s "${ATTENTION_LOG_BIN}" "${work}/linked-attention" && /bin/bash "${work}/
 Usage: attention-log <command> [options]
 ```
 
+## An exported CDPATH cannot pollute helper discovery
+
+```scrut
+$ (cd "${REPO_ROOT}" && CDPATH=. /bin/bash plugins/attention-log/scripts/attention-log --help) | head -1
+Usage: attention-log <command> [options]
+```
+
 ## The next prompt clears every open state with "*"
 
 Two requests stay open after a dismissed dialog, and one prompt closes both; a later prompt with nothing open writes nothing.

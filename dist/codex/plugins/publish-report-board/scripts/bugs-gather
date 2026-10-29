@@ -45,11 +45,11 @@ function resolve_script_dir() {
   local path="${BASH_SOURCE[0]}"
   local link_dir
   while [[ -L "${path}" ]]; do
-    link_dir="$(cd -P -- "$(dirname -- "${path}")" && pwd)"
+    link_dir="$(CDPATH='' cd -P -- "$(dirname -- "${path}")" && pwd)"
     path="$(readlink "${path}")"
     [[ "${path}" == /* ]] || path="${link_dir}/${path}"
   done
-  cd -P -- "$(dirname -- "${path}")" && pwd
+  CDPATH='' cd -P -- "$(dirname -- "${path}")" && pwd
 }
 
 SCRIPT_NAME="${0##*/}"

@@ -14,7 +14,7 @@ function owner_lock_script_directory() {
   while :; do
     directory="${path%/*}"
     [[ "${directory}" != "${path}" ]] || directory=.
-    directory="$(cd -P -- "${directory}" && pwd)" || return 1
+    directory="$(CDPATH='' cd -P -- "${directory}" && pwd)" || return 1
     path="${directory}/${path##*/}"
     if [[ ! -L "${path}" ]]; then
       printf '%s' "${directory}"

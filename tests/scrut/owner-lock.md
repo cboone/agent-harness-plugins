@@ -41,3 +41,10 @@ slot 8: exclusive open refused the second actor without diagnostics
 $ "${OWNER_LOCK_PROBE_BIN}" contend9
 slot 9: exclusive open refused the second actor without diagnostics
 ```
+
+## Non-contention open failures retain their reason after diagnostic creation
+
+```scrut
+$ "${OWNER_LOCK_PROBE_BIN}" open-error
+exclusive-open error: status 2; owner path and reason retained; no token
+```

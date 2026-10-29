@@ -15,7 +15,7 @@ function owner_lock_script_directory() {
   while :; do
     directory="${path%/*}"
     [[ "${directory}" != "${path}" ]] || directory=.
-    directory="$(cd -P -- "${directory}" && pwd)" || return 1
+    directory="$(CDPATH='' cd -P -- "${directory}" && pwd)" || return 1
     path="${directory}/${path##*/}"
     if [[ ! -L "${path}" ]]; then
       printf '%s' "${directory}"
@@ -248,9 +248,6 @@ function file_inode() {
 # Writing events
 # -----------------------------------------------------------------------------
 
-# Renames a full events file to events.jsonl.1 under a lock, so two writers
-# never rename twice and lose the first rotation. A lock left by a stopped
-# writer is taken over once it is a minute old.
 # Idempotent callback used before rotation diagnostics and at the normal append.
 function append_pending_event() {
   [[ "${PENDING_EVENT_ATTEMPTED}" == false ]] || return 0
@@ -259,6 +256,8 @@ function append_pending_event() {
   return 0
 }
 
+# Renames a full events file under the rotation owner. An abandoned owner is
+# reclaimed after a minute under the existing recovery policy.
 function rotate_events() {
   local result diagnostic
   mkdir -p "${ROTATE_LOCK}" 2> /dev/null || return 0

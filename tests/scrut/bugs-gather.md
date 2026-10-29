@@ -105,6 +105,13 @@ $ ln -s "${BUGS_GATHER_BIN}" "${work}/linked-bugs" && "${work}/linked-bugs" --he
 Usage:
 ```
 
+## An exported CDPATH cannot pollute dependency discovery
+
+```scrut
+$ (cd "${REPO_ROOT}" && CDPATH=. bash plugins/publish-report-board/scripts/bugs-gather --help) | head -1
+Usage:
+```
+
 ## Gather reports its counts, and a first sync is a cold one
 
 ```scrut

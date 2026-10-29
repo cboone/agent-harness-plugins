@@ -160,6 +160,13 @@ $ link_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && ln -s "${MANAGE_RESO
 Usage: manage-resource-claims <subcommand> [options]
 ```
 
+## An exported CDPATH cannot pollute the helper directory
+
+```scrut
+$ (cd "${REPO_ROOT}" && CDPATH=. bash plugins/workmux/scripts/manage-resource-claims --help) | head -1
+Usage: manage-resource-claims <subcommand> [options]
+```
+
 ## A claim is recorded and listed
 
 The claim file is created along with its parent directory, so a project that has no `.claude/` yet does not have to make one first.
