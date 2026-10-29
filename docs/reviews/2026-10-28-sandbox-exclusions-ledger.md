@@ -2,12 +2,13 @@
 
 ## Current status
 
-Local review is complete. Structural loop: one Nit and one Important, ended:
-fixes changed no behavior after the approved instruction-only closure. Focused
-loop: one Nit and one Important, **clean at Important**. The base is pinned to
-`26acdbfec2d70593d563f5fcc78d52f9680d4cd0`. Resource tests pass 23/23; claim
-and owner-lock checks passed after signed base sync. The one-round trims are complete; baseline Semgrep and final
-verification/publication steps are next. No push or PR has occurred.
+Local verification is complete. Structural loop: one Nit and one Important,
+ended: fixes changed no behavior after the approved instruction-only closure.
+Focused loop: one Nit and one Important, **clean at Important**. Reviews and
+baseline Semgrep use merge base `26acdbfec2d70593d563f5fcc78d52f9680d4cd0`.
+Final `make test-all SCRUT_JOBS=4` passed all 48 documents and 1,775 cases,
+with no failures or skips. Bash 3.2 passed the resource matrix separately.
+Publication and remote CI remain; no push or PR has occurred.
 
 ## Authority and status
 
@@ -922,3 +923,40 @@ Final lint-and-fix verification now runs make test-all with SCRUT_JOBS=4 to
 limit shared-machine contention while executing the full suite. All documented
 linters/validators are included; Markdown autofix stays downgraded under the
 protected-snapshot policy. No push is performed by this child workflow.
+
+## Final verification and publication preparation
+
+The normal `make test-all SCRUT_JOBS=4` completed with exit 0: lint,
+validation, and all 48 Scrut documents (1,775 cases), no failures or skips.
+The earlier `make -s test-all` attempt failed three snapshots in
+`environment-isolation.md`: inherited silent MAKEFLAGS suppressed expected
+nested make command echoes. Its other 47 documents passed. The corrected
+normal invocation passed that document and the complete suite; no product
+change was needed. Both logs remain under `final-checks/` in the recorded
+scratch directory.
+
+A PATH shim resolving `bash` to `/bin/bash` confirmed the resource suite on
+macOS Bash 3.2.57: 23/23 passed. The committed guards kept all real workmux,
+tmux and gh commands out of that matrix.
+
+`lint-and-fix --no-push` completed: the configured formatter fix was signed in
+`59548593`; all required linters and validators passed. Snapshot documents
+were check-only under the repository's formatting prohibition. The final
+normal full run repeated these checks successfully. No required tool was
+skipped. The completed Semgrep rescan and its shell-only partial parsing
+coverage are recorded in the preceding section.
+
+The final check-versions run used the actual merge base and fetched main
+`e2dfde13927d59052fe0941e1172cf565fdf09a2`. All five changed plugins have a
+patch version one above main; Claude/Codex manifests agree; marketplace
+coverage and manifest-only version ownership pass. Detailed output is
+`final-checks/versions.json` in the recorded scratch directory. Read-only
+merge-tree inspection against that main succeeded, and its plugin versions
+match the reviewed base. No additional sync was needed.
+
+Tidy preserves the signed commits and signed base merge. TOOLING's latest
+explicit instruction prohibits history rewrite, superseding the default
+soft-reset tidy. An owned pre-publish backup and an exact-tree comparison
+will verify the published tree without reset, rebase or amend. The completed
+implementation plan moves to `docs/plans/done/`; publication and CI receipts
+remain in the durable worker checkpoint and final conductor report.
