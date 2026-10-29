@@ -441,3 +441,11 @@ CI run 40808118209 on pushed head 606deef13cf03f8e444c0c9f156e71526af664c7 compl
 The other failed document is manage-resource-claims.md at its parallel-claims case: expected resource=logic is missing, while resource=simulator remains. This branch does not change resource-claims production code or that testcase. Report the observation to TOOLING for its owning workstream; no cause or flaky classification is inferred and no fix/retry is applied.
 
 The CI watch has ended; no background process remains. Keep the PR open and ready for review but explicitly failing checks. This record is committed locally without a retry push at the stopped gate.
+
+## TOOLING CI continuation: root the fixture operand
+
+TOOLING authorized fixing the branch-owned CI failure and identified the resource-claims job as the known lost-claim flake addressed separately by issue 656. Leave resource-claims code and tests unchanged and retain its failing observation in the report. This continuation opens the fixture recurrence gate.
+
+The symlink fixture now derives one absolute ln destination from PWD and its canonical relative link_path. JSON and scope paths retain their relative strings. Local Linux-like verification uses the already-installed GNU coreutils ln 9.12 via a temporary PATH link, with macOS Bash 3.2 selected. The exact combined Scrut case passed; restoring the raw relative operand failed with exit 50; restored control passed. No software was installed and no real configuration changed. Logs are /tmp/523-gnu-ln-control.log, mutant.log and restored.log; the owned temporary PATH directory is recorded in /tmp/523-gnu-ln-location.
+
+The pending order is structural Critical-only, focused Critical-only, fresh baseline Semgrep under the shell parsing rule, then final lint/test-all/version checks and non-force push. Record Important/Nit findings without taking them at these explicit thresholds. Resource claims is not fixed or retried independently. Preserve all earlier review evidence and history; no tidy rewrite.

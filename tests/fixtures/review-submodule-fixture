@@ -331,14 +331,15 @@ function main() {
       return
       ;;
     symlink | symlink-option)
-      local link_path=module/new-link
+      local link_path=module/new-link link_operand
       if [[ "${scenario}" == symlink-option ]]; then
         git mv -- module -vendor
         git commit -qm layout
         link_path=-vendor/new-link
       fi
       printf 'fixture target bytes\n' > "${fixture}/outside"
-      ln -s ../../outside "${link_path}"
+      link_operand="${PWD}/${link_path}"
+      ln -s ../../outside "${link_operand}"
       "${scope}" --base "${base}" > "${fixture}/linked"
       consume_scope "${fixture}/linked" "${fixture}" "${aspects}"
       sed -n 's/^- Symlink members (JSON): //p' "${fixture}/prompt" > "${fixture}/prompt-links"
