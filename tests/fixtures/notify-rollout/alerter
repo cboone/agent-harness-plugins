@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+printf 'pid=%s parent=%s\n' "$$" "${PPID}" >> "${ROLLOUT_EXECUTIONS:?}"
 if [[ -n "${ROLLOUT_ALERTER_STATUS:-}" ]]; then
   printf '%s\n' attempted >> "${ROLLOUT_ATTEMPTS:?}"
   echo 'fixture backend startup failed' >&2

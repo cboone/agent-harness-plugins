@@ -28,7 +28,17 @@ function await_count() {
     if count_is "${1}"; then return; fi
     sleep 0.02
   done
-  echo 'Expected alert count was not reached' >&2
+  printf 'Expected alert count %s; actual %s\n' "${1}" "$(wc -l < "${ROLLOUT_ALERTS}" | tr -d ' ')" >&2
+  printf 'Captured alerts:\n' >&2
+  cat "${ROLLOUT_ALERTS}" >&2
+  if [[ -f "${ROLLOUT_EXECUTIONS}" ]]; then
+    printf 'Backend processes:\n' >&2
+    cat "${ROLLOUT_EXECUTIONS}" >&2
+  fi
+  if [[ -d "${XDG_CACHE_HOME}/agent-harness-notify/codex-failures" ]]; then
+    printf 'Delivery claims:\n' >&2
+    find "${XDG_CACHE_HOME}/agent-harness-notify/codex-failures" -type d >&2
+  fi
   return 1
 }
 
@@ -64,6 +74,7 @@ function main() {
   unset ROLLOUT_BOUNDARY_READY ROLLOUT_BOUNDARY_RELEASE
   unset ROLLOUT_ALERTER_STATUS
   export ROLLOUT_ATTEMPTS="${CASE_DIR}/attempts"
+  export ROLLOUT_EXECUTIONS="${CASE_DIR}/executions"
   : > "${ROLLOUT_ALERTS}"
   : > "${ROLLOUT_LOOKUPS}"
   DATA="${REPO_ROOT}/tests/data/codex-failure-rollouts"
