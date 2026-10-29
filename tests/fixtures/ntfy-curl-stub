@@ -42,7 +42,7 @@ function main() {
 
   if [[ -n "${STUB_CURL_LOG:-}" ]]; then
     {
-      printf 'arg: %s\n' "${args[@]}"
+      printf 'arg: %s\n' ${args[@]+"${args[@]}"}
       printf 'body: %s\n' "${body}"
       local secrets="${NTFY_TOPIC+NTFY_TOPIC }${NTFY_TOKEN+NTFY_TOKEN}"
       printf 'env secrets: %s\n' "${secrets:-none}"

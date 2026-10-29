@@ -20,7 +20,7 @@ function die() {
 }
 
 function main() {
-  [[ "${1:-} ${2:-}" == "api graphql" ]] || die "unexpected invocation: gh ${*}"
+  [[ "${1:-} ${2:-}" == "api graphql" ]] || die "unexpected invocation: gh $*"
   shift 2
 
   local query_name="" arg value
