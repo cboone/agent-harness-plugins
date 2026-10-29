@@ -284,3 +284,21 @@ The open-error classification plant replaced unexpected-open failure handling wi
 ## One-pass trims
 
 trim-comments and trim-text each ran once, in parallel, through fresh read-only Codex contexts with explicit gpt-6.1-sol/low/872000, approval never, web search disabled and stdin closed. Both exited 0 with complete file-classification lists and proposal tables. Applied all eight comment proposals and four prose proposals after checking meaning and scope. Directives, executable fragments, API preconditions, test commands, the reclaim warning and all ledger evidence were preserved. Generated copies were rebuilt. Artifacts: `/tmp/656-trims.LitMpB`. No extra review round is created by these comment/prose-only edits.
+
+All six edited shell files produced byte-identical shfmt-minified code before and after trimming. Artifacts: `/tmp/656-trim-code-check.DDv13Q`. No runtime behavior changed.
+
+## Semgrep baseline
+
+Ran in disposable shared clone `/tmp/656-semgrep.4ALHLt/repo` at head 7af90b90, with SEMGREP_REPO_NAME=cboone/agent-harness-plugins: `semgrep scan --config auto --baseline-commit a2e56c535ed6326cc8d531d945fbb6c627a9b335 --json`. Metrics were not disabled. The scan completed with exit 0: 131 rules, 18 targets, 0 findings, approximately 86.1% parsed lines. Twenty-six paths were skipped by Semgrep ignore patterns. The scan was limited to baseline-changed files, not a full scan matched to changed lines.
+
+| Partly parsed Bash file                          | Reported unparsed spans                                    | Required complementary check           |
+| ------------------------------------------------ | ---------------------------------------------------------- | -------------------------------------- |
+| bin/build-shared-references                      | lines 59, 60, 79 and 80, around parameter-removal patterns | ShellCheck passed on the scanned clone |
+| plugins/attention-log/scripts/attention-log      | lines 10 through 820, covering most of this script         | ShellCheck passed on the scanned clone |
+| plugins/publish-report-board/scripts/bugs-gather | line 961, compound atomic-write condition                  | ShellCheck passed on the scanned clone |
+
+All three files declare Bash shebangs. These are the only reported parse errors; none is another language. Under Chris's relayed tooling standing rule, this completed baseline scan counts with its coverage limitation recorded and all affected ShellCheck checks passing. It does not establish complete Semgrep coverage of attention-log or ignored test files. Raw outputs: `/tmp/656-semgrep.4ALHLt/scan.json`, `scan.log`, and `coverage.json`.
+
+## Final lint plan
+
+Apply lint-and-fix --no-push using project commands. Global Markdown auto-fix and Prettier write commands are downgraded to their check modes because the project rule says Scrut files are never reformatted; narrowed markdownlint --fix is also unsafe because its configured globs can widen the write. Existing scoped prose formatting and canonical shell formatting have already run, with generated copies rebuilt. Remaining findings will be fixed only in the branch's own unprotected sources, with mirrors regenerated. Required tools: Markdownlint, Prettier, ShellCheck, shfmt, actionlint, JSON/fixture/plugin validation. Run make test-all afterward and verify versions before tidy/publication. No check is skipped by the policy downgrade.
