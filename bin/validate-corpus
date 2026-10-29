@@ -217,9 +217,9 @@ function warning() {
 function require_tools() {
   local yq_version
 
-  command -v jq > /dev/null 2>&1 || die "jq is required: https://jqlang.org" "${E_USAGE}"
+  command -v jq > /dev/null 2>&1 || die "jq is required: https://jqlang.org" "${E_USAGE}" # error-output-allow: missing jq receives a specific prerequisite diagnostic
   command -v yq > /dev/null 2>&1 \
-    || die "yq is required: https://github.com/mikefarah/yq" "${E_USAGE}"
+    || die "yq is required: https://github.com/mikefarah/yq" "${E_USAGE}" # error-output-allow: missing yq receives a specific prerequisite diagnostic
 
   # Check the banner to reject python-yq, which misreads -o=json.
   capture_child yq_version -- yq --version || true
@@ -236,7 +236,7 @@ function validate_corpus_dir() {
     || die "no corpus given; pass --corpus DIR or set REVIEW_CASE_CORPUS_DIR" "${E_USAGE}"
   [[ -d "${corpus}" ]] || die "corpus ${corpus} is not a directory" "${E_USAGE}"
   git -C "${corpus}" rev-parse --git-dir > /dev/null 2>&1 \
-    || die "corpus ${corpus} is not a git repository" "${E_USAGE}"
+    || die "corpus ${corpus} is not a git repository" "${E_USAGE}" # error-output-allow: repository predicate receives the specific corpus-checkout diagnostic
   [[ -d "${corpus}/cases" ]] || die "corpus ${corpus} has no cases directory" "${E_USAGE}"
 }
 
@@ -352,7 +352,7 @@ function blob_line_count() {
   local file="${3}"
   local content
 
-  content="$(git -C "${corpus}" show "${commit}:${file}" 2> /dev/null)" || return 1
+  content="$(git -C "${corpus}" show "${commit}:${file}" 2> /dev/null)" || return 1 # error-output-allow: caller reports the unreadable frozen file with corpus context
   printf '%s\n' "${content}" | awk 'END { print NR }'
 }
 
@@ -390,7 +390,7 @@ function check_defect_locations() {
     # -e is true for a tree as well as a blob, and `git show` on a tree prints
     # its listing, so a defect recorded against a directory would clear the
     # range check and be reported later as a diff-membership problem instead.
-    object_type="$(git -C "${corpus}" cat-file -t "${head_sha}:${file}" 2> /dev/null || true)"
+    object_type="$(git -C "${corpus}" cat-file -t "${head_sha}:${file}" 2> /dev/null || true)" # error-output-allow: missing blob type produces the frozen-file validator error
     if [[ "${object_type}" != "blob" ]]; then
       error "${case_id}/${defect_id}: ${file} is not a file at HEAD"
       continue
@@ -483,7 +483,7 @@ function check_case() {
 
   if [[ "${structural_ok}" == "yes" ]]; then
     if ! git -C "${corpus}" cat-file -e "${base_sha}^{commit}" 2> /dev/null \
-      || ! git -C "${corpus}" cat-file -e "${head_sha}^{commit}" 2> /dev/null; then
+      || ! git -C "${corpus}" cat-file -e "${head_sha}^{commit}" 2> /dev/null; then # error-output-allow: unresolvable comparison commit produces the validator error below
       error "${case_id}: BASE or HEAD is not in the corpus repository; fetch refs/cases/*"
     elif ! git -C "${corpus}" merge-base --is-ancestor "${base_sha}" "${head_sha}"; then
       error "${case_id}: BASE is not an ancestor of HEAD, so a three-dot diff would be wrong"

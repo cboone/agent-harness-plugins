@@ -121,7 +121,7 @@ function resource_die() {
 function new_claim_id() {
   local random
 
-  random="$(od -An -N6 -tx1 /dev/urandom 2> /dev/null | tr -d ' \n')" || random=""
+  random="$(od -An -N6 -tx1 /dev/urandom 2> /dev/null | tr -d ' \n')" || random="" # error-output-allow: unavailable random bytes fall back to shell RANDOM
 
   if [[ -z "${random}" ]]; then
     random="$(printf '%04x%04x%04x' "${RANDOM}" "${RANDOM}" "${RANDOM}")"
@@ -152,7 +152,7 @@ function main_worktree_path() {
         ;;
       *) ;;
     esac
-  done < <(git worktree list --porcelain -z 2> /dev/null)
+  done < <(git worktree list --porcelain -z 2> /dev/null) # error-output-allow: deferred inventory producer-status follow-up recorded in the error-output audit ledger
 
   return 1
 }
@@ -177,7 +177,7 @@ function worktree_identity() {
   local worktree="${1}"
   local identity
 
-  identity="$(git -C "${worktree}" rev-parse --path-format=absolute --git-dir 2> /dev/null)" || return 0
+  identity="$(git -C "${worktree}" rev-parse --path-format=absolute --git-dir 2> /dev/null)" || return 0 # error-output-allow: nonexistent worktrees use the path and branch identity fallback
 
   # The identity is derived from the main checkout's location, so it can carry
   # a control character even when the linked worktree's own path does not.
@@ -256,7 +256,7 @@ function live_worktrees_json() {
         ;;
       *) ;;
     esac
-  done < <(git worktree list --porcelain -z 2> /dev/null)
+  done < <(git worktree list --porcelain -z 2> /dev/null) # error-output-allow: deferred inventory producer-status follow-up recorded in the error-output audit ledger
 
   [[ "${saw_any}" -eq 1 ]] || return 1
 
@@ -308,7 +308,7 @@ function read_claims() {
   # one embedded as shorter than it is or as empty, after which a mutation
   # would rewrite it and lose the rest. That is the destructive rewrite this
   # validation exists to prevent.
-  if ! jq empty "${file}" > /dev/null 2>&1; then
+  if ! jq empty "${file}" > /dev/null 2>&1; then # error-output-allow: invalid JSON receives the claims-file diagnostic
     die "${file} is not valid JSON; fix or remove it"
   fi
 
@@ -331,7 +331,7 @@ function read_claims() {
   # The version is an integer, not merely a number, so that a 1.5 is refused as
   # a malformed envelope rather than reported as an unsupported version it was
   # never going to be.
-  if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.version | floor) == .version) and ((.claims | type) == "array")' "${file}" > /dev/null 2>&1; then
+  if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.version | floor) == .version) and ((.claims | type) == "array")' "${file}" > /dev/null 2>&1; then # error-output-allow: invalid claims shape receives the schema diagnostic
     die "${file} is not a claim file; expected an object with an integer \"version\" and a \"claims\" array"
   fi
 
@@ -344,7 +344,7 @@ function read_claims() {
   # parse every shape a valid JSON number can take: 1e100 is an integer as far
   # as the check above is concerned, and would reach (( )) as scientific
   # notation and fail as a syntax error instead of the diagnostic below.
-  if ! jq -e --argjson supported "${SCHEMA_VERSION}" '.version == $supported' "${file}" > /dev/null 2>&1; then
+  if ! jq -e --argjson supported "${SCHEMA_VERSION}" '.version == $supported' "${file}" > /dev/null 2>&1; then # error-output-allow: unsupported version receives the version diagnostic
     declared="$(jq -r '.version' "${file}")"
     die "${file} declares version ${declared}; this script supports version ${SCHEMA_VERSION} only, so it will not read or rewrite the file"
   fi
@@ -366,14 +366,14 @@ function read_claims() {
         and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+\\z"))
         and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+\\z"))
         and ((has("gitdir") | not) or (((.gitdir | type) == "string") and (.gitdir | test("^[^[:cntrl:]]+\\z"))))
-        and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' "${file}" > /dev/null 2>&1; then
+        and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' "${file}" > /dev/null 2>&1; then # error-output-allow: invalid claim fields receive the field-validation diagnostic
     die "${file} holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present"
   fi
 
   # One claim per resource is the invariant every lookup assumes: claim_for_resource
   # answers with the first match, so a duplicate would let a stale record hide a
   # live holder behind it and slip a takeover past the guard in cmd_claim.
-  if ! jq -e '(.claims | map(.resource)) as $names | ($names | length) == ($names | unique | length)' "${file}" > /dev/null 2>&1; then
+  if ! jq -e '(.claims | map(.resource)) as $names | ($names | length) == ($names | unique | length)' "${file}" > /dev/null 2>&1; then # error-output-allow: duplicate resources receive the uniqueness diagnostic
     die "${file} holds more than one claim on the same resource; remove the duplicates"
   fi
 
@@ -412,7 +412,7 @@ function held_lock_report() {
     return
   fi
 
-  if kill -0 "${owner}" 2> /dev/null; then
+  if kill -0 "${owner}" 2> /dev/null; then # error-output-allow: process existence predicate selects stale-lock handling
     printf '%s/owner is held by process %s, which is still running; wait for it to finish' "${lock}" "${owner}"
     return
   fi
@@ -615,7 +615,7 @@ function holder_is_live_and_foreign() {
      and (if ($gitdir != "") and ((.gitdir // "") != "")
           then .gitdir != $gitdir
           else (.worktree != $worktree) or (.branch != $branch)
-          end)' > /dev/null 2>&1 <<< "${existing}"
+          end)' > /dev/null 2>&1 <<< "${existing}" # error-output-allow: same-holder predicate selects claim reuse
 }
 
 # True when the holder is the one the caller was approved to displace.
@@ -633,7 +633,7 @@ function holder_matches() {
 
   [[ -n "${approved}" ]] || return 1
 
-  jq -e --arg approved "${approved}" '.id == $approved' > /dev/null 2>&1 <<< "${existing}"
+  jq -e --arg approved "${approved}" '.id == $approved' > /dev/null 2>&1 <<< "${existing}" # error-output-allow: approval predicate must match exactly before replacement
 }
 
 function claim_for_resource() {

@@ -1,0 +1,73 @@
+{
+  "non_bash": [
+    {
+      "name": "bin/lib/error-output-ast.jq",
+      "reason": "jq evaluator, not a shell program; its Bash caller checks status and keeps diagnostics live."
+    },
+    {
+      "name": "plugins/monitor-pr/scripts/watch-policy.jq",
+      "reason": "jq watch-policy transitions are data transformations, not Bash source."
+    },
+    {
+      "name": "plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-workflow-template.yml",
+      "reason": "Workflow configuration is not a Bash source file; its embedded run text is outside this AST scope."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/backlog-gather-queries/issues.graphql",
+      "reason": "GraphQL issues query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/backlog-gather-queries/merged.graphql",
+      "reason": "GraphQL merged query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/backlog-gather-queries/pulls.graphql",
+      "reason": "GraphQL pulls query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/backlog-gather-queries/repository.graphql",
+      "reason": "GraphQL repository query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/branches.graphql",
+      "reason": "GraphQL branches query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/open-pulls.graphql",
+      "reason": "GraphQL open-pulls query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/pulls.graphql",
+      "reason": "GraphQL pulls query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/repository.graphql",
+      "reason": "GraphQL repository query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/search.graphql",
+      "reason": "GraphQL search query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/bugs-gather-queries/zenhub.graphql",
+      "reason": "GraphQL zenhub query document is data for its Bash HTTP caller, not executable shell."
+    },
+    {
+      "name": "plugins/publish-report-board/scripts/progress.jq",
+      "reason": "Pure jq progress calculations have no shell redirection syntax."
+    },
+    {
+      "name": "plugins/attention-log/scripts/claude-transcript.jq",
+      "reason": "Generated jq transcript selector, not Bash source; shell callers invoke it through jq."
+    },
+    {
+      "name": "plugins/notify/scripts/claude-transcript.jq",
+      "reason": "Canonical jq transcript selector, not Bash source; shell callers invoke it through jq."
+    },
+    {
+      "name": "plugins/notify/scripts/codex-failure.jq",
+      "reason": "jq rollout-failure classifier, not a shell program; watch-codex-failures is its Bash caller."
+    }
+  ],
+  "parse_exceptions": []
+}

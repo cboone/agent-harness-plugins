@@ -33,7 +33,7 @@ function record_drift() {
 # error, so the `if [[ -z "${latest}" ]]` guards at each call site never get to
 # run and the report is never printed.
 function fetch_json() {
-  curl -fsSL -H "User-Agent: ${USER_AGENT}" "${1}" 2> /dev/null || true
+  curl -fsSL -H "User-Agent: ${USER_AGENT}" "${1}" || true
 }
 
 # Documentation comments in the scripts and templates this repository ships
@@ -47,7 +47,7 @@ function strip_comment_lines() {
 
 function github_latest_release() {
   local repo="${1}"
-  gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2> /dev/null || true
+  gh api "repos/${repo}/releases/latest" --jq '.tag_name' || true
 }
 
 # ─── 1. Audit Node.js version in .tool-versions ──────────────────────────────
@@ -124,7 +124,7 @@ function audit_actions() {
         record_drift "Actions" "${repo}" "${current}" "${latest}" "${file}"
       fi
     fi
-  done < <(grep -rE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' .github/ plugins/ 2> /dev/null | strip_comment_lines)
+  done < <(grep -rE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' .github/ plugins/ | strip_comment_lines)
 }
 
 # ─── 4. Audit npx <tool>@<version> pins ──────────────────────────────────────
@@ -151,7 +151,7 @@ function audit_npx_pins() {
         record_drift "npx pin" "${pkg}" "${current}" "${latest}" "skill templates"
       fi
     fi
-  done < <(grep -rhE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' plugins/ 2> /dev/null | strip_comment_lines)
+  done < <(grep -rhE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' plugins/ | strip_comment_lines)
 }
 
 # ─── 5. Audit go install <path>@v<version> pins for known tools ──────────────
@@ -187,7 +187,7 @@ function audit_go_install_pins() {
         record_drift "go install" "${install_path}" "${current}" "${latest}" "skill templates"
       fi
     fi
-  done < <(grep -rhE 'go install [a-zA-Z0-9./-]+@v[0-9]+' plugins/ 2> /dev/null | strip_comment_lines)
+  done < <(grep -rhE 'go install [a-zA-Z0-9./-]+@v[0-9]+' plugins/ | strip_comment_lines)
 }
 
 # ─── 6. Audit cargo install --version <X> <crate> pins ───────────────────────
@@ -214,7 +214,7 @@ function audit_cargo_install_pins() {
         record_drift "cargo install" "${crate}" "${current}" "${latest}" "skill templates"
       fi
     fi
-  done < <(grep -rhE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' plugins/ 2> /dev/null | strip_comment_lines)
+  done < <(grep -rhE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' plugins/ | strip_comment_lines)
 }
 
 # ─── 7. Audit pip / uv install <pkg>==<X> pins ───────────────────────────────
@@ -241,7 +241,7 @@ function audit_pip_install_pins() {
         record_drift "pip / uv install" "${pkg}" "${current}" "${latest}" "skill templates"
       fi
     fi
-  done < <(grep -rhE '(pip install|uv (pip install|add( --dev)?)) +.?[a-zA-Z0-9_-]+==[0-9]' plugins/ 2> /dev/null | strip_comment_lines)
+  done < <(grep -rhE '(pip install|uv (pip install|add( --dev)?)) +.?[a-zA-Z0-9_-]+==[0-9]' plugins/ | strip_comment_lines)
 }
 
 # ─── 8. Print Markdown report ────────────────────────────────────────────────

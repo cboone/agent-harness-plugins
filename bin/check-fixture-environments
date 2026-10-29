@@ -1,48 +1,16 @@
 #!/usr/bin/env bash
-# Check Git environment resets in tests and repository tooling.
+# Check fixture environments and retained child diagnostics.
 set -euo pipefail
 
 # shellcheck source=bin/lib/git-environment.bash
 source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
 
-function main() {
-  local root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}" file scripts documents workflows first_line
-  local -a files=(Makefile)
-  cd "${root}"
-  scripts="$(find bin tests/fixtures plugins -type f ! -name '*.md' ! -name '*.json' ! -name '*.yaml' ! -name '*.yml' | sort)"
-  [[ -n "${scripts}" ]] || {
-    echo 'No shell scripts found' >&2
-    return 1
-  }
-  while IFS= read -r file; do
-    [[ -r "${file}" ]] || {
-      echo "Cannot read ${file}" >&2
-      return 1
-    }
-    first_line=''
-    IFS= read -r first_line < "${file}" || true
-    case "${file}:${first_line}" in
-      *.bash:* | *.sh:* | *.py:* | *.pl:* | *.rb:* | *:'#!'*) files+=("${file}") ;;
-      *) ;;
-    esac
-  done <<< "${scripts}"
-  [[ ${#files[@]} -gt 1 ]] || {
-    echo 'No shell scripts found' >&2
-    return 1
-  }
-  documents="$(bin/run-scrut-documents --list)"
-  [[ -n "${documents}" ]] || {
-    echo 'No Scrut documents found' >&2
-    return 1
-  }
-  while IFS= read -r file; do
-    files+=("${file}")
-  done <<< "${documents}"
-  workflows="$(find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)"
-  while IFS= read -r file; do
-    files+=("${file}")
-  done <<< "${workflows}"
+# shellcheck source=bin/lib/capture-child.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/capture-child.bash"
+# shellcheck source=bin/lib/error-output-ast.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/error-output-ast.bash"
 
+function check_fixture_graph() {
   # Trace direct and indirect Git consumers; each caller must reset its own environment.
   awk '
     function git_call(text) {
@@ -119,13 +87,6 @@ function main() {
       text = $0
       if (document) sub(/^[\t ]*[$>] /, "", text)
       if (text ~ /^[\t ]*#/ || text ~ /^[\t ]*$/) next
-      if (FILENAME ~ /^(tests\/fixtures\/|bin\/validate-|bin\/lib\/)/ && FILENAME != "bin/lib/capture-child.bash") {
-        capture_text = text
-        gsub(/>[\t ]*\/dev\/null[\t ]+2>&1/, "", capture_text)
-        gsub(/2>>?[\t ]*\/dev\/null/, "", capture_text)
-        gsub(/&>>?[\t ]*\/dev\/null/, "", capture_text)
-        if (capture_text ~ /2>&1|2>[\t ]*[^&\t ]|&>/) invalid_capture[FILENAME] = 1
-      }
       if (FILENAME != "bin/run-scrut" && raw_scrut(text)) invalid_scrut[FILENAME] = 1
       if (text ~ /^set -euo pipefail[\t ]*$/) next
       if (!entry[FILENAME]) entry[FILENAME] = FNR
@@ -146,10 +107,6 @@ function main() {
     END {
       for (file in invalid_namespace) {
         print file ": fixture variables must stay outside the GIT_* namespace"
-        errors++
-      }
-      for (file in invalid_capture) {
-        print file ": use capture_child for retained diagnostics"
         errors++
       }
       if (!make_test || !make_update || !make_all) invalid_scrut["Makefile"] = 1
@@ -182,7 +139,82 @@ function main() {
       if (errors) exit 1
       print "All Git consumers reset their fixture environment."
     }
-  ' "${files[@]}"
+  ' "$@"
+}
+
+function main() {
+  local ast_scope=false
+  if [[ "${1:-}" == --ast-scope ]]; then
+    ast_scope=true
+    shift
+  fi
+  [[ $# -le 1 ]] || {
+    echo 'Usage: check-fixture-environments [--ast-scope] [root]' >&2
+    return 2
+  }
+  local root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}" file scripts documents workflows first_line
+  local -a files=(Makefile) ast_files=()
+  cd "${root}"
+  scripts="$(find bin tests/fixtures plugins -type f ! -name '*.md' ! -name '*.json' ! -name '*.yaml' ! -name '*.yml' | sort)"
+  [[ -n "${scripts}" ]] || {
+    echo 'No shell scripts found' >&2
+    return 1
+  }
+  while IFS= read -r file; do
+    [[ -r "${file}" ]] || {
+      echo "Cannot read ${file}" >&2
+      return 1
+    }
+    first_line=''
+    IFS= read -r first_line < "${file}" || true
+    local program=false
+    case "${file}:${first_line}" in
+      *.bash:* | *.sh:* | *.py:* | *.pl:* | *.rb:* | *:'#!'*)
+        files+=("${file}")
+        program=true
+        ;;
+      *) ;;
+    esac
+    if [[ "${program}" == true || "${file}" == bin/* || "${file}" == tests/fixtures/* || "${file}" == plugins/*/scripts/* ]]; then
+      ast_files+=("${file}")
+    fi
+  done <<< "${scripts}"
+  [[ ${#files[@]} -gt 1 ]] || {
+    echo 'No shell scripts found' >&2
+    return 1
+  }
+  local metadata
+  metadata="$(find tests/fixtures plugins -type f \( -name '*.md' -o -name '*.json' -o -name '*.yaml' -o -name '*.yml' \) | sort)"
+  while IFS= read -r file; do
+    [[ -n "${file}" ]] || continue
+    if [[ "${file}" == tests/fixtures/* || "${file}" == plugins/*/scripts/* ]]; then ast_files+=("${file}"); fi
+  done <<< "${metadata}"
+  documents="$(bin/run-scrut-documents --list)"
+  [[ -n "${documents}" ]] || {
+    echo 'No Scrut documents found' >&2
+    return 1
+  }
+  while IFS= read -r file; do
+    files+=("${file}")
+    ast_files+=("${file}")
+  done <<< "${documents}"
+  workflows="$(find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)"
+  while IFS= read -r file; do
+    files+=("${file}")
+  done <<< "${workflows}"
+
+  check_error_output_ast "${ast_files[@]}"
+  if [[ "${ast_scope}" == true ]]; then
+    if ! check_fixture_graph "${files[@]}" > "${OUTPUT_AST_TMP}/graph.out"; then
+      cat "${OUTPUT_AST_TMP}/graph.out" >&2
+      return 1
+    fi
+    cat "${OUTPUT_AST_TMP}/report.json"
+    jq -e '(.errors | type == "array" and length == 0) and (.units | type == "array" and length > 0)' "${OUTPUT_AST_TMP}/report.json" > /dev/null
+  else
+    jq -e '(.errors | type == "array" and length == 0) and (.units | type == "array" and length > 0)' "${OUTPUT_AST_TMP}/report.json" > /dev/null
+    check_fixture_graph "${files[@]}"
+  fi
 }
 
 main "$@"

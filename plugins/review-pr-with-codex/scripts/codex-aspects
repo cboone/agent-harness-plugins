@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Make `set -e` apply inside command substitutions, where Bash supports it.
-shopt -s inherit_errexit 2> /dev/null || true
+shopt -s inherit_errexit 2> /dev/null || true # error-output-allow: Bash 3.2 lacks inherit_errexit; later commands check status explicitly
 
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
@@ -58,7 +58,7 @@ readonly STOP_POLL_LIMIT
 function group_active() {
   local group="${1}" pgid state
   if ! ps -axo pgid=,stat= > "${TMP_DIR}/groups" 2> "${TMP_DIR}/groups.err" \
-    || [[ -s "${TMP_DIR}/groups.err" || ! -s "${TMP_DIR}/groups" ]]; then
+    || [[ -s "${TMP_DIR}/groups.err" || ! -s "${TMP_DIR}/groups" ]]; then # error-output-allow: inspection failure is treated as active and retains diagnostic artifacts
     return 0
   fi
   while read -r pgid state; do
@@ -76,7 +76,7 @@ function stop_running_codex() {
     if ((attempt >= STOP_POLL_LIMIT / 2)); then signal=KILL; fi
     for group in ${RUNNING_GROUPS[@]+"${RUNNING_GROUPS[@]}"}; do
       # Repeat delivery so descendants created by a TERM handler are covered.
-      kill -"${signal}" -- "-${group}" 2> /dev/null || true
+      kill -"${signal}" -- "-${group}" 2> /dev/null || true # error-output-allow: cancellation tolerates an already stopped process group
       if group_active "${group}"; then active="true"; fi
     done
     if [[ "${active}" == "false" ]]; then break; fi
@@ -87,7 +87,7 @@ function stop_running_codex() {
     return 1
   fi
   for pid in ${RUNNING_PIDS[@]+"${RUNNING_PIDS[@]}"}; do
-    wait "${pid}" 2> /dev/null || true
+    wait "${pid}" 2> /dev/null || true # error-output-allow: cancellation reaps children without replacing the selected cancellation status
   done
   RUNNING_PIDS=()
   RUNNING_GROUPS=()
@@ -268,7 +268,7 @@ function require_scope_file() {
     [inputs] as $values
     | ($values | length) == 1 and ($values[0] | valid_scope)
   ' "${scope}" > /dev/null 2>&1 \
-    || die "scope file '${scope}' is not review-scope output"
+    || die "scope file '${scope}' is not review-scope output" # error-output-allow: invalid scope receives a specific schema diagnostic
 }
 
 # The output contract. Every property is required and no extra ones are
@@ -406,7 +406,7 @@ function aspect_status() {
         elif $values[0].aspect != $aspect then "the output names a different aspect"
         elif $values[0].reviewed != $snapshot then "the output reviewed a different snapshot"
         else "" end
-    ' "${output}" 2> /dev/null)" || reason="the output is not JSON"
+    ' "${output}" 2> /dev/null)" || reason="the output is not JSON" # error-output-allow: invalid JSON becomes the explicit output-is-not-JSON failure
   fi
 
   jq -n \
@@ -832,10 +832,10 @@ function cmd_gate() {
   jq -e -n "${VALIDATE_DEFS}"'
     [inputs] as $v | ($v | length) == 1 and ($v[0] | type == "array" and length > 0
       and all(valid_output and (.aspect | IN("code", "errors", "tests", "comments", "types"))))
-  ' "${results}" > /dev/null 2>&1 || die "review results are incomplete or invalid"
+  ' "${results}" > /dev/null 2>&1 || die "review results are incomplete or invalid" # error-output-allow: invalid results receive the explicit incomplete-results diagnostic
   jq -e -n '[inputs] as $v | ($v | length) == 1 and ($v[0] | type == "array"
     and all(type == "object" and (.aspect | type == "string") and (.status | IN("ok", "failed"))))' \
-    "${statuses}" > /dev/null 2>&1 || die "aspect statuses are invalid"
+    "${statuses}" > /dev/null 2>&1 || die "aspect statuses are invalid" # error-output-allow: invalid statuses receive the explicit invalid-statuses diagnostic
   jq -n --slurpfile before "${scope}" --slurpfile after "${after}" --slurpfile results "${results}" \
     --slurpfile before_members "${before_members}" --slurpfile after_members "${after_members}" \
     --slurpfile statuses "${statuses}" --argjson expected "${expected}" '
@@ -913,7 +913,7 @@ function cmd_prompt() {
 
   local top_level snapshot
   top_level="$(git rev-parse --show-toplevel 2> /dev/null)" \
-    || die "not inside a git work tree"
+    || die "not inside a git work tree" # error-output-allow: missing checkout produces the explicit repository diagnostic
   top_level="$(physical_dir "${top_level}")"
   require_trusted_aspects "${top_level}"
   snapshot="$(jq -r '.snapshot' "${scope}")"
@@ -1072,7 +1072,7 @@ function cmd_run() {
 
   local top_level out_physical
   top_level="$(git rev-parse --show-toplevel 2> /dev/null)" \
-    || die "not inside a git work tree"
+    || die "not inside a git work tree" # error-output-allow: missing checkout produces the explicit repository diagnostic
   top_level="$(physical_dir "${top_level}")"
   require_trusted_aspects "${top_level}"
   out_physical="$(physical_dir "${out_dir}")"
@@ -1158,7 +1158,7 @@ function cmd_run() {
       --output-last-message "${out_physical}/${aspect}.json" \
       ${extra_args[@]+"${extra_args[@]}"} \
       "${prompts[${index}]}" \
-      < /dev/null > "${out_physical}/${aspect}.log" 2>&1 &
+      < /dev/null > "${out_physical}/${aspect}.log" 2>&1 & # error-output-allow: standalone runner checks status and reply after wait and retains logs
     RUNNING_PIDS+=("$!")
     RUNNING_GROUPS+=("$!")
     set +m
@@ -1248,7 +1248,7 @@ function cmd_changes() {
   require_scope_file "${after}"
 
   git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
-    || die "not inside a git work tree"
+    || die "not inside a git work tree" # error-output-allow: repository predicate has a specific not-inside-repository diagnostic
 
   local before_tree after_tree raw members after_members
   members="$(mktemp "${TMP_DIR}/changes-members.XXXXXX")" || die "could not create change membership"

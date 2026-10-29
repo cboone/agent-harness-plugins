@@ -76,7 +76,7 @@ function capture_child() {
       echo 'capture_child: exec-log requires a discarded result and no callback' >&2
       return 2
     }
-    exec "$@" > "${__capture_log}" 2>&1
+    exec "$@" > "${__capture_log}" 2>&1 # error-output-allow: shared capture implementation preserves exec PID and wait-log replay
   fi
   [[ "${__capture_stdout}" != - ]] || __capture_stdout=/dev/fd/3
   if [[ "${__capture_mode}" == wait ]]; then
@@ -88,9 +88,9 @@ function capture_child() {
     __capture_buffer="$(cat "${__capture_log}")" || __capture_read_status=$?
     ((__capture_status != 0 || __capture_read_status == 0)) || __capture_status=2
   elif [[ -n "${__capture_stdout}" ]]; then
-    __capture_buffer="$("$@" 2>&1 > "${__capture_stdout}")" || __capture_status=$?
+    __capture_buffer="$("$@" 2>&1 > "${__capture_stdout}")" || __capture_status=$? # error-output-allow: shared capture implementation replays child errors below
   else
-    __capture_buffer="$("$@" 2>&1)" || __capture_status=$?
+    __capture_buffer="$("$@" 2>&1)" || __capture_status=$? # error-output-allow: shared capture implementation replays child errors below
   fi
   if [[ -n "${__capture_from}" ]]; then
     __capture_buffer="${__capture_buffer//"${__capture_from}"/${__capture_to}}"
@@ -119,10 +119,10 @@ function capture_child() {
   fi
   ((__capture_status != 0 || __capture_callback_status == 0)) || __capture_status="${__capture_callback_status}"
   if [[ "${__capture_target}" != - ]]; then
-    __capture_attributes="$(declare -p "${__capture_target}" 2> /dev/null)" || __capture_attributes=''
+    __capture_attributes="$(declare -p "${__capture_target}" 2> /dev/null)" || __capture_attributes='' # error-output-allow: undeclared result variables are valid; attributes default to empty
     __capture_attributes="${__capture_attributes#declare -}"
     __capture_attributes="${__capture_attributes%% *}"
-    if [[ "${__capture_attributes}" == *r* ]] || ! printf -v "${__capture_target}" '%s' "${__capture_buffer}" 2> /dev/null; then
+    if [[ "${__capture_attributes}" == *r* ]] || ! printf -v "${__capture_target}" '%s' "${__capture_buffer}" 2> /dev/null; then # error-output-allow: storage errors receive the explicit cannot-store diagnostic below
       printf 'capture_child: cannot store output in %s\n' "${__capture_target}" >&2
       ((__capture_status != 0)) || __capture_status=2
     fi

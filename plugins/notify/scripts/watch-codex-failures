@@ -72,14 +72,14 @@ function main() {
     [[ -z "${owner_pid}" ]] || die '--once and --owner-pid are mutually exclusive'
   else
     [[ "${owner_pid}" =~ ^[1-9][0-9]*$ ]] || die '--owner-pid requires a positive PID'
-    kill -0 "${owner_pid}" 2> /dev/null || die 'the supervising process is not running'
+    kill -0 "${owner_pid}" 2> /dev/null || die 'the supervising process is not running' # error-output-allow: process-existence predicate receives the explicit supervising-process diagnostic
   fi
   case "${tier}" in
     '' | top | lead | worker | untiered) ;;
     *) die 'invalid tier' ;;
   esac
   script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-  exec 3< "${rollout}"
+  exec 3< "${rollout}" # error-output-allow: retain the rollout reader on descriptor 3; open errors remain on stderr under strict mode
   local initial_bytes bytes_read=0
   initial_bytes="$(LC_ALL=C wc -c < "${rollout}")"
   cd -- "${cwd}"
@@ -88,7 +88,7 @@ function main() {
   [[ "${once}" == false ]] || state=final-drain
   while true; do
     if [[ "${state}" == owner-exit ]]; then
-      if kill -0 "${owner_pid}" 2> /dev/null; then
+      if kill -0 "${owner_pid}" 2> /dev/null; then # error-output-allow: process-existence predicate selects follow or final-drain state
         state=following
         sleep 0.2
       else
@@ -129,7 +129,7 @@ function main() {
       fi
       mkdir -p "$(dirname "${marker}")"
       # Claim delivery once across concurrent readers and restarts. Never retry an uncertain delivery.
-      if mkdir "${marker}" 2> /dev/null; then
+      if mkdir "${marker}" 2> /dev/null; then # error-output-allow: exclusive delivery claim diagnoses failure unless another reader already owns the marker
         payload="$(jq -nc --arg kind "${kind}" --arg message "${message}" --arg session_id "${identity}" --arg turn_id "${turn}" \
           --arg session_name "${name}" --arg tmux_session "${tmux_session}" --arg tmux_window "${tmux_window}" \
           '{kind:$kind,message:$message,session_id:$session_id,turn_id:$turn_id,session_name:$session_name,

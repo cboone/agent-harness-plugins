@@ -18,13 +18,13 @@ function main() {
   [[ -f "${source}" && -r "${source}" ]] \
     || failed 'temporary ledger is missing or unreadable' '' 1
   diagnostic="$(mkdir -p "${directory}" 2>&1)" \
-    || failed "cannot create ${directory}; temporary ledger retained at ${source}" "${diagnostic}" "$?"
+    || failed "cannot create ${directory}; temporary ledger retained at ${source}" "${diagnostic}" "$?" # error-output-allow: standalone plugin replays mkdir errors through failed
   dest="${directory}/${stem}.md"
   until diagnostic="$(
     (
       set -C
       : > "${dest}"
-    ) 2>&1
+    ) 2>&1 # error-output-allow: reservation collision is retried; other errors replay through failed
   )"; do
     [[ -e "${dest}" || -L "${dest}" ]] \
       || failed "cannot reserve ${dest}; temporary ledger retained at ${source}" "${diagnostic}" 1
@@ -33,7 +33,7 @@ function main() {
   done
   # Overwrite only this run's reserved file.
   diagnostic="$(cat "${source}" 2>&1 > "${dest}")" \
-    || failed "cannot write ${dest}; temporary ledger retained at ${source}" "${diagnostic}" "$?"
+    || failed "cannot write ${dest}; temporary ledger retained at ${source}" "${diagnostic}" "$?" # error-output-allow: standalone plugin replays copy errors through failed
   printf '%s\n' "${dest}"
 }
 

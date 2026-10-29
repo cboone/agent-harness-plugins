@@ -28,6 +28,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \
+	-u STUB_SHFMT_REAL_BIN -u STUB_SHFMT_MODE -u ERROR_OUTPUT_SHFMT_STUB_PATH \
 	-u CHAIN_CODEX_STUB_MODE \
 	-u EVAL_GH_AUTH -u EVAL_GH_LOG \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
@@ -72,6 +73,8 @@ SCRUT_ENV := \
 	CATALOG_RELEASE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/catalog-release-fixture" \
 	ENVIRONMENT_ISOLATION_BIN="$(CURDIR)/tests/fixtures/environment-isolation" \
 	CHECK_FIXTURE_ENVIRONMENTS_BIN="$(CURDIR)/bin/check-fixture-environments" \
+	ERROR_OUTPUT_GUARD_BIN="$(CURDIR)/tests/fixtures/error-output-guard" \
+	ERROR_OUTPUT_SHFMT_STUB_BIN="$(CURDIR)/tests/fixtures/error-output-shfmt-stub" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \
 	LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/workmux/scripts/launch-workmux" \
 	DEPENDABOT_PRS_BIN="$(CURDIR)/plugins/dependabot/scripts/dependabot-prs" \

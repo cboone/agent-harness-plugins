@@ -5,7 +5,7 @@ set -euo pipefail
 # Make `set -e` apply inside command substitutions too. Bash leaves this off by
 # default, which is why a multi-command function called as `$(...)` can fail
 # halfway and still return the last command's success.
-shopt -s inherit_errexit 2> /dev/null || true
+shopt -s inherit_errexit 2> /dev/null || true # error-output-allow: Bash 3.2 lacks inherit_errexit; later commands check status explicitly
 
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
@@ -411,7 +411,7 @@ function main() {
   require_command git
 
   git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
-    || die "not inside a git work tree"
+    || die "not inside a git work tree" # error-output-allow: repository predicate receives the specific checkout diagnostic
 
   # Run from the repository root so ls-files includes every untracked path
   # and uses the same repository-relative paths as diff.
