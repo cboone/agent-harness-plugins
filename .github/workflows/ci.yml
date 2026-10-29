@@ -165,6 +165,7 @@ jobs:
         LEDGER_BARRIER_ENV=./tests/fixtures/ledger-reservation-barrier.bash
         LEDGER_COMMAND_STUB_BIN=./tests/fixtures/ledger-command-stub
         LEDGER_CONCURRENCY_BIN=./tests/fixtures/ledger-concurrency
+        REVIEW_SUBMODULE_FIXTURE_BIN=./tests/fixtures/review-submodule-fixture
         REVIEW_SCOPE_BIN=./plugins/review-until-clean/scripts/review-scope
         REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN=./plugins/review-pr-with-codex/scripts/review-scope
         CODEX_ASPECTS_BIN=./plugins/review-pr-with-codex/scripts/codex-aspects

@@ -25,6 +25,8 @@ since a commit still needs one.
 $ "${REVIEW_SCOPE_BIN}" --help
 Usage: review-scope [--base <ref>]
        review-scope --schema
+       review-scope --membership <scope.json>
+       review-scope --symlinks <scope.json>
 
 Print one JSON object describing every local change and a snapshot identifier
 bound to their content: committed branch changes, staged changes, unstaged
@@ -39,6 +41,8 @@ Options:
   --base <ref>  Take the merge base with this ref instead of with the default
                 branch; committed changes are those from the merge base to HEAD
   --schema      Print review-until-clean's findings schema and exit
+  --membership <file>  Print the captured canonical path records
+  --symlinks <file>    Describe links from canonical membership without following targets
   -h, --help    Show this help
 ```
 
@@ -702,7 +706,7 @@ prepared round invalidated
 ```scrut
 $ cd "${work}" \
 >   && ( function git() { \
->          if [[ "${1:-}" == diff && "${4:-}" == HEAD ]]; then \
+>          if [[ " $* " == *" diff "* && " $* " == *" HEAD "* ]]; then \
 >            local blob; blob="$(printf 'during scan\n' | command git hash-object -w --stdin)" || return; \
 >            command git update-index --cacheinfo "100644,${blob},tracked.txt" || return; \
 >          fi; \
