@@ -2,7 +2,7 @@
 # Inject a PID-write failure after exclusive owner-file creation succeeds.
 
 function printf() {
-  if [[ "${LOCK_TEST_MODE:-}" == write && $# -eq 2 && "${1}" == '%s' && "${2}" == "$$" ]]; then
+  if [[ "${LOCK_TEST_MODE:-}" == write && $# -eq 2 && ("${1}" == '%s' || "${1}" == '%s\n') && "${2}" == "$$" ]]; then
     echo 'injected owner write failure' >&2
     return 74
   fi
@@ -19,4 +19,13 @@ function printf() {
     echo 'second cache owner barrier timed out' >&2
     return 1
   fi
+}
+
+function echo() {
+  if [[ "${LOCK_TEST_REPORT_ORDER:-}" == true && "$*" == *'rotation owner release failed:'* ]]; then
+    if ! grep -q '"event":"auto_denied"' "${ATTENTION_LOG_DIR:?}/events.jsonl"; then
+      touch "${LOCK_TEST_DIRECTORY:?}/reported-before-append"
+    fi
+  fi
+  builtin echo "$@"
 }

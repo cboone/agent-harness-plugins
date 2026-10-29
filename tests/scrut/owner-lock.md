@@ -1,0 +1,29 @@
+# Owner-file reservation identity
+
+## An empty reservation can be released before PID recording
+
+```scrut
+$ "${OWNER_LOCK_PROBE_BIN}" empty
+empty reservation released
+```
+
+## Release preserves a different file at the same owner path
+
+```scrut
+$ "${OWNER_LOCK_PROBE_BIN}" successor
+successor identity preserved
+```
+
+## A stale token cannot release the next reservation in the same process
+
+```scrut
+$ "${OWNER_LOCK_PROBE_BIN}" stale
+stale token refused; current reservation released
+```
+
+## Session and rotation can retain separate identities
+
+```scrut
+$ "${OWNER_LOCK_PROBE_BIN}" nested
+independent session and rotation identities released
+```

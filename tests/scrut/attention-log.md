@@ -328,6 +328,45 @@ $ fresh
 rotation owner preserved
 ```
 
+## Failed PID recording releases the reservation before a later clear
+
+```scrut
+$ fresh
+> hook PermissionRequest '{"tool_name":"Bash"}'
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_MODE=write /bin/bash "${ATTENTION_LOG_BIN}" hook PostToolUse 2> "${work}/pid-write-error"
+> test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid" && test -f "${ATTENTION_LOG_DIR}/sessions/s1.open" && grep -q 'injected owner write failure' "${work}/pid-write-error" || exit 1
+> hook PostToolUse '{"tool_name":"Bash"}'
+> test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && echo 'reservation released; next hook cleared the state'
+reservation released; next hook cleared the state
+```
+
+## Rotation release failure is reported only after the event is saved
+
+```scrut
+$ fresh
+> lock="${ATTENTION_LOG_DIR}/rotate.lock"
+> mkdir -p "${lock}" "${work}/release-bin"
+> cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/release-bin/rm"
+> test "$(export PATH="${work}/release-bin:${PATH}"; command -v rm)" = "${work}/release-bin/rm" || exit 1
+> head -c 5242880 /dev/zero > "${events_file}"
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/release-bin:${PATH}" LOCK_TEST_REAL_RM="$(command -v rm)" LOCK_TEST_MODE=cleanup LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REPORT_ORDER=true BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/release-error"
+> test -f "${lock}/owner" && test ! -e "${lock}/reported-before-append" && grep -q 'rotation owner release failed:.*injected owner unlink failure' "${work}/release-error" || exit 1
+> jq -r '.event' "${events_file}"
+auto_denied
+```
+
+## Rotation PID failure releases ownership and still saves the event
+
+```scrut
+$ fresh
+> mkdir -p "${ATTENTION_LOG_DIR}"
+> head -c 5242880 /dev/zero > "${events_file}"
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_MODE=write /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/rotation-pid-error"
+> test ! -e "${ATTENTION_LOG_DIR}/rotate.lock/owner" && grep -q 'injected owner write failure' "${work}/rotation-pid-error" || exit 1
+> tr -d '\000' < "${events_file}" | jq -r '.event'
+auto_denied
+```
+
 ## The next prompt clears every open state with "*"
 
 Two requests stay open after a dismissed dialog, and one prompt closes both; a later prompt with nothing open writes nothing.

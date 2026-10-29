@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Check reservation identity without relying on PID contents.
+set -euo pipefail
+# shellcheck source=plugins/workmux/scripts/owner-lock.bash
+source "${OWNER_LOCK_LIBRARY:?}"
+PROBE_DIRECTORY=""
+
+function main() {
+  local root path first second
+  root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+  PROBE_DIRECTORY="${root}"
+  trap 'rm -r -- "${PROBE_DIRECTORY}"' EXIT
+  path="${root}/owner"
+  owner_lock_reserve "${path}" 8 || exit 1
+  first="${OWNER_LOCK_TOKEN}"
+  case "${1}" in
+    empty)
+      [[ -f "${path}" && ! -s "${path}" ]] || exit 1
+      owner_lock_release "${path}" "${first}" || exit 1
+      [[ ! -e "${path}" ]] || exit 1
+      echo 'empty reservation released'
+      ;;
+    successor)
+      mv "${path}" "${root}/prior"
+      printf 'successor\n' > "${path}"
+      if owner_lock_release "${path}" "${first}"; then exit 1; fi
+      [[ "$(cat "${path}")" == successor ]] || exit 1
+      echo 'successor identity preserved'
+      ;;
+    stale)
+      owner_lock_release "${path}" "${first}" || exit 1
+      owner_lock_reserve "${path}" 8 || exit 1
+      second="${OWNER_LOCK_TOKEN}"
+      if owner_lock_release "${path}" "${first}"; then exit 1; fi
+      owner_lock_release "${path}" "${second}" || exit 1
+      echo 'stale token refused; current reservation released'
+      ;;
+    nested)
+      owner_lock_reserve "${root}/rotation" 9 || exit 1
+      second="${OWNER_LOCK_TOKEN}"
+      owner_lock_release "${root}/rotation" "${second}" || exit 1
+      owner_lock_release "${path}" "${first}" || exit 1
+      echo 'independent session and rotation identities released'
+      ;;
+    *) exit 2 ;;
+  esac
+}
+
+main "$@"

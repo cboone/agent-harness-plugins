@@ -328,6 +328,8 @@ A reference that skills in two plugins read lives in one plugin and is copied in
 
 The shared references are:
 
+- The owner-file mutex helper: `plugins/workmux/scripts/owner-lock.bash`, copied into `plugins/attention-log/scripts/` and `plugins/publish-report-board/scripts/`. Acquire captures open-file identity before PID recording; every converted cleanup calls the same checked release helper. Edit only the workmux source and regenerate the other copies.
+
 - The progress model: `plugins/publish-report-board/skills/publish-report-board/references/progress-model.md`, copied to `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`.
 - The `codex exec` path: `plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md`, copied to the `references/` directories of `trim-comments` and `trim-text`. Each consumer's `SKILL.md` names its own model, effort, window, prompt additions and fallback.
 

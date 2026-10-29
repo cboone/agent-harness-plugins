@@ -39,6 +39,12 @@
 # holds, and says why.
 set -euo pipefail
 
+OWNER_LOCK_LIBRARY_DIRECTORY="${BASH_SOURCE[0]%/*}"
+[[ "${OWNER_LOCK_LIBRARY_DIRECTORY}" != "${BASH_SOURCE[0]}" ]] || OWNER_LOCK_LIBRARY_DIRECTORY=.
+# shellcheck source=plugins/workmux/scripts/owner-lock.bash
+source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
+unset OWNER_LOCK_LIBRARY_DIRECTORY
+
 # Prints the directory holding this script, following symlinks so the queries
 # are found beside the real script rather than beside a link to it.
 function resolve_script_dir() {
@@ -86,6 +92,7 @@ readonly DOT_SEGMENT_PATTERN='(^|/)\.\.?(/|$)'
 TEMP_DIR=""
 # Set by save while it holds the cache lock, so the EXIT trap releases it.
 SAVE_LOCK=""
+SAVE_LOCK_TOKEN=""
 # Set by load_config.
 CONFIG=""
 # Read from the variable the config names, once per gather.
@@ -845,7 +852,10 @@ function cleanup() {
     rm -rf -- "${TEMP_DIR}" || result=1
   fi
   if [[ -n "${SAVE_LOCK}" ]]; then
-    rm -- "${SAVE_LOCK}/owner" || return 1
+    if ! owner_lock_release "${SAVE_LOCK}/owner" "${SAVE_LOCK_TOKEN}"; then
+      echo "${SCRIPT_NAME}: ${OWNER_LOCK_ERROR}" >&2
+      return 1
+    fi
   fi
   return "${result}"
 }
@@ -859,17 +869,14 @@ function acquire_save_lock() {
   local -i tries=0
   mkdir -p -- "${lock}" || die "${E_INVALID}" "cannot create ${lock}"
   while :; do
-    if owner_error="$(
-      (
-        set -o noclobber
-        : > "${lock}/owner"
-      ) 2>&1
-    )"; then
+    if owner_lock_reserve "${lock}/owner" 8; then
       SAVE_LOCK="${lock}"
+      SAVE_LOCK_TOKEN="${OWNER_LOCK_TOKEN}"
       printf '%s' "$$" > "${lock}/owner" \
         || die "${E_INVALID}" "cannot record the lock owner in ${lock}"
       return 0
     fi
+    owner_error="${OWNER_LOCK_ERROR}"
     if ((tries >= 100)); then
       if [[ ! -e "${lock}/owner" && -n "${owner_error}" ]]; then
         die "${E_INVALID}" "cannot create ${lock}/owner: ${owner_error}"

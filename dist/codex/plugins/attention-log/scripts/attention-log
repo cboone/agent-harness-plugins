@@ -9,6 +9,12 @@
 # Must parse under macOS /bin/bash 3.2, what `env bash` finds without Homebrew.
 set -euo pipefail
 
+OWNER_LOCK_LIBRARY_DIRECTORY="${BASH_SOURCE[0]%/*}"
+[[ "${OWNER_LOCK_LIBRARY_DIRECTORY}" != "${BASH_SOURCE[0]}" ]] || OWNER_LOCK_LIBRARY_DIRECTORY=.
+# shellcheck source=plugins/workmux/scripts/owner-lock.bash
+source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
+unset OWNER_LOCK_LIBRARY_DIRECTORY
+
 readonly SCRIPT_NAME="${0##*/}"
 
 STATE_DIR="${ATTENTION_LOG_DIR:-${HOME}/.local/state/attention-log}"
@@ -155,6 +161,8 @@ TMUX_PANE_ID=""
 
 LOCK_DIR=""
 LOCK_HELD=false
+SESSION_LOCK_TOKEN=""
+ROTATE_RELEASE_ERROR=""
 
 # Set by marker_take_request and marker_newest_wait.
 TAKEN_ID=""
@@ -226,32 +234,47 @@ function file_inode() {
 # never rename twice and lose the first rotation. A lock left by a stopped
 # writer is taken over once it is a minute old.
 function rotate_events() {
+  local token
   mkdir -p "${ROTATE_LOCK}" 2> /dev/null || return 0
-  if ! reserve_owner "${ROTATE_LOCK}/owner"; then
+  if ! owner_lock_reserve "${ROTATE_LOCK}/owner" 9; then
     [[ -n "$(find "${ROTATE_LOCK}/owner" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0
     # Age-based reclaim can remove a live successor's owner file.
     # https://github.com/cboone/agent-harness-plugins/issues/673
     rm "${ROTATE_LOCK}/owner" || return 0
-    reserve_owner "${ROTATE_LOCK}/owner" || return 0
+    owner_lock_reserve "${ROTATE_LOCK}/owner" 9 || return 0
   fi
+  token="${OWNER_LOCK_TOKEN}"
   if ! printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; then
-    rm "${ROTATE_LOCK}/owner"
-    return
+    if ! owner_lock_release "${ROTATE_LOCK}/owner" "${token}"; then
+      ROTATE_RELEASE_ERROR="${OWNER_LOCK_ERROR}"
+    fi
+    return 1
   fi
   file_size "${EVENTS_FILE}"
   if ((FILE_SIZE >= ROTATE_BYTES)); then
     mv -f "${EVENTS_FILE}" "${ROTATED_FILE}" || true
   fi
-  rm "${ROTATE_LOCK}/owner"
+  if owner_lock_release "${ROTATE_LOCK}/owner" "${token}"; then
+    return 0
+  fi
+  ROTATE_RELEASE_ERROR="${OWNER_LOCK_ERROR}"
+  return 1
 }
 
 # Appends line $1 in one write: cat reads the here-string, complete before cat
 # starts, in one read, and O_APPEND places the write after every other writer's.
 function append_line() {
-  local line="${1}"
+  local line="${1}" append_status=0
+  ROTATE_RELEASE_ERROR=""
   file_size "${EVENTS_FILE}"
-  ((FILE_SIZE < ROTATE_BYTES)) || rotate_events
-  cat >> "${EVENTS_FILE}" <<< "${line}"
+  if ((FILE_SIZE >= ROTATE_BYTES)); then
+    rotate_events || :
+  fi
+  cat >> "${EVENTS_FILE}" <<< "${line}" || append_status=$?
+  if [[ -n "${ROTATE_RELEASE_ERROR}" ]]; then
+    echo "${SCRIPT_NAME}: rotation owner release failed: ${ROTATE_RELEASE_ERROR}" >&2
+  fi
+  return "${append_status}"
 }
 
 # Writes event $1 with id $2, built from HOOK_INPUT, the session's name and its
@@ -358,21 +381,13 @@ function transcript_shows_refusal() {
 # Changes run under the session lock, so a hook that closes a state writes after
 # the hook that opened it.
 
-# Takes the session lock, a directory holding its owner's PID. It is taken over
-# from a stopped owner, or after a minute without a PID; a running owner is
-# waited on for about ten seconds and never overtaken. Fails if not taken.
-function reserve_owner() {
-  (
-    set -o noclobber
-    : > "${1}"
-  ) 2> /dev/null
-}
-
+# Reserves the session owner, retaining its file identity before PID recording.
+# Stopped-PID and age recovery retain their existing policy.
 function lock_session() {
   local tries=0 owner
   LOCK_DIR="${SESSIONS_DIR}/${SESSION_ID}.lock"
   mkdir -p "${LOCK_DIR}" 2> /dev/null || return 1
-  while ! reserve_owner "${LOCK_DIR}/pid"; do
+  while ! owner_lock_reserve "${LOCK_DIR}/pid" 8; do
     owner=""
     IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
     if { [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2> /dev/null; } \
@@ -385,21 +400,25 @@ function lock_session() {
     ((tries <= 100)) || return 1
     sleep 0.1
   done
+  SESSION_LOCK_TOKEN="${OWNER_LOCK_TOKEN}"
   LOCK_HELD=true
   if ! printf '%s\n' "$$" > "${LOCK_DIR}/pid"; then
-    unlock_session
+    unlock_session || :
     return 1
   fi
 }
 
 # Releases the session lock if this hook still owns it.
 function unlock_session() {
-  local owner=""
   [[ "${LOCK_HELD}" == true ]] || return 0
   LOCK_HELD=false
-  IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
-  [[ "${owner}" == "$$" ]] || return 0
-  rm -f "${LOCK_DIR}/pid"
+  if owner_lock_release "${LOCK_DIR}/pid" "${SESSION_LOCK_TOKEN}"; then
+    SESSION_LOCK_TOKEN=""
+    return 0
+  fi
+  SESSION_LOCK_TOKEN=""
+  echo "${SCRIPT_NAME}: session owner release failed: ${OWNER_LOCK_ERROR}" >&2
+  return 1
 }
 
 # Adds an open state of kind $1 with id $2 for the payload's agent and tool.
@@ -462,7 +481,7 @@ function record_state() {
 function open_state() {
   [[ -z "${SESSION_ID}" ]] || lock_session || true
   record_state "${1}" "${2}"
-  unlock_session
+  unlock_session || :
 }
 
 function on_permission_request() {
@@ -484,7 +503,7 @@ function on_notification() {
       else
         record_state waiting permission_waiting
       fi
-      unlock_session
+      unlock_session || :
       ;;
     elicitation_dialog | elicitation_url_dialog)
       emit_event elicitation
@@ -504,7 +523,7 @@ function on_tool_result() {
   if [[ -n "${TAKEN_ID}" ]]; then
     emit_event cleared "${TAKEN_ID}"
   fi
-  unlock_session
+  unlock_session || :
 }
 
 # A safeguard refusal reaches StopFailure as an invalid_request error; the
@@ -527,7 +546,7 @@ function clear_session() {
     rm -f "${MARKER_FILE}"
     emit_event cleared "*"
   fi
-  unlock_session
+  unlock_session || :
 }
 
 function on_session_start() {
@@ -545,7 +564,7 @@ function on_session_end() {
 function do_hook() {
   local hook_event="${1:-}" input_head="" session_pattern='"session_id":"([A-Za-z0-9_-]+)"'
   exec > /dev/null
-  trap 'unlock_session; exit 0' EXIT
+  trap 'unlock_session || :; exit 0' EXIT
   # The log holds paths and session names, so only this user may read it.
   umask 077
 

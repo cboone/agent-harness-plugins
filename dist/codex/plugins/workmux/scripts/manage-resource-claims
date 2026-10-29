@@ -8,6 +8,12 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 
+OWNER_LOCK_LIBRARY_DIRECTORY="${BASH_SOURCE[0]%/*}"
+[[ "${OWNER_LOCK_LIBRARY_DIRECTORY}" != "${BASH_SOURCE[0]}" ]] || OWNER_LOCK_LIBRARY_DIRECTORY=.
+# shellcheck source=plugins/workmux/scripts/owner-lock.bash
+source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
+unset OWNER_LOCK_LIBRARY_DIRECTORY
+
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
@@ -28,6 +34,7 @@ readonly LOCK_WAIT_SECONDS
 # Set while a lock is held so the EXIT trap knows what to remove.
 LOCK_DIRECTORY=""
 LOCK_OWNER_ERROR=""
+LOCK_TOKEN=""
 
 function usage() {
   cat << 'USAGE_TEXT'
@@ -355,8 +362,12 @@ function read_claims() {
 function release_lock() {
   [[ -n "${LOCK_DIRECTORY}" ]] || return 0
 
-  rm "${LOCK_DIRECTORY}/owner" || return 1
+  if ! owner_lock_release "${LOCK_DIRECTORY}/owner" "${LOCK_TOKEN}"; then
+    echo "${SCRIPT_NAME}: ${OWNER_LOCK_ERROR}" >&2
+    return 1
+  fi
   LOCK_DIRECTORY=""
+  LOCK_TOKEN=""
 }
 
 # Describes a lock that outlasted the wait, so the message says whether
@@ -415,18 +426,15 @@ function held_lock_report() {
 # exclusively, even when mkdir incorrectly reports success on an existing path.
 function try_acquire_lock() {
   local lock="${1}"
-  if LOCK_OWNER_ERROR="$(
-    (
-      set -o noclobber
-      : > "${lock}/owner"
-    ) 2>&1
-  )"; then
+  if owner_lock_reserve "${lock}/owner" 8; then
+    LOCK_TOKEN="${OWNER_LOCK_TOKEN}"
     LOCK_DIRECTORY="${lock}"
     trap 'release_lock || exit 1' EXIT
     printf '%s' "$$" > "${lock}/owner" \
       || die "cannot record the lock owner in ${lock}"
     return 0
   fi
+  LOCK_OWNER_ERROR="${OWNER_LOCK_ERROR}"
   return 1
 }
 

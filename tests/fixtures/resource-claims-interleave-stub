@@ -41,7 +41,7 @@ case "${0##*/}" in
     ;;
   rm)
     "${CLAIMS_REAL_RM:?}" "$@"
-    if [[ ("${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release || "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == released-successor) && "${CLAIMS_WRITER}" == first && "${1:-}" == "${WORKTREE_RESOURCES_FILE}.lock/owner" ]]; then
+    if [[ ("${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release || "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == released-successor) && "${CLAIMS_WRITER}" == first && "${!#}" == "${WORKTREE_RESOURCES_FILE}.lock/owner" ]]; then
       touch "${CLAIMS_BARRIER}/first-owner-removed"
       await_release release-cleanup 'cleanup barrier timed out'
       exit 0
