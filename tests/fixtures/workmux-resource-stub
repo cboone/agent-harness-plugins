@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Installed as fixture commands by the guarded resource matrix.
-# Scenarios select successful launches, operation failures or scratch-only denials.
+# Stub commands to test launches and resource failures without live services.
 set -euo pipefail
 
 # shellcheck source=bin/lib/git-environment.bash

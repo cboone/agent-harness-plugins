@@ -6,7 +6,7 @@ Local review is complete. Structural loop: one Nit and one Important, ended:
 fixes changed no behavior after the approved instruction-only closure. Focused
 loop: one Nit and one Important, **clean at Important**. The base is pinned to
 `26acdbfec2d70593d563f5fcc78d52f9680d4cd0`. Resource tests pass 23/23; claim
-and owner-lock checks passed after signed base sync. Trims and the remaining
+and owner-lock checks passed after signed base sync. The one-round trims are complete; baseline Semgrep and final
 verification/publication steps are next. No push or PR has occurred.
 
 ## Authority and status
@@ -829,3 +829,27 @@ gpt-6.1-sol/low/872000. Only changed comment/prose units are eligible; generated
 files and recorded evidence/quoted outputs are protected. The parent checks
 meaning and applies accepted proposals. No executable behavior change is
 planned after local review.
+
+## Trims: one round each
+
+Two fresh standalone Codex runs, gpt-6.1-sol/low/872000, read-only,
+approval never, web disabled, external working directory and closed stdin.
+Both exited 0 with nonempty replies matching the required Files classified
+list plus full proposal table. Comment classification covered all six source
+files; prose classification covered all eleven eligible Markdown files with
+profiles. Recorded evidence, quoted data, requirements, conditions, code fences
+and links were protected. No lasting reviewer edits occurred.
+
+Accepted one comment trim: the resource stub header now states what it fakes
+and why. Kept the launcher bootstrap comment because the proposed replacement
+was longer. Rejected the manage-resource-claims proposals at the historical
+199/828 lines because those legacy comments were outside changed hunks; no
+unrelated comment was edited. Accepted the five listed plugin-root substitution
+sentence rewrites; each preserved timing, absolute/version-correct location
+and the no-search/no-shell-variable distinction. No requirement or behavior
+changed. Raw proposals: `trims/comments.reply` and `trims/text.reply`.
+
+Scoped check-mode Prettier, Markdownlint, shfmt and ShellCheck passed after the
+edits; make build and make validate passed. Generated mirrors were rebuilt
+rather than edited. No further code review round is required for these
+comment/prose-only changes. Next: actual baseline scan in a disposable clone.
