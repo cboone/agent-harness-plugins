@@ -1,0 +1,19 @@
+{
+  "findings": 0,
+  "partial_parsing": [
+    {
+      "path": "bin/build-shared-references",
+      "type": "PartialParsing",
+      "message": "Syntax error at line bin/build-shared-references:58:"
+    },
+    {
+      "path": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "type": "PartialParsing",
+      "message": "Syntax error at line plugins/review-pr-with-codex/scripts/codex-aspects:3:"
+    }
+  ],
+  "coverage": ["\u2022 Parsed lines: ~78.1%"],
+  "scanned": 65,
+  "shellcheck": "passed",
+  "baseline": "a2e56c535ed6326cc8d531d945fbb6c627a9b335"
+}

@@ -474,3 +474,11 @@ All five standalone aspects completed exit 0, valid nonempty schema replies and 
 | important: historical child-guidance documentation, comments | Important, reference omits the known limitation                            | Record with follow-up 674, disclosed in PR                       | No edits     |
 
 No Critical finding and no edit: focused round ends **clean at Critical**. The requested structural and focused rounds are now complete on the committed merged tree containing the rooted fixture fix. No further round is launched. Fresh baseline and final checks follow. The prior failed resource-claims job remains explicitly retained under TOOLING's known-flake disposition; no claims code/test change or independent retry is included.
+
+## Final post-recurrence baseline scan
+
+Fresh Semgrep baseline completed exit 0 with zero findings on committed head 9b0bcce2 in disposable shared clone /tmp/523-semgrep-final.ivua2cbx/repo, comparing with actual merge base a2e56c535ed6326cc8d531d945fbb6c627a9b335. Invocation retains SEMGREP_REPO_NAME=cboone/agent-harness-plugins, semgrep scan --config auto --baseline-commit with that merge base, and no metrics suppression.
+
+Coverage is approximately **78.1 percent parsed lines**, over 65 scanned files. The only PartialParsing entries are bin/build-shared-references and plugins/review-pr-with-codex/scripts/codex-aspects, both shell. Targeted ShellCheck passed on both with exit 0. No other parsing error or finding was reported, so the baseline counts under the standing shell-only rule. Concise evidence: final-semgrep-diagnostics.json beside this ledger. Full JSON/log remains in the disposable scan directory.
+
+Final configured lint and full tests follow. The known failed resource-claims observation remains in the report under TOOLING's explicit disposition, regardless of later independent suite results. No source change to that workstream is included.
