@@ -119,14 +119,21 @@ function main() {
     concurrent)
       mkdir "${CASE_DIR}/claim-barrier"
       export ROLLOUT_CLAIM_BARRIER="${CASE_DIR}/claim-barrier"
-      capture_child - --replay-stdout -- run_case error &
+      ROLLOUT_READER=one capture_child - --replay-stdout -- run_case error &
       CHILD_PID=$!
-      capture_child - --replay-stdout -- run_case error &
+      ROLLOUT_READER=two capture_child - --replay-stdout -- run_case error &
       OTHER_PID=$!
-      wait "${CHILD_PID}"
+      local first_status=0 second_status=0
+      wait "${CHILD_PID}" || first_status=$?
       CHILD_PID=""
-      wait "${OTHER_PID}"
+      wait "${OTHER_PID}" || second_status=$?
       OTHER_PID=""
+      if ((first_status != 0 || second_status != 0)); then
+        printf 'Reader statuses: %s %s\n' "${first_status}" "${second_status}" >&2
+        cat "${ROLLOUT_CLAIM_BARRIER}/one.log" "${ROLLOUT_CLAIM_BARRIER}/two.log" >&2
+        find "${CASE_DIR}" -print >&2
+        return 1
+      fi
       await_count 1
       ;;
     identity)
