@@ -22,7 +22,7 @@ function printf() {
 }
 
 function echo() {
-  if [[ "${LOCK_TEST_REPORT_ORDER:-}" == true && "$*" == *'rotation owner release failed:'* ]]; then
+  if [[ "${LOCK_TEST_REPORT_ORDER:-}" == true && "$*" == *'owner-lock: cannot release '* ]]; then
     if ! grep -q '"event":"auto_denied"' "${ATTENTION_LOG_DIR:?}/events.jsonl"; then
       touch "${LOCK_TEST_DIRECTORY:?}/reported-before-append"
     fi

@@ -8,8 +8,23 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 
-OWNER_LOCK_LIBRARY_DIRECTORY="${BASH_SOURCE[0]%/*}"
-[[ "${OWNER_LOCK_LIBRARY_DIRECTORY}" != "${BASH_SOURCE[0]}" ]] || OWNER_LOCK_LIBRARY_DIRECTORY=.
+# Locate bundled dependencies through symlinks without requiring dirname for help.
+function owner_lock_script_directory() {
+  local path="${BASH_SOURCE[0]}" directory target
+  while :; do
+    directory="${path%/*}"
+    [[ "${directory}" != "${path}" ]] || directory=.
+    directory="$(cd -P -- "${directory}" && pwd)" || return 1
+    path="${directory}/${path##*/}"
+    if [[ ! -L "${path}" ]]; then
+      printf '%s' "${directory}"
+      return 0
+    fi
+    target="$(readlink "${path}")" || return 1
+    if [[ "${target}" == /* ]]; then path="${target}"; else path="${directory}/${target}"; fi
+  done
+}
+OWNER_LOCK_LIBRARY_DIRECTORY="$(owner_lock_script_directory)"
 # shellcheck source=plugins/workmux/scripts/owner-lock.bash
 source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
 unset OWNER_LOCK_LIBRARY_DIRECTORY
@@ -33,7 +48,6 @@ readonly LOCK_WAIT_SECONDS
 
 # Set while a lock is held so the EXIT trap knows what to remove.
 LOCK_DIRECTORY=""
-LOCK_OWNER_ERROR=""
 LOCK_TOKEN=""
 
 function usage() {
@@ -363,7 +377,6 @@ function release_lock() {
   [[ -n "${LOCK_DIRECTORY}" ]] || return 0
 
   if ! owner_lock_release "${LOCK_DIRECTORY}/owner" "${LOCK_TOKEN}"; then
-    echo "${SCRIPT_NAME}: ${OWNER_LOCK_ERROR}" >&2
     return 1
   fi
   LOCK_DIRECTORY=""
@@ -425,7 +438,7 @@ function held_lock_report() {
 # lock on the resource, which stays advisory. Bash noclobber creates the owner
 # exclusively, even when mkdir incorrectly reports success on an existing path.
 function try_acquire_lock() {
-  local lock="${1}"
+  local lock="${1}" result
   if owner_lock_reserve "${lock}/owner" 8; then
     LOCK_TOKEN="${OWNER_LOCK_TOKEN}"
     LOCK_DIRECTORY="${lock}"
@@ -433,15 +446,16 @@ function try_acquire_lock() {
     printf '%s' "$$" > "${lock}/owner" \
       || die "cannot record the lock owner in ${lock}"
     return 0
+  else
+    result=$?
   fi
-  LOCK_OWNER_ERROR="${OWNER_LOCK_ERROR}"
-  return 1
+  return "${result}"
 }
 
 function acquire_lock() {
   local file="${1}"
   local lock="${file}.lock"
-  local directory waited=0
+  local directory result waited=0
 
   directory="$(dirname "${file}")"
   mkdir -p "${lock}" \
@@ -450,11 +464,11 @@ function acquire_lock() {
   while :; do
     if try_acquire_lock "${lock}"; then
       break
+    else
+      result=$?
     fi
+    ((result == 1)) || exit 1
     if ((waited >= LOCK_WAIT_SECONDS)); then
-      if [[ ! -e "${lock}/owner" && -n "${LOCK_OWNER_ERROR}" ]]; then
-        die "cannot create ${lock}/owner: ${LOCK_OWNER_ERROR}"
-      fi
       die "$(held_lock_report "${lock}")"
     fi
 

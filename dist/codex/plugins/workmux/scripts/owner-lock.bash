@@ -4,7 +4,6 @@
 # shellcheck disable=SC2034
 
 OWNER_LOCK_TOKEN=""
-OWNER_LOCK_ERROR=""
 OWNER_LOCK_SEQUENCE=0
 OWNER_LOCK_TOKEN_8=""
 OWNER_LOCK_TOKEN_9=""
@@ -16,9 +15,15 @@ OWNER_LOCK_CAPTURED_INODE=""
 
 function owner_lock_inode() {
   local listing
-  listing="$(ls -diL -- "${1}" 2> /dev/null)" || return 1
+  if ! listing="$(ls -diL -- "${1}" 2>&1)"; then
+    echo "owner-lock: cannot inspect reservation ${1}: ${listing}" >&2
+    return 1
+  fi
   read -r OWNER_LOCK_CAPTURED_INODE _ <<< "${listing}"
-  [[ "${OWNER_LOCK_CAPTURED_INODE}" =~ ^[0-9]+$ ]]
+  if [[ ! "${OWNER_LOCK_CAPTURED_INODE}" =~ ^[0-9]+$ ]]; then
+    echo "owner-lock: invalid reservation inode for ${1}" >&2
+    return 1
+  fi
 }
 
 function owner_lock_close() {
@@ -39,23 +44,32 @@ function owner_lock_close() {
   esac
 }
 
-# Sets OWNER_LOCK_TOKEN on success and OWNER_LOCK_ERROR on failure.
+# Reserves path $1 with unused descriptor $2 (8 or 9). Call directly in the
+# shell that will release it; save OWNER_LOCK_TOKEN and retain the descriptor.
+# Returns 0 on acquisition, 1 on contention, 2 on error (diagnosed on stderr).
 function owner_lock_reserve() {
-  local path="${1}" slot="${2}" diagnostic had_noclobber=false result=0
-  OWNER_LOCK_ERROR=""
+  local path="${1}" slot="${2}" diagnostic error had_noclobber=false result=0
+  local LC_ALL=C
+  export LC_ALL
   OWNER_LOCK_TOKEN=""
   case "${slot}" in
-    8) [[ -z "${OWNER_LOCK_TOKEN_8}" ]] || return 2 ;;
-    9) [[ -z "${OWNER_LOCK_TOKEN_9}" ]] || return 2 ;;
+    8) [[ -z "${OWNER_LOCK_TOKEN_8}" ]] || {
+      echo "owner-lock: descriptor 8 is already reserved: ${path}" >&2
+      return 2
+    } ;;
+    9) [[ -z "${OWNER_LOCK_TOKEN_9}" ]] || {
+      echo "owner-lock: descriptor 9 is already reserved: ${path}" >&2
+      return 2
+    } ;;
     *)
-      OWNER_LOCK_ERROR='invalid owner descriptor'
+      echo "owner-lock: invalid owner descriptor for ${path}" >&2
       return 2
       ;;
   esac
   [[ ! -e "${path}" && ! -L "${path}" ]] || return 1
   if ! diagnostic="$(mktemp "${path}.diagnostic.XXXXXX" 2>&1)"; then
-    OWNER_LOCK_ERROR="${diagnostic}"
-    return 1
+    echo "owner-lock: cannot create ${path}: ${diagnostic}" >&2
+    return 2
   fi
   [[ ! -o noclobber ]] || had_noclobber=true
   set -o noclobber
@@ -65,16 +79,19 @@ function owner_lock_reserve() {
     *) result=2 ;;
   esac
   [[ "${had_noclobber}" == true ]] || set +o noclobber
-  OWNER_LOCK_ERROR="$(cat "${diagnostic}")" || OWNER_LOCK_ERROR='cannot read reservation diagnostic'
+  error="$(cat "${diagnostic}")" || error='cannot read reservation diagnostic'
   if ! rm -- "${diagnostic}"; then
     echo "owner-lock: cannot remove reservation diagnostic ${diagnostic}" >&2
   fi
-  ((result == 0)) || return "${result}"
+  if ((result != 0)); then
+    [[ "${error}" != *': cannot overwrite existing file' ]] || return 1
+    echo "owner-lock: cannot create ${path}: ${error}" >&2
+    return 2
+  fi
   if ! owner_lock_inode "/dev/fd/${slot}"; then
-    OWNER_LOCK_ERROR="cannot capture reservation identity for ${path}; manual cleanup may be required"
-    echo "owner-lock: ${OWNER_LOCK_ERROR}" >&2
+    echo "owner-lock: cannot capture reservation identity for ${path}; manual cleanup may be required" >&2
     owner_lock_close "${slot}"
-    return 1
+    return 2
   fi
   OWNER_LOCK_SEQUENCE=$((OWNER_LOCK_SEQUENCE + 1))
   OWNER_LOCK_TOKEN="$$:${slot}:${OWNER_LOCK_SEQUENCE}"
@@ -94,11 +111,10 @@ function owner_lock_reserve() {
   return 0
 }
 
-# Unlinks only the matching reservation; reports failure through OWNER_LOCK_ERROR.
+# Unlinks only the matching reservation and diagnoses failures on stderr.
 # The descriptor prevents inode reuse. Reclaim's check/unlink race remains separate.
 function owner_lock_release() {
-  local path="${1}" token="${2}" slot inode result=0
-  OWNER_LOCK_ERROR=""
+  local path="${1}" token="${2}" slot inode error result=0
   if [[ -n "${token}" && "${token}" == "${OWNER_LOCK_TOKEN_8}" && "${path}" == "${OWNER_LOCK_PATH_8}" ]]; then
     slot=8
     inode="${OWNER_LOCK_INODE_8}"
@@ -106,17 +122,24 @@ function owner_lock_release() {
     slot=9
     inode="${OWNER_LOCK_INODE_9}"
   else
-    OWNER_LOCK_ERROR="reservation identity does not match ${path}"
+    echo "owner-lock: reservation identity does not match ${path}" >&2
     return 1
   fi
   # macOS /dev/fd reports a proxy device, so -ef is not portable here. The
   # retained descriptor prevents reuse of this inode in the preparation filesystem.
-  if ! owner_lock_inode "${path}" || [[ "${OWNER_LOCK_CAPTURED_INODE}" != "${inode}" ]]; then
-    OWNER_LOCK_ERROR="reservation was replaced or removed: ${path}"
+  if ! owner_lock_inode "${path}"; then
     owner_lock_close "${slot}"
     return 1
   fi
-  OWNER_LOCK_ERROR="$(rm -- "${path}" 2>&1)" || result=$?
+  if [[ "${OWNER_LOCK_CAPTURED_INODE}" != "${inode}" ]]; then
+    echo "owner-lock: reservation was replaced or removed: ${path}" >&2
+    owner_lock_close "${slot}"
+    return 1
+  fi
+  error="$(rm -- "${path}" 2>&1)" || result=$?
+  if ((result != 0)); then
+    echo "owner-lock: cannot release ${path}: ${error}" >&2
+  fi
   owner_lock_close "${slot}"
   return "${result}"
 }

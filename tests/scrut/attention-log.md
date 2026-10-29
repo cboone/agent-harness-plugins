@@ -350,7 +350,7 @@ $ fresh
 > test "$(export PATH="${work}/release-bin:${PATH}"; command -v rm)" = "${work}/release-bin/rm" || exit 1
 > head -c 5242880 /dev/zero > "${events_file}"
 > payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/release-bin:${PATH}" LOCK_TEST_REAL_RM="$(command -v rm)" LOCK_TEST_MODE=cleanup LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REPORT_ORDER=true BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/release-error"
-> test -f "${lock}/owner" && test ! -e "${lock}/reported-before-append" && grep -q 'rotation owner release failed:.*injected owner unlink failure' "${work}/release-error" || exit 1
+> test -f "${lock}/owner" && test ! -e "${lock}/reported-before-append" && grep -q 'owner-lock: cannot release.*injected owner unlink failure' "${work}/release-error" || exit 1
 > jq -r '.event' "${events_file}"
 auto_denied
 ```
@@ -365,6 +365,41 @@ $ fresh
 > test ! -e "${ATTENTION_LOG_DIR}/rotate.lock/owner" && grep -q 'injected owner write failure' "${work}/rotation-pid-error" || exit 1
 > tr -d '\000' < "${events_file}" | jq -r '.event'
 auto_denied
+```
+
+## Unexpected session reservation failures retain their diagnostic
+
+```scrut
+$ fresh
+> hook PermissionRequest '{"tool_name":"Bash"}'
+> chmod 500 "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> hook PostToolUse '{"tool_name":"Bash"}' 2> "${work}/session-reserve-error"
+> grep -q 'owner-lock: cannot create.*s1.lock/pid:.*Permission denied' "${work}/session-reserve-error" && test -e "${ATTENTION_LOG_DIR}/sessions/s1.open" || exit 1
+> chmod 700 "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+> hook PostToolUse '{"tool_name":"Bash"}'
+> test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && echo 'reservation failure diagnosed; state cleared after repair'
+reservation failure diagnosed; state cleared after repair
+```
+
+## Unexpected rotation reservation failures retain the event and diagnostic
+
+```scrut
+$ fresh
+> mkdir -p "${ATTENTION_LOG_DIR}/rotate.lock"
+> chmod 500 "${ATTENTION_LOG_DIR}/rotate.lock"
+> head -c 5242880 /dev/zero > "${events_file}"
+> hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/rotation-reserve-error"
+> grep -q 'owner-lock: cannot create.*rotate.lock/owner:.*Permission denied' "${work}/rotation-reserve-error" || exit 1
+> chmod 700 "${ATTENTION_LOG_DIR}/rotate.lock"
+> tr -d '\000' < "${events_file}" | jq -r '.event'
+auto_denied
+```
+
+## A symlinked command loads the helper beside its real script
+
+```scrut
+$ ln -s "${ATTENTION_LOG_BIN}" "${work}/linked-attention" && /bin/bash "${work}/linked-attention" --help | head -1
+Usage: attention-log <command> [options]
 ```
 
 ## The next prompt clears every open state with "*"

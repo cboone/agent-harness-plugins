@@ -27,3 +27,17 @@ stale token refused; current reservation released
 $ "${OWNER_LOCK_PROBE_BIN}" nested
 independent session and rotation identities released
 ```
+
+## Descriptor 8 rejects a contender that passed the existence precheck
+
+```scrut
+$ "${OWNER_LOCK_PROBE_BIN}" contend8
+slot 8: exclusive open refused the second actor without diagnostics
+```
+
+## Descriptor 9 rejects a contender that passed the existence precheck
+
+```scrut
+$ "${OWNER_LOCK_PROBE_BIN}" contend9
+slot 9: exclusive open refused the second actor without diagnostics
+```

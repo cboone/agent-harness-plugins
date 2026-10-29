@@ -80,6 +80,7 @@ SCRUT_ENV := \
 	CACHE_LOCK_HANDOFF_BIN="$(CURDIR)/tests/fixtures/cache-lock-handoff" \
 	OWNER_LOCK_LIBRARY="$(CURDIR)/plugins/workmux/scripts/owner-lock.bash" \
 	OWNER_LOCK_PROBE_BIN="$(CURDIR)/tests/fixtures/owner-lock-probe" \
+	OWNER_CALL_CONTRACT_BIN="$(CURDIR)/tests/fixtures/check-owner-call-contract" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
 	COPILOT_ROUNDS_REPORT_BIN="$(CURDIR)/bin/copilot-rounds-report" \

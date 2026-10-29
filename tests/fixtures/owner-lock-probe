@@ -4,12 +4,98 @@ set -euo pipefail
 # shellcheck source=plugins/workmux/scripts/owner-lock.bash
 source "${OWNER_LOCK_LIBRARY:?}"
 PROBE_DIRECTORY=""
+FIRST_PID=""
+SECOND_PID=""
+
+function await_marker() {
+  local root="${1}" first="${2}" second="${3:-${2}}" attempt
+  for ((attempt = 0; attempt < 300; attempt++)); do
+    [[ ! -e "${root}/${first}" && ! -e "${root}/${second}" ]] || return 0
+    sleep 0.02
+  done
+  echo "owner contention barrier timed out: ${first}" >&2
+  return 1
+}
+
+function probe_cleanup() {
+  local result=$?
+  trap - EXIT
+  touch "${PROBE_DIRECTORY}/open-first" "${PROBE_DIRECTORY}/open-second" "${PROBE_DIRECTORY}/release-first" "${PROBE_DIRECTORY}/release-second" || result=1
+  if [[ -n "${FIRST_PID}" ]]; then wait "${FIRST_PID}" || :; fi
+  if [[ -n "${SECOND_PID}" ]]; then wait "${SECOND_PID}" || :; fi
+  rm -r -- "${PROBE_DIRECTORY}" || result=1
+  exit "${result}"
+}
+
+function contention_actor() {
+  local root="${1}" role="${2}" slot="${3}" token result
+  # mktemp is reached after the helper owner-existence precheck. Both actors
+  # must reach it before either exclusive open is allowed to proceed.
+  function mktemp() {
+    local temporary
+    temporary="$(command mktemp "$@")" || return 1
+    touch "${root}/ready-${role}"
+    await_marker "${root}" "open-${role}" || return 1
+    printf '%s' "${temporary}"
+  }
+  if owner_lock_reserve "${root}/owner" "${slot}"; then
+    token="${OWNER_LOCK_TOKEN}"
+    touch "${root}/owned-${role}"
+    await_marker "${root}" "release-${role}" || return 3
+    if owner_lock_release "${root}/owner" "${token}"; then return 0; else return 3; fi
+  else
+    result=$?
+    printf '%s' "${result}" > "${root}/result-${role}"
+    touch "${root}/done-${role}"
+    return "${result}"
+  fi
+}
+
+function contention_probe() {
+  local root="${1}" slot="${2}" first_status=0 second_status=0
+  "${BASH}" "${BASH_SOURCE[0]}" actor "${root}" first "${slot}" > "${root}/first.log" 2>&1 &
+  FIRST_PID=$!
+  "${BASH}" "${BASH_SOURCE[0]}" actor "${root}" second "${slot}" > "${root}/second.log" 2>&1 &
+  SECOND_PID=$!
+  await_marker "${root}" ready-first || return 1
+  await_marker "${root}" ready-second || return 1
+  touch "${root}/open-first"
+  await_marker "${root}" owned-first || return 1
+  touch "${root}/open-second"
+  await_marker "${root}" done-second owned-second || return 1
+  if [[ -e "${root}/owned-second" ]]; then
+    echo 'two actors acquired the same owner' >&2
+    return 1
+  fi
+  wait "${SECOND_PID}" || second_status=$?
+  SECOND_PID=""
+  [[ "${second_status}" == 1 && "$(cat "${root}/result-second")" == 1 && ! -s "${root}/second.log" ]] || {
+    cat "${root}/second.log"
+    return 1
+  }
+  touch "${root}/release-first"
+  wait "${FIRST_PID}" || first_status=$?
+  FIRST_PID=""
+  [[ "${first_status}" == 0 && ! -e "${root}/owner" ]] || {
+    cat "${root}/first.log"
+    return 1
+  }
+  echo "slot ${slot}: exclusive open refused the second actor without diagnostics"
+}
 
 function main() {
+  if [[ "${1:-}" == actor ]]; then
+    contention_actor "${2}" "${3}" "${4}"
+    return "$?"
+  fi
   local root path first second
   root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
   PROBE_DIRECTORY="${root}"
-  trap 'rm -r -- "${PROBE_DIRECTORY}"' EXIT
+  trap probe_cleanup EXIT
+  if [[ "${1}" == contend8 || "${1}" == contend9 ]]; then
+    contention_probe "${root}" "${1#contend}"
+    return "$?"
+  fi
   path="${root}/owner"
   owner_lock_reserve "${path}" 8 || exit 1
   first="${OWNER_LOCK_TOKEN}"

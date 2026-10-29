@@ -39,12 +39,6 @@
 # holds, and says why.
 set -euo pipefail
 
-OWNER_LOCK_LIBRARY_DIRECTORY="${BASH_SOURCE[0]%/*}"
-[[ "${OWNER_LOCK_LIBRARY_DIRECTORY}" != "${BASH_SOURCE[0]}" ]] || OWNER_LOCK_LIBRARY_DIRECTORY=.
-# shellcheck source=plugins/workmux/scripts/owner-lock.bash
-source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
-unset OWNER_LOCK_LIBRARY_DIRECTORY
-
 # Prints the directory holding this script, following symlinks so the queries
 # are found beside the real script rather than beside a link to it.
 function resolve_script_dir() {
@@ -61,6 +55,8 @@ function resolve_script_dir() {
 SCRIPT_NAME="${0##*/}"
 readonly SCRIPT_NAME
 SCRIPT_DIR="$(resolve_script_dir)"
+# shellcheck source=plugins/workmux/scripts/owner-lock.bash
+source "${SCRIPT_DIR}/owner-lock.bash"
 readonly SCRIPT_DIR
 readonly QUERY_DIR="${SCRIPT_DIR}/bugs-gather-queries"
 
@@ -853,7 +849,6 @@ function cleanup() {
   fi
   if [[ -n "${SAVE_LOCK}" ]]; then
     if ! owner_lock_release "${SAVE_LOCK}/owner" "${SAVE_LOCK_TOKEN}"; then
-      echo "${SCRIPT_NAME}: ${OWNER_LOCK_ERROR}" >&2
       return 1
     fi
   fi
@@ -865,7 +860,7 @@ function cleanup() {
 # different gathers. It waits about ten seconds for another save to finish.
 function acquire_save_lock() {
   local lock="${1}/save.lock"
-  local owner_error=""
+  local result
   local -i tries=0
   mkdir -p -- "${lock}" || die "${E_INVALID}" "cannot create ${lock}"
   while :; do
@@ -875,12 +870,11 @@ function acquire_save_lock() {
       printf '%s' "$$" > "${lock}/owner" \
         || die "${E_INVALID}" "cannot record the lock owner in ${lock}"
       return 0
+    else
+      result=$?
     fi
-    owner_error="${OWNER_LOCK_ERROR}"
+    ((result == 1)) || exit "${E_INVALID}"
     if ((tries >= 100)); then
-      if [[ ! -e "${lock}/owner" && -n "${owner_error}" ]]; then
-        die "${E_INVALID}" "cannot create ${lock}/owner: ${owner_error}"
-      fi
       die "${E_INVALID}" "another sync is saving the cache; if none is running, remove ${lock}/owner"
     fi
     tries=$((tries + 1))

@@ -98,6 +98,13 @@ $ function bugs() {
 > bugs score "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" > /dev/null
 ```
 
+## Invocation through a symlink loads dependencies beside the real script
+
+```scrut
+$ ln -s "${BUGS_GATHER_BIN}" "${work}/linked-bugs" && "${work}/linked-bugs" --help | head -1
+Usage:
+```
+
 ## Gather reports its counts, and a first sync is a cold one
 
 ```scrut

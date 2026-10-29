@@ -153,6 +153,13 @@ $ function setup_claims() {
 > }
 ```
 
+## A symlinked command loads the helper beside its real script
+
+```scrut
+$ link_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && ln -s "${MANAGE_RESOURCE_CLAIMS_BIN}" "${link_dir}/claims" && bash "${link_dir}/claims" --help | head -1
+Usage: manage-resource-claims <subcommand> [options]
+```
+
 ## A claim is recorded and listed
 
 The claim file is created along with its parent directory, so a project that has no `.claude/` yet does not have to make one first.

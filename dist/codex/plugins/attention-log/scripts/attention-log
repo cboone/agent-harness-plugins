@@ -9,8 +9,23 @@
 # Must parse under macOS /bin/bash 3.2, what `env bash` finds without Homebrew.
 set -euo pipefail
 
-OWNER_LOCK_LIBRARY_DIRECTORY="${BASH_SOURCE[0]%/*}"
-[[ "${OWNER_LOCK_LIBRARY_DIRECTORY}" != "${BASH_SOURCE[0]}" ]] || OWNER_LOCK_LIBRARY_DIRECTORY=.
+# Locate the bundled helper through symlinks using only builtins on direct paths.
+function owner_lock_script_directory() {
+  local path="${BASH_SOURCE[0]}" directory target
+  while :; do
+    directory="${path%/*}"
+    [[ "${directory}" != "${path}" ]] || directory=.
+    directory="$(cd -P -- "${directory}" && pwd)" || return 1
+    path="${directory}/${path##*/}"
+    if [[ ! -L "${path}" ]]; then
+      printf '%s' "${directory}"
+      return 0
+    fi
+    target="$(readlink "${path}")" || return 1
+    if [[ "${target}" == /* ]]; then path="${target}"; else path="${directory}/${target}"; fi
+  done
+}
+OWNER_LOCK_LIBRARY_DIRECTORY="$(owner_lock_script_directory)"
 # shellcheck source=plugins/workmux/scripts/owner-lock.bash
 source "${OWNER_LOCK_LIBRARY_DIRECTORY}/owner-lock.bash"
 unset OWNER_LOCK_LIBRARY_DIRECTORY
@@ -162,7 +177,7 @@ TMUX_PANE_ID=""
 LOCK_DIR=""
 LOCK_HELD=false
 SESSION_LOCK_TOKEN=""
-ROTATE_RELEASE_ERROR=""
+ROTATION_TOKEN=""
 
 # Set by marker_take_request and marker_newest_wait.
 TAKEN_ID=""
@@ -234,46 +249,53 @@ function file_inode() {
 # never rename twice and lose the first rotation. A lock left by a stopped
 # writer is taken over once it is a minute old.
 function rotate_events() {
-  local token
+  local result
   mkdir -p "${ROTATE_LOCK}" 2> /dev/null || return 0
-  if ! owner_lock_reserve "${ROTATE_LOCK}/owner" 9; then
+  if owner_lock_reserve "${ROTATE_LOCK}/owner" 9; then
+    ROTATION_TOKEN="${OWNER_LOCK_TOKEN}"
+  else
+    result=$?
+    ((result == 1)) || return "${result}"
     [[ -n "$(find "${ROTATE_LOCK}/owner" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0
     # Age-based reclaim can remove a live successor's owner file.
     # https://github.com/cboone/agent-harness-plugins/issues/673
     rm "${ROTATE_LOCK}/owner" || return 0
-    owner_lock_reserve "${ROTATE_LOCK}/owner" 9 || return 0
-  fi
-  token="${OWNER_LOCK_TOKEN}"
-  if ! printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; then
-    if ! owner_lock_release "${ROTATE_LOCK}/owner" "${token}"; then
-      ROTATE_RELEASE_ERROR="${OWNER_LOCK_ERROR}"
+    if owner_lock_reserve "${ROTATE_LOCK}/owner" 9; then
+      ROTATION_TOKEN="${OWNER_LOCK_TOKEN}"
+    else
+      return "$?"
     fi
+  fi
+  if ! printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; then
     return 1
   fi
   file_size "${EVENTS_FILE}"
   if ((FILE_SIZE >= ROTATE_BYTES)); then
     mv -f "${EVENTS_FILE}" "${ROTATED_FILE}" || true
   fi
-  if owner_lock_release "${ROTATE_LOCK}/owner" "${token}"; then
-    return 0
-  fi
-  ROTATE_RELEASE_ERROR="${OWNER_LOCK_ERROR}"
-  return 1
+  return 0
 }
 
 # Appends line $1 in one write: cat reads the here-string, complete before cat
 # starts, in one read, and O_APPEND places the write after every other writer's.
 function append_line() {
   local line="${1}" append_status=0
-  ROTATE_RELEASE_ERROR=""
+  local rotation_status=0
+  ROTATION_TOKEN=""
   file_size "${EVENTS_FILE}"
   if ((FILE_SIZE >= ROTATE_BYTES)); then
-    rotate_events || :
+    rotate_events || rotation_status=$?
   fi
   cat >> "${EVENTS_FILE}" <<< "${line}" || append_status=$?
-  if [[ -n "${ROTATE_RELEASE_ERROR}" ]]; then
-    echo "${SCRIPT_NAME}: rotation owner release failed: ${ROTATE_RELEASE_ERROR}" >&2
+  if [[ -n "${ROTATION_TOKEN}" ]]; then
+    if owner_lock_release "${ROTATE_LOCK}/owner" "${ROTATION_TOKEN}"; then
+      ROTATION_TOKEN=""
+    else
+      ROTATION_TOKEN=""
+      return 1
+    fi
   fi
+  ((rotation_status == 0)) || return "${rotation_status}"
   return "${append_status}"
 }
 
@@ -384,10 +406,16 @@ function transcript_shows_refusal() {
 # Reserves the session owner, retaining its file identity before PID recording.
 # Stopped-PID and age recovery retain their existing policy.
 function lock_session() {
-  local tries=0 owner
+  local tries=0 owner result
   LOCK_DIR="${SESSIONS_DIR}/${SESSION_ID}.lock"
   mkdir -p "${LOCK_DIR}" 2> /dev/null || return 1
-  while ! owner_lock_reserve "${LOCK_DIR}/pid" 8; do
+  while :; do
+    if owner_lock_reserve "${LOCK_DIR}/pid" 8; then
+      break
+    else
+      result=$?
+    fi
+    ((result == 1)) || return 1
     owner=""
     IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
     if { [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2> /dev/null; } \
@@ -417,7 +445,6 @@ function unlock_session() {
     return 0
   fi
   SESSION_LOCK_TOKEN=""
-  echo "${SCRIPT_NAME}: session owner release failed: ${OWNER_LOCK_ERROR}" >&2
   return 1
 }
 
