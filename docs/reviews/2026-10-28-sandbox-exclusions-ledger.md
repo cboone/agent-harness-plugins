@@ -2,12 +2,12 @@
 
 ## Current status
 
-**stopped: recurring defect**. The first structural Important round found an
-active tmpfile review instruction repeating the sandbox guarantee removed in
-the Nit round. The required conductor design decision is pending. No product
-fix has been applied to that instruction. Last reviewed head: `9372c20c`.
-No push or PR has occurred; focused reviews, trims, Semgrep, final lint/full
-checks, version audit and tidy remain pending. Resource tests pass 21/21.
+Active through the ready PR. TOOLING selected the structural proposal and
+cleared the recurrence gate. The scoped tmpfile review instruction now defers
+to the canonical reference; the class-wide active-guidance inventory is
+recorded below. Structural loop: one Nit, one Important, **ended: fixes changed
+no behavior** after the instruction-only closure. Focused reviews are next.
+Resource tests pass 21/21. No push or PR has occurred.
 
 ## Authority and status
 
@@ -583,3 +583,55 @@ A reviewable candidate patch is retained outside the worktree at
 been applied. TOOLING must choose the structural closure before work resumes.
 All reviewer, plant and private-server processes have completed; none remains
 running. This stop changes only the ledger, not the reviewed product tree.
+
+## TOOLING structural decision and closure
+
+TOOLING directed taking the prepared proposal in this conversation, keeping
+the canonical tmpfile reference as the one policy authority, inventorying hidden
+active guidance, preserving the Important count and continuing through the PR.
+The pause on new work does not pause this work in flight. The recurrence gate
+is therefore cleared; the earlier stop remains historical evidence.
+
+Applied `recurrence-proposal.diff` to the existing scoped instruction only.
+The file now links the canonical reference, removes universal directory and
+matching guarantees, permits reporting actual resource gaps, and preserves the
+non-secret versus sensitive temporary-file distinction. No runtime settings,
+permissions, new tool or watcher changed.
+
+### Class-wide repository guidance inventory
+
+Inventory includes tracked AGENTS/CLAUDE files, hidden review/approval configs,
+review checklists and Codex mirrors. No user profile or credential file was
+opened. The complete per-path inventory and decisions are retained at
+`/private/tmp/sandbox512-live.dW1szP/active-guidance-inventory.json`: 40 active
+guidance/config files, 6 same-source links and 565 generated paths. A textual
+sweep additionally found 84 generated files with relevant terms. Each instance
+was fixed or classified as follows:
+
+| Instance                                                  | Disposition                                                                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `.github/instructions/tmpfile.instructions.md`            | Fixed: canonical reference is authoritative; no duplicated platform guarantees or blanket suppression              |
+| `.github/copilot-instructions.md`                         | Recorded: command approval/pipeline conventions, scoped instruction links and neutral terms; no resource exemption |
+| `.github/instructions/plugin-permissions.instructions.md` | Recorded: Claude command-rule syntax, not resource access; left unchanged                                          |
+| `.github/instructions/dependabot.instructions.md`         | Recorded: script command approval and harness-specific locator rules; no resource-access promise                   |
+| `.github/instructions/shell.instructions.md`              | Recorded: shell semantics and fixture conventions; no sandbox writable-directory guarantee                         |
+| `.github/skills/code-review/write-bash-scripts.md`        | Recorded: strict mode and sourced-library exception; generated checklist, unchanged                                |
+| `.github/skills/code-review/write-scrut-tests.md`         | Recorded: isolated temporary test locations, not guaranteed write permission; generated checklist, unchanged       |
+| Root and scoped AGENTS files                              | Recorded: source/generator boundaries and neutral vocabulary; no exemption or writable-directory guarantee         |
+| Six CLAUDE/same-source links                              | Recorded: point to the corresponding policy source; no independent text to edit                                    |
+| `.claude/settings.json`                                   | Recorded: tracked project approval config, no sandbox/excludedCommands field; unchanged                            |
+| `.agents/plugins/marketplace.json`                        | Recorded: generated catalog descriptions/keywords only; no resource policy                                         |
+| CI/release/traffic/version-audit workflows                | Recorded: GitHub Actions token permissions, unrelated to harness resources                                         |
+| `REVIEW.md`                                               | Recorded: severity/reporting contract; no resource guarantee                                                       |
+| Other tracked review guidance with no relevant statements | Recorded individually in the per-path inventory; no class instance                                                 |
+| Codex generated mirrors                                   | Canonical parity verified by make build and make validate; never hand-edited                                       |
+
+The original recurrence label and severity remain Important; the finding is
+now taken and resolved by the conductor-selected structural correction.
+The correction is instruction text only and requires no extra structural
+round under the process's prose-only rule. **Structural end state: ended:
+fixes changed no behavior.** Count stays one Nit and one Important. The next
+independent focused loop starts its own Nit round.
+
+Scoped Markdown formatting/lint, make build and make validate passed after the
+closure. Product/helper/test code did not change during this correction.
