@@ -64,7 +64,7 @@ Reject `--no-issue` with any fan-out flag before classifying the argument, since
 
 The single-issue workflow applies, with these changes:
 
-- **Step 3:** fetch every issue into its own `mktemp` file, and remove every one once the worktree exists or the run stops. Warn about every closed issue and ask about them in one question, before anything is composed. Drop each issue the user declines and remove its JSON file; stop if none remain. Every later step works with the remaining issues only. The first remaining issue is the primary one: it supplies `--issue` to the launcher, so it owns the branch number and the lookup that reuses an existing branch. Name the candidate for the combined work, not only the primary issue.
+- **Step 3:** fetch every issue into its own `mktemp` file, and remove every one once the worktree exists or the run stops. Warn about every closed issue and ask about them in one question, before anything is composed. Drop each issue the user declines and remove its JSON file; stop if none remain. Every later step works with the remaining issues only. The first remaining issue leads the branch name. Pass every remaining number with repeated `--issue` flags; for example `--generated-name fix/verify-email --issue 4523 --issue 4503` produces `fix/4523-4503-verify-email`. Reuse requires every requested issue on the same branch, even when their order changes; ask for an explicit choice if several branches match all the numbers. Name the candidate for the combined work, not only the primary issue.
 - **Step 5:** run `compose-issue-prompt` once per issue, in the order given, and join the outputs with a blank line. Check every composition before invoking the launcher: if any helper fails, stop and remove every issue JSON file instead of launching with a partial prompt. Pass no `--chain-command`, as for one issue.
 
 ```bash
@@ -73,7 +73,7 @@ The single-issue workflow applies, with these changes:
   prompt_42="$(bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON_42)" || exit
   prompt_57="$(bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON_57)" || exit
   printf '%s\n\n%s\n' "${prompt_42}" "${prompt_57}" |
-    bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue 42 --base "BASE_BRANCH"
+    bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue 42 --issue 57 --base "BASE_BRANCH"
 )
 ```
 
@@ -368,7 +368,15 @@ Run every phase 1 check before launching anything, so a problem with the third i
 
    Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one. Exit 1 means git could not list local branches: stop, report the error, and remove every JSON file, since no branch choice can be trusted.
 
-1. **Ask every outstanding question in one batch:** whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file.
+1. **Ask every outstanding question in one batch:** whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file. Recheck the remaining branch choices for duplicates after any choice changes.
+
+1. **Check duplicate resolved branches before any launch or marking.** Pass every remaining issue and its resolved branch to the launcher; use an empty string when no branch exists:
+
+   ```bash
+   bash "SCRIPTS_DIR/launch-workmux" --check-fan-out-branches 42 "RESOLVED_BRANCH_42" 57 "RESOLVED_BRANCH_57"
+   ```
+
+   Exit 1 names the issues and shared branch and asks for distinct explicit branches. Stop, remove every issue JSON file and ask for those choices; do not select branches automatically. On resume, restart phase 1 to refetch and validate issue context. Then check the explicit choices with the same command before launching anything. Pass the chosen names positionally in phase 2 so singleton issue lookup cannot replace them with the combined branch again.
 
 Nothing has been launched yet, so stopping anywhere in this phase leaves nothing behind but the JSON files, which are removed on the way out.
 

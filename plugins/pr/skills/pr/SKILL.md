@@ -114,12 +114,21 @@ Search for GitHub issues that this branch addresses. Record each candidate as a 
 
 Extract the current branch name. Look for issue numbers in patterns like:
 
+- `TYPE/N1-N2-description` (e.g., `fix/4523-4503-verify-email` → #4523 and #4503). Every number in the leading numeric run names an issue, in branch order.
 - `TYPE/N-description` (e.g., `fix/42-login-bug` → #42)
 - `TYPE/description-N` (e.g., `feature/login-bug-42` → #42)
 - `TYPE/issue-N` or `TYPE/issue-N-description` (e.g., `fix/issue-42` → #42)
 - `N-description` (e.g., `42-add-login` → #42)
 
-For each candidate number, verify it refers to an existing issue:
+Use the bundled helper to extract leading numeric runs, including every issue in a combined branch:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/branch-issues" "BRANCH"
+```
+
+If the plugin-root placeholder was not substituted, resolve `../../scripts/branch-issues` from the directory containing the loaded `skills/pr/SKILL.md`. Confirm it with `test -x` and use that absolute quoted path. Do not use a version-blind search or another installed copy. If the helper cannot be resolved or run, report the failure and skip branch-name detection; retain the other detection strategies.
+
+Keep the other patterns above as additional candidate sources. For each candidate number, verify it refers to an existing issue:
 
 ```bash
 gh issue view NUMBER --repo <pr-target> --json number,title,state,url --jq 'select(.url | split("?")[0] | split("#")[0] | test("/issues/[0-9]+/?$")) | .number' 2> /dev/null
@@ -335,7 +344,7 @@ Closes #N
 
 Keep the summary to 1-4 bullet points. Focus on what changed and why.
 
-If connected issues in the PR target were detected in step 2, add a `## Closes` section after `## Test plan`. Use one line per issue with the appropriate keyword:
+If connected issues in the PR target were detected in step 2, add a `## Closes` section after `## Test plan`. Use one line per issue with the appropriate keyword, including every verified issue from a combined branch:
 
 - When the changes fix a bug: `Fixes #N`
 - Otherwise: `Closes #N`

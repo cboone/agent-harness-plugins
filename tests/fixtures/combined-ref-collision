@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Exercise ref namespace collisions only inside a fixture-owned bare repository.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+scratch=""
+
+function expect_collision() {
+  local ref="${1}" commit="${2}" error
+  # Retain expected failures in error; replay an unexpected diagnostic below.
+  if capture_child error -- git update-ref "${ref}" "${commit}" 2> /dev/null; then
+    echo "expected namespace collision for ${ref}" >&2
+    return 1
+  fi
+  [[ "${error}" == *"refs/heads/fix/4523"* && "${error}" == *"refs/heads/fix/4523/4503-slug"* && "${error}" == *"exists; cannot create"* ]] || {
+    printf '%s\n' "${error}" >&2
+    return 1
+  }
+}
+
+function main() {
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+  trap 'rm -r -- "${scratch}"' EXIT
+  local commit git_source="${REPO_ROOT}" source_commit
+  capture_child - --stdout "${scratch}/commit" -- git -C "${git_source}" cat-file commit HEAD
+  case "${1:-}" in
+    --shallow-source)
+      git init --quiet --bare --initial-branch=main "${scratch}/source"
+      source_commit="$(git -C "${scratch}/source" hash-object -w -t commit --stdin < "${scratch}/commit")"
+      git -C "${scratch}/source" update-ref refs/heads/main "${source_commit}"
+      printf '%s\n' "${source_commit}" > "${scratch}/source/shallow"
+      git_source="${scratch}/source"
+      [[ "$(git -C "${git_source}" rev-parse --is-shallow-repository)" == true ]]
+      echo 'shallow source: true'
+      ;;
+    '') ;;
+    *)
+      echo 'Usage: combined-ref-collision [--shallow-source]' >&2
+      return 1
+      ;;
+  esac
+  git init --quiet --bare --initial-branch=main "${scratch}/repo"
+  cd "${scratch}/repo"
+  capture_child - --stdout "${scratch}/commit" -- git -C "${git_source}" cat-file commit HEAD
+  commit="$(git hash-object -w -t commit --stdin < "${scratch}/commit")"
+  [[ "${commit}" == "$(git -C "${git_source}" rev-parse HEAD)" ]]
+
+  git update-ref refs/heads/fix/4523 "${commit}"
+  expect_collision refs/heads/fix/4523/4503-slug "${commit}"
+  echo 'parent branch blocks combined child: yes'
+  git update-ref -d refs/heads/fix/4523 "${commit}"
+
+  git update-ref refs/heads/fix/4523/4503-slug "${commit}"
+  expect_collision refs/heads/fix/4523 "${commit}"
+  echo 'combined child blocks parent branch: yes'
+
+  git update-ref refs/heads/fix/4523-4503-slug "${commit}"
+  git update-ref -d refs/heads/fix/4523/4503-slug "${commit}"
+  git update-ref refs/heads/fix/4523 "${commit}"
+  [[ "$(git rev-parse refs/heads/fix/4523-4503-slug)" == "${commit}" ]]
+  echo 'hyphen-separated combined branch coexists: yes'
+}
+
+main "$@"
