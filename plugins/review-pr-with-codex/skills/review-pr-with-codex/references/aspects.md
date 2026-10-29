@@ -29,3 +29,12 @@ Read the diff of every bucket in the scope, not only the file names. When unsure
 - **`simplify`**: selected explicitly by name only, then gated by step 6 of the workflow. It never runs alongside the review aspects.
 
 Record every aspect left out, with the specific reason, for the report's **Aspect runs** table.
+
+## Internal cleanup angles
+
+After selected review aspects succeed, simplify coordinates four read-only
+cleanup aspects: `cleanup-reuse`, `cleanup-simplification`, `cleanup-efficiency`
+and `cleanup-altitude`. These are internal tasks, excluded from public selection
+and correctness gates. Altitude uses this project's abstraction-level checklist;
+it is not a recovered Claude checklist. See the workflow for the inline fallback
+and the single editing stage.

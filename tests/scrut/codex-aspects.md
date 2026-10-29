@@ -106,7 +106,7 @@ identical
 
 ```scrut
 $ "${CODEX_ASPECTS_BIN}" prompt --aspect style --scope "${FIXTURE}/scope.json" 2>&1
-codex-aspects: unknown aspect 'style'; expected one of: code errors tests comments types simplify
+codex-aspects: unknown aspect 'style'; expected one of: code errors tests comments types simplify cleanup-reuse cleanup-simplification cleanup-efficiency cleanup-altitude
 [1]
 ```
 

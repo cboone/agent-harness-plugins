@@ -110,10 +110,51 @@ An empty `changed` measures disk content only, while `scope_changed` checks revi
 
 Run `simplify` only when explicitly selected and every selected review aspect succeeded. Save exactly those validated review objects to `<tmp>/initial-results.json`, excluding failed or missing aspects. Save the run array, or every native `validate` status, to `<tmp>/initial-statuses.json`. Check eligibility with `codex-aspects gate --scope <tmp>/scope.json --after <tmp>/scope-after.json --results <tmp>/initial-results.json --statuses <tmp>/initial-statuses.json --aspect <name> [--aspect <name>...]`, passing every selected aspect exactly once. The gate rejects invalid or empty results, snapshot changes, Critical findings and incomplete or failed coverage, including a process that failed after writing valid output. Eligibility never authorizes edits. Otherwise record simplification as skipped with the reason.
 
+Before the editing stage, run four independent **read-only cleanup reviewers**:
+`cleanup-reuse`, `cleanup-simplification`, `cleanup-efficiency` and `cleanup-altitude`.
+These internal names work with `prompt`, `run` and `validate`, but cannot be
+selected as public review aspects or satisfy the correctness gate. Each uses
+the same scope, historical guidance, schema and completion checks as a review
+aspect. Their checklists live beside the simplify instructions. Cleanup does
+not search for correctness bugs.
+
+On the standalone path, create `<tmp>/cleanup` outside the tree and run:
+
+```bash
+codex-aspects run --aspect cleanup-reuse --aspect cleanup-simplification \
+  --aspect cleanup-efficiency --aspect cleanup-altitude \
+  --scope <tmp>/scope-after.json --out-dir <tmp>/cleanup \
+  --model <model> --effort <level> --window <tokens> > <tmp>/cleanup/statuses.json
+```
+
+On the native path, render the four tasks with `prompt` and schedule independent
+Codex reviewers within available slots. Save exact replies as
+`<tmp>/cleanup/cleanup-<angle>.json`, validate each and save the four validation
+statuses as one array at `<tmp>/cleanup/statuses.json`. Wait until every reviewer
+has stopped. Check the scope again as in step 5; lasting changes invalidate
+cleanup findings and block editing. Never revert another session's changes.
+
+If independent reviewers are unavailable, use the **inline fallback**: omit
+`--cleanup-dir`, complete all four checklists in one read-only pass before
+editing, and report the reason and actual angles completed. Report a failed or
+incomplete fan-out as failed, never clean. If all launched workers
+are confirmed stopped and the scope is still valid, the inline pass may cover
+all four angles anew; retain the failed statuses and disclose the retry.
+
+Pass `--cleanup-dir <tmp>/cleanup` to the simplify `prompt` or `run` only after
+all four independent reviewers succeeded. The helper validates their results,
+snapshots, membership and statuses before incorporating them as untrusted data.
+Deduplicate cleanup findings by mechanism, keeping contributing angle names;
+different mechanisms on one line stay separate. Each finding names a concrete
+cost. One editing stage then handles the merged findings and reports every
+skipped fix with a reason. Cleanup findings remain separate from bug findings.
+
 Run it alone with `<tmp>/scope-after.json` from step 5. Immediately before editing, recapture that scope and rerun the gate against the original reviewed scope. Never pair a refreshed scope with stale review results after a pause.
 
 - **`codex exec` path:** `codex-aspects run --aspect simplify --scope <tmp>/scope-after.json --out-dir <tmp>/out --reviewed-scope <tmp>/scope.json --results <tmp>/initial-results.json --statuses <tmp>/initial-statuses.json --reviewed-aspect <name>... [--guide-name <name>...] [--model <model>] [--effort <level>] [--window <tokens>]`, which reruns the gate, recaptures the scope and refuses to launch unless it still matches `--scope`, then uses `--sandbox workspace-write`. Another session can still edit between that check and the launch.
-- **Subagent path:** one subagent with the rendered `simplify` task, then `validate` its reply.
+- **Subagent path:** one subagent with the rendered `simplify` task, then `validate` its reply. Include `--cleanup-dir <tmp>/cleanup` when rendering its task if the four independent reviewers completed.
+
+Add `--cleanup-dir <tmp>/cleanup` to the standalone simplify command above when using completed independent reviewers; omit it only for the disclosed inline fallback.
 
 Afterwards run `review-scope` again and `codex-aspects changes --before <tmp>/scope-after.json --after <tmp>/scope-final.json`. Report exactly the paths in `changed`, their content diff using the shared policy (`review_diff <before_tree> <after_tree>` after sourcing the bundled `review-git.bash`), and any prohibited edits in `outside_scope`. For submodule paths, compare the corresponding child scope trees with `review_git -C <submodule> diff "${REVIEW_DIFF_OPTIONS[@]}" <before_tree> <after_tree>`, recursively; the parent trees contain gitlinks only. Use the measured diff rather than `simplify`'s account, even when simplification failed; report that failure too.
 
@@ -168,7 +209,7 @@ Merge the outputs into one report, in this shape:
 - Attribute every finding to its aspect, and give `file:line`, or `file` alone when `line` is null.
 - When two aspects report the same problem at the same place, list it once under the higher severity and name both aspects.
 - The **Aspect runs** table lists every aspect: ran, failed with the reason the helper gave, or skipped with the reason from step 2 or 6. Add the entry point, model, effort and window, and whether the aspects ran in parallel or sequentially.
-- **Simplify changes** lists measured changes, or says why `simplify` did not run. Include validation and final review when edits occurred. Only findings bound to the final snapshot belong in the recommended action list.
+- **Simplify changes** lists measured changes, or says why `simplify` did not run. Include validation and final review when edits occurred. Report cleanup execution mode, actual angle coverage, merged mechanisms, concrete costs, fixed findings and skipped findings with reasons, separately from bug review. Only findings bound to the final snapshot belong in the recommended action list.
 - When any aspect failed, say so before the findings, and say that the review is incomplete. Never present a failed aspect's area as clean.
 
 Print the report in the conversation. The skill saves nothing, commits nothing and pushes nothing; `simplify`'s edits stay in the working tree for the user to review.
