@@ -1,0 +1,7 @@
+{
+  "aspect": "types",
+  "findings": [],
+  "reviewed": "00da2c4cc09abb4892f56b99da733d15ba7968b1",
+  "strengths": ["Scope record: encapsulation 8/10, invariant expression 8/10, invariant usefulness 10/10, invariant enforcement 9/10; construction binds normalized and raw trees, index, membership and recursive inputs, rejects unstable captures, and recursively validates optional legacy-compatible raw_tree fields.", "Raw tree entry: encapsulation 9/10, invariant expression 9/10, invariant usefulness 10/10, invariant enforcement 9/10; construction pairs measured disk kinds and owner-execute modes with regular-file bytes, exact link text or checkout HEAD, while intentionally absent sparse paths remain omitted."],
+  "summary": "Reviewed the complete 33-path fixed-base scope, including tests and documentation, for type and data-model invariants. No reportable type-design defects were found; clean at Nit. Review was static and read-only, with no tests, builds or formatters run."
+}

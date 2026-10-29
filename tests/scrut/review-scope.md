@@ -33,7 +33,7 @@ Print one JSON object describing every local change and a snapshot identifier
 bound to their content: committed branch changes, staged changes, unstaged
 changes, and untracked files.
 
-The snapshot covers HEAD, the base tip and merge base, disk content, index
+The snapshot covers HEAD, the base tip and merge base, raw disk bytes, index
 content and bucket membership. Staging, unstaging and intent-to-add move it.
 The separate tree identifier measures content as Git would store it; byte
 changes removed by Git's normalization do not move it.
