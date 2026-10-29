@@ -260,3 +260,9 @@ TOOLING confirmed the combined contract: helper-owned stderr, quiet expected exc
 The direct canonical-source stderr-drop plant was rejected by the call-site checker with exit 1 and the exact offending call. The ordinary-redirection plant passed syntax validation but failed both descriptor-8 and descriptor-9 forced-contention cases, each reporting that two actors acquired the owner. Four other identity cases passed; make returned 2. Sources and generated copies were restored. The contract's three permanent negative cases also reject redirection, capture and ignored status. Artifacts: `/tmp/656-contract-plants.UiJlLv`.
 
 Updated targeted results before final-tree acceptance: resource 108/108, cache 92/92, attention 62/62, identity/contention 6/6 on Bash 5 and Bash 3.2, call-site contract 4/4. Final Linux validation and the next Critical-only round remain pending. Review counts remain Nit, Important 1, Important 2 and Critical 1; none restart.
+
+### Final-helper Linux result and Critical 2
+
+[Final-helper Linux run](https://github.com/cboone/agent-harness-plugins/actions/runs/40806645450), head 45bf08b9, passed all ten shards of 100 concurrent pairs: 0/1,000 lost claims and zero writer errors in 2,000 writers. This includes the shared identity helper, helper-owned diagnostics, symlink fixes and pending-data ordering. Baseline remains 368/1,000 losses (36.8%); final helper 0/1,000 (0%). Full log: `/tmp/656-final-helper-linux.log`. The temporary workflow was removed again in its own signed commit before the next review and PR.
+
+Fresh origin/main versions are workmux 1.1.1, publish-report-board 1.3.1 and attention-log 1.0.0, so all three branch patch bumps remain forward. Final Bash 3.2 controls passed identity/contention 6/6 and call-site contract 4/4. The focused loop continues as Critical-only round 2 under TOOLING's explicit call, with all earlier counts retained. No new review result is claimed yet.
