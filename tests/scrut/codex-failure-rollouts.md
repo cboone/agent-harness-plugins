@@ -51,11 +51,32 @@ Error: MONITOR | atlas: w sample | API limit reached | Funk
 
 ## Concurrent readers of the same thread
 
-A committed mkdir stub holds both readers at the claim operation. Child-output capture waits for detached delivery diagnostics to close before the alert count is checked.
+A committed boundary fixture holds each reader at the exclusive file claim. The parent releases both through separate FIFOs after receiving both ready messages. Child-output capture waits for detached delivery diagnostics to close before the alert count is checked.
 
 ```scrut
 $ "${CHECK_CODEX_FAILURES_BIN}" concurrent
 Error: MONITOR | atlas: w sample | API limit reached | Funk
+```
+
+## Existing directory claims remain valid
+
+```scrut
+$ "${CHECK_CODEX_FAILURES_BIN}" legacy-claim
+legacy directory preserved; no replay
+```
+
+## Missing concurrent reader reports arrivals and statuses
+
+```scrut
+$ "${CHECK_CODEX_FAILURES_BIN}" concurrent-timeout
+readiness timeout identifies missing reader; both statuses retained
+```
+
+## Claim errors retain filesystem diagnostics
+
+```scrut
+$ LC_ALL=C "${CHECK_CODEX_FAILURES_BIN}" claim-error
+claim failed with filesystem diagnostic; no delivery
 ```
 
 ## Identity and missing-message fallbacks
