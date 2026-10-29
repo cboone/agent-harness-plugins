@@ -63,7 +63,7 @@ function main() {
   stub_dir="${REPO_ROOT:?}/tests/fixtures/notify-rollout"
   export PATH="${stub_dir}:${PATH}"
   local tool
-  for tool in alerter tmux sleep wc; do
+  for tool in alerter tmux sleep wc mkdir; do
     [[ "$(command -v "${tool}")" == "${stub_dir}/${tool}" ]] || return 1
   done
   export XDG_CACHE_HOME="${CASE_DIR}/cache" XDG_CONFIG_HOME="${CASE_DIR}/config"
@@ -73,6 +73,7 @@ function main() {
   unset NOTIFY_TIER NOTIFY_SOUND_SET CLAUDE_PROJECT_DIR CLAUDE_CODE_SESSION_ID
   unset ROLLOUT_BOUNDARY_READY ROLLOUT_BOUNDARY_RELEASE
   unset ROLLOUT_ALERTER_STATUS
+  unset ROLLOUT_CLAIM_BARRIER
   export ROLLOUT_ATTEMPTS="${CASE_DIR}/attempts"
   export ROLLOUT_EXECUTIONS="${CASE_DIR}/executions"
   : > "${ROLLOUT_ALERTS}"
@@ -116,9 +117,11 @@ function main() {
       await_count 2
       ;;
     concurrent)
-      run_case error &
+      mkdir "${CASE_DIR}/claim-barrier"
+      export ROLLOUT_CLAIM_BARRIER="${CASE_DIR}/claim-barrier"
+      capture_child - --replay-stdout -- run_case error &
       CHILD_PID=$!
-      run_case error &
+      capture_child - --replay-stdout -- run_case error &
       OTHER_PID=$!
       wait "${CHILD_PID}"
       CHILD_PID=""

@@ -51,6 +51,8 @@ Error: MONITOR | atlas: w sample | API limit reached | Funk
 
 ## Concurrent readers of the same thread
 
+A committed mkdir stub holds both readers at the claim operation. Child-output capture waits for detached delivery diagnostics to close before the alert count is checked.
+
 ```scrut
 $ "${CHECK_CODEX_FAILURES_BIN}" concurrent
 Error: MONITOR | atlas: w sample | API limit reached | Funk
