@@ -53,7 +53,7 @@ $ function bugs() {
 >   mkdir "${cache}/bin"
 >   for tool in mkdir sleep rmdir rm; do
 >     cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/${tool}"
->     test "$(PATH="${cache}/bin:${PATH}" command -v "${tool}")" = "${cache}/bin/${tool}" || return 1
+>     test "$(export PATH="${cache}/bin:${PATH}"; command -v "${tool}")" = "${cache}/bin/${tool}" || return 1
 >   done
 >   output="$(bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_MODE="${mode}" LOCK_TEST_DIRECTORY="${lock}" \
 >     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" LOCK_TEST_REAL_RM="$(command -v rm)" \
@@ -689,8 +689,8 @@ $ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && printf 'held\n' > "${lock}/owner" \
 >   && cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/mkdir" \
 >   && cp "${DIRECTORY_LOCK_STUB_BIN}" "${cache}/bin/sleep" \
->   && test "$(PATH="${cache}/bin:${PATH}" command -v mkdir)" = "${cache}/bin/mkdir" \
->   && test "$(PATH="${cache}/bin:${PATH}" command -v sleep)" = "${cache}/bin/sleep" \
+>   && test "$(export PATH="${cache}/bin:${PATH}"; command -v mkdir)" = "${cache}/bin/mkdir" \
+>   && test "$(export PATH="${cache}/bin:${PATH}"; command -v sleep)" = "${cache}/bin/sleep" \
 >   && { bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_DIRECTORY="${lock}" XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1; echo "exit=$?"; } | sed "s|${cache}|CACHE|g" \
 >   && cat "${lock}/owner" \
 >   && test ! -e "${lock%/save.lock}/gather.json"

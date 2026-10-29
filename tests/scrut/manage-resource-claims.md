@@ -89,7 +89,7 @@ $ function setup_claims() {
 >   printf '{"version":1,"claims":[]}' > "${claim_file}"
 >   for tool in mkdir sleep rmdir rm; do
 >     cp "${DIRECTORY_LOCK_STUB_BIN}" "${stub_dir}/${tool}"
->     test "$(PATH="${stub_dir}:${PATH}" command -v "${tool}")" = "${stub_dir}/${tool}" || return 1
+>     test "$(export PATH="${stub_dir}:${PATH}"; command -v "${tool}")" = "${stub_dir}/${tool}" || return 1
 >   done
 >   output="$(env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" \
 >     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" LOCK_TEST_REAL_RM="$(command -v rm)" \
@@ -470,9 +470,9 @@ $ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" false-success
 ["logic","simulator"]
 ```
 
-## Releasing a directory cannot remove a succeeding owner
+## Releasing ownership cannot remove a succeeding owner
 
-The first writer pauses after removing its owner file. The second takes ownership before the first attempts rmdir. That cleanup must preserve the second owner and its eventual claim.
+The first writer pauses after removing its owner file. The second takes ownership before the first release returns. Cleanup must preserve the second owner and its eventual claim, without attempting directory removal.
 
 ```scrut
 $ "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" release

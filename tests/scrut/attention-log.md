@@ -308,7 +308,7 @@ $ fresh
 > printf '%s\n' "$$" > "${lock}/pid"
 > cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/lock-bin/mkdir"
 > cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/lock-bin/sleep"
-> test "$(PATH="${work}/lock-bin:${PATH}" command -v mkdir)" = "${work}/lock-bin/mkdir" && test "$(PATH="${work}/lock-bin:${PATH}" command -v sleep)" = "${work}/lock-bin/sleep" || exit 1
+> test "$(export PATH="${work}/lock-bin:${PATH}"; command -v mkdir)" = "${work}/lock-bin/mkdir" && test "$(export PATH="${work}/lock-bin:${PATH}"; command -v sleep)" = "${work}/lock-bin/sleep" || exit 1
 > payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/lock-bin:${PATH}" LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionRequest
 > test "$(cat "${lock}/pid")" = "$$" && test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && echo 'live owner preserved'
 live owner preserved
@@ -322,7 +322,7 @@ $ fresh
 > mkdir -p "${lock}"
 > printf 'held\n' > "${lock}/owner"
 > head -c 5242880 /dev/zero > "${events_file}"
-> test "$(PATH="${work}/lock-bin:${PATH}" command -v mkdir)" = "${work}/lock-bin/mkdir" && test "$(PATH="${work}/lock-bin:${PATH}" command -v sleep)" = "${work}/lock-bin/sleep" || exit 1
+> test "$(export PATH="${work}/lock-bin:${PATH}"; command -v mkdir)" = "${work}/lock-bin/mkdir" && test "$(export PATH="${work}/lock-bin:${PATH}"; command -v sleep)" = "${work}/lock-bin/sleep" || exit 1
 > payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/lock-bin:${PATH}" LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied
 > test ! -e "${events_file}.1" && test "$(cat "${lock}/owner")" = held && echo 'rotation owner preserved'
 rotation owner preserved
