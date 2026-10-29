@@ -1,7 +1,7 @@
 # Workmux harness and resource matrix
 
 These tests cover both harness identities and the documented Bash launch path
-plus direct executable invocation. The fixture refuses to invoke any helper
+plus direct and symlinked executable invocation. The fixture refuses to invoke any helper
 unless workmux, tmux, gh and git resolve to its committed stubs. Live sandbox
 matching results are recorded separately in the sandbox exclusions ledger.
 
@@ -14,17 +14,19 @@ $ source "${REPO_ROOT}/bin/lib/git-environment.bash"
 ## Both harnesses can compose, launch and record claims
 
 ```scrut
-$ for harness in 'Claude Code' Codex; do for invocation in bash executable; do "${WORKMUX_SANDBOX_CASE_BIN}" "${harness}" "${invocation}" success || exit 1; done; done
+$ for harness in 'Claude Code' Codex; do for invocation in bash executable symlink; do "${WORKMUX_SANDBOX_CASE_BIN}" "${harness}" "${invocation}" success || exit 1; done; done
 Claude Code bash: compose, launch and claim passed
 Claude Code executable: compose, launch and claim passed
+Claude Code symlink: compose, launch and claim passed
 Codex bash: compose, launch and claim passed
 Codex executable: compose, launch and claim passed
+Codex symlink: compose, launch and claim passed
 ```
 
 ## Both harness identities retain every resource failure through either launch form
 
 ```scrut
-$ for harness in 'Claude Code' Codex; do for invocation in bash executable; do for resource in log socket config claim; do "${WORKMUX_SANDBOX_CASE_BIN}" "${harness}" "${invocation}" "${resource}" check || exit 1; done; done; done
+$ for harness in 'Claude Code' Codex; do for invocation in bash executable symlink; do for resource in log socket config claim; do "${WORKMUX_SANDBOX_CASE_BIN}" "${harness}" "${invocation}" "${resource}" check || exit 1; done; done; done
 Claude Code bash log: resource, harness and failure retained
 Claude Code bash socket: resource, harness and failure retained
 Claude Code bash config: resource, harness and failure retained
@@ -33,6 +35,10 @@ Claude Code executable log: resource, harness and failure retained
 Claude Code executable socket: resource, harness and failure retained
 Claude Code executable config: resource, harness and failure retained
 Claude Code executable claim: resource, harness and failure retained
+Claude Code symlink log: resource, harness and failure retained
+Claude Code symlink socket: resource, harness and failure retained
+Claude Code symlink config: resource, harness and failure retained
+Claude Code symlink claim: resource, harness and failure retained
 Codex bash log: resource, harness and failure retained
 Codex bash socket: resource, harness and failure retained
 Codex bash config: resource, harness and failure retained
@@ -41,20 +47,50 @@ Codex executable log: resource, harness and failure retained
 Codex executable socket: resource, harness and failure retained
 Codex executable config: resource, harness and failure retained
 Codex executable claim: resource, harness and failure retained
+Codex symlink log: resource, harness and failure retained
+Codex symlink socket: resource, harness and failure retained
+Codex symlink config: resource, harness and failure retained
+Codex symlink claim: resource, harness and failure retained
 ```
 
 ## Upstream owner reservations retain their resource diagnostics
 
 ```scrut
-$ for harness in 'Claude Code' Codex; do for invocation in bash executable; do for scenario in owner-reserve owner-write; do "${WORKMUX_SANDBOX_CASE_BIN}" "${harness}" "${invocation}" "${scenario}" check || exit 1; done; done; done
+$ for harness in 'Claude Code' Codex; do for invocation in bash executable symlink; do for scenario in owner-reserve owner-write; do "${WORKMUX_SANDBOX_CASE_BIN}" "${harness}" "${invocation}" "${scenario}" check || exit 1; done; done; done
 Claude Code bash owner-reserve: resource, harness and failure retained
 Claude Code bash owner-write: resource, harness and failure retained
 Claude Code executable owner-reserve: resource, harness and failure retained
 Claude Code executable owner-write: resource, harness and failure retained
+Claude Code symlink owner-reserve: resource, harness and failure retained
+Claude Code symlink owner-write: resource, harness and failure retained
 Codex bash owner-reserve: resource, harness and failure retained
 Codex bash owner-write: resource, harness and failure retained
 Codex executable owner-reserve: resource, harness and failure retained
 Codex executable owner-write: resource, harness and failure retained
+Codex symlink owner-reserve: resource, harness and failure retained
+Codex symlink owner-write: resource, harness and failure retained
+```
+
+## Denied claim publication preserves prior claims and cleans owned state
+
+The fixture seeds a real claim before denying the claim-file temporary write or
+replacement. It checks byte-for-byte preservation, no serialization temporary
+files, and release of the owned owner-token file.
+
+```scrut
+$ for harness in 'Claude Code' Codex; do for invocation in bash executable symlink; do for scenario in claim-temp claim-move; do "${WORKMUX_SANDBOX_CASE_BIN}" "${harness}" "${invocation}" "${scenario}" check || exit 1; done; done; done
+Claude Code bash claim-temp: resource, harness and failure retained
+Claude Code bash claim-move: resource, harness and failure retained
+Claude Code executable claim-temp: resource, harness and failure retained
+Claude Code executable claim-move: resource, harness and failure retained
+Claude Code symlink claim-temp: resource, harness and failure retained
+Claude Code symlink claim-move: resource, harness and failure retained
+Codex bash claim-temp: resource, harness and failure retained
+Codex bash claim-move: resource, harness and failure retained
+Codex executable claim-temp: resource, harness and failure retained
+Codex executable claim-move: resource, harness and failure retained
+Codex symlink claim-temp: resource, harness and failure retained
+Codex symlink claim-move: resource, harness and failure retained
 ```
 
 ## Alternate failure forms retain context without prescribing approval

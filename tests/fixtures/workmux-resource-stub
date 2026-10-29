@@ -76,7 +76,7 @@ function main() {
       ;;
     mktemp)
       case "${STUB_RESOURCE_SCENARIO:-success}:${*}" in
-        temp-prompt:*workmux-prompt-*.md.XXXXXX | temp-raw:*.raw.XXXXXX | temp-state:*workmux-launch-* | owner-reserve:*claims.json.lock/owner.diagnostic.XXXXXX)
+        temp-prompt:*workmux-prompt-*.md.XXXXXX | temp-raw:*.raw.XXXXXX | temp-state:*workmux-launch-* | owner-reserve:*claims.json.lock/owner.diagnostic.XXXXXX | claim-temp:*claims.json.XXXXXX)
           printf 'mktemp: fixture access denied\n' >&2
           exit 1
           ;;
@@ -96,6 +96,18 @@ function main() {
         exit 2
       fi
       exec /usr/bin/sed "$@"
+      ;;
+    mv)
+      if [[ "${STUB_RESOURCE_SCENARIO:-success}" == claim-move ]]; then
+        local argument
+        for argument in "$@"; do
+          if [[ "${argument}" == "${MATRIX_ROOT:?}/claims.json" ]]; then
+            printf 'mv: fixture replacement denied: %s\n' "${argument}" >&2
+            exit 1
+          fi
+        done
+      fi
+      exec /bin/mv "$@"
       ;;
     ls)
       /bin/ls "$@"

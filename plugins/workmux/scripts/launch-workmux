@@ -5,8 +5,23 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
-SCRIPT_DIRECTORY="${BASH_SOURCE[0]%/*}"
-if [[ "${BASH_SOURCE[0]}" != */* ]]; then SCRIPT_DIRECTORY=.; fi
+# Resolve links before loading sibling libraries, without dirname for help.
+function workmux_script_directory() {
+  local path="${BASH_SOURCE[0]}" directory target
+  while :; do
+    directory="${path%/*}"
+    [[ "${directory}" != "${path}" ]] || directory=.
+    directory="$(CDPATH='' cd -P -- "${directory}" && pwd)" || return 1
+    path="${directory}/${path##*/}"
+    if [[ ! -L "${path}" ]]; then
+      printf '%s' "${directory}"
+      return 0
+    fi
+    target="$(readlink "${path}")" || return 1
+    if [[ "${target}" == /* ]]; then path="${target}"; else path="${directory}/${target}"; fi
+  done
+}
+SCRIPT_DIRECTORY="$(workmux_script_directory)"
 readonly SCRIPT_DIRECTORY
 # shellcheck source=plugins/workmux/scripts/resource-diagnostics.bash
 source "${SCRIPT_DIRECTORY}/resource-diagnostics.bash"

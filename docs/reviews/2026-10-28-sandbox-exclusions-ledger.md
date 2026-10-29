@@ -5,7 +5,7 @@
 Active through the ready PR. TOOLING authorized signed origin/main syncs as
 needed through this run, with no rebase or history rewrite. The upstream
 owner-token lock and symlink-aware loading are retained; diagnostics are
-integrated into its new failure paths. Resource tests pass 22/22, claims
+integrated into its new failure paths. Resource tests pass 23/23, claims
 109/109, owner-lock 7/7 and owner-call contract 5/5. Focused Nit is next, pinned
 to the actual merge-base SHA. Its earlier attempt was invalidated, not failed;
 counts stand. No push or PR has occurred.
@@ -755,3 +755,37 @@ controls passed. No upstream owner-lock implementation was changed. Results:
 
 The focused Nit completion now uses that immutable, freshly verified merge-base
 SHA rather than the mutable origin/main ref. Its count remains unchanged.
+
+## Focused Nit completion after base sync
+
+Pinned actual merge base: `26acdbfec2d70593d563f5fcc78d52f9680d4cd0`.
+Reviewed head `a73e7d5bd40908c9dd714e8aac191a3325cf62a5`, snapshot
+`845cd1e0001517aa2e1147b2e2c27e748adc0f90`. All four Codex aspects
+(code/errors/tests/comments) ran in parallel through installed codex-aspects
+2.2.0, gpt-6.1-sol, high, window 872000, read-only/approval-never/web-disabled.
+Every process exited 0 and passed output/schema/snapshot validation. The
+before/after scope was unchanged, with no lasting changes found. This is the
+same Nit round previously invalidated by mutable-base metadata, not a new loop.
+Artifacts: `focused-nit-post-sync/` under the recorded scratch root.
+
+| Finding                                                                                | Reviewer's label                         | Our severity and impact                                                                      | Take or record                                                                                                                          | Review again                             |
+| -------------------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Launcher loads its sibling library beside a symlink rather than beside the real script | `important`                              | Important: formerly valid linked invocations, including help, now terminate before launching | Take: use the existing upstream symlink-resolution pattern before sourcing; test absolute/relative link chains in a path with spaces    | Yes, runtime library lookup changes      |
+| Claim-file mktemp and replacement diagnostics lack negative coverage                   | `suggestion`, detail "Criticality: 5/10" | Nit: new error-reporting boundaries are unguarded, though normal behavior is correct         | Take: deny each publication stage, assert original error/harness/resource/status, prior bytes, temporary cleanup and owned-lock release | No independent round for test-only edits |
+
+Errors and comments had no findings. The linked-invocation finding is a new
+compatibility case; prior rounds fixed minimal-PATH dependencies and wording,
+not symlink invocation. Upstream symlink handling was preserved during base
+sync, not repaired as an earlier review finding. No recurring class or downgrade
+is invoked here.
+
+The launcher now follows the existing bootstrap pattern without requiring
+dirname for ordinary help. All three helpers run through an absolute link
+followed by a relative link inside a path with spaces. Both harness identities
+cover Bash, direct and linked invocation. Publication fixtures seed a real
+claim, then refuse only the intended temporary creation or replacement. Tests
+assert byte preservation, no serialization temporary file and no owned token
+left behind. The revised resource document passes 23/23; ShellCheck and fixture
+validation pass. Tests are committed before the new boundary plants.
+The behavior-changing fix advances this focused loop to its first Important
+round; no second Nit round will run.

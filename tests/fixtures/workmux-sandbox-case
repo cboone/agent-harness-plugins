@@ -36,6 +36,8 @@ function invoke_helper() {
   shift
   if [[ "${MATRIX_INVOCATION}" == bash ]]; then
     bash "${helper}" "$@"
+  elif [[ "${MATRIX_INVOCATION}" == symlink ]]; then
+    "${MATRIX_ROOT}/helpers with space/${helper##*/}" "$@"
   else
     "${helper}" "$@"
   fi
@@ -45,13 +47,13 @@ function main() {
   local harness="${1:?}" invocation="${2:?}" scenario="${3:?}" mode="${4:-print}"
   local fixture tool prompt status=0 claim_output output resource original expected_status=1
   [[ "${mode}" == print || "${mode}" == check ]] || die 'unknown mode'
-  [[ "${invocation}" == bash || "${invocation}" == executable ]] || die 'unknown invocation'
+  [[ "${invocation}" == bash || "${invocation}" == executable || "${invocation}" == symlink ]] || die 'unknown invocation'
   case "${harness}" in
     'Claude Code' | Codex) ;;
     *) die 'unknown harness' ;;
   esac
   case "${scenario}" in
-    success | guard | log | socket | config | claim | occupied | owner-reserve | owner-write | ordinary | disk | auth | generic | generic-lower | generic-typed | config-load | log-home | log-relative | log-no-home | temp-prompt | temp-raw | temp-state | temp-read | temp-render) ;;
+    success | guard | log | socket | config | claim | occupied | claim-temp | claim-move | owner-reserve | owner-write | ordinary | disk | auth | generic | generic-lower | generic-typed | config-load | log-home | log-relative | log-no-home | temp-prompt | temp-raw | temp-state | temp-read | temp-render) ;;
     *) die 'unknown scenario' ;;
   esac
   fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
@@ -61,8 +63,13 @@ function main() {
   trap 'interrupt_fixture 130' INT
   trap 'interrupt_fixture 143' TERM
   export MATRIX_INVOCATION="${invocation}"
-  mkdir "${fixture}/bin" "${fixture}/tmp" "${fixture}/worktree"
-  for tool in workmux tmux gh mkdir mktemp cat sed ls; do
+  mkdir "${fixture}/bin" "${fixture}/tmp" "${fixture}/worktree" "${fixture}/helpers with space"
+  local helper
+  for helper in "${COMPOSE_ISSUE_PROMPT_BIN:?}" "${LAUNCH_WORKMUX_BIN:?}" "${MANAGE_RESOURCE_CLAIMS_BIN:?}"; do
+    ln -s "${helper}" "${fixture}/helpers with space/target-${helper##*/}"
+    ln -s "target-${helper##*/}" "${fixture}/helpers with space/${helper##*/}"
+  done
+  for tool in workmux tmux gh mkdir mktemp cat sed ls mv; do
     cp "${WORKMUX_RESOURCE_STUB_BIN:?}" "${fixture}/bin/${tool}"
     chmod +x "${fixture}/bin/${tool}"
   done
@@ -74,7 +81,7 @@ function main() {
   fi
   export PATH="${fixture}/bin:${PATH}"
   if [[ "${scenario}" == guard ]]; then export PATH="${fixture}/bin:${fixture}/other-bin:${PATH}"; fi
-  for tool in workmux tmux gh git mkdir mktemp cat sed ls; do
+  for tool in workmux tmux gh git mkdir mktemp cat sed ls mv; do
     [[ "$(command -v "${tool}" || true)" == "${fixture}/bin/${tool}" ]] ||
       die "refusing to run: ${tool} is not the fixture stub"
   done
@@ -109,13 +116,26 @@ function main() {
     log-no-home) unset HOME XDG_STATE_HOME ;;
     *) ;;
   esac
-  if [[ "${scenario}" == claim || "${scenario}" == occupied || "${scenario}" == owner-reserve || "${scenario}" == owner-write ]]; then
+  if [[ "${scenario}" == claim || "${scenario}" == occupied || "${scenario}" == owner-reserve || "${scenario}" == owner-write || "${scenario}" == claim-temp || "${scenario}" == claim-move ]]; then
     export WORKTREE_RESOURCES_FILE="${fixture}/claims.json"
+    if [[ "${scenario}" == claim-temp || "${scenario}" == claim-move ]]; then
+      STUB_RESOURCE_SCENARIO=success invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN}" claim held \
+        --worktree "${fixture}/worktree" --branch feature/held > /dev/null
+      cp "${WORKTREE_RESOURCES_FILE}" "${fixture}/before.json"
+    fi
     if [[ "${scenario}" == occupied ]]; then : > "${WORKTREE_RESOURCES_FILE}.lock"; fi
     capture_child output --error-stdout invoke_helper "${MANAGE_RESOURCE_CLAIMS_BIN:?}" claim test \
       --worktree "${fixture}/worktree" --branch feature/test > "${fixture}/output" || status=$?
     if [[ "${scenario}" == claim ]]; then
       [[ ! -e "${WORKTREE_RESOURCES_FILE}.lock" ]] || die 'denial fixture created a lock'
+    fi
+    if [[ "${scenario}" == claim-temp || "${scenario}" == claim-move ]]; then
+      cmp -s "${fixture}/before.json" "${WORKTREE_RESOURCES_FILE}" || die 'existing claims changed after denied publication'
+      [[ ! -e "${WORKTREE_RESOURCES_FILE}.lock/owner" ]] || die 'owned claim lock left behind'
+      local temporary
+      for temporary in "${WORKTREE_RESOURCES_FILE}."*; do
+        [[ ! -f "${temporary}" ]] || die 'temporary claim file left behind'
+      done
     fi
   else
     export STUB_RESOURCE_SCENARIO="${scenario}"
@@ -165,6 +185,14 @@ function main() {
       claim | occupied)
         resource="claim lock ${fixture}/claims.json.lock"
         original="cannot create ${fixture}/claims.json.lock"
+        ;;
+      claim-temp | claim-move)
+        resource="claim file ${fixture}/claims.json"
+        if [[ "${scenario}" == claim-temp ]]; then
+          original="cannot write next to ${fixture}/claims.json"
+        else
+          original="cannot replace ${fixture}/claims.json"
+        fi
         ;;
       owner-reserve)
         resource="claim owner lock ${fixture}/claims.json.lock/owner"
