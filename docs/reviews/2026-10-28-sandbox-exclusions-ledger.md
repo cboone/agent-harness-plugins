@@ -164,9 +164,33 @@ completed with all JSON, fixture environments and plugin validations passing.
 Helper diagnostics, the complete semantic catalog sweep, launch/resource
 matrix, plants, review loops, Semgrep, final lint, full tests, version audit,
 tidy and publication remain pending. No clean review state or passing
-acceptance matrix is claimed. Do not retry a denied probe, add permission
-rules, or change real settings to obtain missing evidence. TOOLING has the
-open Claude harness questions and the probe limitations.
+acceptance matrix is claimed. Do not retry denied real-resource probes or
+change real settings. The scratch-only matching runs below are authorized by
+TOOLING's follow-up; they are distinct controlled experiments.
+
+## TOOLING follow-up before parking
+
+At 9:38 PM ET, TOOLING declined to supply recollection and directed live
+Claude Code matching runs, using `claude -p`, a temporary settings file and
+limited setting sources so only that file loads. Sandbox enabled; one
+`excludedCommands` variant per run: bare binary, absolute executable path,
+bash script path, pipeline. Record observed outcomes, not inferred matching.
+
+Each variant must exercise scratch resources only: a temporary directory
+outside the sandbox allowlist, a private tmux server started with its own `-L`
+name and stopped by its recorded PID, and a scratch gh-style config copy.
+Never inspect or access real settings, real tmux servers or real gh config
+for these runs. Supplement with CLI help and installed runtime text, labeled
+as such. The earlier real work-socket read probe will not be repeated.
+
+This answers mailbox question `000002`: use controlled live experiments,
+not a fresh session's recollection. The earlier answers remain explicitly
+unconfirmed where they described matching. The requested four-variant matrix
+has not run. Resume by preparing its scratch fixture and private server,
+recording every created path and process PID, then execute and clean up only
+those recorded resources. Do not leave a private tmux server running across
+the nighttime stop. TOOLING reiterated checkpoint/report by 9:40 PM ET and
+parking at 9:45 PM ET.
 
 ## Nighttime checkpoint
 
@@ -186,10 +210,9 @@ is still running. No push or PR has been attempted.
 
 Resume from this ledger and the plan, then:
 
-1. Read TOOLING's answer to the open Claude harness fact request (mailbox
-   question `000002`). Keep the restrictive probe denials distinct from
-   executed resource denials. Obtain the remaining matching and resource
-   evidence without broad shell exemptions or real settings changes.
+1. Follow the scratch-only live matrix direction above, which resolves mailbox
+   question `000002`. Keep tool permission rejections distinct from executed
+   resource denials. No real settings changes or real servers are involved.
 2. Read the remaining sandbox/exemption hits before finishing the semantic
    sweep. The initial full hit list includes review/trim isolation settings,
    use-git's tmpfile assumptions, clean-up-agent-config policy examples,
