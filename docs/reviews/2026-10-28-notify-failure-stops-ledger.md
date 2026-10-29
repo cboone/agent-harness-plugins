@@ -187,8 +187,24 @@ Resource-claims cause PR 677 then landed on main at 26acdbfec2d70593d563f5fcc78d
 
 Main also advanced attention-log to 1.0.1, so this branch now advances it to 1.0.2. Its classifier loader reuses main's existing symlink-aware helper-directory resolver. The contract fixture runs attention-log through a symlink and passed 3/3. This integration preserves main's lock helper without editing its generated copies. A new negative control checks the loader's symlink boundary before final integrated validation.
 
-| Planted defect                                                                          | Instrument               | Observed result | Regression coverage           |
-| --------------------------------------------------------------------------------------- | ------------------------ | --------------- | ----------------------------- |
-| Resolve classifier from the symlink entry's parent instead of the real plugin directory | Shared-consumer contract | Pending         | Symlinked attention-log entry |
+| Planted defect                                                                          | Instrument               | Observed result                                       | Regression coverage           |
+| --------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------- | ----------------------------- |
+| Resolve classifier from the symlink entry's parent instead of the real plugin directory | Shared-consumer contract | Scrut exit 50 at the intended missing-classifier path | Symlinked attention-log entry |
 
-After the integrated result is checked, updating the published PR following rebase needs force-with-lease permission under the no-force rule. Route that final publication action to TOOLING with the exact expected remote head; do not execute a force flag without explicit approval. No PR merge is authorized for the worker.
+The interim local rebase was superseded by TOOLING’s merge-only instruction; the recovery below preserves published history and uses a normal push. No force update or PR merge is authorized for the worker.
+
+## Signed-merge recovery
+
+TOOLING’s mailbox instruction at 12:01 AM ET required a signed merge of main, no rebase and no force, and deferred the Codex watcher until the morning go-ahead. That message was read after an interim local rebase had started. Preserved that work under feat/642-notify-failure-stops-local-rebase-backup, restored the published head with a non-destructive keep reset, and merged origin/main with signed commit 72a8bf24. Reapplied the integration fix as signed commit 8c123f29. The published e8c98002 commit is an ancestor of HEAD; no remote history was rewritten.
+
+Stopped only the recorded test runner PID 45688 from the superseded local-rebase run; its parent command finished with make exit 2 after the deliberate SIGTERM. It is not a passing suite. The interrupted run also exposed an extra outdated five-copy error-count line in the temporary rebase fixture. The signed-merge fixture retains all seven entries and one seven-error count, and now passes all 11 generator testcases.
+
+The merged production tree (generator, notify, attention-log and their shipped copies) compares equal to the already scanned resource-fix candidate, with the same merge base 26acdbfec2d70593d563f5fcc78d52f9680d4cd0. The existing resource-fix baseline scan therefore remains applicable; no redundant rescan is needed. Version checks remain clear at notify 4.3.0 and attention-log 1.0.2. Run complete lint and make test-all on the signed-merge tree, then commit evidence and push normally. Leave the Codex watcher for the morning authorization; do not start another branch tonight.
+
+## Final signed-merge validation
+
+make test-all passed on the signed-merge history: exit 0, 49 Scrut documents, 1759 testcases succeeded, zero failures and zero skips. Complete lint (including ShellCheck on all partially parsed shell files), JSON/plugin/catalog/mirror/fixture validation, and the seven-copy generator contract passed. Artifacts: test-all-merged.log, test-all-merged.exit and test-summary-merged.json in the scratch folder. The superseded interrupted run remains explicitly non-passing.
+
+Final version check: notify 4.3.0, attention-log 1.0.2, both forward from main; all 60 plugins registered, manifests valid and Codex/source versions equal. Review totals remain structural Nit 1/Important 2 clean at Important, focused Nit 1 clean at Nit, trims one round each. Nine targeted plants were detected. Semgrep remains valid for the byte-identical merged production tree and same 26acdbfe merge base: zero findings, 74.4% parsed lines, shell-only gaps documented above and ShellCheck passing.
+
+Publication proceeds by ordinary fast-forward push, preserving the original published head and signed main merge. No force push, further tidy/history rewrite, live configuration, installed hook, software installation or live banner is authorized or performed. Update the existing ready PR and wait for green CI; report the final précis to TOOLING and stop. The Codex watcher is deferred until the morning go-ahead.
