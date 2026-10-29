@@ -482,3 +482,13 @@ Fresh Semgrep baseline completed exit 0 with zero findings on committed head 9b0
 Coverage is approximately **78.1 percent parsed lines**, over 65 scanned files. The only PartialParsing entries are bin/build-shared-references and plugins/review-pr-with-codex/scripts/codex-aspects, both shell. Targeted ShellCheck passed on both with exit 0. No other parsing error or finding was reported, so the baseline counts under the standing shell-only rule. Concise evidence: final-semgrep-diagnostics.json beside this ledger. Full JSON/log remains in the disposable scan directory.
 
 Final configured lint and full tests follow. The known failed resource-claims observation remains in the report under TOOLING's explicit disposition, regardless of later independent suite results. No source change to that workstream is included.
+
+## Final post-recurrence checks and publication
+
+The final make test-all run exited 0: all 44 documents and 1700 testcases passed, zero failed/skipped. Log: /tmp/523-post-recurrence-test-all.log. This includes the corrected combined symlink fixture, all membership consumer cases, the narrow checker regressions and the independent resource-claims document. The latter local pass does not erase the earlier CI failure or establish a fix for that known flake.
+
+Configured lint-and-fix --no-push completed successfully with no extra source formatting changes, no unresolved/skipped checks, and no fixes commit. Markdownlint/Prettier used check mode under the protected snapshot/generated-copy policy. ShellCheck, shfmt, Actionlint, JSON/plugin validation, fixture-environment validation and mirror consistency passed.
+
+Version checks after fetch remain clear against actual origin/main merge base a2e56c535ed6326cc8d531d945fbb6c627a9b335: review-until-clean 3.2.0 to 3.3.0, review-pr-with-codex 2.1.4 to 2.2.0; all 60 plugin/catalog entries and present Codex manifests agree, and marketplace version ownership is correct. Evidence: /tmp/523-final-post-recurrence-versions.json.
+
+Normal push is authorized; published history is preserved. Both requested final review rounds are clean at Critical, retaining Important guidance findings under follow-up 674. The final baseline counts with 78.1 percent parsed coverage and targeted ShellCheck on the two partly parsed shell files. CI remains to be observed; the previously failed resource-claims job is explicitly retained per TOOLING's exception, with no independent retry or code change. TOOLING alone merges.
