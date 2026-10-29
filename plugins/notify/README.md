@@ -41,6 +41,25 @@ notification_condition = "unfocused"
 
 Automatic transport selection supports terminals where OSC 9 is unavailable. Native terminal attention does not provide the plugin's customized macOS approval banner. Plan confirmation prompts retain this fallback because they do not use the question tool hook.
 
+### Codex terminal failures through an explicit rollout watcher
+
+`scripts/watch-codex-failures` reads one supplied rollout file and posts terminal error or refusal banners. It ships without a launcher or hook registration. Activation is a separate decision for Chris (he/him) and SL-VF after merge; installing this plugin does not start the watcher. It starts no daemon, uses no app-server socket and adds no dependency.
+
+The owning launcher supplies the rollout path, expected thread ID, directory, display name, tmux session/window and a supervising PID. For example, from a shell supervising the watcher:
+
+```bash
+scripts/watch-codex-failures \
+  --rollout /path/to/rollout.jsonl --thread-id thread-id \
+  --owner-pid "$$" --cwd /path/to/repository \
+  --session-name MONITOR --tmux-session tooling --tmux-window 'w task'
+```
+
+The watcher verifies `session_meta`, captures an initial byte boundary, skips completions within it, then follows appended newline-terminated records. After observing supervisor exit, it drains remaining records to EOF before stopping. The launcher must stop and reap its watcher during cleanup. The file must already exist and contain session metadata. Replacement or truncation requires a new watcher; ephemeral sessions without a rollout cannot be watched. `--once` deliberately processes existing records to EOF instead of following them, and can post historical failure banners. Do not use it to activate live monitoring.
+
+A durable `task_complete` record with a non-null typed `error` identifies terminal failure. Typed `cyber_policy`, `bio_policy` and `misalignment_policy_violation` errors become refusals with a fixed body; other typed errors become errors. Recovered turns and approval waits post nothing. Request-level failures are ignored. Subagent rollouts are excluded. Classification uses metadata, never message wording. These shapes were measured against Codex 0.165.0; a format change requires renewed validation.
+
+An atomic claim under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/codex-failures/` permits one delivery attempt per thread and turn across readers and restarts. An uncertain delivery is never retried. An unavailable `alerter` fails before a claim is created. The launcher should retain stderr so detached backend startup failures remain visible with thread and turn identity. Preserve this cache when restarting watchers. Names fall back to thread identity, missing error messages to a fixed description, and absent tmux context to the existing repository/task subtitle. `--tier` accepts `top`, `lead`, `worker` or `untiered`; otherwise existing tier configuration applies. Context comes from launcher arguments, never a shared daemon's pane.
+
 ### Granting notification permission
 
 `alerter` posts notifications by impersonating Terminal's bundle identity (the v26.4+ default) so it appears under "Terminal" in System Settings → Notifications, where you grant alert permission once. You will not see a separate "alerter" entry. The first notification after install may not appear until permission is granted; the second will.
@@ -99,7 +118,7 @@ Failure titles name the session from the transcript, falling back to its ID. The
 
 `UserPromptSubmit` resets completion deduplication without posting a banner. `Stop` posts nothing for subagent sessions or `codex exec` and `codex review` runs, except a run started in a terminal with an option that takes a value before its command; see [Notes and caveats](#notes-and-caveats). Repeated Stop events in the same user turn are suppressed, including their sounds. A Stop hook that requests continuation can still cause the first completion banner before that continuation finishes; the notification plugin does not decide whether other Stop hooks will continue the turn.
 
-Terminal-error and refusal banners for Codex are pending a follow-on watcher PR under the [shared turn-failure plan](https://github.com/cboone/agent-harness-plugins/blob/main/docs/plans/todo/2026-10-28-shared-turn-failure-notifications.md). Codex 0.165.0 does not run `Stop` on terminal API errors. Its `PostModelRequest` event precedes retry resolution, so a failed request does not prove the turn stopped. A watcher can observe terminal app-server `error` events (`willRetry: false`) or `turn/completed` with failed status and distinguish them from approval waits. This release adds the Claude Code half of that paired change.
+Terminal-error and refusal banners use the [explicit rollout watcher](#codex-terminal-failures-through-an-explicit-rollout-watcher), completing the [shared turn-failure plan](https://github.com/cboone/agent-harness-plugins/blob/main/docs/plans/todo/2026-10-28-shared-turn-failure-notifications.md) when a launcher activates it separately. Codex 0.165.0 does not run `Stop` on terminal API errors. `PostModelRequest` precedes retry resolution; the watcher instead waits for the durable terminal record and its typed error. Approval waits and recovered requests remain silent.
 
 ## Session tiers
 

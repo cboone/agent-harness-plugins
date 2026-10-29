@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# watch-codex-failures -- Follow one owned Codex rollout for terminal failures.
+set -euo pipefail
+
+# Count bytes without changing the locale used by notification tier rules.
+function byte_count() {
+  local LC_ALL=C
+  printf '%s\n' "${#1}"
+}
+
+function usage() {
+  cat << 'USAGE'
+Usage: watch-codex-failures --rollout PATH (--owner-pid PID | --once) [options]
+
+  --thread-id ID       Expected thread identity; otherwise use session_meta
+  --session-name NAME  Banner name; defaults to the thread ID
+  --tmux-session NAME  Originating tmux session, supplied by the launcher
+  --tmux-window NAME   Originating tmux window, supplied by the launcher
+  --cwd PATH          Originating directory; defaults to the launch directory
+  --tier TIER         top, lead, worker or untiered
+  --owner-pid PID     Follow new records until this supervising process exits
+  --once              Process existing records to EOF, then exit
+  -h, --help          Show this help
+
+Follow mode skips existing completions. --once deliberately processes history.
+Only the given rollout supplies events. No socket or daemon is used.
+USAGE
+}
+
+function die() {
+  printf 'watch-codex-failures: %s\n' "${1}" >&2
+  exit 1
+}
+
+function main() {
+  local rollout="" owner_pid="" once=false expected="" name="" tmux_session="" tmux_window=""
+  local cwd="${PWD}" tier="${NOTIFY_TIER:-}" option value script_dir
+  while (($#)); do
+    option="${1}"
+    case "${option}" in
+      --once)
+        once=true
+        shift
+        continue
+        ;;
+      -h | --help)
+        usage
+        return
+        ;;
+      --rollout | --owner-pid | --thread-id | --session-name | --tmux-session | --tmux-window | --cwd | --tier)
+        (($# >= 2)) || die "${option} requires a value"
+        value="${2}"
+        [[ -n "${value}" ]] || die "${option} requires a non-empty value"
+        case "${option}" in
+          --rollout) rollout="${value}" ;;
+          --owner-pid) owner_pid="${value}" ;;
+          --thread-id) expected="${value}" ;;
+          --session-name) name="${value}" ;;
+          --tmux-session) tmux_session="${value}" ;;
+          --tmux-window) tmux_window="${value}" ;;
+          --cwd) cwd="${value}" ;;
+          --tier) tier="${value}" ;;
+          *) die "unknown option: ${option}" ;;
+        esac
+        shift 2
+        ;;
+      *) die "unknown option: ${option}" ;;
+    esac
+  done
+  [[ -n "${rollout}" && -f "${rollout}" && -r "${rollout}" ]] || die 'a readable rollout file is required'
+  if [[ "${once}" == true ]]; then
+    [[ -z "${owner_pid}" ]] || die '--once and --owner-pid are mutually exclusive'
+  else
+    [[ "${owner_pid}" =~ ^[1-9][0-9]*$ ]] || die '--owner-pid requires a positive PID'
+    kill -0 "${owner_pid}" 2> /dev/null || die 'the supervising process is not running'
+  fi
+  case "${tier}" in
+    '' | top | lead | worker | untiered) ;;
+    *) die 'invalid tier' ;;
+  esac
+  script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+  exec 3< "${rollout}"
+  local initial_bytes bytes_read=0
+  initial_bytes="$(LC_ALL=C wc -c < "${rollout}")"
+  cd -- "${cwd}"
+
+  local line line_bytes partial="" record identity="" subagent=false state=startup action turn kind message key marker payload alerter_path
+  [[ "${once}" == false ]] || state=final-drain
+  while true; do
+    if [[ "${state}" == owner-exit ]]; then
+      if kill -0 "${owner_pid}" 2> /dev/null; then
+        state=following
+        sleep 0.2
+      else
+        state=final-drain
+      fi
+      continue
+    fi
+    line=""
+    if IFS= read -r line <&3; then
+      line="${partial}${line}"
+      partial=""
+      line_bytes="$(byte_count "${line}")"
+      bytes_read=$((bytes_read + line_bytes + 1))
+      if [[ "${state}" == startup ]] && ((bytes_read > initial_bytes)); then state=following; fi
+      record="$(printf '%s' "${line}" | jq -c -f "${script_dir}/codex-failure.jq")" || die 'invalid rollout record'
+      [[ -n "${record}" ]] || continue
+      action="$(printf '%s' "${record}" | jq -r '.action')"
+      if [[ "${action}" == meta ]]; then
+        value="$(printf '%s' "${record}" | jq -r '.id')"
+        [[ -n "${value}" ]] || value="${expected}"
+        [[ -n "${value}" ]] || die 'session_meta has no thread identity'
+        [[ -z "${identity}" || "${identity}" == "${value}" ]] || die 'rollout thread identity changed'
+        [[ -z "${expected}" || "${expected}" == "${value}" ]] || die 'rollout does not match --thread-id'
+        identity="${value}"
+        subagent="$(printf '%s' "${record}" | jq -r '.subagent')"
+        continue
+      fi
+      [[ -n "${identity}" ]] || die 'terminal record precedes session_meta'
+      [[ "${state}" != startup && "${subagent}" == false ]] || continue
+      turn="$(printf '%s' "${record}" | jq -r '.turn_id')"
+      kind="$(printf '%s' "${record}" | jq -r '.kind')"
+      message="$(printf '%s' "${record}" | jq -r '.message')"
+      key="$(jq -nc --arg id "${identity}" --arg turn "${turn}" '[$id,$turn]' | shasum -a 256 | cut -d ' ' -f 1)"
+      marker="${XDG_CACHE_HOME:-${HOME}/.cache}/agent-harness-notify/codex-failures/${key}"
+      [[ ! -d "${marker}" ]] || continue
+      if ! alerter_path="$(command -v alerter)" || [[ ! -f "${alerter_path}" || ! -x "${alerter_path}" ]]; then
+        die "alerter is not executable (thread ${identity}, turn ${turn})"
+      fi
+      mkdir -p "$(dirname "${marker}")"
+      # Claim delivery once across concurrent readers and restarts. Never retry an uncertain delivery.
+      if mkdir "${marker}" 2> /dev/null; then
+        payload="$(jq -nc --arg kind "${kind}" --arg message "${message}" --arg session_id "${identity}" --arg turn_id "${turn}" \
+          --arg session_name "${name}" --arg tmux_session "${tmux_session}" --arg tmux_window "${tmux_window}" \
+          '{kind:$kind,message:$message,session_id:$session_id,turn_id:$turn_id,session_name:$session_name,
+            tmux_session:$tmux_session,tmux_window:$tmux_window}')"
+        printf '%s' "${payload}" | NOTIFY_TIER="${tier}" "${script_dir}/notify" codex-failure
+      elif [[ ! -d "${marker}" ]]; then
+        die 'cannot claim failure delivery'
+      fi
+    else
+      partial="${partial}${line}"
+      [[ -n "${identity}" ]] || die 'rollout has no session_meta'
+      if [[ "${state}" == final-drain ]]; then
+        [[ -z "${partial}" ]] || die 'incomplete rollout record at EOF'
+        break
+      fi
+      state=owner-exit
+    fi
+  done
+}
+
+main "$@"
