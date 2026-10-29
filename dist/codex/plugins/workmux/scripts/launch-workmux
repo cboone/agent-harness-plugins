@@ -151,7 +151,7 @@ function run_workmux_and_cleanup_prompt() {
   shift
 
   set +e
-  "${@}"
+  "$@"
   status=$?
   set -e
 
@@ -341,7 +341,7 @@ function send_prompt_to_codex_pane() {
 }
 
 function run_workmux_command() {
-  local -a command=(workmux "${@}")
+  local -a command=(workmux "$@")
   local -a env_args=()
   local tmux_env
   tmux_env="$(resolved_tmux_env)"
@@ -369,7 +369,7 @@ function run_workmux_with_existing_prompt_fallback() {
   shift 3
 
   set +e
-  run_workmux_command "${@}"
+  run_workmux_command "$@"
   status=$?
   set -e
 
@@ -543,7 +543,7 @@ function run_detached_launch() {
   trap '' HUP
 
   # Captured with `||`, not `set +e`: the helper re-enables errexit on return.
-  run_workmux_and_cleanup_prompt "${prompt_file}" "${@}" > "${state_dir}/log" 2>&1 || status=$?
+  run_workmux_and_cleanup_prompt "${prompt_file}" "$@" > "${state_dir}/log" 2>&1 || status=$?
   {
     printf '%s\n' "${status}" > "${state_dir}/status.tmp" \
       && mv -- "${state_dir}/status.tmp" "${state_dir}/status"
