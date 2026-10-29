@@ -334,6 +334,7 @@ The shared references and policy libraries are:
 
 - The progress model: `plugins/publish-report-board/skills/publish-report-board/references/progress-model.md`, copied to `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`.
 - The `codex exec` path: `plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md`, copied to the `references/` directories of `trim-comments` and `trim-text`. Each consumer's `SKILL.md` names its own model, effort, window, prompt additions and fallback.
+- Claude transcript classification: `plugins/notify/scripts/claude-transcript.jq`, copied to `plugins/attention-log/scripts/claude-transcript.jq`. Both scripts use its prompt and refusal predicates. Edit only the notify source and rebuild; the contract test checks matching copies and both consumers' behavior.
 
 Write a shared reference for every consumer, and leave rules only one consumer follows in that consumer's own references.
 

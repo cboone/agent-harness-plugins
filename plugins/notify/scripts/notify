@@ -135,6 +135,7 @@ Subcommands:
   cc-permission     Claude Code Notification:permission_prompt
   cc-question       Claude Code PreToolUse:AskUserQuestion
   cc-stop           Claude Code Stop
+  cc-failure        Claude Code StopFailure (error or safeguard refusal)
   cc-turn-start     Claude Code UserPromptSubmit (resets completion deduplication)
   codex-question    Codex PreToolUse:request_user_input
   codex-stop        Codex Stop
@@ -457,24 +458,7 @@ function banner_subtitle() {
 #   prompt;
 # - "result": a user record carrying tool results;
 # - "assistant", and "other" for everything else.
-# Read with `read -d ''` because bash 3.2 cannot parse these heredocs inside $().
-IFS= read -r -d '' TURN_JQ << 'JQ' || true
-def content: (.message | objects | .content) // "";
-def is_user: .type == "user" or .type == "human";
-def is_result: content | type == "array" and any(.[]?; type == "object" and .type == "tool_result");
-def kind:
-  content as $c
-  | if .type == "assistant" then "assistant"
-    elif is_user and .isMeta != true then
-      (if is_result then "result"
-       elif ($c | type) == "string" and ($c | test("^<local-")) then "other"
-       else "prompt" end)
-    else "other" end;
-def turn:
-  [label $out | inputs | (fromjson? // null) | objects
-    | if kind == "prompt" then break $out else . end];
-def blocks: content | if type == "array" then .[] | objects else empty end;
-JQ
+TURN_JQ="$(cat "${SCRIPT_DIR}/claude-transcript.jq")"$'\n'
 readonly TURN_JQ
 
 # Prints the text of the current turn's last assistant message, or nothing.
@@ -832,6 +816,45 @@ function fire_alerter_detached() {
 # Claude Code event handlers
 # -----------------------------------------------------------------------------
 
+# Retries refusal detection because the transcript can lag behind StopFailure.
+function failure_is_refusal() {
+  local transcript_path="${1}" attempt
+  [[ "$(hook_string error)" == invalid_request && -f "${transcript_path}" ]] || return 1
+  for attempt in 1 2 3 4 5; do
+    if tail -n 20 "${transcript_path}" 2> /dev/null | jq -Rne "${TURN_JQ} shows_refusal" > /dev/null 2>&1; then
+      return 0
+    fi
+    if ((attempt < 5)); then sleep 0.5; fi
+  done
+  return 1
+}
+
+# Failure events bypass completion policy, including focus and origin checks.
+function do_cc_failure() {
+  local transcript_path name title="Error" message sound
+  transcript_path="$(hook_string transcript_path)"
+  resolve_tier "${transcript_path}"
+  sound="$(resolve_sound Funk)"
+  read_tmux_names
+  compute_place "${transcript_path}"
+  read_session_name "${transcript_path}"
+  name="${SESSION_NAME:-$(hook_string session_id)}"
+  name="$(truncate_with_ellipsis "${name:-Unknown session}" 70)"
+  if failure_is_refusal "${transcript_path}"; then
+    title="Refusal"
+    message="Turn ended in a safeguard refusal."
+  else
+    message=""
+    if [[ "$(hook_string error)" != invalid_request ]]; then
+      message="$(hook_string last_assistant_message)"
+    fi
+    message="${message:-Turn ended in an API error.}"
+  fi
+  fire_alerter_detached "$(tier_title "${title}: ${name}")" "$(banner_subtitle)" \
+    "$(truncate_with_ellipsis "${message}" "${BODY_LIMIT}")" \
+    "${sound}" "${HARNESS}-failure" "${ASSETS_DIR}/claude-code.png"
+}
+
 # An MCP server raises the dialog, so in every tier only a banner announces it.
 function do_cc_elicit() {
   local message body
@@ -1114,6 +1137,7 @@ function main() {
     cc-elicit) do_cc_elicit ;;
     cc-permission) do_cc_permission ;;
     cc-stop) do_stop "claude-code" ;;
+    cc-failure) do_cc_failure ;;
     codex-stop) do_stop "codex" ;;
     "")
       echo "Error: subcommand required" >&2
