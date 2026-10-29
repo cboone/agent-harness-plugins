@@ -39,7 +39,7 @@ Print one JSON object describing every local change and a snapshot identifier
 bound to their content: committed branch changes, staged changes, unstaged
 changes, and untracked files.
 
-The snapshot covers HEAD, the base tip and merge base, disk content, index
+The snapshot covers HEAD, the base tip and merge base, raw disk bytes, index
 content and bucket membership. Staging, unstaging and intent-to-add move it.
 The separate tree identifier measures content as Git would store it; byte
 changes removed by Git's normalization do not move it.
@@ -282,6 +282,84 @@ function paths_to_json() {
   jq -Rs 'split("\u0000") | map(select(length > 0)) | unique'
 }
 
+# Build a raw tree from inventory index $1, emptying and repopulating private
+# scratch index $2. Write the tree OID to stdout and unreferenced Git objects.
+# Present type and owner-execute bits come from lstat, not Git's mode settings.
+function raw_tree_digest() {
+  local disk_index="${1}" raw_index="${2}"
+  local entry path indexed_mode mode blob operand flag link_text disk_mode stat_base
+  local stat_args=()
+  # Select the installed stat dialect, including GNU stat on macOS PATHs.
+  if stat -c '%f' "${top_level}" > "${raw_index}.stat-probe" 2> "${raw_index}.stat-error"; then
+    stat_args=(-c '%f')
+    stat_base=16
+  else
+    stat -f '%p' "${top_level}" > "${raw_index}.stat-probe" \
+      || die "stat must support GNU -c %f or BSD -f %p"
+    stat_args=(-f '%p')
+    stat_base=8
+  fi
+  GIT_INDEX_FILE="${disk_index}" review_git ls-files --stage -t -z > "${raw_index}.entries" \
+    || die "could not inventory raw working-tree files"
+  : > "${raw_index}.records" || die "could not create raw tree records"
+  while IFS= read -r -d '' entry; do
+    flag="${entry%% *}"
+    entry="${entry#* }"
+    path="${entry#*$'\t'}"
+    indexed_mode="${entry%% *}"
+    operand="${top_level}/${path}"
+    if review_has_non_directory_parent "${top_level}" "${path}"; then
+      die "raw working-tree path has a non-directory parent: ${path}"
+    fi
+    if [[ ! -e "${operand}" && ! -L "${operand}" ]]; then
+      if [[ "${flag}" == S || "${indexed_mode}" == 160000 ]]; then continue; fi
+      die "raw working-tree file changed type or disappeared: ${path}"
+    fi
+    disk_mode="$(stat "${stat_args[@]}" "${operand}")" \
+      || die "could not lstat raw working-tree path: ${path}"
+    if [[ "${stat_base}" == 16 && "${disk_mode}" =~ ^[0-9a-fA-F]+$ ]]; then
+      disk_mode="$((16#${disk_mode}))"
+    elif [[ "${stat_base}" == 8 && "${disk_mode}" =~ ^[0-7]+$ ]]; then
+      disk_mode="$((8#${disk_mode}))"
+    else
+      die "invalid lstat mode for raw working-tree path: ${path}"
+    fi
+    case "$((disk_mode & 0170000))" in
+      $((0100000)))
+        mode=100644
+        if ((disk_mode & 0100)); then mode=100755; fi
+        blob="$(git hash-object -w --no-filters -- "${operand}")" \
+          || die "could not hash raw working-tree file: ${path}"
+        ;;
+      $((0120000)))
+        mode=120000
+        # -n suppresses tool-added newlines; the dot preserves link newlines.
+        link_text="$(readlink -n "${operand}" && printf '.')" \
+          || die "could not read raw working-tree link: ${path}"
+        link_text="${link_text%.}"
+        blob="$(printf '%s' "${link_text}" | git hash-object -w --stdin)" \
+          || die "could not hash raw working-tree link: ${path}"
+        ;;
+      $((0040000)))
+        # Empty uninitialized checkouts have no raw files or available HEAD.
+        if [[ ! -e "${operand}/.git" && "${indexed_mode}" == 160000 ]]; then continue; fi
+        [[ -e "${operand}/.git" ]] || die "raw working-tree directory is not a checkout: ${path}"
+        mode=160000
+        blob="$(git -C "${operand}" rev-parse --verify 'HEAD^{commit}')" \
+          || die "could not read raw checkout HEAD: ${path}"
+        ;;
+      *) die "unsupported raw working-tree file type: ${path}" ;;
+    esac
+    printf '%s %s 0\t%s\0' "${mode}" "${blob}" "${path}" >> "${raw_index}.records" \
+      || die "could not record raw working-tree path: ${path}"
+  done < "${raw_index}.entries"
+  GIT_INDEX_FILE="${raw_index}" git read-tree --empty \
+    || die "could not initialize raw tree index"
+  GIT_INDEX_FILE="${raw_index}" git update-index -z --index-info < "${raw_index}.records" \
+    || die "could not populate raw tree index"
+  GIT_INDEX_FILE="${raw_index}" git write-tree || die "could not write raw working-tree tree"
+}
+
 # Run a git command that lists paths and store the result as JSON under
 # TMP_DIR. The raw output lands in a file first so that git's exit status is
 # checked by `set -e`; piping straight into jq would let jq's success hide a
@@ -313,11 +391,13 @@ function index_digest() {
 # child runs the same stability checks in its own temporary directory. An
 # uninitialized, empty checkout has only the gitlink as review input.
 function collect_submodules() {
-  local output="${1}" entries="${2}" disk_index="${3}"
+  local output="${1}" entries="${2}" disk_index="${3}" raw_index="${4}"
   local path child root child_repo
   review_git ls-files --stage -z > "${entries}" || die "could not list submodules"
   GIT_INDEX_FILE="${disk_index}" review_git ls-files --stage -z >> "${entries}" \
     || die "could not list working-tree submodules"
+  GIT_INDEX_FILE="${raw_index}" review_git ls-files --stage -z >> "${entries}" \
+    || die "could not list raw working-tree submodules"
   jq -jRs 'split("\u0000") | map(select(startswith("160000 "))
     | .[index("\t") + 1:]) | unique[] | ., "\u0000"' "${entries}" > "${entries}.paths" \
     || die "could not extract submodule paths"
@@ -409,6 +489,7 @@ function main() {
     return
   fi
   require_command git
+  require_command stat
 
   git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
     || die "not inside a git work tree"
@@ -478,24 +559,16 @@ function main() {
     die "TMPDIR must point outside the working tree"
   fi
 
-  # The tree is written before the buckets are read, and is written again after
-  # them. Both describe the working tree, they are separate git invocations,
-  # and nothing stops the tree from changing in between. Without a stability
-  # check the gap fails silently and in the worst direction: a file created
-  # after the buckets were read but before the tree was written lands in the
-  # tree and in no bucket, so the reviewer is never shown it while the snapshot
-  # already covers it, and the caller's recheck then confirms a snapshot that
-  # never moved. That is a clean result over unread code, which is the one
-  # outcome this script exists to make impossible.
-  #
-  # Bracketing detects unequal end states, not edits or index changes that are
-  # reversed between reads. A consistent scope assumes the repository holds
-  # still throughout collection; rerun against a settled tree when it differs.
-  local tree digest index_before
+  # Bracket bucket collection with tree reads so the snapshot cannot cover
+  # files omitted from the review lists. Matching end states cannot detect
+  # intervening edits or index changes that were reversed; collection assumes
+  # a settled repository. Rerun when the end states differ.
+  local tree raw_tree digest index_before
   index_before="$(index_digest "${TMP_DIR}/index-before.records")"
   tree="$(working_tree_digest "${TMP_DIR}/index")"
+  raw_tree="$(raw_tree_digest "${TMP_DIR}/index" "${TMP_DIR}/raw-index")"
 
-  collect_submodules "${TMP_DIR}/submodules.json" "${TMP_DIR}/gitlinks" "${TMP_DIR}/index"
+  collect_submodules "${TMP_DIR}/submodules.json" "${TMP_DIR}/gitlinks" "${TMP_DIR}/index" "${TMP_DIR}/raw-index"
 
   # Each bucket goes to a file rather than into a jq argument. A large scope
   # makes the combined argument list exceed the execve limit, and on Linux a
@@ -512,15 +585,14 @@ function main() {
   # this guard must not reject.
   write_bucket worktree_vs_head review_diff -z --name-only HEAD
 
-  # The closing half of the bracket. A second index file is used rather than
-  # reusing the first, so this is a genuinely independent read of the tree and
-  # not a report on whatever the earlier run left behind.
-  local tree_after
+  # Recheck with separate indexes so the closing read is independent.
+  local tree_after raw_tree_after
   tree_after="$(working_tree_digest "${TMP_DIR}/index-recheck")"
-  collect_submodules "${TMP_DIR}/submodules-after.json" "${TMP_DIR}/gitlinks-after" "${TMP_DIR}/index-recheck"
+  raw_tree_after="$(raw_tree_digest "${TMP_DIR}/index-recheck" "${TMP_DIR}/raw-index-recheck")"
+  collect_submodules "${TMP_DIR}/submodules-after.json" "${TMP_DIR}/gitlinks-after" "${TMP_DIR}/index-recheck" "${TMP_DIR}/raw-index-recheck"
   cmp -s "${TMP_DIR}/submodules.json" "${TMP_DIR}/submodules-after.json" \
     || die "submodules changed while the scope was being read; rerun once settled"
-  [[ "${tree_after}" == "${tree}" ]] \
+  [[ "${tree_after}" == "${tree}" && "${raw_tree_after}" == "${raw_tree}" ]] \
     || die "the working tree changed while the scope was being read, so the file lists and the snapshot may describe different states; rerun once it has settled"
 
   local index_after head_after base_tip_after=""
@@ -538,13 +610,12 @@ function main() {
   [[ "${index_before}" == "${index_after}" && "${head}" == "${head_after}" && "${base_tip}" == "${base_tip_after}" ]] \
     || die "the index, HEAD or base changed while the scope was being read; rerun once it has settled"
 
-  # The parent tree must differ when ordinary disk paths differ. Submodule
-  # directories have independent recursive records, and a retained checkout
-  # staged for deletion can leave the parent tree equal to HEAD. Staged and
-  # unstaged changes can cancel on disk, so their buckets do not prove a change.
-  #
-  # The committed bucket is deliberately excluded: a branch with commits ahead
-  # of its base and a clean working tree legitimately has HEAD's own tree.
+  # Ordinary disk changes must move at least one tree. Sparse paths can retain
+  # normalized index blobs; raw trees capture their present bytes and availability.
+  # Submodules have recursive records; a retained checkout staged for deletion
+  # can leave the parent tree equal to HEAD. Staged and unstaged changes can
+  # cancel on disk, so their buckets do not prove a disk change.
+  # Exclude committed changes: a clean branch ahead of its base has HEAD's tree.
   local head_tree
   head_tree="$(git rev-parse "${head}^{tree}")" \
     || die "could not resolve HEAD's tree"
@@ -559,7 +630,7 @@ function main() {
        | . as $path | select(($links | index($path | rtrimstr("/"))) == null)]
     | length > 0')"
 
-  if [[ "${worktree_differs}" == "true" && "${tree}" == "${head_tree}" ]]; then
+  if [[ "${worktree_differs}" == "true" && "${tree}" == "${head_tree}" && "${raw_tree}" == "${head_tree}" ]]; then
     die "the working-tree digest equals HEAD's tree while paths on disk differ from HEAD; the snapshot does not describe what is on disk"
   fi
 
@@ -568,10 +639,10 @@ function main() {
   # even when it never appears on disk.
   digest="$(jq -cSn \
     --arg head "${head}" --arg base "${merge_base}" --arg base_tip "${base_tip}" \
-    --arg tree "${tree}" --arg index "${index_before}" \
+    --arg tree "${tree}" --arg raw_tree "${raw_tree}" --arg index "${index_before}" \
     --slurpfile submodules "${TMP_DIR}/submodules.json" --slurpfile files "${TMP_DIR}/files.json" \
     --slurpfile membership "${TMP_DIR}/membership.json" \
-    '{head: $head, base: $base, base_tip: $base_tip, tree: $tree, index: $index,
+    '{head: $head, base: $base, base_tip: $base_tip, tree: $tree, raw_tree: $raw_tree, index: $index,
       submodules: $submodules[0], files: $files[0], membership: $membership[0]}' \
     | git hash-object -w --stdin)"
 
@@ -585,6 +656,7 @@ function main() {
     --argjson base_unrelated "${base_unrelated}" \
     --argjson committed_covered "${committed_covered}" \
     --arg tree "${tree}" \
+    --arg raw_tree "${raw_tree}" \
     --arg index "${index_before}" \
     --arg base_tip "${base_tip}" \
     --arg snapshot "${digest}" \
@@ -595,6 +667,7 @@ function main() {
       base_unrelated: $base_unrelated,
       committed_covered: $committed_covered,
       tree: $tree,
+      raw_tree: $raw_tree,
       index: $index,
       base_tip: (if $base_tip == "" then null else $base_tip end),
       snapshot: $snapshot,
