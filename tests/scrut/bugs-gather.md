@@ -666,7 +666,7 @@ exit=1
 held
 ```
 
-## Reuse on a warm cache keeps every matching assessment
+## Reuse on a warm cache keeps every assessment that still matches its bug
 
 `#12` changed after it was read, so it alone needs reading.
 

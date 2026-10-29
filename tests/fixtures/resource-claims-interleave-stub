@@ -10,6 +10,16 @@ CLAIMS_WRITER="${CLAIMS_WRITER:-controller}"
 : "${CLAIMS_REAL_MKDIR:?}" "${WORKTREE_RESOURCES_FILE:?}"
 : "${CLAIMS_BARRIER:?}" "${WORKTREE_GIT_STUB_BIN:?}"
 
+function await_release() {
+  local marker="${1}" message="${2}" attempt
+  for ((attempt = 0; attempt < 200; attempt++)); do
+    [[ ! -f "${CLAIMS_BARRIER}/${marker}" ]] || return 0
+    "${CLAIMS_REAL_SLEEP:?}" 0.05
+  done
+  echo "${message}" >&2
+  return 1
+}
+
 case "${0##*/}" in
   mkdir)
     status=0
@@ -23,12 +33,8 @@ case "${0##*/}" in
     if [[ "${CLAIMS_WRITER}" == second ]]; then
       touch "${CLAIMS_BARRIER}/second-blocked"
       if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == stale ]]; then
-        for ((attempt = 0; attempt < 200; attempt++)); do
-          [[ ! -f "${CLAIMS_BARRIER}/release-waiter" ]] || exit 0
-          "${CLAIMS_REAL_SLEEP:?}" 0.05
-        done
-        echo 'stale waiter barrier timed out' >&2
-        exit 1
+        await_release release-waiter 'stale waiter barrier timed out'
+        exit 0
       fi
     fi
     exec "${CLAIMS_REAL_SLEEP:?}" "$@"
@@ -37,12 +43,8 @@ case "${0##*/}" in
     "${CLAIMS_REAL_RM:?}" "$@"
     if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release && "${CLAIMS_WRITER}" == first && "${1:-}" == "${WORKTREE_RESOURCES_FILE}.lock/owner" ]]; then
       touch "${CLAIMS_BARRIER}/first-owner-removed"
-      for ((attempt = 0; attempt < 200; attempt++)); do
-        [[ ! -f "${CLAIMS_BARRIER}/release-cleanup" ]] || exit 0
-        "${CLAIMS_REAL_SLEEP:?}" 0.05
-      done
-      echo 'cleanup barrier timed out' >&2
-      exit 1
+      await_release release-cleanup 'cleanup barrier timed out'
+      exit 0
     fi
     ;;
   git)
@@ -63,12 +65,8 @@ case "${0##*/}" in
       fi
       touch "${CLAIMS_BARRIER}/second-read"
       if [[ "${CLAIMS_INTERLEAVE_MODE:-snapshot}" == release ]]; then
-        for ((attempt = 0; attempt < 200; attempt++)); do
-          [[ ! -f "${CLAIMS_BARRIER}/release-second" ]] || exec "${WORKTREE_GIT_STUB_BIN}" "$@"
-          "${CLAIMS_REAL_SLEEP:?}" 0.05
-        done
-        echo 'second writer barrier timed out' >&2
-        exit 1
+        await_release release-second 'second writer barrier timed out'
+        exec "${WORKTREE_GIT_STUB_BIN}" "$@"
       fi
     fi
     exec "${WORKTREE_GIT_STUB_BIN}" "$@"

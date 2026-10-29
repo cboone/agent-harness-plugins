@@ -414,6 +414,14 @@ function held_lock_report() {
 # This serializes access to the file; it does not make the claim an enforced
 # lock on the resource, which stays advisory. Bash noclobber creates the owner
 # exclusively, even when mkdir incorrectly reports success on an existing path.
+function try_acquire_lock() {
+  local lock="${1}"
+  mkdir "${lock}" 2> /dev/null && (
+    set -o noclobber
+    printf '%s' "$$" > "${lock}/owner"
+  ) 2> /dev/null
+}
+
 function acquire_lock() {
   local file="${1}"
   local lock="${file}.lock"
@@ -423,13 +431,8 @@ function acquire_lock() {
   mkdir -p "${directory}" || die "cannot create ${directory}"
 
   while :; do
-    if mkdir "${lock}" 2> /dev/null; then
-      if (
-        set -o noclobber
-        printf '%s' "$$" > "${lock}/owner"
-      ) 2> /dev/null; then
-        break
-      fi
+    if try_acquire_lock "${lock}"; then
+      break
     fi
     # mkdir fails for reasons other than contention: an unwritable parent, or
     # something that is not a directory already at that path. Waiting those out
@@ -439,13 +442,8 @@ function acquire_lock() {
     if [[ ! -d "${lock}" ]]; then
       # It may have been released between the mkdir and this test, so try once
       # more before concluding the failure was not contention.
-      if mkdir "${lock}" 2> /dev/null; then
-        if (
-          set -o noclobber
-          printf '%s' "$$" > "${lock}/owner"
-        ) 2> /dev/null; then
-          break
-        fi
+      if try_acquire_lock "${lock}"; then
+        break
       fi
 
       if [[ ! -d "${lock}" ]]; then
