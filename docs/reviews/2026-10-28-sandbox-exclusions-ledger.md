@@ -2,11 +2,12 @@
 
 ## Current status
 
-Active overnight through a ready PR; TOOLING retains merging. Helper diagnostics,
-the guarded matrix and initial plants are committed. The structural Nit round
-has completed with findings, and its fixes and defect plants are verified; the first Important round is next. The resource
-suite now passes 21 cases; the restored 20-case revision measured 60.46 seconds. No push or PR has occurred. Earlier
-checkpoint sections below are historical, not current task status.
+**stopped: recurring defect**. The first structural Important round found an
+active tmpfile review instruction repeating the sandbox guarantee removed in
+the Nit round. The required conductor design decision is pending. No product
+fix has been applied to that instruction. Last reviewed head: `9372c20c`.
+No push or PR has occurred; focused reviews, trims, Semgrep, final lint/full
+checks, version audit and tidy remain pending. Resource tests pass 21/21.
 
 ## Authority and status
 
@@ -523,3 +524,62 @@ again. Results: `revision-plants/retained-output-plant.json`. The resource suite
 passed 21/21 before this plant; no source mutation remains. Structural round
 counts remain one Nit round, with the failed/partial completion attempts
 retained as such. The next round is Important, not another Nit round.
+
+## Structural review: first Important round, recurrence stop
+
+Review input: head `9372c20cbd48e7de088d83eb363472d04f7300af`, base
+`a2e56c535ed6326cc8d531d945fbb6c627a9b335`, snapshot
+`a3c7d125102409a8b8bd4292a78cf2dfe61dbb4d`. Both fresh Codex runs used
+read-only sandbox, approval never, web search disabled, gpt-6.1-sol, high,
+window 872000, external working directory and closed stdin. Both exited 0,
+returned nonempty valid output and progressed beyond stdin. Anti-patterns
+reported complete=true and no unread files; report-only simplify had no
+Important/Critical findings. Before/after trees both
+`bcdfd81a52c92c94338c54ccebc16d5b5af4dad7`, scope_changed=false, no lasting
+changes found.
+
+The installed review-pr-with-codex cache changed from 2.1.4 to 2.2.0 between
+rounds. The old path failed before any reviewer started; its empty scope was
+not reviewed. The updated installed skill and invocation reference were read,
+and scope/schema/prompts were regenerated with 2.2.0. Its canonical membership
+records remain with the artifacts in `structural-important-1/`.
+
+### Required finding decisions
+
+- **Reviewer's label:** `important`, "Parallel paths: active tmpfile review
+  instructions retain the removed sandbox guarantee".
+- **Our severity:** Important. `.github/instructions/tmpfile.instructions.md:9`
+  states that the preferred template needs no further change and prohibits
+  reporting an unresolved gap, even though active sandbox resource access can
+  deny its resolved directory. Lines 7 and 20 also assert universal directory
+  behavior. The full file was read to confirm the evidence.
+- **Take or record:** proposed take, blocked on the mandatory structural
+  decision. This is an unchanged sibling newly conflicting with the canonical
+  reference corrected in the preceding Nit round. No downgrade is proposed.
+- **Review again:** no further round is started before the conductor's call.
+  An instruction-only correction would not independently require another
+  round under the process; any executable structural fix would use the next
+  Important round, preserving the count.
+
+**End state: stopped: recurring defect.** The project Review rounds rule says:
+"When a round finds another instance of a defect class an earlier round fixed,
+stop the loop and report to the conductor". The recurring class is an
+unconditional sandbox temporary-directory guarantee in active guidance.
+The instruction file is unchanged. Loop count: one Nit, one Important; no
+second Important or Critical-only round started. Focused review has not begun.
+
+### Concrete proposal for TOOLING
+
+Reuse the existing canonical tmpfile reference as the policy source and revise
+its existing scoped review instruction to reference it without duplicating
+platform guarantees or suppressing actual resource findings. Include hidden
+active review guidance in the class-wide inventory alongside catalog sources
+and generated mirrors. Preserve the non-secret `-u` versus atomic sensitive
+file distinction. No new tool, watcher, permission rule or real setting is
+needed.
+
+A reviewable candidate patch is retained outside the worktree at
+`/private/tmp/sandbox512-live.dW1szP/recurrence-proposal.diff`. It has **not**
+been applied. TOOLING must choose the structural closure before work resumes.
+All reviewer, plant and private-server processes have completed; none remains
+running. This stop changes only the ledger, not the reviewed product tree.
