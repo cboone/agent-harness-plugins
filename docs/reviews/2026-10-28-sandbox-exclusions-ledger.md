@@ -258,9 +258,9 @@ not merely the model's prose:
 | ------------------------------- | ------------------------------------------------ | --------------------------------------------- |
 | No exclusions                   | Absolute fixture executable                      | Executed; write, socket and config all denied |
 | `sandbox512-probe *`            | Bare fixture binary                              | Tool permission rejected before execution     |
-| Absolute fixture path plus `*` | Absolute fixture executable                      | Tool permission rejected before execution     |
+| Absolute fixture path plus `*`  | Absolute fixture executable                      | Tool permission rejected before execution     |
 | `bash ABSOLUTE_FIXTURE_PATH *`  | `bash ABSOLUTE_FIXTURE_PATH bash`                | Tool permission rejected before execution     |
-| Absolute fixture path plus `*` | `printf probe \| ABSOLUTE_FIXTURE_PATH pipeline` | Executed; all three resources denied          |
+| Absolute fixture path plus `*`  | `printf probe \| ABSOLUTE_FIXTURE_PATH pipeline` | Executed; all three resources denied          |
 | No exclusions, binary control   | Same bare-binary command                         | Executed; all three resources denied          |
 | No exclusions, bash control     | Same bash-script command                         | Executed; all three resources denied          |
 | No exclusions, pipeline control | Same pipeline command                            | Executed; all three resources denied          |
@@ -354,3 +354,26 @@ log/socket/config/claim diagnostics; and an unrelated failure control. Existing
 launch-options suite passed 16/16. ShellCheck and shfmt passed for new helpers
 and fixtures. The existing launcher suite is still running and is not yet
 reported as passed. Plants and reviews have not started.
+
+### Completed validation and plants
+
+The existing launcher suite subsequently passed 68/68; claims passed 100/100,
+options 16/16 and the new resource suite 8/8. Feature/test checkpoint:
+`685a9c41`. Tests were committed before plants. Each plant passed Bash syntax
+validation, then failed the actual Scrut document with the assertion below.
+Original bytes were restored between plants; restored suite passed 8/8.
+
+| Planted defect                                                                 | Instrument                                    | Observed result                                             | Regression coverage                                                |
+| ------------------------------------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------ |
+| Disable workmux log-marker recognition                                         | Resource matrix and pinned message            | Failed, harness/resource diagnostic missing                 | Log failure cell and pinned log diagnostic                         |
+| Replace socket resource identification                                         | Resource matrix and pinned message            | Failed, harness/resource diagnostic missing                 | Socket failure cells and pinned socket diagnostic                  |
+| Replace gh config identification                                               | Resource matrix and pinned message            | Failed, harness/resource diagnostic missing                 | Config failure cells and pinned config diagnostic                  |
+| Remove claim resource diagnostic                                               | Resource matrix and pinned message            | Failed, harness/resource diagnostic missing                 | Claim failure cells and pinned claim diagnostic                    |
+| Replace native Codex label                                                     | Resource matrix and pinned messages           | Failed, harness/resource diagnostic missing                 | Both invocation forms under the Codex identity                     |
+| Discard completed launch's original log                                        | Original-error assertions and pinned messages | Failed, original resource error missing                     | Original log/socket/config errors remain visible                   |
+| Weaken matrix diagnostic assertion and disable log-marker recognition together | Independent pinned log snapshot               | Exactly 7 passed, 1 failed; pinned log diagnostic caught it | Independent snapshot remains necessary alongside matrix assertions |
+
+Plant logs and `plants.json` are under the recorded scratch root's `results/`.
+The final restored run after the weakened-judge experiment passed 8/8. No
+temporary source mutation remains. All private servers and fact-finding
+processes have finished. Structural and focused review rounds remain unstarted.
