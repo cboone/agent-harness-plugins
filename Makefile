@@ -40,6 +40,8 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 # drifting apart. CI invokes these targets and uses this same environment.
 SCRUT_ENV := \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
+	CODEX_FAILURE_WATCHER_BIN="$(CURDIR)/plugins/notify/scripts/watch-codex-failures" \
+	CHECK_CODEX_FAILURES_BIN="$(CURDIR)/tests/fixtures/check-codex-failures" \
 	ATTENTION_LOG_BIN="$(CURDIR)/plugins/attention-log/scripts/attention-log" \
 	CHECK_NOTIFICATIONS_BIN="$(CURDIR)/tests/fixtures/check-notifications" \
 	CHECK_CROSS_REFERENCES_BIN="$(CURDIR)/bin/check-cross-references" \

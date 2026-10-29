@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Synchronize both claim attempts before delegating to the real filesystem.
+set -euo pipefail
+
+function main() {
+  local target="" barrier="${ROLLOUT_CLAIM_BARRIER:-}" attempt
+  for target in "$@"; do :; done
+  if [[ -n "${barrier}" ]]; then
+    case "${target}" in
+      "${XDG_CACHE_HOME:?}/agent-harness-notify/codex-failures/"*)
+        if /bin/mkdir "${barrier}/first" 2> /dev/null; then
+          :
+        else
+          /bin/mkdir "${barrier}/second"
+        fi
+        for ((attempt = 0; attempt < 150; attempt++)); do
+          [[ ! -d "${barrier}/second" ]] || break
+          /bin/sleep 0.02
+        done
+        if ((attempt == 150)); then
+          echo 'Concurrent claim barrier was not reached by both readers' >&2
+          return 1
+        fi
+        ;;
+      *) ;;
+    esac
+  fi
+  exec /bin/mkdir "$@"
+}
+
+main "$@"

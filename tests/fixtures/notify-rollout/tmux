@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo 'Unexpected tmux lookup' >> "${ROLLOUT_LOOKUPS:?}"
+exit 1

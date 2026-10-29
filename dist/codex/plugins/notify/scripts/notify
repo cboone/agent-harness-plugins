@@ -136,6 +136,7 @@ Subcommands:
   cc-question       Claude Code PreToolUse:AskUserQuestion
   cc-stop           Claude Code Stop
   cc-failure        Claude Code StopFailure (error or safeguard refusal)
+  codex-failure     Normalized terminal failure from the rollout watcher
   cc-turn-start     Claude Code UserPromptSubmit (resets completion deduplication)
   codex-question    Codex PreToolUse:request_user_input
   codex-stop        Codex Stop
@@ -335,6 +336,7 @@ function read_session_name() {
 
 # Sets TMUX_SESSION and TMUX_WINDOW for $TMUX_PANE, or leaves them empty.
 function read_tmux_names() {
+  [[ "${EXPLICIT_CONTEXT:-false}" == false ]] || return 0
   [[ -n "${TMUX_PANE:-}" ]] || return 0
   local names
   names="$(tmux display-message -t "${TMUX_PANE}" -p "#{session_name}${TMUX_FIELD_SEP}#{window_name}" 2> /dev/null)" || return 0
@@ -770,12 +772,23 @@ function plan_heading() {
 # Stops alerter with SIGKILL WAIT_LIMIT seconds after launch, unless it exits
 # first. SIGTERM or SIGINT would make alerter remove its delivered banner.
 function run_alerter() {
+  local failure_context="${1}"
+  shift
   alerter "$@" --timeout "${FIRE_TIMEOUT}" &
-  local pid=$! waited=0
+  local pid=$! waited=0 backend_status
   while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do
     sleep 1
     waited=$((waited + 1))
   done
+  if [[ -n "${failure_context}" ]] && ! kill -0 "${pid}" 2> /dev/null; then
+    if wait "${pid}"; then
+      return 0
+    else
+      backend_status=$?
+      printf 'notify: alerter exited with status %s (%s)\n' "${backend_status}" "${failure_context}" >&2
+      return "${backend_status}"
+    fi
+  fi
   kill -KILL "${pid}" 2> /dev/null || true
 }
 
@@ -783,6 +796,8 @@ function run_alerter() {
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
+  local failure_context="${7:-}" error_fd=1
+  if [[ -n "${failure_context}" ]]; then error_fd=2; fi
 
   group="${group}-${SESSION_KEY}"
   if [[ "${group}" == *-stop-* ]]; then
@@ -800,14 +815,14 @@ function fire_alerter_detached() {
     sound_args=(--sound "${sound}")
   fi
 
-  run_alerter \
+  run_alerter "${failure_context}" \
     --title "${title}" \
     --subtitle "${subtitle}" \
     --message "${message}" \
     ${sound_args[@]+"${sound_args[@]}"} \
     --group "${group}" \
     --app-icon "${icon}" \
-    > /dev/null 2>&1 < /dev/null &
+    > /dev/null 2>&"${error_fd}" < /dev/null &
   # disown fails without job control, and set -e would then skip the notification.
   disown 2> /dev/null || true
 }
@@ -853,6 +868,33 @@ function do_cc_failure() {
   fire_alerter_detached "$(tier_title "${title}: ${name}")" "$(banner_subtitle)" \
     "$(truncate_with_ellipsis "${message}" "${BODY_LIMIT}")" \
     "${sound}" "${HARNESS}-failure" "${ASSETS_DIR}/claude-code.png"
+}
+
+# The watcher supplies presentation context; a shared daemon's pane is unrelated.
+function do_codex_failure() {
+  local kind name message sound title="Error"
+  kind="$(hook_string kind)"
+  case "${kind}" in error | refusal) ;; *) return 1 ;; esac
+  EXPLICIT_CONTEXT=true
+  unset TMUX TMUX_PANE CLAUDE_PROJECT_DIR
+  TMUX_SESSION="$(hook_string tmux_session)"
+  TMUX_WINDOW="$(hook_string tmux_window)"
+  SESSION_NAME="$(hook_string session_name)"
+  SESSION_NAME_READ=true
+  if [[ "${NOTIFY_TIER:-}" != untiered ]]; then resolve_tier ""; fi
+  sound="$(resolve_sound Funk)"
+  compute_place ""
+  name="${SESSION_NAME:-$(hook_string session_id)}"
+  name="$(truncate_with_ellipsis "${name:-Unknown session}" 70)"
+  message="$(hook_string message)"
+  if [[ "${kind}" == refusal ]]; then
+    title="Refusal"
+    message="Turn ended in a safeguard refusal."
+  fi
+  fire_alerter_detached "$(tier_title "${title}: ${name}")" "$(banner_subtitle)" \
+    "$(truncate_with_ellipsis "${message:-Turn ended in an API error.}" "${BODY_LIMIT}")" \
+    "${sound}" "${HARNESS}-failure" "${ASSETS_DIR}/codex.png" \
+    "thread $(hook_string session_id), turn $(hook_string turn_id)"
 }
 
 # An MCP server raises the dialog, so in every tier only a banner announces it.
@@ -1138,6 +1180,7 @@ function main() {
     cc-permission) do_cc_permission ;;
     cc-stop) do_stop "claude-code" ;;
     cc-failure) do_cc_failure ;;
+    codex-failure) do_codex_failure ;;
     codex-stop) do_stop "codex" ;;
     "")
       echo "Error: subcommand required" >&2
