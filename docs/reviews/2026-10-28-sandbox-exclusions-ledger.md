@@ -167,3 +167,43 @@ tidy and publication remain pending. No clean review state or passing
 acceptance matrix is claimed. Do not retry a denied probe, add permission
 rules, or change real settings to obtain missing evidence. TOOLING has the
 open Claude harness questions and the probe limitations.
+
+## Nighttime checkpoint
+
+Checkpoint preparation at 9:37 PM ET, 2026-10-28, for the requested nighttime
+stop around 9:40 PM ET. TOOLING parks the worker and controls its restart after
+8 AM ET. This checkpoint does not complete either issue.
+
+Signed commits so far:
+
+- `de4af294`: plan and initial harness evidence.
+- `f5f6b305`: five source corrections, four patch bumps and generated mirrors.
+
+Both signatures verified as `G` through Git's log signature status. The tree
+was clean before this checkpoint entry. Every fact-finding process and the
+build/validation commands has completed; no child process or background wait
+is still running. No push or PR has been attempted.
+
+Resume from this ledger and the plan, then:
+
+1. Read TOOLING's answer to the open Claude harness fact request (mailbox
+   question `000002`). Keep the restrictive probe denials distinct from
+   executed resource denials. Obtain the remaining matching and resource
+   evidence without broad shell exemptions or real settings changes.
+2. Read the remaining sandbox/exemption hits before finishing the semantic
+   sweep. The initial full hit list includes review/trim isolation settings,
+   use-git's tmpfile assumptions, clean-up-agent-config policy examples,
+   attention-log and notify parsing, Homebrew guidance, style references and
+   repository validators. None has yet been classified as an additional
+   command-exemption dependency. Historical plans remain historical.
+3. Implement helper diagnostics and the committed, stub-guarded launch and
+   resource matrix. No executable implementation or new test exists yet.
+   Preserve existing detached-process completion and uncertain-delivery rules.
+   Load `plant-defects` and commit tests before planting diagnostic defects.
+4. Complete the full local review order and all remaining checks listed above.
+   No review round has started. Recompute the actual origin/main merge base
+   when review starts; do not treat the initial base as permanently current.
+   TOOLING retains merging and issue labels.
+
+All created temporary files are under the single recorded probe directory.
+Keep it for resumption; do not remove files by a shared temporary-path pattern.
