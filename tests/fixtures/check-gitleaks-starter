@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pin the starter's active TOML, so additions cannot silently narrow coverage.
+function main() {
+  local active
+  active="$(awk '
+    /^```toml$/ && !seen { seen = 1; inside = 1; next }
+    inside && /^```$/ { closed = 1; exit }
+    inside {
+      sub(/#.*/, "")
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+      if (length) print
+    }
+    END { if (!closed) print "Missing TOML fence" }
+  ' "${1:?template path required}")"
+  if [[ "${active}" != $'[extend]\nuseDefault = true' ]]; then
+    printf '%s\n' 'Starter must only extend default rules without added exclusions.' >&2
+    return 1
+  fi
+  printf '%s\n' 'Starter extends default rules without added exclusions.'
+}
+
+main "$@"
