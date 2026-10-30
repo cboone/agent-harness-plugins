@@ -1,0 +1,7 @@
+{
+  "aspect": "tests",
+  "findings": [],
+  "reviewed": "158cb90146e0f9166b3050ec7ac5419a80ff75a1",
+  "strengths": ["The minimal public-mode fixture omits AST libraries and asserts both rejection diagnostics and protected-command acceptance, covering the import-order regression.", "Normal-mode tests independently exercise discard rejection, allowed controls and scope reporting.", "Static samples cover parser failures, descriptor boundaries and reason handling without executing sample programs."],
+  "summary": "Reviewed the fixed scope against accompanying tests, existing integrations and relevant callers. No introduced coverage gaps warrant reporting: clean at Critical. Review remained static; no repository code or checks ran."
+}

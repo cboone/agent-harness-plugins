@@ -1,0 +1,39 @@
+{
+  "round": "focused Critical1 mode confirmation",
+  "base": "5205fada80635f7d9dd4a1967c94a256e60a99cb",
+  "head": "3d633c45fa885401c507381aab7b590a39b51ec9",
+  "aspects": [
+    {
+      "aspect": "code",
+      "exit_status": 0,
+      "findings": 0,
+      "reviewed": "158cb90146e0f9166b3050ec7ac5419a80ff75a1"
+    },
+    {
+      "aspect": "errors",
+      "exit_status": 0,
+      "findings": 0,
+      "reviewed": "158cb90146e0f9166b3050ec7ac5419a80ff75a1"
+    },
+    {
+      "aspect": "tests",
+      "exit_status": 0,
+      "findings": 0,
+      "reviewed": "158cb90146e0f9166b3050ec7ac5419a80ff75a1"
+    }
+  ],
+  "scope_changed": false,
+  "end_state": "clean at Critical",
+  "threshold": "Critical only; record anything lower",
+  "lower_findings": [],
+  "omitted": {
+    "comments": "Existing directives moved, no comment text changed; explicit selected scope.",
+    "types": "No data model change; explicit selected scope."
+  },
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "window": 872000,
+  "sandbox": "read-only",
+  "actual_host_errors": 0,
+  "hook_picker": "none"
+}

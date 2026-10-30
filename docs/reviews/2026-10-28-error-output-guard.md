@@ -1368,3 +1368,19 @@ findings and record lower findings. Comments and types are omitted because this
 fix moves existing directive text and changes no data model. The fixed review
 base remains 5205fada; full checks follow this confirmation. The incoming-main
 operand defect remains assigned elsewhere.
+
+## Focused Critical round 1: mode dependency confirmation
+
+Code, errors and tests completed with valid output and zero findings at fixed
+base 5205fada and head 3d633c45. All native processes exited 0 and every reply
+named the required snapshot. The after-scope comparison found no lasting changes.
+Comments and types were omitted as directed: no comment text or data model changed.
+The threshold was Critical-only; there were no lower findings to record.
+
+[The confirmation record](2026-10-29-error-output-focused-critical1-mode-status.json)
+and raw successful replies retain the evidence. Settings remained gpt-6.1-sol,
+high effort, 872000 window, read-only sandbox, never approvals, disabled web
+search and closed stdin. No actual host error or hook-review picker appeared.
+The focused loop end state is **clean at Critical**, with counts Nit 1,
+Important 1, Important 2 and Critical 1 preserved. Final validation follows;
+the known incoming-main operand-contract defect remains untouched.
