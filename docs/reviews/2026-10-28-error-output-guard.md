@@ -1384,3 +1384,37 @@ search and closed stdin. No actual host error or hook-review picker appeared.
 The focused loop end state is **clean at Critical**, with counts Nit 1,
 Important 1, Important 2 and Critical 1 preserved. Final validation follows;
 the known incoming-main operand-contract defect remains untouched.
+
+## Final post-fix validation and upstream limitation
+
+The required make test-all was rerun and exits 2 at the known incoming-main
+lint-shell operand contract: six diagnostics at review-submodule-fixture lines
+132–134 and 254. The source remains byte-identical to 5205fada; no ignore,
+override or upstream repair was applied. This is not reported as a passing
+test-all run.
+
+Separate repository validation, Bash 3.2 normal checking and the version audit
+pass. All 102 guard cases pass after the import fix. The public-mode negative
+and positive controls pass. The affected environment document now has 50 passes
+and one failure, solely the known incoming-main contract; the own dependency
+regression is fixed. The earlier full 57-document run had 1,983 tests and two
+failures in that document; all other 56 documents and their 1,932 tests passed.
+Only affected checks were repeated after the local fix.
+
+Markdownlint, Prettier, ShellCheck and shfmt pass. Actionlint was run separately
+and passes because the known lint prerequisite prevents the aggregate recipe
+from reaching it. Ten changed plugins have forward patch versions and all
+60 catalog plugins retain complete coverage and matching Codex manifests.
+
+The final native baseline Semgrep scan uses fixed 5205fada, an owned shared clone
+of 151d0519, config auto and default metrics. It exits 0 with zero findings,
+138 rules, 132 targets and approximately 88.2 percent parsed lines. Thirteen
+Bash files have parser limitations; ShellCheck passes all thirteen. No other
+language has a parser error. The standing shell-only coverage exception applies;
+full parsing is not claimed. Both owned scan clones were archived and removed.
+
+[The final post-merge record](2026-10-29-error-output-postmerge-final-validation.json)
+retains exact source states, failures, measured reruns, versions, parser-limit
+files and spans. The next step publishes the signed merge and local fixes to
+the existing PR with a fast-forward push, then observes CI. The known upstream
+failure will be reported if it remains; the unrelated source is not changed here.
