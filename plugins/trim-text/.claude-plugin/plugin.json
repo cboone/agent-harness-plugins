@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Trim and rewrite prose, such as PR and issue bodies and agent instructions, so it leads with what the reader needs and the minimum why, without changing what it says.",
+  "description": "Trim and rewrite prose and code comments so each leads with what the reader needs and the minimum why, without changing what it says.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["agent-instructions", "editing", "pull-requests", "style", "writing"],
   "license": "MIT",
   "name": "trim-text",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.1"
+  "version": "1.3.0"
 }
