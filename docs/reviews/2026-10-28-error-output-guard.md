@@ -1320,3 +1320,27 @@ published history. Its focused review uses immutable base `5205fada` and the
 existing Important-round count advances to round 2, as directed for this behavior
 change. Full checks follow the review. No additional rare site appeared beyond
 the nine approved.
+
+## Focused Important round 2: incoming-main integration
+
+The integration review used fixed base `5205fada` and signed merge
+`54d3d451`, preserving the existing focused Nit 1 and Important 1 counts.
+Code, errors and tests completed with valid output and no findings. The first
+comments reply returned a different snapshot identifier, so validation failed;
+types was cancelled without a reply. No invalid prose was used or repaired.
+The unchanged snapshot allowed the three valid replies to be retained.
+
+TOOLING authorized comments and types to complete the same round, with
+`reviewed` bound to the required snapshot in the native schema. Both returned
+valid output and no findings. All five successful replies name snapshot
+`445aa43eee880cf6c8eb77f2b3212ec910d69c5d`; every process exited 0, with no
+lasting source or scope changes. Settings remained `gpt-6.1-sol`, high effort,
+872000 window, read-only sandbox, never approvals, disabled web search and closed
+stdin. No actual host error or hook-review picker appeared.
+
+[The completion record](2026-10-29-error-output-focused-important2-integration-status.json)
+identifies retained and completed aspects. Raw successful replies and full
+failed/completion captures are retained. The focused loop end state is
+**clean at Important**, with counts Nit 1, Important 1 and Important 2.
+No finding requires a further behavior round. Post-merge checks follow; the
+known incoming-main operand-contract failure remains assigned elsewhere.
