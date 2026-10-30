@@ -1,0 +1,88 @@
+{
+  "head": "7f7dbc454551b9a11649377103b5753fd6498d50",
+  "method": "Rare literal exec-like names with redirections, recursively recognized command/builtin exec redirections, and coprocess contexts. Dynamic variable command names including ordinary \"$@\" > file are unchanged. Statically resolved non-exec quoted names are unchanged. Existing parsed reason comments are excluded. Unresolved literal-only quoted or escaped names are conservatively exec-like.",
+  "risk_count": 2,
+  "site_count": 2,
+  "file_count": 2,
+  "sites": [
+    {
+      "file": "plugins/attention-log/scripts/attention-log",
+      "line": 529,
+      "source": "  exec > /dev/null",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "tests/fixtures/ledger-concurrency",
+      "line": 11,
+      "source": "  exec 3<> \"${fixture}/barrier/ready\"",
+      "constructs": ["exec redirection"]
+    }
+  ],
+  "probes": [
+    {
+      "name": "escaped-exec",
+      "source": "\\exec 1>/dev/null; some-command 2>&1",
+      "candidate_diagnostics": [
+        {
+          "construct": "escaped or quoted exec",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "name": "quoted-exec",
+      "source": "'exec' 1>/dev/null; some-command 2>&1",
+      "candidate_diagnostics": [
+        {
+          "construct": "exec redirection",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "name": "coproc",
+      "source": "coproc { some-command 2>&1; }",
+      "candidate_diagnostics": [
+        {
+          "construct": "coproc",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "name": "accepted-saved-alias",
+      "source": "{ exec 3>/dev/null; some-command 2>&3; } 3>&1",
+      "candidate_diagnostics": [
+        {
+          "construct": "exec redirection",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "name": "accepted-composed-prefix",
+      "source": "command builtin exec 1>/dev/null; some-command 2>&1",
+      "candidate_diagnostics": [
+        {
+          "construct": "exec redirection",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "name": "ordinary-variable",
+      "source": "\"$@\" > file",
+      "candidate_diagnostics": []
+    },
+    {
+      "name": "quoted-non-exec",
+      "source": "\"printf\" hello > file",
+      "candidate_diagnostics": []
+    }
+  ]
+}

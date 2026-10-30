@@ -35,7 +35,7 @@ fetched the case content, would otherwise report a clean pass with the counts
 as the only dissenting signal, and nothing consuming them.
 
 ```scrut
-$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && rm -rf "${root}/corpus/cases" && mkdir "${root}/corpus/cases" && (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | sed "s|${root}|<root>|")
+$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && rm -rf "${root}/corpus/cases" && mkdir "${root}/corpus/cases" && (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | sed "s|${root}|<root>|") # error-output-allow: testcase asserts retained diagnostics: A corpus with no cases is refused, not passed
 Error: no cases found under <root>/corpus/cases; nothing was validated
 [2]
 ```
@@ -137,7 +137,7 @@ the caller was told to use would defeat it. Removing it also keeps the failure
 idempotent: the retry reports the real reason instead of "not empty".
 
 ```scrut
-$ scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && root="$("${REVIEW_CORPUS_FIXTURE_BIN}" metadata-in-tree)" && "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 001-demo-tally-sign "${scratch}/wt" > /dev/null 2>&1; test ! -e "${scratch}/wt" && echo "worktree removed" && "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 001-demo-tally-sign "${scratch}/wt" 2>&1
+$ scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && root="$("${REVIEW_CORPUS_FIXTURE_BIN}" metadata-in-tree)" && "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 001-demo-tally-sign "${scratch}/wt" > /dev/null ; test ! -e "${scratch}/wt" && echo "worktree removed" && "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 001-demo-tally-sign "${scratch}/wt" 2>&1
 worktree removed
 Error: the frozen tree carries corpus metadata (defects.yaml); the case is mis-frozen
 [1]
@@ -150,7 +150,7 @@ whatever the ref now points at while the harness scored against the SHA the
 case records.
 
 ```scrut
-$ (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}" head-mismatch)/corpus" 001-demo-tally-sign "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/wt" 2>&1 | sed -E 's/[0-9a-f]{40}/<sha>/g')
+$ (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}" head-mismatch)/corpus" 001-demo-tally-sign "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/wt" 2>&1 | sed -E 's/[0-9a-f]{40}/<sha>/g') # error-output-allow: testcase asserts retained diagnostics: A recorded SHA that has drifted from its case ref is refused
 Error: HEAD records <sha> but refs/cases/001-demo-tally-sign/head points at <sha>
 [1]
 ```
@@ -161,7 +161,7 @@ Both ends move together in this scenario, so the recorded SHAs and the refs
 agree and the ancestry is the only thing left to refuse it.
 
 ```scrut
-$ (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}" base-unrelated)/corpus" 001-demo-tally-sign "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/wt" 2>&1 | sed -E 's/[0-9a-f]{40}/<sha>/g')
+$ (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}" base-unrelated)/corpus" 001-demo-tally-sign "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/wt" 2>&1 | sed -E 's/[0-9a-f]{40}/<sha>/g') # error-output-allow: testcase asserts retained diagnostics: A base that is not an ancestor of the head is refused
 Error: BASE <sha> is not an ancestor of HEAD <sha>; three-dot diffs would be wrong
 [1]
 ```
@@ -197,7 +197,7 @@ The first block shows the failure it remedies: git keeps the registration, so
 re-using the freed path is refused until the registration is dropped.
 
 ```scrut
-$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 001-demo-tally-sign "${scratch}/a" > /dev/null && rm -rf "${scratch}/a" && (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 001-demo-tally-sign "${scratch}/a" 2>&1 | tail -1)
+$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 001-demo-tally-sign "${scratch}/a" > /dev/null && rm -rf "${scratch}/a" && (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 001-demo-tally-sign "${scratch}/a" 2>&1 | tail -1) # error-output-allow: testcase asserts retained diagnostics: --prune forgets a worktree whose directory is gone
 Error: could not add a worktree for 001-demo-tally-sign at */a (glob)
 [1]
 ```
@@ -348,7 +348,7 @@ than reusing the base, so the BASE..HEAD diff stays non-empty and the
 diff-membership rule does not fire alongside this one.
 
 ```scrut
-$ (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}" head-mismatch)/corpus" 2>&1 | sed -E 's/[0-9a-f]{40}/<sha>/g')
+$ (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}" head-mismatch)/corpus" 2>&1 | sed -E 's/[0-9a-f]{40}/<sha>/g') # error-output-allow: testcase asserts retained diagnostics: A recorded SHA that has drifted from its case ref is reported
 ::error::001-demo-tally-sign: head ref points at <sha> but the file records <sha>
 Review corpus: 2 case(s), 2 defect(s), 0 warning(s).
 1 corpus validation error(s) found.
@@ -396,7 +396,7 @@ rather than replaced with a generic one. Reporting every failure as invalid
 YAML would also blame the file for an unwritable scratch directory.
 
 ```scrut
-$ (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}" invalid-yaml)/corpus" 2>&1 | sed -n '1p')
+$ (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}" invalid-yaml)/corpus" 2>&1 | sed -n '1p') # error-output-allow: testcase asserts retained diagnostics: Unparseable YAML carries yq's own diagnostic
 ::error::001-demo-tally-sign: could not read defects.yaml: Error: bad file *did not find expected ',' or ']' (glob)
 [1]
 ```
@@ -430,7 +430,7 @@ The loop reports every problem rather than stopping at the first, so one edit
 does not mask another.
 
 ```scrut
-$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && sed -i.bak -e 's/^source: planted$/source: invented/' -e 's/^    severity: p1$/    severity: urgent/' "${root}/corpus/cases/001-demo-tally-sign/defects.yaml" && rm -f "${root}/corpus/cases/001-demo-tally-sign/defects.yaml.bak" && (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | grep -c '^::error::')
+$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && sed -i.bak -e 's/^source: planted$/source: invented/' -e 's/^    severity: p1$/    severity: urgent/' "${root}/corpus/cases/001-demo-tally-sign/defects.yaml" && rm -f "${root}/corpus/cases/001-demo-tally-sign/defects.yaml.bak" && (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | grep -c '^::error::') # error-output-allow: testcase asserts retained diagnostics: Two problems in one case are both reported
 2
 [1]
 ```
@@ -440,7 +440,7 @@ $ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && sed -i.bak -e 's/^source: planted$
 Two defects sharing an id would make per-defect scoring ambiguous.
 
 ```scrut
-$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); open(p,'w').write(s + s.split('defects:')[1])" "${root}/corpus/cases/001-demo-tally-sign/defects.yaml" 2>/dev/null; (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | grep -c 'not unique')
+$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); open(p,'w').write(s + s.split('defects:')[1])" "${root}/corpus/cases/001-demo-tally-sign/defects.yaml" ; (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | grep -c 'not unique') # error-output-allow: testcase asserts retained diagnostics: Duplicate defect ids are reported
 1
 [1]
 ```
@@ -448,7 +448,7 @@ $ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && python3 -c "import sys; p=sys.argv
 ## A defect naming a file absent from HEAD is reported
 
 ```scrut
-$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && sed -i.bak 's|^    file: src/tally$|    file: src/gone|' "${root}/corpus/cases/001-demo-tally-sign/defects.yaml" && rm -f "${root}/corpus/cases/001-demo-tally-sign/defects.yaml.bak" && (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | sed -n '1p')
+$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && sed -i.bak 's|^    file: src/tally$|    file: src/gone|' "${root}/corpus/cases/001-demo-tally-sign/defects.yaml" && rm -f "${root}/corpus/cases/001-demo-tally-sign/defects.yaml.bak" && (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | sed -n '1p') # error-output-allow: testcase asserts retained diagnostics: A defect naming a file absent from HEAD is reported
 ::error::001-demo-tally-sign/D1: src/gone is not a file at HEAD
 [1]
 ```
@@ -456,7 +456,7 @@ $ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && sed -i.bak 's|^    file: src/tally
 ## A reversed line range is reported
 
 ```scrut
-$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && sed -i.bak 's/^    lines: \[9, 9\]$/    lines: [9, 4]/' "${root}/corpus/cases/001-demo-tally-sign/defects.yaml" && rm -f "${root}/corpus/cases/001-demo-tally-sign/defects.yaml.bak" && (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | sed -n '1p')
+$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && sed -i.bak 's/^    lines: \[9, 9\]$/    lines: [9, 4]/' "${root}/corpus/cases/001-demo-tally-sign/defects.yaml" && rm -f "${root}/corpus/cases/001-demo-tally-sign/defects.yaml.bak" && (set -o pipefail; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 2>&1 | sed -n '1p') # error-output-allow: testcase asserts retained diagnostics: A reversed line range is reported
 ::error::001-demo-tally-sign: defects[0].lines start 9 is after end 4
 [1]
 ```
@@ -467,7 +467,7 @@ Writing a case over an existing tree would leave the reviewer with a mixture of
 two, and nothing downstream could tell.
 
 ```scrut
-$ scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${scratch}/wt" && touch "${scratch}/wt/leftover" && (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}")/corpus" 001-demo-tally-sign "${scratch}/wt" 2>&1 | sed "s|${scratch}|<scratch>|")
+$ scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${scratch}/wt" && touch "${scratch}/wt/leftover" && (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}")/corpus" 001-demo-tally-sign "${scratch}/wt" 2>&1 | sed "s|${scratch}|<scratch>|") # error-output-allow: testcase asserts retained diagnostics: A non-empty target is refused
 Error: target <scratch>/wt is not empty
 [1]
 ```
@@ -493,7 +493,7 @@ The same user error, so the same code. Exit 2 keeps a misconfigured run
 distinguishable from a corpus that really has a problem.
 
 ```scrut
-$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 099-demo-absent "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/wt" > /dev/null 2>&1; m=$?; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 099-demo-absent > /dev/null 2>&1; v=$?; printf 'materialize=%d validate=%d\n' "${m}" "${v}"
+$ root="$("${REVIEW_CORPUS_FIXTURE_BIN}")" && "${MATERIALIZE_CASE_BIN}" --corpus "${root}/corpus" 099-demo-absent "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/wt" > /dev/null ; m=$?; "${VALIDATE_CORPUS_BIN}" --corpus "${root}/corpus" 099-demo-absent > /dev/null ; v=$?; printf 'materialize=%d validate=%d\n' "${m}" "${v}"
 materialize=2 validate=2
 ```
 
@@ -508,7 +508,7 @@ Error: no corpus given; pass --corpus DIR or set REVIEW_CASE_CORPUS_DIR
 ## A corpus that is not a git repository is a usage error
 
 ```scrut
-$ scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "${scratch}" 001-demo-tally-sign "${scratch}/wt" 2>&1 | sed "s|${scratch}|<scratch>|")
+$ scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "${scratch}" 001-demo-tally-sign "${scratch}/wt" 2>&1 | sed "s|${scratch}|<scratch>|") # error-output-allow: testcase asserts retained diagnostics: A corpus that is not a git repository is a usage error
 Error: corpus <scratch> is not a git repository
 [2]
 ```
@@ -519,7 +519,7 @@ Rather than git's own `fatal:` and exit 128, which is outside the documented
 contract and says nothing about which option was wrong.
 
 ```scrut
-$ scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${scratch}/notgit" && (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}")/corpus" --cache "${scratch}/notgit" --prune 2>&1 | sed "s|${scratch}|<scratch>|")
+$ scratch="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${scratch}/notgit" && (set -o pipefail; "${MATERIALIZE_CASE_BIN}" --corpus "$("${REVIEW_CORPUS_FIXTURE_BIN}")/corpus" --cache "${scratch}/notgit" --prune 2>&1 | sed "s|${scratch}|<scratch>|") # error-output-allow: testcase asserts retained diagnostics: A cache that is not a git repository is a usage error
 Error: cache <scratch>/notgit is not a git repository
 [2]
 ```

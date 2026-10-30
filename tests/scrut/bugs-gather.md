@@ -58,7 +58,7 @@ $ function bugs() {
 >   output="$(bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_MODE="${mode}" LOCK_TEST_DIRECTORY="${lock}" \
 >     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" LOCK_TEST_REAL_RM="$(command -v rm)" \
 >     BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" XDG_CACHE_HOME="${cache}" save \
->     "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1)" || status=$?
+>     "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1)" || status=$? # error-output-allow: fixture checks merged failure diagnostics and status for each owner-lock fault
 >   if [[ "${status}" != 1 ]]; then printf '%s\nexit=%s\n' "${output}" "${status}"; return 1; fi
 >   case "${mode}" in
 >     create)
@@ -183,7 +183,7 @@ bug, and counts with no label. A closing reference from another repository
 does not count.
 
 ```scrut
-$ unlabeled='(.labels.nodes |= map(select(.name != "in progress")))' && for change in "${unlabeled}" "${unlabeled} | .timelineItems.nodes[0].willCloseTarget = true" "${unlabeled} | .closedByPullRequestsReferences.nodes += [.timelineItems.nodes[1].source]"; do dir="$(variant "if .number == 26 then ${change} else . end")" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/mention.json" > /dev/null 2>&1 && progress "${work}/mention.json" 26; done
+$ unlabeled='(.labels.nodes |= map(select(.name != "in progress")))' && for change in "${unlabeled}" "${unlabeled} | .timelineItems.nodes[0].willCloseTarget = true" "${unlabeled} | .closedByPullRequestsReferences.nodes += [.timelineItems.nodes[1].source]"; do dir="$(variant "if .number == 26 then ${change} else . end")" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/mention.json" > /dev/null && progress "${work}/mention.json" 26; done
 none
 close-out, author: close or split
 none
@@ -194,7 +194,7 @@ none
 Each line changes `#40`, the approved and green fix for `#16`.
 
 ```scrut
-$ for change in '.reviewDecision = "REVIEW_REQUIRED" | .reviewRequests.totalCount = 1' '.reviewDecision = null | .commits.nodes[0].commit.statusCheckRollup.state = "PENDING"' '.mergeable = "CONFLICTING"' '.reviewDecision = "CHANGES_REQUESTED"' '.mergeStateStatus = "BEHIND"' '.mergeable = "UNKNOWN"' '.isDraft = true'; do dir="$(variant "(.closedByPullRequestsReferences.nodes |= map(if .number == 40 then ${change} else . end))")" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pr.json" > /dev/null 2>&1 && printf '%s => %s\n' "${change}" "$(progress "${work}/pr.json" 16)"; done
+$ for change in '.reviewDecision = "REVIEW_REQUIRED" | .reviewRequests.totalCount = 1' '.reviewDecision = null | .commits.nodes[0].commit.statusCheckRollup.state = "PENDING"' '.mergeable = "CONFLICTING"' '.reviewDecision = "CHANGES_REQUESTED"' '.mergeStateStatus = "BEHIND"' '.mergeable = "UNKNOWN"' '.isDraft = true'; do dir="$(variant "(.closedByPullRequestsReferences.nodes |= map(if .number == 40 then ${change} else . end))")" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pr.json" > /dev/null && printf '%s => %s\n' "${change}" "$(progress "${work}/pr.json" 16)"; done
 .reviewDecision = "REVIEW_REQUIRED" | .reviewRequests.totalCount = 1 => awaiting-review, reviewer: wait for review
 .reviewDecision = null | .commits.nodes[0].commit.statusCheckRollup.state = "PENDING" => awaiting-review, ci: wait for checks
 .mergeable = "CONFLICTING" => needs-author, author: resolve the conflict [conflict]
@@ -207,7 +207,7 @@ $ for change in '.reviewDecision = "REVIEW_REQUIRED" | .reviewRequests.totalCoun
 ## Unknown mergeability counts as no conflict, and the signal says so
 
 ```scrut
-$ dir="$(variant '(.closedByPullRequestsReferences.nodes |= map(if .number == 40 then .mergeable = "UNKNOWN" else . end))')" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/unknown.json" > /dev/null 2>&1 && jq -r '.bugs[] | select(.number == 16) | .progress.signal' "${work}/unknown.json"
+$ dir="$(variant '(.closedByPullRequestsReferences.nodes |= map(if .number == 40 then .mergeable = "UNKNOWN" else . end))')" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/unknown.json" > /dev/null && jq -r '.bugs[] | select(.number == 16) | .progress.signal' "${work}/unknown.json"
 pull request #40, approved, mergeability unknown, checks passing
 ```
 
@@ -217,7 +217,7 @@ pull request #40, approved, mergeability unknown, checks passing
 weeks on it is stale, and its next action becomes resume or drop.
 
 ```scrut
-$ for at in 2026-10-25T16:00:00Z 2026-11-20T16:00:00Z; do bugs BUGS_GATHER_NOW="${at}" gather "${work}/config.json" "${work}/aged.json" > /dev/null 2>&1 && printf '%s: %s\n' "${at}" "$(progress "${work}/aged.json" 16)"; done
+$ for at in 2026-10-25T16:00:00Z 2026-11-20T16:00:00Z; do bugs BUGS_GATHER_NOW="${at}" gather "${work}/config.json" "${work}/aged.json" > /dev/null && printf '%s: %s\n' "${at}" "$(progress "${work}/aged.json" 16)"; done
 2026-10-25T16:00:00Z: ready-to-merge, author: merge it [quiet]
 2026-11-20T16:00:00Z: ready-to-merge, author: resume or drop [stale]
 ```
@@ -227,7 +227,7 @@ $ for at in 2026-10-25T16:00:00Z 2026-11-20T16:00:00Z; do bugs BUGS_GATHER_NOW="
 Without its draft pull request, `#27` has only the progress label.
 
 ```scrut
-$ dir="$(variant 'if .number == 27 then .closedByPullRequestsReferences.nodes = [] else . end')" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/label.json" > /dev/null 2>&1 && progress "${work}/label.json" 27
+$ dir="$(variant 'if .number == 27 then .closedByPullRequestsReferences.nodes = [] else . end')" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/label.json" > /dev/null && progress "${work}/label.json" 27
 started, author: open a branch
 ```
 
@@ -238,7 +238,7 @@ pushed, and the viewer's branch files and commits join the files affinity
 reads.
 
 ```scrut
-$ repo="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (cd "${repo}" && export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_AUTHOR_DATE=2026-10-01T10:00:00Z GIT_COMMITTER_DATE=2026-10-01T10:00:00Z && git init -q -b main && git config user.email alice@example.com && git config user.name Alice && echo a > README.md && git add -A && git commit -q -m readme && git update-ref refs/remotes/origin/main HEAD && git remote add origin git@github.com:acme/widgets.git && git checkout -q -b 18-axios-test && mkdir -p src/deps && echo x > src/deps/axios.js && git add -A && GIT_AUTHOR_DATE=2026-10-14T10:00:00Z GIT_COMMITTER_DATE=2026-10-14T10:00:00Z git commit -q -m axios && git checkout -q main && bugs gather "${work}/config.json" "${work}/checkout.json" > /dev/null 2>&1) && jq -r '.checkout, (.bugs[] | select(.number == 18) | .progress | "\(.signal) on \(.host): \(.nextAction) [\(.flags | join(", "))]"), (.viewerFiles | .active[], .recent[] | "\(.path) via \(.via)")' "${work}/checkout.json"
+$ repo="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (cd "${repo}" && export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_AUTHOR_DATE=2026-10-01T10:00:00Z GIT_COMMITTER_DATE=2026-10-01T10:00:00Z && git init -q -b main && git config user.email alice@example.com && git config user.name Alice && echo a > README.md && git add -A && git commit -q -m readme && git update-ref refs/remotes/origin/main HEAD && git remote add origin git@github.com:acme/widgets.git && git checkout -q -b 18-axios-test && mkdir -p src/deps && echo x > src/deps/axios.js && git add -A && GIT_AUTHOR_DATE=2026-10-14T10:00:00Z GIT_COMMITTER_DATE=2026-10-14T10:00:00Z git commit -q -m axios && git checkout -q main && bugs gather "${work}/config.json" "${work}/checkout.json" > /dev/null ) && jq -r '.checkout, (.bugs[] | select(.number == 18) | .progress | "\(.signal) on \(.host): \(.nextAction) [\(.flags | join(", "))]"), (.viewerFiles | .active[], .recent[] | "\(.path) via \(.via)")' "${work}/checkout.json"
 true
 branch 18-axios-test, 1 commit ahead, local on testhost: push it [local]
 CHANGELOG.md via pull request #40
@@ -253,7 +253,7 @@ src/deps/axios.js via commit * (glob)
 ## A checkout of a lookalike host supplies no local state
 
 ```scrut
-$ repo="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (cd "${repo}" && git init -q -b main && git remote add origin https://evilgithub.com/acme/widgets.git && bugs gather "${work}/config.json" "${work}/lookalike.json" 2>&1 > /dev/null | grep 'origin is') && jq -c '.checkout' "${work}/lookalike.json"
+$ repo="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (cd "${repo}" && git init -q -b main && git remote add origin https://evilgithub.com/acme/widgets.git && bugs gather "${work}/config.json" "${work}/lookalike.json" 2>&1 > /dev/null | grep 'origin is') && jq -c '.checkout' "${work}/lookalike.json" # error-output-allow: testcase asserts retained diagnostics: A checkout of a lookalike host supplies no local state
 bugs-gather: this checkout's origin is https://evilgithub.com/acme/widgets.git, not acme/widgets, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request
 false
 ```
@@ -268,7 +268,7 @@ $ jq -c '[.checkout, .host]' "${work}/gather.json"
 It says so once the gather is written, so a gather that stops shows only why.
 
 ```scrut
-$ bugs gather "${work}/config.json" "${work}/outside.json" 2>&1 > /dev/null | grep checkout
+$ bugs gather "${work}/config.json" "${work}/outside.json" 2>&1 > /dev/null | grep checkout # error-output-allow: testcase asserts retained diagnostics: Outside a checkout, the gather reads no local state
 bugs-gather: not inside a checkout of acme/widgets, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request
 ```
 
@@ -288,7 +288,7 @@ $ jq -c '.bugs[] | select(.number == 20) | {outsideReporter, outsidePeople, reac
 its files stay out of the viewer's affinity.
 
 ```scrut
-$ dir="$(variant .)" && jq 'map(.data.repository.pullRequests.nodes += [{number: 46, title: "Speed up admin search", url: "https://github.com/acme/widgets/pull/46", state: "OPEN", isDraft: false, createdAt: "2026-10-13T09:00:00Z", updatedAt: "2026-10-14T09:00:00Z", mergedAt: null, mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", headRefName: "21-admin-search", reviewDecision: "REVIEW_REQUIRED", reviewRequests: {totalCount: 1}, latestReviews: {nodes: []}, author: {login: "bob"}, commits: {nodes: []}, files: {pageInfo: {hasNextPage: false}, nodes: [{path: "src/admin/search.js"}]}}])' "${BUGS_GATHER_DATA_DIR}/github/graphql/pulls-open.json" > "${dir}/graphql/pulls-open.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/others.json" > /dev/null 2>&1 && progress "${work}/others.json" 21 && jq -r '"files via #46: \([.viewerFiles.active[] | select(.via == "pull request #46")] | length)"' "${work}/others.json"
+$ dir="$(variant .)" && jq 'map(.data.repository.pullRequests.nodes += [{number: 46, title: "Speed up admin search", url: "https://github.com/acme/widgets/pull/46", state: "OPEN", isDraft: false, createdAt: "2026-10-13T09:00:00Z", updatedAt: "2026-10-14T09:00:00Z", mergedAt: null, mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", headRefName: "21-admin-search", reviewDecision: "REVIEW_REQUIRED", reviewRequests: {totalCount: 1}, latestReviews: {nodes: []}, author: {login: "bob"}, commits: {nodes: []}, files: {pageInfo: {hasNextPage: false}, nodes: [{path: "src/admin/search.js"}]}}])' "${BUGS_GATHER_DATA_DIR}/github/graphql/pulls-open.json" > "${dir}/graphql/pulls-open.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/others.json" > /dev/null && progress "${work}/others.json" 21 && jq -r '"files via #46: \([.viewerFiles.active[] | select(.via == "pull request #46")] | length)"' "${work}/others.json"
 awaiting-review, reviewer: wait for review
 files via #46: 0
 ```
@@ -296,7 +296,7 @@ files via #46: 0
 ## An open fix in another repository does not carry a bug
 
 ```scrut
-$ dir="$(variant 'if .number == 16 then .closedByPullRequestsReferences.nodes |= map(.repository = {nameWithOwner: "acme/other"}) else . end')" && jq 'map(.data.repository.pullRequests.nodes |= map(select(.number != 40)))' "${BUGS_GATHER_DATA_DIR}/github/graphql/pulls-open.json" > "${dir}/graphql/pulls-open.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/elsewhere.json" > /dev/null 2>&1 && progress "${work}/elsewhere.json" 16
+$ dir="$(variant 'if .number == 16 then .closedByPullRequestsReferences.nodes |= map(.repository = {nameWithOwner: "acme/other"}) else . end')" && jq 'map(.data.repository.pullRequests.nodes |= map(select(.number != 40)))' "${BUGS_GATHER_DATA_DIR}/github/graphql/pulls-open.json" > "${dir}/graphql/pulls-open.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/elsewhere.json" > /dev/null && progress "${work}/elsewhere.json" 16
 none
 ```
 
@@ -306,7 +306,7 @@ The head branch of `#40` adds no carrier, and its newer commit becomes the
 last activity.
 
 ```scrut
-$ dir="$(variant .)" && jq 'map(.data.repository.refs.nodes += [{name: "16-election-day", target: {committedDate: "2026-10-15T08:00:00Z"}}])' "${BUGS_GATHER_DATA_DIR}/github/graphql/branches-widgets.json" > "${dir}/graphql/branches-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/head.json" > /dev/null 2>&1 && jq -c '.bugs[] | select(.number == 16) | .progress | {carrier, extraCarriers, flags, lastActivity}' "${work}/head.json"
+$ dir="$(variant .)" && jq 'map(.data.repository.refs.nodes += [{name: "16-election-day", target: {committedDate: "2026-10-15T08:00:00Z"}}])' "${BUGS_GATHER_DATA_DIR}/github/graphql/branches-widgets.json" > "${dir}/graphql/branches-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/head.json" > /dev/null && jq -c '.bugs[] | select(.number == 16) | .progress | {carrier, extraCarriers, flags, lastActivity}' "${work}/head.json"
 {"carrier":{"pr":40},"extraCarriers":[],"flags":[],"lastActivity":"2026-10-15T08:00:00Z"}
 ```
 
@@ -316,7 +316,7 @@ Without its branch, `#12` is carried by its ZenHub pipeline, and its last
 activity is when it moved there.
 
 ```scrut
-$ dir="$(variant .)" && jq 'map(.data.repository.refs.nodes |= map(select(.name != "12-token-refresh")))' "${BUGS_GATHER_DATA_DIR}/github/graphql/branches-widgets.json" > "${dir}/graphql/branches-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pipeline.json" > /dev/null 2>&1 && jq -r '.bugs[] | select(.number == 12) | .progress | "\(.stage) on \(.carrier | to_entries[0] | "\(.key) \(.value)"), last activity \(.lastActivity)"' "${work}/pipeline.json"
+$ dir="$(variant .)" && jq 'map(.data.repository.refs.nodes |= map(select(.name != "12-token-refresh")))' "${BUGS_GATHER_DATA_DIR}/github/graphql/branches-widgets.json" > "${dir}/graphql/branches-widgets.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/pipeline.json" > /dev/null && jq -r '.bugs[] | select(.number == 12) | .progress | "\(.stage) on \(.carrier | to_entries[0] | "\(.key) \(.value)"), last activity \(.lastActivity)"' "${work}/pipeline.json"
 started on pipeline In Progress, last activity 2026-10-05T14:00:00Z
 ```
 
@@ -504,14 +504,14 @@ ignored: 0
 ## A claim with no assignee has no known owner
 
 ```scrut
-$ dir="$(variant 'if .number == 19 then .labels.nodes += [{name: "claimed"}] else . end')" && config_with '.claimLabels = ["Claimed"]' > "${work}/claims.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/claims.json" "${work}/claims-gather.json" > /dev/null 2>&1 && bugs score "${work}/claims.json" "${work}/claims-gather.json" "${assessments}" "${work}/claims-scored.json" > /dev/null && jq -c '[.tiers[][]] | .[] | select(.number == 19) | .affinity' "${work}/claims-scored.json"
+$ dir="$(variant 'if .number == 19 then .labels.nodes += [{name: "claimed"}] else . end')" && config_with '.claimLabels = ["Claimed"]' > "${work}/claims.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/claims.json" "${work}/claims-gather.json" > /dev/null && bugs score "${work}/claims.json" "${work}/claims-gather.json" "${assessments}" "${work}/claims-scored.json" > /dev/null && jq -c '[.tiers[][]] | .[] | select(.number == 19) | .affinity' "${work}/claims-scored.json"
 {"owner":"unknown","kind":"explicit","tier":null,"reasons":["claimed with the claimed label"]}
 ```
 
 ## An area named twice with different paths is refused
 
 ```scrut
-$ jq 'map(if .number == 11 then .areas = [{name: "api", paths: ["src/api/v2/"]}] else . end)' "${assessments}" > "${work}/clash.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/clash.json" "${work}/clash-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ jq 'map(if .number == 11 then .areas = [{name: "api", paths: ["src/api/v2/"]}] else . end)' "${assessments}" > "${work}/clash.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/clash.json" "${work}/clash-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: An area named twice with different paths is refused
 bugs-gather: WORK/clash.json does not cover the gather:
   - area api has different paths in #10, #11; give it one set
 exit 1
@@ -520,7 +520,7 @@ exit 1
 ## An area without a path pattern is refused
 
 ```scrut
-$ jq 'map(if .number == 11 then .areas = [{name: "api", paths: []}] elif .number == 12 then .areas = "src" else . end)' "${assessments}" > "${work}/no-paths.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/no-paths.json" "${work}/no-paths-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ jq 'map(if .number == 11 then .areas = [{name: "api", paths: []}] elif .number == 12 then .areas = "src" else . end)' "${assessments}" > "${work}/no-paths.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/no-paths.json" "${work}/no-paths-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: An area without a path pattern is refused
 bugs-gather: WORK/no-paths.json does not cover the gather:
   - #11: areas must be a list of {name, paths}, each with a name and at least one path pattern
   - #12: areas must be a list of {name, paths}, each with a name and at least one path pattern
@@ -624,7 +624,7 @@ A missing assessment, one older than its bug, and one outside the closed sets
 each stop the score, all listed at once.
 
 ```scrut
-$ jq 'map(select(.number != 20)) + [(.[] | select(.number == 11))] | map(if .number == 23 then .reproduced = "no" else . end) | map(if .number == 21 then .updatedAt = "2026-10-01T00:00:00Z" elif .number == 22 then .impact = "severe" | .gist = "" else . end)' "${assessments}" > "${work}/bad-assessments.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/bad-assessments.json" "${work}/bad-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ jq 'map(select(.number != 20)) + [(.[] | select(.number == 11))] | map(if .number == 23 then .reproduced = "no" else . end) | map(if .number == 21 then .updatedAt = "2026-10-01T00:00:00Z" elif .number == 22 then .impact = "severe" | .gist = "" else . end)' "${assessments}" > "${work}/bad-assessments.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/bad-assessments.json" "${work}/bad-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: Score refuses assessments that do not cover the gather
 bugs-gather: WORK/bad-assessments.json does not cover the gather:
   - #20: no assessment; read it
   - #21: assessed at updatedAt 2026-10-01T00:00:00Z, but the bug was updated at 2026-10-10T12:00:00Z; read it again
@@ -641,7 +641,7 @@ Every placement, signal, and fact comes from the score, so `report-board`
 rejects the draft for the summary and the Critical and High priority impacts alone.
 
 ```scrut
-$ bugs draft "${work}/config.json" "${work}/gather.json" "${work}/scored.json" "${work}/board.json" | sed "s|${work}|WORK|g" && "${REPORT_BOARD_BIN}" validate "${work}/board.json" 2>&1 | grep -c '^  - ' && "${REPORT_BOARD_BIN}" validate "${work}/board.json" 2>&1 | grep '^  - ' | grep -v 'impact is required\|^  - summary: ' | wc -l | tr -d ' '
+$ bugs draft "${work}/config.json" "${work}/gather.json" "${work}/scored.json" "${work}/board.json" | sed "s|${work}|WORK|g" && "${REPORT_BOARD_BIN}" validate "${work}/board.json" 2>&1 | grep -c '^  - ' && "${REPORT_BOARD_BIN}" validate "${work}/board.json" 2>&1 | grep '^  - ' | grep -v 'impact is required\|^  - summary: ' | wc -l | tr -d ' ' # error-output-allow: testcase asserts retained diagnostics: Draft builds board data that lacks only its prose
 bugs-gather: drafted WORK/board.json; write summary, and impact for each Critical and High priority entry, before validating
 9
 0
@@ -673,7 +673,7 @@ Read these bugs and add their assessments: #10 #11 #12 #13 #14 #15 #16 #17 #18 #
 ## Save stores the cache, and a warm gather reports that nothing moved
 
 ```scrut
-$ bugs save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${work}|WORK|g" && ls "${work}/cache/report-boards/bugs/github.com/acme/widgets" && bugs moved "${work}/config.json" "${work}/gather.json"
+$ bugs save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${work}|WORK|g" && ls "${work}/cache/report-boards/bugs/github.com/acme/widgets" && bugs moved "${work}/config.json" "${work}/gather.json" # error-output-allow: testcase asserts retained diagnostics: Save stores the cache, and a warm gather reports that nothing moved
 bugs-gather: saved the cache in WORK/cache/report-boards/bugs/github.com/acme/widgets
 assessments.json
 gather.json
@@ -688,7 +688,7 @@ This gather: 2026-10-15T16:00:00Z
 ## Save waits for another sync's save, then refuses and names the lock
 
 ```scrut
-$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" && touch "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock/owner" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${cache}|CACHE|g"; echo "exit ${PIPESTATUS[0]}"; ls "${cache}/report-boards/bugs/github.com/acme/widgets"
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" && touch "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock/owner" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${cache}|CACHE|g"; echo "exit ${PIPESTATUS[0]}"; ls "${cache}/report-boards/bugs/github.com/acme/widgets" # error-output-allow: snapshot checks normalized lock-contention diagnostics and producer status
 bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock/owner
 exit 1
 save.lock
@@ -707,7 +707,7 @@ $ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && test "$(export PATH="${cache}/bin:${PATH}"; command -v sleep)" = "${cache}/bin/sleep" \
 >   && { bugs PATH="${cache}/bin:${stub_dir}:${PATH}" LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_DIRECTORY="${lock}" XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1; echo "exit=$?"; } | sed "s|${cache}|CACHE|g" \
 >   && cat "${lock}/owner" \
->   && test ! -e "${lock%/save.lock}/gather.json"
+>   && test ! -e "${lock%/save.lock}/gather.json" # error-output-allow: snapshot checks lock-contention diagnostics, status and unchanged owner
 bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock/owner
 exit=1
 held
@@ -790,7 +790,7 @@ $ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cat "${BUGS_GATHER_DATA_DIR
 ## Save refuses a score from a different gather
 
 ```scrut
-$ jq '.gatheredAt = "2026-10-14T16:00:00Z"' "${work}/scored.json" > "${work}/other-scored.json" && bugs save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/other-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ jq '.gatheredAt = "2026-10-14T16:00:00Z"' "${work}/scored.json" > "${work}/other-scored.json" && bugs save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/other-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: Save refuses a score from a different gather
 bugs-gather: WORK/other-scored.json was not scored from WORK/gather.json
 exit 1
 ```
@@ -809,7 +809,7 @@ null
 ## An invalid config lists every problem
 
 ```scrut
-$ printf '%s\n' '{"repo": "acme", "bugLabels": [], "recentDays": 0, "zenhub": {"workspace": "ws 1", "tokenVarible": "ZH"}, "triageGit": {"gitDir": "a", "workTree": "b", "worktree": "c"}, "weights": {"impact": {"security": "high"}, "impcat": {}}, "triagenote": "triage.md"}' > "${work}/bad-config.json" && bugs gather "${work}/bad-config.json" "${work}/bad.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ printf '%s\n' '{"repo": "acme", "bugLabels": [], "recentDays": 0, "zenhub": {"workspace": "ws 1", "tokenVarible": "ZH"}, "triageGit": {"gitDir": "a", "workTree": "b", "worktree": "c"}, "weights": {"impact": {"security": "high"}, "impcat": {}}, "triagenote": "triage.md"}' > "${work}/bad-config.json" && bugs gather "${work}/bad-config.json" "${work}/bad.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: An invalid config lists every problem
 bugs-gather: WORK/bad-config.json is not a valid bugs config:
   - repo: expected owner/name
   - bugLabels: expected a non-empty list of label names
@@ -830,7 +830,7 @@ Labels compare without regard to case, as the gather matches them; pipelines
 compare exactly.
 
 ```scrut
-$ printf '%s\n' '{"repo": "acme/widgets", "claimLabels": ["In Progress"], "claimPipelines": ["Review/QA", "review/qa"], "quietDays": 30, "staleDays": 30, "uniformityShare": 1.5, "affinityWorkDays": 0, "weights": {"affinity": {"me": 3, "other": "much"}}}' > "${work}/overlap.json" && bugs gather "${work}/overlap.json" "${work}/overlap-gather.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ printf '%s\n' '{"repo": "acme/widgets", "claimLabels": ["In Progress"], "claimPipelines": ["Review/QA", "review/qa"], "quietDays": 30, "staleDays": 30, "uniformityShare": 1.5, "affinityWorkDays": 0, "weights": {"affinity": {"me": 3, "other": "much"}}}' > "${work}/overlap.json" && bugs gather "${work}/overlap.json" "${work}/overlap-gather.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: A label or pipeline cannot mark both work started and ownership
 bugs-gather: WORK/overlap.json is not a valid bugs config:
   - quietDays: must be fewer than staleDays
   - affinityWorkDays: expected a positive whole number of days
@@ -845,7 +845,7 @@ exit 1
 ## A config for another repository is refused
 
 ```scrut
-$ mkdir -p "${work}/config/report-boards/bugs/github.com/acme" && jq '.repo = "acme/gadgets"' "${work}/config.json" > "${work}/config/report-boards/bugs/github.com/acme/widgets.json" && bugs gather acme/widgets "${work}/mismatch.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ mkdir -p "${work}/config/report-boards/bugs/github.com/acme" && jq '.repo = "acme/gadgets"' "${work}/config.json" > "${work}/config/report-boards/bugs/github.com/acme/widgets.json" && bugs gather acme/widgets "${work}/mismatch.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: A config for another repository is refused
 bugs-gather: WORK/config/report-boards/bugs/github.com/acme/widgets.json is not a valid bugs config:
   - repo: the config names acme/gadgets, not acme/widgets
 exit 1
@@ -862,7 +862,7 @@ exit 1
 ```
 
 ```scrut
-$ jq '.repo = "acme/.."' "${work}/config.json" > "${work}/dots-config.json" && bugs gather "${work}/dots-config.json" "${work}/dots.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ jq '.repo = "acme/.."' "${work}/config.json" > "${work}/dots-config.json" && bugs gather "${work}/dots-config.json" "${work}/dots.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: A repository with a . or .. segment is refused
 bugs-gather: WORK/dots-config.json is not a valid bugs config:
   - repo: expected owner/name
 exit 1
@@ -918,7 +918,7 @@ Reuse keeps the last assessment of a closed bug, and save keeps it in the
 cache, so every sync in the window knows the fix went to production.
 
 ```scrut
-$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '. + [{number: 5, updatedAt: "2026-10-01T12:00:00Z", environment: "production", evidence: "user-report", surface: "signed-in", impact: "core-flow", reach: "some", workaround: "none", cause: "known", timeSensitive: false, deadline: null, mitigated: false, reproduced: null, gist: "Verify email returns 500.", nextStep: "Fix it.", question: null}]' "${assessments}" > "${work}/with-closed.json" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/with-closed.json" "${work}/scored.json" 2> /dev/null && for sync in first second; do bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" > /dev/null && bugs XDG_CACHE_HOME="${cache}" score "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" "${work}/verify-scored.json" > /dev/null && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" "${work}/verify-scored.json" 2> /dev/null && jq -r --arg sync "${sync}" '"\($sync): " + (.tiers.fixed | map("#\(.number) verify=\(.verify)") | join(", "))' "${work}/verify-scored.json"; done
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '. + [{number: 5, updatedAt: "2026-10-01T12:00:00Z", environment: "production", evidence: "user-report", surface: "signed-in", impact: "core-flow", reach: "some", workaround: "none", cause: "known", timeSensitive: false, deadline: null, mitigated: false, reproduced: null, gist: "Verify email returns 500.", nextStep: "Fix it.", question: null}]' "${assessments}" > "${work}/with-closed.json" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/with-closed.json" "${work}/scored.json" && for sync in first second; do bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" > /dev/null && bugs XDG_CACHE_HOME="${cache}" score "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" "${work}/verify-scored.json" > /dev/null && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" "${work}/verify-scored.json" && jq -r --arg sync "${sync}" '"\($sync): " + (.tiers.fixed | map("#\(.number) verify=\(.verify)") | join(", "))' "${work}/verify-scored.json"; done
 first: #5 verify=true, #6 verify=false
 second: #5 verify=true, #6 verify=false
 ```
@@ -926,7 +926,7 @@ second: #5 verify=true, #6 verify=false
 ## A cache file that cannot be read is named, not taken for a first sync
 
 ```scrut
-$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets" && printf 'not json' > "${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json" && bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/corrupt-reused.json" 2>&1 | head -2 | sed -e "s|${cache}|CACHE|g" -e "s|${work}|WORK|g"
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets" && printf 'not json' > "${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json" && bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/corrupt-reused.json" 2>&1 | head -2 | sed -e "s|${cache}|CACHE|g" -e "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A cache file that cannot be read is named, not taken for a first sync
 bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/assessments.json: it is unreadable or was written by another version of bugs-gather
 bugs-gather: reused 0 cached assessments in WORK/corrupt-reused.json
 ```
@@ -934,7 +934,7 @@ bugs-gather: reused 0 cached assessments in WORK/corrupt-reused.json
 ## Bugs ZenHub does not track are listed, and the gather goes on
 
 ```scrut
-$ bugs gather "${work}/config.json" "${work}/listed.json" 2>&1 > /dev/null | head -3
+$ bugs gather "${work}/config.json" "${work}/listed.json" 2>&1 > /dev/null | head -3 # error-output-allow: testcase asserts retained diagnostics: Bugs ZenHub does not track are listed, and the gather goes on
 bugs-gather: these bugs have no ZenHub state, so they carry no pipeline, sprint, or container level:
   - #13: Issue not found
   - #14: Issue not found
@@ -946,7 +946,7 @@ A wrong workspace or repository ID answers every lookup with an error, and a
 board ranked without any ZenHub state would mislead.
 
 ```scrut
-$ empty="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json" "${empty}/" && bugs STUB_CURL_DIR="${empty}" gather "${work}/config.json" "${work}/no-state.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}"
+$ empty="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json" "${empty}/" && bugs STUB_CURL_DIR="${empty}" gather "${work}/config.json" "${work}/no-state.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather
 bugs-gather: ZenHub returned no state for any of the 20 open bugs, so the workspace or the repository is wrong:
   - #10: Issue not found
 exit 1
@@ -967,7 +967,7 @@ bugs-gather: ZenHub returned errors:
 ## A failed ZenHub request stops the gather
 
 ```scrut
-$ bugs STUB_CURL_FAIL=1 gather "${work}/config.json" "${work}/zenhub-down.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}"
+$ bugs STUB_CURL_FAIL=1 gather "${work}/config.json" "${work}/zenhub-down.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: A failed ZenHub request stops the gather
 bugs-gather: the ZenHub request failed:
   curl: (22) The requested URL returned error: 500
 exit 1
@@ -995,7 +995,7 @@ bugs-gather: the open-labels search came back without a result count, so its res
 ## ZenHub lists cut short are listed, and the gather goes on
 
 ```scrut
-$ cut="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/"*.json "${cut}/" && jq '.sprints.pageInfo = {hasNextPage: true}' "${BUGS_GATHER_DATA_DIR}/zenhub/101-12.json" > "${cut}/101-12.json" && bugs STUB_CURL_DIR="${cut}" gather "${work}/config.json" "${work}/cut.json" 2>&1 > /dev/null | grep -A1 'ZenHub cut'
+$ cut="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/"*.json "${cut}/" && jq '.sprints.pageInfo = {hasNextPage: true}' "${BUGS_GATHER_DATA_DIR}/zenhub/101-12.json" > "${cut}/101-12.json" && bugs STUB_CURL_DIR="${cut}" gather "${work}/config.json" "${work}/cut.json" 2>&1 > /dev/null | grep -A1 'ZenHub cut' # error-output-allow: testcase asserts retained diagnostics: ZenHub lists cut short are listed, and the gather goes on
 bugs-gather: ZenHub cut these lists short, so a sprint or a blocking issue past the cut is missing:
   - #12: sprints
 ```
@@ -1014,7 +1014,7 @@ The malformed note above scores, but the board built from that score cannot
 validate until the note is fixed.
 
 ```scrut
-$ bugs draft "${work}/bad-note.json" "${work}/gather.json" "${work}/bad-note-scored.json" "${work}/bad-note-board.json" > /dev/null && jq '.summary = "x" | (.critical[], .high[]) |= (.impact = "x")' "${work}/bad-note-board.json" > "${work}/bad-note-filled.json" && "${REPORT_BOARD_BIN}" validate "${work}/bad-note-filled.json" 2>&1 | grep -c '^  - triage note: '; echo "exit ${PIPESTATUS[0]}"
+$ bugs draft "${work}/bad-note.json" "${work}/gather.json" "${work}/bad-note-scored.json" "${work}/bad-note-board.json" > /dev/null && jq '.summary = "x" | (.critical[], .high[]) |= (.impact = "x")' "${work}/bad-note-board.json" > "${work}/bad-note-filled.json" && "${REPORT_BOARD_BIN}" validate "${work}/bad-note-filled.json" 2>&1 | grep -c '^  - triage note: '; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: Problems with the triage note travel into the draft, which validation refuses
 13
 exit 1
 ```
@@ -1033,7 +1033,7 @@ $ for change in '.cause = "suspected"' '.reproduced = false'; do jq "map(if .num
 ## Save keeps a closed bug's cached assessment even when it is not given one
 
 ```scrut
-$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/with-closed.json" "${work}/scored.json" 2> /dev/null && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2> /dev/null && jq -r '[.[] | select(.number == 5) | "#5 kept: \(.environment)"] | first // "#5 lost"' "${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json"
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/with-closed.json" "${work}/scored.json" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" && jq -r '[.[] | select(.number == 5) | "#5 kept: \(.environment)"] | first // "#5 lost"' "${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json"
 #5 kept: production
 ```
 
@@ -1043,7 +1043,7 @@ A scored cache without tiers, or an assessments cache whose entries carry no
 bug number, would otherwise reach the filters.
 
 ```scrut
-$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && dir="${cache}/report-boards/bugs/github.com/acme/widgets" && mkdir -p "${dir}" && printf '[{"foo": 1}]' > "${dir}/assessments.json" && printf '{"version": 2}' > "${dir}/scored.json" && { bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/shape-reused.json" 2>&1 > /dev/null; bugs XDG_CACHE_HOME="${cache}" score "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/shape-scored.json" 2>&1 > /dev/null; } | sed "s|${cache}|CACHE|g"
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && dir="${cache}/report-boards/bugs/github.com/acme/widgets" && mkdir -p "${dir}" && printf '[{"foo": 1}]' > "${dir}/assessments.json" && printf '{"version": 2}' > "${dir}/scored.json" && { bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/shape-reused.json" 2>&1 > /dev/null; bugs XDG_CACHE_HOME="${cache}" score "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/shape-scored.json" 2>&1 > /dev/null; } | sed "s|${cache}|CACHE|g" # error-output-allow: testcase asserts retained diagnostics: Cache files of the wrong shape are named and set aside
 bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/assessments.json: it is unreadable or was written by another version of bugs-gather
 bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/scored.json: it is unreadable or was written by another version of bugs-gather
 ```
@@ -1051,7 +1051,7 @@ bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/scored.js
 ## Lists GitHub cut short are listed, and the gather goes on
 
 ```scrut
-$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 26) | .assignees.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json" > "${capped}/graphql/search-open-type.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/assignees-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 26) | .assignees.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json" > "${capped}/graphql/search-open-type.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/assignees-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: Lists GitHub cut short are listed, and the gather goes on
 bugs-gather: GitHub cut these lists short, so an item past the cut is missing, and a cut cross-reference can hide a merged pull request:
   - #26: assignees
 exit 0
@@ -1076,12 +1076,12 @@ bugs-gather: GitHub cut short the lists of #26 (linked pull requests and cross-r
 ## Usage errors
 
 ```scrut
-$ bugs score "${work}/config.json" 2>&1 | head -1
+$ bugs score "${work}/config.json" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Usage errors
 bugs-gather: score takes a repository, a gather file, an assessments file, and an output path
 ```
 
 ```scrut
-$ bugs frobnicate 2>&1 | head -1
+$ bugs frobnicate 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Usage errors
 bugs-gather: unknown command: frobnicate
 ```
 

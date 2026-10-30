@@ -208,7 +208,7 @@ function do_graphql() {
     # gh prints a response that holds GraphQL errors, then exits 1. Only a
     # top-level errors field counts, on the response or on each slurped page.
     if jq -e 'if type == "array" then any(.[]; type == "object" and has("errors"))
-      else type == "object" and has("errors") end' "${file}" > /dev/null 2>&1; then
+      else type == "object" and has("errors") end' "${file}" > /dev/null 2>&1; then # error-output-allow: bundle-shape predicate selects the API fixture response
       exit 1
     fi
   elif [[ "${query_name}" == "search" || "${query_name}" == "pulls" ]]; then

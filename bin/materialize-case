@@ -95,9 +95,9 @@ function die() {
 function cleanup() {
   [[ -n "${CREATED_WORKTREE}" ]] || return 0
 
-  git -C "${CREATED_IN_CACHE}" worktree remove --force "${CREATED_WORKTREE}" > /dev/null 2>&1 \
+  git -C "${CREATED_IN_CACHE}" worktree remove --force "${CREATED_WORKTREE}" > /dev/null \
     || rm -rf "${CREATED_WORKTREE}"
-  git -C "${CREATED_IN_CACHE}" worktree prune > /dev/null 2>&1 || true
+  git -C "${CREATED_IN_CACHE}" worktree prune > /dev/null 2>&1 || true # error-output-allow: cleanup prune is best effort after worktree removal
 }
 
 # Reads a SHA file into SHA_VALUE, rejecting anything that is not a single
@@ -120,7 +120,7 @@ function validate_corpus() {
     || die "no corpus given; pass --corpus DIR or set REVIEW_CASE_CORPUS_DIR" "${E_USAGE}"
   [[ -d "${corpus}" ]] || die "corpus ${corpus} is not a directory" "${E_USAGE}"
   git -C "${corpus}" rev-parse --git-dir > /dev/null 2>&1 \
-    || die "corpus ${corpus} is not a git repository" "${E_USAGE}"
+    || die "corpus ${corpus} is not a git repository" "${E_USAGE}" # error-output-allow: repository predicate receives the specific corpus-checkout diagnostic
 }
 
 # Makes a path absolute before git sees it. Every git call runs under
@@ -148,11 +148,11 @@ function ensure_cache() {
   fi
 
   git -C "${cache}" rev-parse --git-dir > /dev/null 2>&1 \
-    || die "cache ${cache} is not a git repository" "${E_USAGE}"
+    || die "cache ${cache} is not a git repository" "${E_USAGE}" # error-output-allow: repository predicate receives the specific cache-checkout diagnostic
 
   # Re-adding an existing remote fails, and set-url on a missing one fails too,
   # so branch on whether it is already there and make the URL current either way.
-  if git -C "${cache}" remote get-url corpus > /dev/null 2>&1; then
+  if git -C "${cache}" remote get-url corpus > /dev/null 2>&1; then # error-output-allow: remote existence predicate selects add or update
     git -C "${cache}" remote set-url corpus "${corpus_abs}" \
       || die "could not point the cache at ${corpus_abs}"
   else
@@ -318,7 +318,7 @@ function main() {
       || die "--prune takes no case or target" "${E_USAGE}"
     [[ -d "${cache}" ]] || die "no cache at ${cache}" "${E_USAGE}"
     git -C "${cache}" rev-parse --git-dir > /dev/null 2>&1 \
-      || die "cache ${cache} is not a git repository" "${E_USAGE}"
+      || die "cache ${cache} is not a git repository" "${E_USAGE}" # error-output-allow: repository predicate receives the specific cache-checkout diagnostic
     git -C "${cache}" worktree prune || die "could not prune worktrees in ${cache}"
     return 0
   fi

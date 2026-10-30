@@ -306,7 +306,7 @@ function usage_error() {
 function require_tools() {
   local tool
   for tool in "$@"; do
-    command -v "${tool}" > /dev/null 2>&1 || die "${E_USAGE}" "${tool} is required but not found"
+    command -v "${tool}" > /dev/null 2>&1 || die "${E_USAGE}" "${tool} is required but not found" # error-output-allow: missing tool receives a specific prerequisite diagnostic
   done
 }
 
@@ -325,7 +325,7 @@ function require_json_file() {
   local path="${1}"
   [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
   jq -e -s 'length == 1 and (.[0] | type == "object")' "${path}" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "${path} must hold exactly one JSON object"
+    || die "${E_INVALID}" "${path} must hold exactly one JSON object" # error-output-allow: invalid JSON receives the input-file validation diagnostic
 }
 
 function require_output_dir() {
@@ -387,7 +387,7 @@ function write_atomic() {
 function start_job() {
   local name="${1}"
   shift
-  "$@" > "${TEMP_DIR}/${name}.json" 2> "${TEMP_DIR}/${name}.err" &
+  "$@" > "${TEMP_DIR}/${name}.json" 2> "${TEMP_DIR}/${name}.err" & # error-output-allow: parallel queries retain stderr and replay it on failed wait
   JOB_PIDS+=("$!")
   JOB_NAMES+=("${name}")
 }
@@ -521,8 +521,8 @@ function cmd_gather() {
   load_config "${repo}"
   config="${CONFIG}"
   require_output_dir "${output_file}"
-  git rev-parse --is-inside-work-tree > /dev/null 2>&1 || die "${E_INVALID}" "run gather inside a checkout of ${repo}"
-  if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then
+  git rev-parse --is-inside-work-tree > /dev/null 2>&1 || die "${E_INVALID}" "run gather inside a checkout of ${repo}" # error-output-allow: repository predicate receives the specific checkout diagnostic
+  if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then                    # error-output-allow: missing origin receives the explicit repository-mismatch diagnostic
     die "${E_INVALID}" "the origin of this checkout is not ${repo} on github.com"
   fi
 
@@ -533,13 +533,13 @@ function cmd_gather() {
   host="${BACKLOG_GATHER_HOST:-$(hostname -s)}"
   make_temp_dir
 
-  github_query repository "${repo}" > "${TEMP_DIR}/repository.json" 2> "${TEMP_DIR}/repository.err" || {
+  github_query repository "${repo}" > "${TEMP_DIR}/repository.json" 2> "${TEMP_DIR}/repository.err" || { # error-output-allow: query failure replays repository.err below
     printf '%s: cannot read the repository %s:\n' "${SCRIPT_NAME}" "${repo}" >&2
     sed 's/^/  /' "${TEMP_DIR}/repository.err" >&2
     exit "${E_INVALID}"
   }
   jq -e '.data.repository != null and .data.viewer.login != null' "${TEMP_DIR}/repository.json" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "cannot read the repository ${repo}"
+    || die "${E_INVALID}" "cannot read the repository ${repo}" # error-output-allow: invalid repository response receives a structured validation diagnostic
   [[ "$(jq -r '.data.repository.isArchived' "${TEMP_DIR}/repository.json")" != true ]] \
     || die "${E_INVALID}" "${repo} is archived; its backlog cannot change, so there is nothing to sync"
   viewer="$(jq -r '.data.viewer.login' "${TEMP_DIR}/repository.json")"
@@ -563,7 +563,7 @@ function cmd_gather() {
   # Every open issue and pull request must arrive, or one would vanish from
   # the board without a word.
   jq -e 'all(.[]; .data.repository.issues.nodes | type == "array")' "${TEMP_DIR}/issues.json" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "the open issues came back without a list, so the board cannot be trusted"
+    || die "${E_INVALID}" "the open issues came back without a list, so the board cannot be trusted" # error-output-allow: invalid issues response receives a structured validation diagnostic
   # A progress label, linked pull request or cross-reference past the cut
   # would read as no progress.
   cut_short="$(jq -r '[.[] | .data.repository.issues.nodes[]
@@ -574,12 +574,12 @@ function cmd_gather() {
   [[ -z "${cut_short}" ]] \
     || die "${E_INVALID}" "GitHub cut short the lists of ${cut_short}, so progress could be missing; the board cannot be trusted"
   jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls.json" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
+    || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted" # error-output-allow: invalid pulls response receives a structured validation diagnostic
   cut_short="$(jq -r '[.[] | .data.repository.pullRequests.nodes[] | select(.closingIssuesReferences.pageInfo.hasNextPage == true) | "#\(.number)"] | join(", ")' "${TEMP_DIR}/pulls.json")"
   [[ -z "${cut_short}" ]] \
     || die "${E_INVALID}" "pull requests ${cut_short} close more than 100 issues, so an issue past the cut would read as unstarted; the board cannot be trusted"
   jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/merged.json" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "the search for your merged pull requests came back without a result count"
+    || die "${E_INVALID}" "the search for your merged pull requests came back without a result count" # error-output-allow: invalid merged response receives a structured validation diagnostic
   # GitHub search stops at 1000 results and then reports no further page.
   jq -e '([.[] | .data.search.nodes | length] | add // 0) >= (.[0].data.search.issueCount // 0)' "${TEMP_DIR}/merged.json" > /dev/null \
     || die "${E_INVALID}" "the search for your merged pull requests was cut short, so the areas you worked in would be missing some files"
@@ -643,7 +643,7 @@ function cmd_finish() {
   require_json_file "${gather_file}"
   require_json_file "${data_file}"
   jq -e --argjson version "${GATHER_VERSION}" '.version == $version and (.issues | type == "array") and (.viewerFiles | type == "object")' "${gather_file}" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "${gather_file} is not a backlog-gather gather"
+    || die "${E_INVALID}" "${gather_file} is not a backlog-gather gather" # error-output-allow: invalid saved gather receives a structured validation diagnostic
   require_output_dir "${output_file}"
   make_temp_dir
 

@@ -28,7 +28,7 @@ function workmux_resource_failure() {
 
 function workmux_diagnose_launch_failure() {
   local log_file="${1}" output log_path
-  output="$(cat "${log_file}" 2> /dev/null)" || return 0
+  output="$(cat "${log_file}" 2> /dev/null)" || return 0 # error-output-allow: optional extra diagnosis tolerates an unreadable log after the original failure was reported
 
   case "${output}" in
     *'failed to create initial log file'*)

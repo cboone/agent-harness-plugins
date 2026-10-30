@@ -96,6 +96,6 @@ compose-issue-prompt: --chain-command requires a command
 ## Unknown argument is rejected
 
 ```scrut
-$ jq -n '{number: 7, title: "Update README", state: "OPEN"}' | "${COMPOSE_ISSUE_PROMPT_BIN}" --nope 2>&1 | tail -n 1
+$ jq -n '{number: 7, title: "Update README", state: "OPEN"}' | "${COMPOSE_ISSUE_PROMPT_BIN}" --nope 2>&1 | tail -n 1 # error-output-allow: testcase asserts retained diagnostics: Unknown argument is rejected
 compose-issue-prompt: unexpected argument: --nope
 ```

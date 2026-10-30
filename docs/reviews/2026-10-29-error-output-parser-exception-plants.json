@@ -1,0 +1,170 @@
+[
+  {
+    "phase": "fixed-before",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "allow-parse",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "allow-comment",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "parser-crash",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: unexpected shfmt failure (status 139) while checking a parse exception\n",
+    "stderr": "stub parser crash\n"
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "parser-terminated",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: unexpected shfmt failure (status 143) while checking a parse exception\n",
+    "stderr": "stub parser termination\n"
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "parser-io",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: unexpected shfmt failure (status 1) while checking a parse exception\n",
+    "stderr": "stub parser input I/O failure\n"
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "parser-empty",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: unexpected shfmt failure (status 1) while checking a parse exception\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "parser-invalid-ast",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: shfmt returned an invalid AST while checking a parse exception\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-implementation",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-implementation",
+    "sample": "allow-parse",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-implementation",
+    "sample": "allow-comment",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-implementation",
+    "sample": "parser-crash",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-implementation",
+    "sample": "parser-terminated",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-implementation",
+    "sample": "parser-io",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-implementation",
+    "sample": "parser-empty",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-implementation",
+    "sample": "parser-invalid-ast",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "allow-parse",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "allow-comment",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "parser-crash",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: unexpected shfmt failure (status 139) while checking a parse exception\n",
+    "stderr": "stub parser crash\n"
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "parser-terminated",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: unexpected shfmt failure (status 143) while checking a parse exception\n",
+    "stderr": "stub parser termination\n"
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "parser-io",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: unexpected shfmt failure (status 1) while checking a parse exception\n",
+    "stderr": "stub parser input I/O failure\n"
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "parser-empty",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: unexpected shfmt failure (status 1) while checking a parse exception\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "parser-invalid-ast",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: shfmt returned an invalid AST while checking a parse exception\n",
+    "stderr": ""
+  }
+]

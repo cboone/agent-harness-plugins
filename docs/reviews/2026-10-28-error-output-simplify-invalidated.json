@@ -1,0 +1,17 @@
+{
+  "aspect": "simplify",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Both reason and capture_text copy text without modifying it. Using three names for the same logical line adds bookkeeping and suggests transformations that do not occur.",
+      "file": "bin/check-fixture-environments",
+      "fix": "Match both regexes against text directly, remove the two assignments, and reduce the signature to check_output(text, file). Preserve the regexes, check order and exemption comments.",
+      "line": 61,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Naming: Remove redundant aliases of the logical line."
+    }
+  ],
+  "reviewed": "6dbcda58c9195390ad406108feda414d55af7a14",
+  "strengths": ["Discard and capture checks have explicit precedence.", "Static samples make acceptance and rejection cases easy to trace."],
+  "summary": "Reviewed the full committed scope and found one worthwhile simplification in the new guard. No files or Git state were changed, as required by the report-only override."
+}

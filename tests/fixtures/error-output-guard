@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+# Apply static guard input to an isolated tree; sample programs never execute.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+function main() {
+  local sample="${1:?sample is required}" location="${2:-fixture}" root target policy='' report=false cross=false parser_mode=''
+  root="$(mktemp -d "${TMPDIR:-/tmp}/error-output-guard.XXXXXX")"
+  readonly OUTPUT_GUARD_TEST_ROOT="${root}"
+  trap 'rm -r "${OUTPUT_GUARD_TEST_ROOT}"' EXIT
+  if [[ "${sample}" == parser-input-open ]]; then
+    # shellcheck source=bin/lib/capture-child.bash
+    source "${REPO_ROOT}/bin/lib/capture-child.bash"
+    # shellcheck source=bin/lib/error-output-ast.bash
+    source "${REPO_ROOT}/bin/lib/error-output-ast.bash"
+    readonly OUTPUT_AST_TMP="${root}"
+    printf '1:1: stale syntax diagnostic\n' > "${root}/parse.err"
+    local parser_status=0
+    output_ast_parse "${root}/missing-input" || parser_status=$?
+    [[ "${parser_status}" -ne 0 ]]
+    if output_ast_expected_syntax_failure "${parser_status}"; then
+      echo 'missing input was accepted as a syntax exception' >&2
+      return 1
+    fi
+    grep -Fq "${root}/missing-input" "${root}/parse.err"
+    if grep -Fq 'stale syntax diagnostic' "${root}/parse.err"; then
+      echo 'parser diagnostic was not cleared' >&2
+      return 1
+    fi
+    echo 'missing-input failures are not syntax exceptions'
+    return 0
+  fi
+  cp -R "${REPO_ROOT}/bin" "${REPO_ROOT}/.github" "${root}/"
+  mkdir -p "${root}/tests/fixtures" "${root}/tests/scrut" "${root}/plugins/workmux/scripts"
+  cp "${REPO_ROOT}/tests/data/error-output/control.md" "${root}/tests/scrut/control.md"
+  cp "${REPO_ROOT}/Makefile" "${root}/Makefile"
+  jq '.non_bash |= map(select(.name | startswith("bin/")))' \
+    "${root}/bin/lib/error-output-policy.json" > "${root}/base-policy.json"
+  mv "${root}/base-policy.json" "${root}/bin/lib/error-output-policy.json"
+  case "${sample}" in
+    cross-block)
+      sample=live-stderr
+      location=scrut
+      cross=true
+      ;;
+    allow-comment)
+      sample=comment-backslash
+      policy=parse_exceptions
+      ;;
+    allow-parse)
+      sample=malformed-shell
+      policy=parse_exceptions
+      ;;
+    parser-crash | parser-terminated | parser-io | parser-empty | parser-invalid-ast)
+      parser_mode="${sample#parser-}"
+      sample=malformed-shell
+      policy=parse_exceptions
+      ;;
+    stale-parse)
+      sample=live-stderr
+      policy=parse_exceptions
+      ;;
+    empty-policy-reason)
+      sample=malformed-shell
+      policy=empty
+      ;;
+    allow-js)
+      sample=non-bash-js
+      policy=non_bash
+      ;;
+    allow-non-bash)
+      sample=non-bash
+      policy=non_bash
+      ;;
+    scope-non-bash)
+      sample=non-bash
+      policy=non_bash
+      report=true
+      ;;
+    scope-embedded)
+      sample=embedded-string
+      report=true
+      ;;
+    *) ;;
+  esac
+  case "${location}" in
+    fixture) target=tests/fixtures/output-sample ;;
+    shipped) target=plugins/workmux/scripts/output-sample ;;
+    tooling) target=bin/output-sample ;;
+    'scrut' | scrut-stderr) target=tests/scrut/output-sample.md ;;
+    *)
+      echo 'unknown sample location' >&2
+      return 2
+      ;;
+  esac
+  local input="${REPO_ROOT}/tests/data/error-output/${sample}.bash"
+  if [[ "${sample}" == non-bash || "${sample}" == non-bash-js ]]; then
+    local extension=py
+    [[ "${sample}" != non-bash-js ]] || extension=js
+    input="${REPO_ROOT}/tests/data/error-output/non-bash.${extension}"
+    target+=.${extension}
+  fi
+  if [[ "${location}" == scrut || "${location}" == scrut-stderr ]]; then
+    local ticks fence
+    ticks="$(printf '\140\140\140')"
+    fence="${ticks}scrut"
+    [[ "${location}" != scrut-stderr ]] || fence+=" {output_stream: stderr}"
+    {
+      # shellcheck disable=SC2016 # Keep the generated sample variable literal.
+      printf '%s\n' '# Static guard input' '' "${ticks}scrut" '$ source "${REPO_ROOT}/bin/lib/git-environment.bash"' "${ticks}" '' "${fence}"
+      if [[ "${cross}" == true ]]; then
+        printf '$ printf \047left\n'
+        printf '%s\n' "${ticks}" '' "${ticks}scrut"
+        printf '$ right\047\n'
+      else
+        awk 'NR > 2 { print (NR == 3 ? "$ " : "> ") $0 }' "${input}"
+      fi
+      printf '%s\n' "${ticks}"
+    } > "${root}/${target}"
+    [[ "${policy}" != parse_exceptions ]] || target+=#block-2
+  else
+    cp "${input}" "${root}/${target}"
+  fi
+  if [[ -n "${parser_mode}" ]]; then
+    [[ "${location}" == fixture ]] || {
+      echo 'parser failure cases require the static fixture location' >&2
+      return 2
+    }
+    printf '%s\n' '# OUTPUT_GUARD_PARSER_FAILURE_FIXTURE' >> "${root}/${target}"
+    local real_shfmt stub_path="${root}/parser-tools/shfmt"
+    real_shfmt="$(command -v shfmt)"
+    mkdir -p "${root}/parser-tools"
+    cp "${ERROR_OUTPUT_SHFMT_STUB_BIN:?committed parser stub is required}" "${stub_path}"
+    export PATH="${root}/parser-tools:${PATH}"
+    [[ "$(command -v shfmt)" == "${stub_path}" ]] || {
+      echo 'parser test refuses to run without its shfmt stub' >&2
+      return 2
+    }
+    export ERROR_OUTPUT_SHFMT_STUB_PATH="${stub_path}"
+    export STUB_SHFMT_REAL_BIN="${real_shfmt}" STUB_SHFMT_MODE="${parser_mode}"
+  fi
+  if [[ -n "${policy}" ]]; then
+    local reason='Static fixture input is intentionally outside AST coverage and is never executed.'
+    [[ "${policy}" != empty ]] || {
+      policy=parse_exceptions
+      reason=''
+    }
+    jq --arg kind "${policy}" --arg name "${target}" --arg reason "${reason}" \
+      '.[$kind] += [{name:$name,reason:$reason}]' "${root}/bin/lib/error-output-policy.json" > "${root}/policy.json"
+    mv "${root}/policy.json" "${root}/bin/lib/error-output-policy.json"
+  fi
+  if [[ "${report}" == true ]]; then
+    "${REPO_ROOT}/bin/check-fixture-environments" --ast-scope "${root}" > "${root}/scope.json"
+    if [[ "${sample}" == non-bash ]]; then
+      jq -r --arg name "${target}" '.policy_exclusions[] | select(.kind == "non-Bash" and .name == $name) | .name + ": " + .reason' "${root}/scope.json"
+    else
+      jq -er --arg name "${target}" \
+        'if any(.embedded_strings[]; .name == $name and .start_line == 3 and .start_column == 9 and (.reason | length > 0))
+         then "embedded literal is explicitly listed outside AST coverage" else error("missing scope record") end' "${root}/scope.json"
+    fi
+  else
+    "${REPO_ROOT}/bin/check-fixture-environments" "${root}"
+  fi
+}
+
+main "$@"

@@ -1,0 +1,17 @@
+{
+  "aspect": "simplify",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Both reason and capture_text copy text without modifying it. Three names for the same logical line add bookkeeping and suggest transformations that never occur.",
+      "file": "bin/check-fixture-environments",
+      "fix": "Match both regexes against text directly, remove the two assignments, and simplify the signature to check_output(text, file). Preserve the regexes, check order and exemption comments.",
+      "line": 61,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Naming: Remove redundant logical-line aliases."
+    }
+  ],
+  "reviewed": "a4a9e5a5269cc1d037e7fa04837922a04cefad71",
+  "strengths": ["Early returns make exemption and discard precedence clear.", "Static samples keep individual guard cases easy to follow."],
+  "summary": "Reviewed every path in the fixed committed scope and found one worthwhile simplification. No files or Git state were changed, and no project scripts ran, as required by the report-only override."
+}

@@ -72,7 +72,7 @@ function git_corpus() {
 # than a glob, so no file name can be read as an option and dotfiles are
 # included, and .git is held back explicitly.
 function clear_tree() {
-  git_corpus rm -r -q -f --ignore-unmatch --cached . > /dev/null 2>&1 || true
+  git_corpus rm -r -q -f --ignore-unmatch --cached . > /dev/null 2>&1 || true # error-output-allow: fixture index reset tolerates an initially empty index
   find "${CORPUS}" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 }
 

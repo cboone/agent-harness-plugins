@@ -14,13 +14,13 @@ function start_socket_server() {
   local socket_path="${1}"
 
   if command -v ruby > /dev/null; then
-    ruby -rsocket -e 'socket_path = ARGV.fetch(0); server = UNIXServer.new(socket_path); cleanup = proc { server.close rescue nil; File.unlink(socket_path) rescue nil; exit 0 }; trap("TERM", &cleanup); trap("INT", &cleanup); sleep' "${socket_path}" > /dev/null 2>&1 &
+    ruby -rsocket -e 'socket_path = ARGV.fetch(0); server = UNIXServer.new(socket_path); cleanup = proc { server.close rescue nil; File.unlink(socket_path) rescue nil; exit 0 }; trap("TERM", &cleanup); trap("INT", &cleanup); sleep' "${socket_path}" > /dev/null &
     printf '%s\n' "$!"
     return 0
   fi
 
   if command -v perl > /dev/null; then
-    perl -MIO::Socket::UNIX -MSocket=SOCK_STREAM -e 'use strict; use warnings; my $socket_path = shift @ARGV; my $server = IO::Socket::UNIX->new(Type => SOCK_STREAM, Local => $socket_path, Listen => 1) or die "$!\n"; $SIG{TERM} = sub { close $server; unlink $socket_path; exit 0 }; $SIG{INT} = $SIG{TERM}; sleep 1 while 1;' "${socket_path}" > /dev/null 2>&1 &
+    perl -MIO::Socket::UNIX -MSocket=SOCK_STREAM -e 'use strict; use warnings; my $socket_path = shift @ARGV; my $server = IO::Socket::UNIX->new(Type => SOCK_STREAM, Local => $socket_path, Listen => 1) or die "$!\n"; $SIG{TERM} = sub { close $server; unlink $socket_path; exit 0 }; $SIG{INT} = $SIG{TERM}; sleep 1 while 1;' "${socket_path}" > /dev/null &
     printf '%s\n' "$!"
     return 0
   fi
@@ -56,7 +56,7 @@ function main() {
     sleep 0.1
   done
 
-  kill "${pid}" 2> /dev/null || true
+  kill "${pid}" || true
   die "socket was not created: ${socket_path}"
 }
 

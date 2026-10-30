@@ -46,34 +46,34 @@ Capture the status before selecting the first diagnostic line, so a pipeline
 cannot hide an expansion failure.
 
 ```scrut
-$ output="$(/bin/bash "${REPORT_BOARD_BIN}" 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1
+$ output="$(/bin/bash "${REPORT_BOARD_BIN}" 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status
 report-board: a command is required
 ```
 
 ## Each report-board subcommand forwards an empty remaining argument list
 
 ```scrut
-$ output="$(/bin/bash "${REPORT_BOARD_BIN}" validate 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1
+$ output="$(/bin/bash "${REPORT_BOARD_BIN}" validate 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status
 report-board: validate takes one data file
 ```
 
 ```scrut
-$ output="$(/bin/bash "${REPORT_BOARD_BIN}" render 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1
+$ output="$(/bin/bash "${REPORT_BOARD_BIN}" render 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status
 report-board: render takes a data file and an output path
 ```
 
 ```scrut
-$ output="$(/bin/bash "${REPORT_BOARD_BIN}" extract 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1
+$ output="$(/bin/bash "${REPORT_BOARD_BIN}" extract 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status
 report-board: extract takes one rendered page
 ```
 
 ```scrut
-$ output="$(/bin/bash "${REPORT_BOARD_BIN}" compare 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1
+$ output="$(/bin/bash "${REPORT_BOARD_BIN}" compare 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status
 report-board: compare takes the previous board and the current data
 ```
 
 ```scrut
-$ output="$(/bin/bash "${REPORT_BOARD_BIN}" starter 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1
+$ output="$(/bin/bash "${REPORT_BOARD_BIN}" starter 2>&1)"; result=$?; test "${result}" -eq 2 && printf '%s\n' "${output}" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status
 report-board: starter takes an output path
 ```
 
@@ -94,7 +94,7 @@ created
 ## The GitHub fixture reports its own diagnostic with no arguments
 
 ```scrut
-$ set -o pipefail && /bin/bash "${GH_STUB_BIN}" 2>&1 | sed -n l
+$ set -o pipefail && /bin/bash "${GH_STUB_BIN}" 2>&1 | sed -n l # error-output-allow: snapshot asserts native Bash fixture diagnostics and failure status
 gh-stub: unexpected invocation: gh $
 [1]
 ```

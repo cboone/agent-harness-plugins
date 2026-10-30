@@ -108,7 +108,6 @@ jobs:
       - name: Verify yq
         run: yq --version | grep -q mikefarah
       - name: Set up shfmt
-        if: matrix.document == 'tests/scrut/environment-isolation.md'
         uses: cboone/gh-actions/actions/set-up-shfmt@3c9adb5a8b166444d3c0e3fe606d55f0dc7ac726 # v5.0.0
       - name: Run Scrut document
         env:

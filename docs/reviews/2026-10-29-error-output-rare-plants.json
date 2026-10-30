@@ -1,0 +1,191 @@
+[
+  {
+    "phase": "fixed-before",
+    "sample": "escaped-exec-rare",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: unresolved stream context (escaped or quoted exec); add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "coproc-rare",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: unresolved stream context (coproc); add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "saved-alias-rare",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: unresolved stream context (exec redirection); add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "composed-exec-rare",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: unresolved stream context (exec redirection); add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "ordinary-variable-query",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "ordinary-variable-merge",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "allowed-escaped-exec",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "allowed-coproc",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-tracking",
+    "sample": "escaped-exec-rare",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-tracking",
+    "sample": "coproc-rare",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-tracking",
+    "sample": "saved-alias-rare",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-tracking",
+    "sample": "composed-exec-rare",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-tracking",
+    "sample": "ordinary-variable-query",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-tracking",
+    "sample": "ordinary-variable-merge",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-tracking",
+    "sample": "allowed-escaped-exec",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-tracking",
+    "sample": "allowed-coproc",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "escaped-exec-rare",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: unresolved stream context (escaped or quoted exec); add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "coproc-rare",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: unresolved stream context (coproc); add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "saved-alias-rare",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: unresolved stream context (exec redirection); add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "composed-exec-rare",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: unresolved stream context (exec redirection); add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "ordinary-variable-query",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "ordinary-variable-merge",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "allowed-escaped-exec",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "allowed-coproc",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "parser-input-open",
+    "status": 0,
+    "stdout": "missing-input failures are not syntax exceptions\n",
+    "stderr": ""
+  },
+  {
+    "phase": "earlier-input-wrapper",
+    "sample": "parser-input-open",
+    "status": 1,
+    "stdout": "",
+    "stderr": "/Users/ctm/Work/projects/tooling/agent-harness-plugins/672-guard-error-discards/bin/lib/error-output-ast.bash: line 42: /var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T//error-output-guard.WOXL6g/missing-input: No such file or directory\nmissing input was accepted as a syntax exception\n"
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "parser-input-open",
+    "status": 0,
+    "stdout": "missing-input failures are not syntax exceptions\n",
+    "stderr": ""
+  }
+]

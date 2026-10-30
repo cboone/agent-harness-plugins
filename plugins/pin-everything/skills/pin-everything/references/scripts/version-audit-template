@@ -70,7 +70,7 @@ fi
 
 # Resolve to the repo root so all relative paths below (TOOL_VERSIONS_FILE,
 # PACKAGE_JSON, SCAN_PATHS) work regardless of the caller's working directory.
-repo_root=$(git rev-parse --show-toplevel 2> /dev/null || true)
+repo_root=$(git rev-parse --show-toplevel || true)
 if [[ -z "${repo_root}" ]]; then
   echo "version-audit: must be run inside a git repository" >&2
   exit 1
@@ -113,7 +113,7 @@ function semver_max() {
 function github_latest_release() {
   local repo="${1}" latest
   # Prefer GitHub Releases when the repo publishes them.
-  latest=$(gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2> /dev/null || true)
+  latest=$(gh api "repos/${repo}/releases/latest" --jq '.tag_name' || true)
   if [[ -n "${latest}" ]]; then
     printf '%s\n' "${latest}"
     return
@@ -121,7 +121,7 @@ function github_latest_release() {
   # Fall back to the highest semver-looking tag for repos that publish version
   # tags without creating GitHub Releases (otherwise audit_actions would
   # silently skip drift for valid SHA-pinned refs against those repos).
-  gh api "repos/${repo}/tags" --paginate --jq '.[].name' 2> /dev/null \
+  gh api "repos/${repo}/tags" --paginate --jq '.[].name' \
     | grep -E '^v?[0-9]+(\.[0-9]+)+$' \
     | semver_max \
     || true
@@ -139,7 +139,7 @@ function github_latest_release_in_major() {
   local result
   # Prefer GitHub Releases (paginated) so a project that backports patches to
   # an older major after releasing the next one is still audited correctly.
-  result=$(gh api "repos/${repo}/releases" --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
+  result=$(gh api "repos/${repo}/releases" --paginate --jq '.[] | select(.prerelease == false) | .tag_name' \
     | grep -E "${pattern}" \
     | semver_max \
     || true)
@@ -148,7 +148,7 @@ function github_latest_release_in_major() {
     return
   fi
   # Fall back to /tags for repos that publish version tags without releases.
-  gh api "repos/${repo}/tags" --paginate --jq '.[].name' 2> /dev/null \
+  gh api "repos/${repo}/tags" --paginate --jq '.[].name' \
     | grep -E "${pattern}" \
     | semver_max \
     || true
@@ -203,7 +203,7 @@ function audit_node() {
   fi
   major="${current%%.*}"
 
-  latest=$(curl -fsSL https://nodejs.org/dist/index.json 2> /dev/null \
+  latest=$(curl -fsSL https://nodejs.org/dist/index.json \
     | jq -r --arg prefix "v${major}." \
       'first(.[] | select(.version | startswith($prefix))) | .version // empty' \
     | sed 's/^v//' || true)
@@ -265,7 +265,7 @@ function audit_ruby() {
   fi
   series="${current%.*}"
   pattern="^${series//./\\.}\.[0-9]+$"
-  latest=$(gh api repos/ruby/ruby/releases --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
+  latest=$(gh api repos/ruby/ruby/releases --paginate --jq '.[] | select(.prerelease == false) | .tag_name' \
     | sed 's/^v//; s/_/./g' \
     | grep -E "${pattern}" \
     | semver_max \
@@ -304,7 +304,7 @@ function audit_python_runtime() {
   fi
   series="${current%.*}"
   pattern="^${series//./\\.}\.[0-9]+$"
-  latest=$(gh api repos/python/cpython/releases --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
+  latest=$(gh api repos/python/cpython/releases --paginate --jq '.[] | select(.prerelease == false) | .tag_name' \
     | sed 's/^v//' \
     | grep -E "${pattern}" \
     | semver_max \
@@ -336,7 +336,7 @@ function audit_go_runtime() {
   fi
   series="${current%.*}"
   pattern="^go${series//./\\.}\.[0-9]+$"
-  latest=$(gh api repos/golang/go/tags --paginate --jq '.[].name' 2> /dev/null \
+  latest=$(gh api repos/golang/go/tags --paginate --jq '.[].name' \
     | grep -E "${pattern}" \
     | sed 's/^go//' \
     | semver_max \
@@ -370,7 +370,7 @@ function audit_rust_runtime() {
   if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     return
   fi
-  latest=$(gh api repos/rust-lang/rust/releases --jq '.[0].tag_name' 2> /dev/null \
+  latest=$(gh api repos/rust-lang/rust/releases --jq '.[0].tag_name' \
     | sed 's/^v//' \
     || true)
   if [[ -z "${latest}" ]]; then
@@ -405,7 +405,7 @@ function audit_zig_runtime() {
   if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     return
   fi
-  latest=$(gh api repos/ziglang/zig/releases --jq '.[0].tag_name' 2> /dev/null || true)
+  latest=$(gh api repos/ziglang/zig/releases --jq '.[0].tag_name' || true)
   if [[ -z "${latest}" || ! "${latest}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     return
   fi
@@ -448,10 +448,10 @@ function audit_packagemanager() {
   fi
 
   if [[ "${mgr}" == "yarn" ]]; then
-    latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
+    latest=$(curl -fsSL https://repo.yarnpkg.com/tags \
       | jq -r '.latest.stable // empty' || true)
   else
-    latest=$(curl -fsSL https://registry.npmjs.org/pnpm/latest 2> /dev/null \
+    latest=$(curl -fsSL https://registry.npmjs.org/pnpm/latest \
       | jq -r '.version // empty' || true)
   fi
 
@@ -517,7 +517,7 @@ function audit_actions() {
         record_drift "Actions" "${repo}" "${current}" "${latest}" "${file}"
       fi
     fi
-  done < <(grep -rHE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+  done < <(grep -rHE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' "${SCAN_PATHS[@]}" || true)
 }
 
 # 9. npx <tool>@<version> pins
@@ -527,7 +527,7 @@ function npm_latest() {
   # Scoped packages (e.g. `@taplo/cli`) require the `/` between scope and name
   # to be URL-encoded; otherwise the registry returns 404.
   local encoded="${pkg//\//%2f}"
-  curl -fsSL "https://registry.npmjs.org/${encoded}/latest" 2> /dev/null | jq -r '.version // empty' || true
+  curl -fsSL "https://registry.npmjs.org/${encoded}/latest" | jq -r '.version // empty' || true
 }
 
 function audit_npx_pins() {
@@ -556,7 +556,7 @@ function audit_npx_pins() {
         record_drift "npx pin" "${pkg}" "${current}" "${latest}" "${file}"
       fi
     fi
-  done < <(grep -rHE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+  done < <(grep -rHE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" || true)
 }
 
 # 10. go install <path>@v<version> pins
@@ -635,14 +635,14 @@ function audit_go_install_pins() {
         record_drift "go install" "${install_path}" "${current}" "${latest}" "${file}"
       fi
     fi
-  done < <(grep -rHE 'go install [a-zA-Z0-9._/~-]+@v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+  done < <(grep -rHE 'go install [a-zA-Z0-9._/~-]+@v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?' "${SCAN_PATHS[@]}" || true)
 }
 
 # 11. cargo install --version <X> <crate> pins
 
 function crates_io_latest() {
   local crate="${1}"
-  curl -fsSL "https://crates.io/api/v1/crates/${crate}" 2> /dev/null | jq -r '.crate.max_stable_version // empty' || true
+  curl -fsSL "https://crates.io/api/v1/crates/${crate}" | jq -r '.crate.max_stable_version // empty' || true
 }
 
 function audit_cargo_install_pins() {
@@ -671,7 +671,7 @@ function audit_cargo_install_pins() {
         record_drift "cargo install" "${crate}" "${current}" "${latest}" "${file}"
       fi
     fi
-  done < <(grep -rHE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+  done < <(grep -rHE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" || true)
 }
 
 # 12. Python install pins across every uv / pip verb (pip install, uv pip install,
@@ -679,7 +679,7 @@ function audit_cargo_install_pins() {
 
 function pypi_latest() {
   local pkg="${1}"
-  curl -fsSL "https://pypi.org/pypi/${pkg}/json" 2> /dev/null | jq -r '.info.version // empty' || true
+  curl -fsSL "https://pypi.org/pypi/${pkg}/json" | jq -r '.info.version // empty' || true
 }
 
 function audit_python_install_pins() {
@@ -734,7 +734,7 @@ function audit_python_install_pins() {
     # function performs the precise package/version match. Match every Python
     # install verb that resolves against PyPI: `pip install`, `uv pip install`,
     # `uv add`, `uv tool install`, `uvx`.
-  done < <(grep -rHE '(pip install|uv (pip install|add|tool install)|uvx)[[:space:]].*==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+  done < <(grep -rHE '(pip install|uv (pip install|add|tool install)|uvx)[[:space:]].*==[0-9]' "${SCAN_PATHS[@]}" || true)
 }
 
 # Print Markdown report

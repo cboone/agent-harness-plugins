@@ -1,0 +1,194 @@
+{
+  "head": "a9bf3f5d41bd56356770df49a280e0b9f2d65d88",
+  "method": "Read-only AST preflight, before changing the evaluator. Unresolved command heads with non-stdin redirects, persistent exec stream redirects and coprocess contexts require reasons; statically literal quoted names resolve normally. Stdin-only redirects and assignment-only calls are excluded. Existing actual reason comments use the current parsed-command scope and are excluded.",
+  "risk_count": 431,
+  "site_count": 409,
+  "file_count": 35,
+  "by_construct": {
+    "persistent exec stream redirect": 2,
+    "unresolved command name with stream redirect": 429
+  },
+  "files": {
+    "plugins/attention-log/scripts/attention-log": 1,
+    "plugins/review-pr-with-codex/scripts/review-scope": 1,
+    "plugins/review-until-clean/scripts/review-scope": 1,
+    "tests/fixtures/error-output-guard": 1,
+    "tests/fixtures/ledger-concurrency": 3,
+    "tests/fixtures/review-submodule-fixture": 26,
+    "tests/scrut/build-codex-marketplace.md": 7,
+    "tests/scrut/build-review-checklists.md": 21,
+    "tests/scrut/build-shared-references.md": 6,
+    "tests/scrut/check-cross-references.md": 16,
+    "tests/scrut/codex-aspects.md": 42,
+    "tests/scrut/compose-issue-prompt.md": 4,
+    "tests/scrut/copilot-fix-ancestry.md": 3,
+    "tests/scrut/copilot-rounds-report.md": 16,
+    "tests/scrut/dependabot-prs.md": 12,
+    "tests/scrut/environment-isolation.md": 9,
+    "tests/scrut/error-output-guard.md": 1,
+    "tests/scrut/manage-resource-claims.md": 1,
+    "tests/scrut/merge-flow.md": 2,
+    "tests/scrut/monitor-dispatch.md": 17,
+    "tests/scrut/progress-model.md": 1,
+    "tests/scrut/record-traffic.md": 4,
+    "tests/scrut/repo-tooling.md": 6,
+    "tests/scrut/report-board-bugs.md": 2,
+    "tests/scrut/report-board.md": 104,
+    "tests/scrut/resolve-copilot-threads.md": 22,
+    "tests/scrut/review-corpus.md": 20,
+    "tests/scrut/review-scope-submodule-consumers.md": 1,
+    "tests/scrut/review-scope-submodules.md": 2,
+    "tests/scrut/review-scope.md": 9,
+    "tests/scrut/run-scrut-documents.md": 11,
+    "tests/scrut/validate-plugins-catalog.md": 7,
+    "tests/scrut/validate-plugins-codex-exec.md": 4,
+    "tests/scrut/validate-plugins-skills.md": 18,
+    "tests/scrut/watch-changes.md": 8
+  },
+  "sample": [
+    {
+      "file": "plugins/attention-log/scripts/attention-log",
+      "annotation_line": 529,
+      "source": "  exec > /dev/null",
+      "constructs": ["persistent exec stream redirect"]
+    },
+    {
+      "file": "plugins/review-pr-with-codex/scripts/review-scope",
+      "annotation_line": 293,
+      "source": "  \"$@\" > \"${TMP_DIR}/${name}.raw\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "plugins/review-until-clean/scripts/review-scope",
+      "annotation_line": 293,
+      "source": "  \"$@\" > \"${TMP_DIR}/${name}.raw\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/error-output-guard",
+      "annotation_line": 133,
+      "source": "    \"${REPO_ROOT}/bin/check-fixture-environments\" --ast-scope \"${root}\" > \"${root}/scope.json\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/ledger-concurrency",
+      "annotation_line": 11,
+      "source": "  exec 3<> \"${fixture}/barrier/ready\"",
+      "constructs": ["persistent exec stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/ledger-concurrency",
+      "annotation_line": 14,
+      "source": "    \"${fixture}/a.md\" \"${fixture}/concurrent\" run > \"${fixture}/a.path\" &",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/ledger-concurrency",
+      "annotation_line": 17,
+      "source": "    \"${fixture}/b.md\" \"${fixture}/concurrent\" run > \"${fixture}/b.path\" &",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 44,
+      "source": "  \"${REVIEW_SCOPE_BIN}\" --symlinks \"${captured}\" > \"${fixture}/discovery\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 71,
+      "source": "  \"${aspects}\" prompt --aspect code --scope \"${captured}\" > \"${fixture}/prompt\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 75,
+      "source": "  \"${aspects}\" validate --aspect code --scope \"${captured}\" \"${fixture}/result\" > \"${fixture}/status\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 78,
+      "source": "  \"${aspects}\" changes --before \"${captured}\" --after \"${captured}\" > \"${fixture}/contract-changes\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 81,
+      "source": "    --statuses \"${fixture}/statuses\" --aspect code > \"${fixture}/gate\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 127,
+      "source": "  \"${scope}\" --base \"${base}\" > \"${fixture}/before\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 135,
+      "source": "      \"${scope}\" --base \"${base}\" > \"${fixture}/after\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 137,
+      "source": "      \"${aspects}\" prompt --aspect code --scope \"${fixture}/after\" > \"${fixture}/prompt\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    },
+    {
+      "file": "tests/fixtures/review-submodule-fixture",
+      "annotation_line": 158,
+      "source": "      \"${scope}\" --base \"${base}\" > \"${fixture}/reviewed\"",
+      "constructs": ["unresolved command name with stream redirect"]
+    }
+  ],
+  "annotations_added": 0,
+  "implementation_built": false,
+  "accepted_probe_results": [
+    {
+      "name": "escaped-exec",
+      "source": "\\exec 1>/dev/null; some-command 2>&1",
+      "candidate_diagnostics": [
+        {
+          "construct": "unresolved command name with stream redirect",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "name": "coproc",
+      "source": "coproc { some-command 2>&1; }",
+      "candidate_diagnostics": [
+        {
+          "construct": "coproc",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "name": "accepted-saved-alias",
+      "source": "{ exec 3>/dev/null; some-command 2>&3; } 3>&1",
+      "candidate_diagnostics": [
+        {
+          "construct": "persistent exec stream redirect",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "name": "accepted-composed-prefix",
+      "source": "command builtin exec 1>/dev/null; some-command 2>&1",
+      "candidate_diagnostics": [
+        {
+          "construct": "persistent exec stream redirect",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    }
+  ]
+}

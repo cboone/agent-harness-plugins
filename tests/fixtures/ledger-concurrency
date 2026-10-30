@@ -8,7 +8,7 @@ function main() {
   mkfifo "${fixture}/barrier/ready" "${fixture}/barrier/a" "${fixture}/barrier/b"
   printf '# Writer A\n' > "${fixture}/a.md"
   printf '# Writer B\n' > "${fixture}/b.md"
-  exec 3<> "${fixture}/barrier/ready"
+  exec 3<> "${fixture}/barrier/ready" # error-output-allow: the owned FIFO descriptor stays open for the reservation barrier
   export LEDGER_BARRIER="${fixture}/barrier"
   BASH_ENV="${LEDGER_BARRIER_ENV:?}" LEDGER_WRITER=a "${SAVE_REVIEW_LEDGER_BIN:?}" \
     "${fixture}/a.md" "${fixture}/concurrent" run > "${fixture}/a.path" &

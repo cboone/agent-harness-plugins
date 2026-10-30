@@ -55,7 +55,7 @@ $ function backlog() {
 > work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 > config_with
 > git init -q --bare "${work}/remote/acme/widgets.git"
-> git clone -q "${work}/remote/acme/widgets.git" "${work}/widgets" 2> /dev/null
+> git clone -q "${work}/remote/acme/widgets.git" "${work}/widgets"
 > cd "${work}/widgets"
 > git remote set-url origin https://github.com/acme/widgets.git
 > git remote set-url --push origin "${work}/remote/acme/widgets.git"
@@ -286,7 +286,7 @@ Affinity signals ignored for uniformity: none
 ## Finish refuses analysis data that does not fit the gather
 
 ```scrut
-$ config_with && jq '.issues[1].areas = ["lexer"] | .issues[0].progress = null | .schemaVersion = 2 | .contention.claims = [] | .issues += [{number: 99, title: "Gone", milestone: null}] | .issues |= map(select(.number != 41)) | .areas += [{name: "empty", paths: []}] | .repo = "acme/gadgets" | .repoUrl = "https://github.com/acme/gadgets"' "${BACKLOG_GATHER_DATA_DIR}/analysis.json" > "${work}/bad.json" && backlog finish "${work}/gather.json" "${work}/bad.json" "${work}/out.json" 2>&1 | sed "s|${work}|WORK|g"
+$ config_with && jq '.issues[1].areas = ["lexer"] | .issues[0].progress = null | .schemaVersion = 2 | .contention.claims = [] | .issues += [{number: 99, title: "Gone", milestone: null}] | .issues |= map(select(.number != 41)) | .areas += [{name: "empty", paths: []}] | .repo = "acme/gadgets" | .repoUrl = "https://github.com/acme/gadgets"' "${BACKLOG_GATHER_DATA_DIR}/analysis.json" > "${work}/bad.json" && backlog finish "${work}/gather.json" "${work}/bad.json" "${work}/out.json" 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: Finish refuses analysis data that does not fit the gather
 backlog-gather: WORK/bad.json does not fit the gather:
   - schemaVersion: derived by backlog-gather finish; leave it out of the analysis data
   - contention.claims: derived from the areas the issues list; leave it out of the analysis data
@@ -301,7 +301,7 @@ backlog-gather: WORK/bad.json does not fit the gather:
 ```
 
 ```scrut
-$ backlog finish "${work}/gather.json" "${work}/missing.json" "${work}/out.json" 2>&1 | sed "s|${work}|WORK|g"
+$ backlog finish "${work}/gather.json" "${work}/missing.json" "${work}/out.json" 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: Finish refuses analysis data that does not fit the gather
 backlog-gather: cannot read WORK/missing.json
 [1]
 ```
@@ -309,14 +309,14 @@ backlog-gather: cannot read WORK/missing.json
 ## A config that marks a label both progress and claim is refused
 
 ```scrut
-$ config_with '.claimLabels = ["In Progress"] | .quietDays = 40 | .colour = "red"' && backlog gather acme/widgets "${work}/x.json" 2>&1 | sed "s|${work}|WORK|g"
+$ config_with '.claimLabels = ["In Progress"] | .quietDays = 40 | .colour = "red"' && backlog gather acme/widgets "${work}/x.json" 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A config that marks a label both progress and claim is refused
 backlog-gather: WORK/config/report-boards/backlog-triage/github.com/acme/widgets.json is not a valid backlog config:
   - colour: not a config key; expected one of progressLabels, claimLabels, quietDays, staleDays, affinityWorkDays, affinityCommentDays, uniformityShare, uniformityMinimum
 [1]
 ```
 
 ```scrut
-$ config_with '.claimLabels = ["In Progress"] | .quietDays = 40' && backlog gather acme/widgets "${work}/x.json" 2>&1 | sed "s|${work}|WORK|g"
+$ config_with '.claimLabels = ["In Progress"] | .quietDays = 40' && backlog gather acme/widgets "${work}/x.json" 2>&1 | sed "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A config that marks a label both progress and claim is refused
 backlog-gather: WORK/config/report-boards/backlog-triage/github.com/acme/widgets.json is not a valid backlog config:
   - claimLabels: In Progress is also a progress label; a label marks work started or claims an issue, not both
   - quietDays: expected fewer days than staleDays, 30
@@ -390,13 +390,13 @@ backlog-gather: run gather inside a checkout of acme/widgets
 ## Usage errors
 
 ```scrut
-$ backlog finish "${work}/gather.json" 2>&1 | sed -n 1p
+$ backlog finish "${work}/gather.json" 2>&1 | sed -n 1p # error-output-allow: testcase asserts retained diagnostics: Usage errors
 backlog-gather: finish takes a gather file, the analysis data, and an output path
 [2]
 ```
 
 ```scrut
-$ backlog frobnicate 2>&1 | sed -n 1p
+$ backlog frobnicate 2>&1 | sed -n 1p # error-output-allow: testcase asserts retained diagnostics: Usage errors
 backlog-gather: unknown command: frobnicate
 [2]
 ```

@@ -65,7 +65,7 @@ function main() {
       fix="${unrelated}"
       ;;
     missing | moved)
-      if git cat-file -e "${fix}^{commit}" 2> /dev/null; then
+      if git cat-file -e "${fix}^{commit}" 2> /dev/null; then # error-output-allow: object existence predicate selects the missing-commit case
         echo 'fixture fix object unexpectedly exists' >&2
         return 1
       fi

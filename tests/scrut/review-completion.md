@@ -19,7 +19,7 @@ $ fixture="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >     reviewer "$1" "${reply}" < /dev/null > "${FIXTURE}/stdout" 2> "${FIXTURE}/stderr" || reviewer_status=$?; \
 >     if test "$1" = silent; then reply="${FIXTURE}/stdout"; fi; \
 >     "${REVIEW_COMPLETION_BIN}" "${reviewer_status}" "${reply}" "${2:-json}"; \
->   }
+>   } # error-output-allow: testcase asserts retained diagnostics: Setup
 ```
 
 ## Finished JSON with no findings passes the gate
@@ -170,7 +170,7 @@ $ mkdir "${FIXTURE}/reserve-bin" \
 >     result=$?; test "${result}" = 1 && test ! -s "${FIXTURE}/reserve.out" \
 >       && grep 'cannot reserve .*temporary ledger retained at' "${FIXTURE}/reserve.err" \
 >       && grep -E 'No such file or directory|no such file or directory' "${FIXTURE}/reserve.err" \
->       && cat "${FIXTURE}/temporary.md")
+>       && cat "${FIXTURE}/temporary.md") # error-output-allow: testcase asserts retained diagnostics: Reservation failure stops and preserves the underlying error and source
 save-ledger: cannot reserve */absent/run.md; temporary ledger retained at */temporary.md (glob)
 *No such file or directory* (glob)
 # New run
@@ -186,7 +186,7 @@ $ mkdir "${FIXTURE}/copy-bin" \
 >     "${SAVE_REVIEW_LEDGER_BIN}" "${FIXTURE}/temporary.md" "${FIXTURE}" copy \
 >       > "${FIXTURE}/copy.out" 2> "${FIXTURE}/copy.err"; \
 >     result=$?; test "${result}" = 19 && test ! -s "${FIXTURE}/copy.out") \
->   && cat "${FIXTURE}/copy.err" "${FIXTURE}/temporary.md"
+>   && cat "${FIXTURE}/copy.err" "${FIXTURE}/temporary.md" # error-output-allow: testcase asserts retained diagnostics: Copy failure never prints a successful destination
 save-ledger: cannot write */copy.md; temporary ledger retained at */temporary.md (glob)
 sample copy failure
 # New run
@@ -217,7 +217,7 @@ $ mkdir "${FIXTURE}/jq-bin" \
 >       > "${FIXTURE}/jq.out" 2> "${FIXTURE}/jq.err"; \
 >     result=$?; test "${result}" = 1 \
 >       && test "$(cat "${FIXTURE}/jq.out")" = 'Review-until-clean status: failed') \
->   && cat "${FIXTURE}/jq.out" "${FIXTURE}/jq.err"
+>   && cat "${FIXTURE}/jq.out" "${FIXTURE}/jq.err" # error-output-allow: testcase asserts retained diagnostics: A failing jq preserves stderr after the reason and leaves the verdict failed
 Review-until-clean status: failed
 check-completion: the output is not exactly one JSON value
 sample jq failure
@@ -234,7 +234,7 @@ $ mkdir "${FIXTURE}/grep-bin" \
 >       > "${FIXTURE}/grep.out" 2> "${FIXTURE}/grep.err"; \
 >     result=$?; test "${result}" = 1 \
 >       && test "$(cat "${FIXTURE}/grep.out")" = 'Review-until-clean status: failed') \
->   && cat "${FIXTURE}/grep.out" "${FIXTURE}/grep.err"
+>   && cat "${FIXTURE}/grep.out" "${FIXTURE}/grep.err" # error-output-allow: testcase asserts retained diagnostics: A failing grep preserves stderr after the reason and leaves the verdict failed
 Review-until-clean status: failed
 check-completion: the output file has no review text
 sample grep failure
@@ -250,7 +250,7 @@ $ mkdir "${FIXTURE}/mkdir-bin" \
 >     "${SAVE_REVIEW_LEDGER_BIN}" "${FIXTURE}/temporary.md" "${FIXTURE}/mkdir-failure" run \
 >       > "${FIXTURE}/mkdir.out" 2> "${FIXTURE}/mkdir.err"; \
 >     result=$?; test "${result}" = 25 && test ! -s "${FIXTURE}/mkdir.out") \
->   && cat "${FIXTURE}/mkdir.err" "${FIXTURE}/temporary.md"
+>   && cat "${FIXTURE}/mkdir.err" "${FIXTURE}/temporary.md" # error-output-allow: testcase asserts retained diagnostics: A failing mkdir preserves stderr after the reason and leaves no destination verdict
 save-ledger: cannot create */mkdir-failure; temporary ledger retained at */temporary.md (glob)
 sample mkdir failure
 # New run

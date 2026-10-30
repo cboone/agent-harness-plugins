@@ -12,8 +12,8 @@ function cleanup() {
   local pid
   for pid in "${CHILD_PID}" "${OTHER_PID}"; do
     [[ -n "${pid}" ]] || continue
-    kill "${pid}" 2> /dev/null || true
-    wait "${pid}" 2> /dev/null || true
+    kill "${pid}" 2> /dev/null || true # error-output-allow: owned test process may already have exited during cleanup
+    wait "${pid}" 2> /dev/null || true # error-output-allow: cleanup reaps owned processes regardless of their exit status
   done
   rm -r "${CASE_DIR}"
 }
@@ -62,9 +62,9 @@ function run_concurrent() {
   mkdir "${CASE_DIR}/claim-barrier"
   export ROLLOUT_CLAIM_BARRIER="${CASE_DIR}/claim-barrier"
   mkfifo "${ROLLOUT_CLAIM_BARRIER}/ready" "${ROLLOUT_CLAIM_BARRIER}/one" "${ROLLOUT_CLAIM_BARRIER}/two"
-  exec 4<> "${ROLLOUT_CLAIM_BARRIER}/ready"
-  exec 5<> "${ROLLOUT_CLAIM_BARRIER}/one"
-  exec 6<> "${ROLLOUT_CLAIM_BARRIER}/two"
+  exec 4<> "${ROLLOUT_CLAIM_BARRIER}/ready" # error-output-allow: Owned readiness FIFO on descriptor 4; standard streams remain live.
+  exec 5<> "${ROLLOUT_CLAIM_BARRIER}/one"   # error-output-allow: Owned release FIFO for reader one on descriptor 5; standard streams remain live.
+  exec 6<> "${ROLLOUT_CLAIM_BARRIER}/two"   # error-output-allow: Owned release FIFO for reader two on descriptor 6; standard streams remain live.
   BASH_ENV="${stub_dir}/claim-boundary.bash" ROLLOUT_READER=one capture_child - --replay-stdout -- run_case error &
   CHILD_PID=$!
   BASH_ENV="${stub_dir}/claim-boundary.bash" ROLLOUT_READER=two capture_child - --replay-stdout -- run_case error &
@@ -86,7 +86,7 @@ function run_concurrent() {
   CHILD_PID=""
   wait "${OTHER_PID}" || second_status=$?
   OTHER_PID=""
-  exec 4>&- 5>&- 6>&-
+  exec 4>&- 5>&- 6>&- # error-output-allow: Close only owned barrier descriptors 4, 5 and 6 after both children are reaped.
   if [[ "${readiness_ok}" != true ]] || ((first_status != 0 || second_status != 0)); then
     printf 'Reader arrivals: %s %s\nReader statuses: %s %s\n' \
       "${ready_one:-missing}" "${ready_two:-missing}" "${first_status}" "${second_status}" >&2
@@ -307,7 +307,7 @@ function main() {
       elif [[ "${scenario}" == shutdown ]]; then
         printf '%s\n' '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"shutdown-turn","error":{"codex_error_info":"other","message":"Appended at shutdown"}}}' >> "${CASE_DIR}/live.jsonl"
         kill "${OTHER_PID}"
-        wait "${OTHER_PID}" 2> /dev/null || true
+        wait "${OTHER_PID}" 2> /dev/null || true # error-output-allow: owned supervisor termination status is expected during shutdown synchronization
         OTHER_PID=""
         : > "${ROLLOUT_OWNER_RELEASE}"
       else
@@ -319,11 +319,11 @@ function main() {
       await_count 1
       if [[ -n "${OTHER_PID}" ]]; then
         kill "${OTHER_PID}"
-        wait "${OTHER_PID}" 2> /dev/null || true
+        wait "${OTHER_PID}" 2> /dev/null || true # error-output-allow: owned supervisor termination status is expected during shutdown synchronization
         OTHER_PID=""
       fi
       for attempt in {1..150}; do
-        if ! kill -0 "${CHILD_PID}" 2> /dev/null; then break; fi
+        if ! kill -0 "${CHILD_PID}" 2> /dev/null; then break; fi # error-output-allow: owned watcher existence predicate bounds fixture shutdown wait
         sleep 0.02
       done
       ((attempt < 150)) || return 1

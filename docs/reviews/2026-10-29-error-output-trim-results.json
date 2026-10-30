@@ -1,0 +1,802 @@
+{
+  "base": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+  "head_before": "36b43eae",
+  "model": "gpt-6.1-sol",
+  "effort": "low",
+  "context_window": 872000,
+  "sandbox": "read-only",
+  "completion": "both exit 0; expected file lists and reply shape; unchanged snapshot",
+  "comments": {
+    "files": [".github/workflows/ci.yml", "Makefile", "bin/check-fixture-environments", "bin/lib/capture-child.bash", "bin/lib/error-output-ast.bash", "bin/lib/error-output-ast.jq", "bin/materialize-case", "bin/record-traffic", "bin/run-scrut-documents", "bin/validate-corpus", "bin/validate-json", "bin/validate-plugins", "bin/version-audit", "plugins/attention-log/scripts/attention-log", "plugins/dependabot/scripts/dependabot-prs", "plugins/monitor-pr/scripts/merge-flow", "plugins/monitor-pr/scripts/resolve-copilot-threads", "plugins/notify/scripts/notify", "plugins/notify/scripts/watch-codex-failures", "plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template", "plugins/publish-report-board/scripts/backlog-gather", "plugins/publish-report-board/scripts/bugs-gather", "plugins/publish-report-board/scripts/report-board", "plugins/push-notification/scripts/push-notification", "plugins/review-pr-with-codex/scripts/codex-aspects", "plugins/review-pr-with-codex/scripts/review-scope", "plugins/review-until-clean/scripts/check-completion", "plugins/review-until-clean/scripts/review-scope", "plugins/review-until-clean/scripts/save-ledger", "plugins/workmux/scripts/compose-issue-prompt", "plugins/workmux/scripts/launch-workmux", "plugins/workmux/scripts/manage-resource-claims", "plugins/workmux/scripts/owner-lock.bash", "plugins/workmux/scripts/resource-diagnostics.bash", "tests/fixtures/check-codex-failures", "tests/fixtures/check-notifications", "tests/fixtures/codex-stub", "tests/fixtures/combined-ref-collision", "tests/fixtures/copilot-ancestry-case", "tests/fixtures/create-unix-socket", "tests/fixtures/curl-stub", "tests/fixtures/environment-isolation", "tests/fixtures/error-output-guard", "tests/fixtures/error-output-shfmt-stub", "tests/fixtures/gh-stub", "tests/fixtures/git-worktree-stub", "tests/fixtures/ledger-concurrency", "tests/fixtures/notify-rollout/mkdir", "tests/fixtures/ntfy-curl-stub", "tests/fixtures/review-corpus-fixture", "tests/fixtures/watch-changes-stub"],
+    "changes": "none proposed"
+  },
+  "prose": {
+    "files": ["docs/plans/todo/2026-10-28-guard-error-output.md", "docs/plugin-development.md", "tests/scrut/attention-log.md", "tests/scrut/backlog-gather.md", "tests/scrut/base-resolution.md", "tests/scrut/bugs-gather.md", "tests/scrut/check-cross-references.md", "tests/scrut/codex-aspects.md", "tests/scrut/codex-cleanup.md", "tests/scrut/compose-issue-prompt.md", "tests/scrut/copilot-rounds-report.md", "tests/scrut/default-branch-fallback.md", "tests/scrut/dependabot-prs.md", "tests/scrut/error-output-guard.md", "tests/scrut/launch-workmux.md", "tests/scrut/manage-resource-claims.md", "tests/scrut/merge-flow.md", "tests/scrut/monitor-dispatch.md", "tests/scrut/push-notification.md", "tests/scrut/record-traffic.md", "tests/scrut/repo-tooling.md", "tests/scrut/report-board-bugs.md", "tests/scrut/report-board.md", "tests/scrut/resolve-copilot-threads.md", "tests/scrut/review-completion.md", "tests/scrut/review-corpus.md", "tests/scrut/review-scope.md", "tests/scrut/run-scrut-documents.md", "tests/scrut/validate-plugins-catalog.md", "tests/scrut/watch-changes.md", "docs/reviews/2026-10-28-error-output-guard.md"],
+    "profile": "none",
+    "changes": [
+      {
+        "location": "docs/plans/todo/2026-10-28-guard-error-output.md:39",
+        "action": "taken",
+        "before": "These remain recorded limitations of the tracking model, accepted by the earlier instruction.",
+        "after": "These tracking-model limitations remain recorded and accepted under the earlier instruction.",
+        "decision": "shortens or uses active voice while preserving claims, requirements and links"
+      },
+      {
+        "location": "docs/plugin-development.md:15",
+        "action": "taken",
+        "before": "Descriptor 2 redirects, duplication, moves and closure are checked in command order.",
+        "after": "The checker inspects descriptor 2 redirects, duplication, moves and closure in command order.",
+        "decision": "shortens or uses active voice while preserving claims, requirements and links"
+      },
+      {
+        "location": "docs/plugin-development.md:38",
+        "action": "taken",
+        "before": "The tracking model's two accepted limits remain recorded in the [guard plan](plans/todo/2026-10-28-guard-error-output.md#accepted-tracking-limits).",
+        "after": "The [guard plan](plans/todo/2026-10-28-guard-error-output.md#accepted-tracking-limits) records the tracking model's two accepted limits.",
+        "decision": "shortens or uses active voice while preserving claims, requirements and links"
+      },
+      {
+        "location": "docs/reviews/2026-10-28-error-output-guard.md:21",
+        "action": "taken",
+        "before": "Each exception carries its reason inline at its occurrence.",
+        "after": "Each exception has an inline reason at its occurrence.",
+        "decision": "shortens or uses active voice while preserving claims, requirements and links"
+      },
+      {
+        "location": "docs/reviews/2026-10-28-error-output-guard.md:127",
+        "action": "taken",
+        "before": "Each row records the reviewer label, our severity, take-or-record decision and whether the decision calls for a further behavior review.",
+        "after": "Each row records the reviewer label, our severity, take-or-record decision and whether further behavior review is required.",
+        "decision": "shortens or uses active voice while preserving claims, requirements and links"
+      },
+      {
+        "location": "docs/reviews/2026-10-28-error-output-guard.md:591",
+        "action": "taken",
+        "before": "No follow-up issue was filed. The existing Nit concerning lock-failure wording remains a pre-existing diagnostic follow-up at its original severity.",
+        "after": "No follow-up issue was filed. The existing lock-failure wording Nit remains a pre-existing diagnostic follow-up at its original severity.",
+        "decision": "shortens or uses active voice while preserving claims, requirements and links"
+      }
+    ]
+  },
+  "exclusions": [
+    {
+      "file": "bin/lib/error-output-policy.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "dist/codex/plugins/attention-log/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/attention-log/.codex-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/attention-log/scripts/attention-log",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/attention-log/scripts/owner-lock.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/dependabot/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/dependabot/scripts/dependabot-prs",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/monitor-pr/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/monitor-pr/scripts/merge-flow",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/monitor-pr/scripts/resolve-copilot-threads",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/notify/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/notify/.codex-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/notify/scripts/notify",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/notify/scripts/watch-codex-failures",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/pin-everything/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/publish-report-board/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/publish-report-board/scripts/backlog-gather",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/publish-report-board/scripts/bugs-gather",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/publish-report-board/scripts/owner-lock.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/publish-report-board/scripts/report-board",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/push-notification/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/push-notification/scripts/push-notification",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/review-pr-with-codex/scripts/codex-aspects",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/review-pr-with-codex/scripts/review-scope",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/review-until-clean/scripts/check-completion",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/review-until-clean/scripts/review-scope",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/review-until-clean/scripts/save-ledger",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/workmux/.claude-plugin/plugin.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/workmux/scripts/compose-issue-prompt",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/workmux/scripts/launch-workmux",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/workmux/scripts/manage-resource-claims",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/workmux/scripts/owner-lock.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "dist/codex/plugins/workmux/scripts/resource-diagnostics.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-anti-incomplete.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-batch-1.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-batch-2.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-batch-3.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-batch-4.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-batch-5.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-batch-6.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-batch-7.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-batch-coverage.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-critical1-anti.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-critical1-simplify.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-deferred-scope-audit.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-exec-stream-plants.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-explicit-reason-count.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-fix-plants.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-guard.md",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important1-batch-1.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important1-batch-2.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important1-batch-3.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important1-batch-4.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important1-batch-5.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important1-batch-6.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important1-batch-7.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important1-simplify.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-batch-1.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-batch-2.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-batch-3.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-batch-4.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-batch-5.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-batch-6.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-batch-7.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-coverage.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-simplify-failed.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-important2-simplify.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-inherited-map-plants.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-old-regex-plants.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-recurrence-repros.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-review-repros.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-shfmt-probes.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-simplify-invalidated.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-simplify-pinned-metadata.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-simplify-pinned.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-28-error-output-versions.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-fail-closed-preflight.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-focused-important1-tool-stop.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-focused-nit1-code.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-focused-nit1-comments.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-focused-nit1-errors.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-focused-nit1-tests.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-focused-nit1-types.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-main-integration-count.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-main-site-review.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-merged-deferred-scope-audit.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-merged-guard-summary.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-merged-versions.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-parser-exception-plants.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-rare-plants.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-rare-preflight.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "docs/reviews/2026-10-29-error-output-review-monitor-invocation.json",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "plugins/attention-log/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/attention-log/.codex-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/attention-log/scripts/owner-lock.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "plugins/dependabot/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/monitor-pr/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/notify/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/notify/.codex-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/pin-everything/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/publish-report-board/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/publish-report-board/scripts/owner-lock.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "plugins/push-notification/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/review-pr-with-codex/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/review-until-clean/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "plugins/workmux/.claude-plugin/plugin.json",
+      "reason": "structured data, version metadata or literal fixture content has no eligible changed comments"
+    },
+    {
+      "file": "tests/data/error-output/allowed-capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/allowed-close.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/allowed-continued.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/allowed-coproc.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/allowed-escaped-exec.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/allowed-hash-text.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/allowed-probe.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/allowed-shorthand.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/ansi-exec-rare.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/append-discard.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/assignment-stdout-query.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/blank-boundary.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/builtin-exec-stdout-capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/combined-discard.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/command-exec-stdout-capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/comment-backslash.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/comment-boundary.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/composed-exec-rare.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/continued-discard.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/control.md",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/coproc-rare.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/discard.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/embedded-string.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/empty-reason.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/escaped-exec-rare.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/escaped-stderr-move.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/even-backslashes.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/exec-query.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/exec-stdout-capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/file-capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/leading-zero-close.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/leading-zero-discard.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/leading-zero-move.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/live-descriptor.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/live-merge.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/live-stderr.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/malformed-shell.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/move-stderr-input.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/move-stderr-output.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/move-stderr-self.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/multiline-capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/named-coproc-rare.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-closed-stdout.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-file-capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-function-alias.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-inout-discard.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-live-self.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-live-stderr.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-moved-stdout.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-null-alias.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-redirect-word.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-saved-stdout.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-substitution-alias.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-zero-discard.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/nested-zero-pipeline.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/next-line-reason.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/non-bash.js",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/non-bash.py",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/numeric-shorthand-file.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/ordinary-variable-merge.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/ordinary-variable-query.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/pending-at-eof.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/pipe-both.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/quoted-command-query.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/quoted-exec-rare.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/quoted-fake-reason.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/quoted-hash-token-split.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/saved-alias-rare.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/shorthand-capture.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/shorthand-discard.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/split-capture-token.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/split-discard-token.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/stderr-input-close.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    },
+    {
+      "file": "tests/data/error-output/stderr-output-close.bash",
+      "reason": "generated copy or literal fixture/review evidence; preserve recorded bytes and directive samples"
+    }
+  ],
+  "protected": "guard directives, literal fixtures, raw evidence and recorded facts",
+  "host_error": "none",
+  "hook_review_picker": "none"
+}

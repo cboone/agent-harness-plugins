@@ -28,9 +28,9 @@ $ function setup_claims() {
 > }
 > function claims_parallel() {
 >   local first second first_status=0 second_status=0
->   claims claim logic --worktree /repo/wt-live --branch feature/a > "${stub_dir}/first.log" 2>&1 &
+>   claims claim logic --worktree /repo/wt-live --branch feature/a > "${stub_dir}/first.log" 2>&1 & # error-output-allow: testcase asserts retained diagnostics: Test helpers
 >   first=$!
->   claims claim simulator --worktree /repo/wt-live --branch feature/b > "${stub_dir}/second.log" 2>&1 &
+>   claims claim simulator --worktree /repo/wt-live --branch feature/b > "${stub_dir}/second.log" 2>&1 & # error-output-allow: testcase asserts retained diagnostics: Test helpers
 >   second=$!
 >   wait "${first}" || first_status=$?
 >   wait "${second}" || second_status=$?
@@ -49,20 +49,20 @@ $ function setup_claims() {
 >   local control subject fixture_pid first_pid second_pid attempt fixture_status=0
 >   control="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   subject="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
->   CLAIMS_INTERRUPT_CONTROL="${control}" TMPDIR="${subject}" "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" > "${control}/log" 2>&1 &
+>   CLAIMS_INTERRUPT_CONTROL="${control}" TMPDIR="${subject}" "${RESOURCE_CLAIMS_INTERLEAVE_BIN}" > "${control}/log" 2>&1 & # error-output-allow: testcase asserts retained diagnostics: Test helpers
 >   fixture_pid=$!
 >   for ((attempt=0; attempt<160; attempt++)); do
 >     if [[ -f "${control}/ready" ]]; then break; fi
 >     sleep 0.05
 >   done
 >   if [[ ! -f "${control}/ready" ]]; then
->     kill -TERM "${fixture_pid}" 2> /dev/null || :
+>     kill -TERM "${fixture_pid}" || :
 >     wait "${fixture_pid}" || :
 >     cat "${control}/log"
 >     return 1
 >   fi
 >   if ! read -r first_pid second_pid < "${control}/writers" || [[ ! "${first_pid}" =~ ^[0-9]+$ || ! "${second_pid}" =~ ^[0-9]+$ ]]; then
->     kill -TERM "${fixture_pid}" 2> /dev/null || :
+>     kill -TERM "${fixture_pid}" || :
 >     wait "${fixture_pid}" || :
 >     cat "${control}/log"
 >     return 1
@@ -73,7 +73,7 @@ $ function setup_claims() {
 >     return 1
 >   fi
 >   wait "${fixture_pid}" || fixture_status=$?
->   if [[ "${fixture_status}" -ne 143 ]] || kill -0 "${first_pid}" 2> /dev/null || kill -0 "${second_pid}" 2> /dev/null; then
+>   if [[ "${fixture_status}" -ne 143 ]] || kill -0 "${first_pid}" || kill -0 "${second_pid}" ; then
 >     printf 'interrupted fixture exit=%s\n' "${fixture_status}"
 >     cat "${control}/log"
 >     return 1
@@ -94,7 +94,7 @@ $ function setup_claims() {
 >   output="$(env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" \
 >     LOCK_TEST_REAL_MKDIR="$(command -v mkdir)" LOCK_TEST_REAL_RMDIR="$(command -v rmdir)" LOCK_TEST_REAL_RM="$(command -v rm)" \
 >     LOCK_TEST_DIRECTORY="${claim_file}.lock" LOCK_TEST_MODE="${mode}" BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" \
->     WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/wt-live --branch main 2>&1)" || status=$?
+>     WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/wt-live --branch main 2>&1)" || status=$? # error-output-allow: fixture checks merged failure diagnostics and status for each owner-lock fault
 >   if [[ "${status}" != 1 ]]; then printf '%s\nexit=%s\n' "${output}" "${status}"; return 1; fi
 >   case "${mode}" in
 >     create)
@@ -118,13 +118,13 @@ $ function setup_claims() {
 > }
 > function claims_tail() {
 >   local output status=0
->   output="$(claims "$@" 2>&1)" || status=$?
+>   output="$(claims "$@" 2>&1)" || status=$? # error-output-allow: testcase asserts retained diagnostics: Test helpers
 >   printf '%s\n' "${output}" | tail -1
 >   return "${status}"
 > }
 > function claims_check_report() {
 >   local output status=0
->   output="$(claims check "$@" 2>&1)" || status=$?
+>   output="$(claims check "$@" 2>&1)" || status=$? # error-output-allow: testcase asserts retained diagnostics: Test helpers
 >   printf '%s\n' "${output}" | sed 's/claimed [0-9TZ:-]*/claimed TIMESTAMP/'
 >   return "${status}"
 > }
@@ -450,7 +450,7 @@ manage-resource-claims: */.claude/worktree-resources.local.json holds a malforme
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":"x"}]}' > "${claim_file}" \
->   && claims list 2>&1 | tail -1
+>   && claims list 2>&1 | tail -1 # error-output-allow: testcase asserts retained diagnostics: A stored claim with a non-numeric issue is refused
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
@@ -585,7 +585,7 @@ Validation on write and on read agree, so a hand-edited file cannot reintroduce 
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a b","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
->   && claims list 2>&1 | tail -1
+>   && claims list 2>&1 | tail -1 # error-output-allow: testcase asserts retained diagnostics: A stored resource name carrying whitespace is refused
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
@@ -761,7 +761,7 @@ A looser read contract would let a hand-edited file hold a claim no command can 
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"-logic","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
->   && claims list 2>&1 | tail -1
+>   && claims list 2>&1 | tail -1 # error-output-allow: testcase asserts retained diagnostics: The stored record contract matches what the CLI accepts
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
@@ -771,7 +771,7 @@ manage-resource-claims: */.claude/worktree-resources.local.json holds a malforme
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b c","claimed_at":"t"}]}' > "${claim_file}" \
->   && claims list 2>&1 | tail -1
+>   && claims list 2>&1 | tail -1 # error-output-allow: testcase asserts retained diagnostics: A stored branch carrying whitespace is refused
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
@@ -815,7 +815,7 @@ manage-resource-claims: --worktree must not contain control characters
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/a\\n/b","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
->   && claims list 2>&1 | tail -1
+>   && claims list 2>&1 | tail -1 # error-output-allow: testcase asserts retained diagnostics: A control character in a stored worktree path is refused on read
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
@@ -847,7 +847,7 @@ The CLI accepts only digit strings for `--issue`, so the read contract has to ma
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":1.5}]}' > "${claim_file}" \
->   && claims list 2>&1 | tail -1
+>   && claims list 2>&1 | tail -1 # error-output-allow: testcase asserts retained diagnostics: A stored issue must be a non-negative integer
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
@@ -855,7 +855,7 @@ manage-resource-claims: */.claude/worktree-resources.local.json holds a malforme
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":-3}]}' > "${claim_file}" \
->   && claims list 2>&1 | tail -1
+>   && claims list 2>&1 | tail -1 # error-output-allow: testcase asserts retained diagnostics: A stored issue must be a non-negative integer
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 

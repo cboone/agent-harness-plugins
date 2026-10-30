@@ -1,0 +1,7 @@
+{
+  "aspect": "types",
+  "findings": [],
+  "reviewed": "6c842fd9d46b75ba129c3dd0879ccd63b44bf846",
+  "strengths": ["ErrorOutputPolicy: exact keys, globally unique names and nonblank reasons are validated before use; encapsulation 8/10, invariant expression 9/10, usefulness 9/10, enforcement 9/10.", "PackedUnit: numeric source coordinates and verified sentinel/subshell boundaries preserve source attribution; encapsulation 8/10, invariant expression 8/10, usefulness 9/10, enforcement 9/10.", "DescriptorState: normalized numeric descriptor keys and ordered updates keep duplication, movement and closure consistent within supported contexts; encapsulation 8/10, invariant expression 8/10, usefulness 9/10, enforcement 8/10.", "GuardFinding and GuardReport: explicit kind tags distinguish failure categories, while common metadata supplies source positions; encapsulation 8/10, invariant expression 8/10, usefulness 8/10, enforcement 8/10."],
+  "summary": "Reviewed the structural data models and their construction and consumption across the scoped changes. No introduced type-design defect met the reporting threshold; review remained static and read-only."
+}

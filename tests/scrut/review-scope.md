@@ -111,7 +111,7 @@ $ out="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && exit_code=0 \
 >   && "${REVIEW_SCOPE_BIN}" --nope > "${out}" 2>&1 || exit_code=$? \
 >   && tail -1 "${out}" \
->   && exit "${exit_code}"
+>   && exit "${exit_code}" # error-output-allow: testcase asserts retained diagnostics: Unknown flag
 review-scope: unexpected argument: --nope
 [1]
 ```
@@ -119,7 +119,7 @@ review-scope: unexpected argument: --nope
 ## Unknown flag prints the usage text
 
 ```scrut
-$ "${REVIEW_SCOPE_BIN}" --nope 2>&1 | head -1
+$ "${REVIEW_SCOPE_BIN}" --nope 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Unknown flag prints the usage text
 Usage: review-scope [--base <ref>]
 ```
 
@@ -474,7 +474,7 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && printf 'secret\n' > unreadable.txt \
 >   && chmod 000 unreadable.txt \
 >   && exit_code=0 \
->   && "${REVIEW_SCOPE_BIN}" --base base > /dev/null 2>&1 || exit_code=$? \
+>   && "${REVIEW_SCOPE_BIN}" --base base > /dev/null || exit_code=$? \
 >   && chmod 644 unreadable.txt \
 >   && printf 'exit=%s\n' "${exit_code}"
 exit=1
@@ -747,7 +747,7 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >          code=0; "${REVIEW_SCOPE_BIN}" ${args[@]+"${args[@]}"} > out 2> err || code=$?; \
 >          test ! -s out || exit 1; \
 >          printf '%s exit=%s\n' "${mode}" "${code}"; cat err; \
->        done )
+>        done ) # error-output-allow: testcase asserts retained diagnostics: Fatal merge-base errors retain Git's diagnostic for either base source
 inferred exit=128
 fatal: sample object read failure
 review-scope: git merge-base '*' '*' failed (exit 128) (glob)
@@ -804,7 +804,7 @@ $ cd "${work}" \
 >        [[ "$(type -t git)" == function ]] || exit 1; \
 >        code=0; "${REVIEW_SCOPE_BIN}" > out 2> err || code=$?; \
 >        test ! -s out || exit 1; \
->        printf 'exit=%s\n' "${code}"; cat err )
+>        printf 'exit=%s\n' "${code}"; cat err ) # error-output-allow: testcase asserts retained diagnostics: Unexpected inferred-base validation errors stop collection
 exit=128
 fatal: sample object read failure
 review-scope: could not resolve base (exit 128)
