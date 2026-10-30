@@ -63,12 +63,13 @@ Write the file using the Write tool.
 
 If gitleaks was selected, ask the user whether they want a `.gitleaks.toml` configuration file.
 
-If yes, read `./references/gitleaks-config.md` for the configuration template and create `.gitleaks.toml` in the repository root from it. Adapt the allowlist paths to the project:
+If yes, read `./references/gitleaks-config.md` and create `.gitleaks.toml` in the repository root from its starter template. Keep the default rules enabled without adding exclusions. Do not exclude whole lockfiles or vendor directories based on the project language or file category.
 
-- **Go projects** (have `go.mod`): include `go.sum`
-- **JavaScript projects** (have `package.json`): include `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`
-- **Ruby projects** (have `Gemfile`): include `Gemfile.lock`
-- Remove lockfile entries that do not apply to the project.
+Explain the inherited coverage limit in the reference. Default rules also include built-in path exclusions, so this starter does not guarantee that every lockfile or vendor path is scanned. Projects requiring that coverage need a separately maintained full configuration without `useDefault`.
+
+Add a suppression only after reviewing a concrete finding and confirming it is a false positive. Use the narrowest scope possible: a finding fingerprint or a rule-specific content pattern. Before using a fingerprint, check all matches sharing its path, rule and starting line, and its commit when present; it does not distinguish content or columns. Use a content pattern when an unrelated credential shares that scope. Document the reason and rescan to confirm unrelated secrets remain detectable. A real credential, even if revoked, is not a false positive.
+
+Explain the PR configuration trust limitation in the reference: the reusable workflow currently scans with configuration from the PR checkout, including automatically discovered `.gitleaks.toml`. This starter does not prevent a PR from weakening its own scan; trusted-base configuration is tracked separately in [cboone/gh-actions issue 157](https://github.com/cboone/gh-actions/issues/157).
 
 If no, skip this step.
 
