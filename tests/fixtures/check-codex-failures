@@ -63,8 +63,8 @@ function run_concurrent() {
   export ROLLOUT_CLAIM_BARRIER="${CASE_DIR}/claim-barrier"
   mkfifo "${ROLLOUT_CLAIM_BARRIER}/ready" "${ROLLOUT_CLAIM_BARRIER}/one" "${ROLLOUT_CLAIM_BARRIER}/two"
   exec 4<> "${ROLLOUT_CLAIM_BARRIER}/ready" # error-output-allow: Owned readiness FIFO on descriptor 4; standard streams remain live.
-  exec 5<> "${ROLLOUT_CLAIM_BARRIER}/one" # error-output-allow: Owned release FIFO for reader one on descriptor 5; standard streams remain live.
-  exec 6<> "${ROLLOUT_CLAIM_BARRIER}/two" # error-output-allow: Owned release FIFO for reader two on descriptor 6; standard streams remain live.
+  exec 5<> "${ROLLOUT_CLAIM_BARRIER}/one"   # error-output-allow: Owned release FIFO for reader one on descriptor 5; standard streams remain live.
+  exec 6<> "${ROLLOUT_CLAIM_BARRIER}/two"   # error-output-allow: Owned release FIFO for reader two on descriptor 6; standard streams remain live.
   BASH_ENV="${stub_dir}/claim-boundary.bash" ROLLOUT_READER=one capture_child - --replay-stdout -- run_case error &
   CHILD_PID=$!
   BASH_ENV="${stub_dir}/claim-boundary.bash" ROLLOUT_READER=two capture_child - --replay-stdout -- run_case error &
