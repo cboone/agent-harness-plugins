@@ -1,0 +1,16 @@
+#!/bin/bash
+# Absolute Bash keeps the fixture PATH limited to this gh stub.
+set -euo pipefail
+
+function main() {
+  while [[ $# -gt 0 ]]; do
+    if [[ "${1}" == --title ]]; then
+      printf '%s\n' "${2:?Missing title}"
+      return
+    fi
+    shift
+  done
+  return 1
+}
+
+main "$@"
