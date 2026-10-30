@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${REPO_ROOT:?Set REPO_ROOT to the repository under test}"
+
+scratch=''
+bash_bin="$(command -v bash)"
+
+function run_example() {
+  local command="${1}"
+  cat > "${scratch}/example.bash" << 'BASH'
+set -euo pipefail
+[[ "$(type -t gh)" == file && "$(command -v gh)" == "${EXPECTED_GH_STUB}" ]] || exit 1
+BASH
+  printf '%s\n' "${command}" >> "${scratch}/example.bash"
+  PATH="${scratch}/bin" EXPECTED_GH_STUB="${scratch}/bin/gh" \
+    "${bash_bin}" --noprofile --norc "${scratch}/example.bash"
+}
+
+function check_titles() {
+  local source line command actual count=0
+  # Substitution syntax is literal test data.
+  # shellcheck disable=SC2016
+  local title='Fix `printf SUBSTITUTED` $(printf SUBSTITUTED) $EXAMPLE_NAME'
+  export EXAMPLE_NAME=SUBSTITUTED
+  for source in \
+    plugins/use-git/skills/create-issue/SKILL.md \
+    plugins/pr/skills/pr/SKILL.md; do
+    while IFS= read -r line; do
+      [[ "${line}" == *--title* && "${line}" == *gh\ * ]] || continue
+      [[ "${line}" == gh\ * || "${line}" == '  gh '* ]] || continue
+      command="${line//Issue title here/${title}}"
+      command="${command//the pr title/${title}}"
+      command="${command//<corrected title>/${title}}"
+      command="${command//<pr-target>/sample\/repo}"
+      command="${command//<head-owner>:<branch>/sample:branch}"
+      command="${command//<pr-url>/https:\/\/github.com\/sample\/repo\/pull\/1}"
+      actual="$(run_example "${command}")"
+      [[ "${actual}" == "${title}" ]]
+      count=$((count + 1))
+    done < "${REPO_ROOT}/${source}"
+  done
+  [[ "${count}" == 5 ]]
+  printf 'literal title examples: %s\n' "${count}"
+}
+
+function check_apostrophe() {
+  local line argument actual
+  line="$(sed -n '/for example `--title /p' "${REPO_ROOT}/plugins/use-git/skills/create-issue/SKILL.md")"
+  argument="${line#*for example \`}"
+  argument="${argument%%\`*}"
+  [[ "${argument}" == --title\ * ]]
+  actual="$(run_example "gh issue create ${argument}")"
+  [[ "${actual}" == "Fix parser's handling" ]]
+  printf '%s\n' "${actual}"
+}
+
+function check_issues() {
+  local line filter url result count=0
+  while IFS= read -r line; do
+    [[ "${line}" == gh\ issue\ view\ NUMBER* ]] || continue
+    filter="${line#*--jq \'}"
+    filter="${filter%%\'*}"
+    for url in \
+      https://github.com/sample/repo/issues/42 \
+      'https://github.com/sample/pull/issues/42/?q=sample#fragment'; do
+      result="$(jq -nr --arg url "${url}" "{number:42, url:\$url} | ${filter}")"
+      [[ "${result}" == 42 ]]
+    done
+    for url in \
+      https://github.com/sample/repo/pull/42 \
+      'https://github.com/sample/issues/pull/42?q=sample#fragment'; do
+      result="$(jq -nr --arg url "${url}" "{number:42, url:\$url} | ${filter}")"
+      [[ -z "${result}" ]]
+    done
+    count=$((count + 1))
+  done < "${REPO_ROOT}/plugins/pr/skills/pr/SKILL.md"
+  [[ "${count}" == 2 ]]
+  printf 'issue-only detection strategies: %s\n' "${count}"
+}
+
+function main() {
+  unset BASH_ENV ENV
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/github-examples.XXXXXX")"
+  trap 'rm -r -- "${scratch}"' EXIT
+  mkdir "${scratch}/bin"
+  cp "${REPO_ROOT}/tests/fixtures/github-title-gh-stub" "${scratch}/bin/gh"
+  case "${1:-}" in
+    titles) check_titles ;;
+    apostrophe) check_apostrophe ;;
+    issues) check_issues ;;
+    *) return 2 ;;
+  esac
+}
+
+main "$@"

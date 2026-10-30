@@ -53,7 +53,7 @@ Use the Write tool (not `echo` or `cat`) to write the full content to the path r
 Run the `gh` command with `--body-file` (or `--notes-file`, for `gh release create`) pointing to the path returned by `mktemp -u` (shown as `TMPFILE` below), in a **separate message** issued only after the Write tool has returned:
 
 ```bash
-gh pr create --title "Add user authentication" --body-file TMPFILE
+gh pr create --title 'Add user authentication' --body-file TMPFILE
 ```
 
 ### 4. Verify the stored body
@@ -102,7 +102,7 @@ Do not chain the cleanup onto the `gh` command, and do not wrap it to preserve t
 
 ```bash
 # BAD - breaks in zsh
-gh pr create --title "..." --body-file TMPFILE; status=$?; rm -f TMPFILE; exit $status
+gh pr create --title '...' --body-file TMPFILE; status=$?; rm -f TMPFILE; exit $status
 ```
 
 In zsh (the macOS default shell), `status` and `pipestatus` are read-only built-in aliases for `$?` and `${pipestatus[@]}`. Assigning to either fails with `read-only variable: status`, so this wrapper exits non-zero and mis-reports a successful `gh` call as failed. Keep cleanup in its own Bash tool call instead.
@@ -127,7 +127,7 @@ mktemp -u "${TMPDIR:-/tmp}/gh-issue-body-XXXXXX"
 Write body content via the Write tool to the returned path, then, in a separate message:
 
 ```bash
-gh issue create --title "Fix login timeout" --body-file /tmp/claude-501/gh-issue-body-a1b2c3 --label "bug"
+gh issue create --title 'Fix login timeout' --body-file /tmp/claude-501/gh-issue-body-a1b2c3 --label "bug"
 ```
 
 ```bash
@@ -144,7 +144,7 @@ mktemp -u "${TMPDIR:-/tmp}/gh-pr-body-XXXXXX"
 Write PR body via the Write tool to the returned path, then, in a separate message:
 
 ```bash
-gh pr create --title "Add retry logic to API client" --body-file /tmp/claude-501/gh-pr-body-x4y5z6
+gh pr create --title 'Add retry logic to API client' --body-file /tmp/claude-501/gh-pr-body-x4y5z6
 ```
 
 ```bash
@@ -166,21 +166,21 @@ Write reply via the Write tool to the returned path, then, in a separate message
 
 ```bash
 # BAD - triggers permission prompts
-echo "Long body content..." | gh issue create --title "Title" --body-file -
+echo "Long body content..." | gh issue create --title 'Title' --body-file -
 ```
 
 **Never use `--body` with long inline content:**
 
 ```bash
 # BAD - long string triggers permission prompts
-gh pr create --title "Title" --body "## Summary\n\n- Change 1\n- Change 2\n..."
+gh pr create --title 'Title' --body "## Summary\n\n- Change 1\n- Change 2\n..."
 ```
 
 **Never use HEREDOC for long `gh` arguments:**
 
 ```bash
 # BAD - HEREDOC with long content still triggers prompts
-gh pr create --title "Title" --body "$(cat << 'EOF'
+gh pr create --title 'Title' --body "$(cat << 'EOF'
 ## Summary
 
 - Change 1
