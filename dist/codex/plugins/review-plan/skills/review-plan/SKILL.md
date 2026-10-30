@@ -31,9 +31,19 @@ Before matching or reading candidates, resolve each candidate path, including sy
 
 For directory or default selection, use `git branch --show-current` to identify the current branch. Compute subjects in this exact order:
 
-1. **Branch**: Remove at most one leading category matching `^(feature|feat|fix|chore|docs)/`, then at most one leading issue prefix matching `^(issue-)?[0-9]+-`.
+1. **Branch**: Remove at most one leading category matching `^(feature|feat|fix|chore|docs)/`, then at most one leading issue prefix matching `^(issue-)?[0-9]+-`. Retain the exact issue digits removed, if any.
 1. **Plan**: From the candidate's basename, remove the `.md` extension, then at most one leading datestamp matching `^[0-9]{4}-[0-9]{2}-[0-9]{2}-`, then at most one leading issue prefix matching `^(issue-)?[0-9]+-`.
-1. **Both**: Lowercase ASCII letters, replace each run of characters outside `[a-z0-9]` with one hyphen, and trim leading and trailing hyphens. Compare the complete normalized subjects, not substrings.
+1. **Both**: Lowercase ASCII letters, replace each run of characters outside `[a-z0-9]` with one hyphen, and trim leading and trailing hyphens. Compare the complete normalized subjects, not substrings. Accept exact equality first. Otherwise, only if the branch had an issue prefix, accept a plan subject equal to the complete branch subject followed by `-<retained issue digits>`. This allows at most one trailing issue suffix on the plan side; never strip arbitrary trailing numbers. With both leading and trailing issue forms in a plan basename, remove the leading prefix first, then apply this same comparison once.
+
+Use the read-only helper for each eligible candidate, passing the branch and candidate basename as two quoted arguments:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/plan-matches-branch" "${branch}" "${basename}"
+```
+
+It prints `match` or `no-match` and exits 0 for either comparison result. A nonzero exit or unexpected output is a comparison failure: report `Blocked` rather than silently using the newest-plan fallback. If the plugin-root placeholder is unresolved, locate `scripts/plan-matches-branch` relative to this skill's plugin root, two directories above this skill directory. The helper compares names only; candidate collection, path restrictions and selection remain governed by this step.
+
+For example, `feat/4344-auto-promote-production-deploys` matches `2026-09-08-auto-promote-production-deploys-4344.md`, while suffix `-4345` does not match. `feat/upgrade-to-postgres-16` still matches `2026-01-01-upgrade-to-postgres-16.md` exactly. A branch without an issue prefix gains no suffix tolerance. The issue digits are compared as text, preserving leading zeroes.
 
 Prefix matches are case-sensitive. Remove only the prefixes specified above; an unlisted branch category remains part of the subject. For example, `feature/123-foo` normalizes to `foo`, while `hotfix/123-foo` normalizes to `hotfix-123-foo`.
 

@@ -54,6 +54,7 @@ SCRUT_ENV := \
 	COMBINED_WORKTREES_CASE_BIN="$(CURDIR)/tests/fixtures/combined-worktrees-case" \
 	COMBINED_REF_COLLISION_BIN="$(CURDIR)/tests/fixtures/combined-ref-collision" \
 	PR_BRANCH_ISSUES_BIN="$(CURDIR)/plugins/pr/scripts/branch-issues" \
+	PLAN_MATCHES_BRANCH_BIN="$(CURDIR)/plugins/review-plan/scripts/plan-matches-branch" \
 	LIST_SHELL_SCRIPTS_BIN="$(CURDIR)/bin/list-shell-scripts" \
 	MATERIALIZE_CASE_BIN="$(CURDIR)/bin/materialize-case" \
 	VALIDATE_CORPUS_BIN="$(CURDIR)/bin/validate-corpus" \
