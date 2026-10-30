@@ -247,7 +247,7 @@ function append_pending_event() {
 }
 
 # Renames a full events file under the rotation owner.
-# Reclaims owners older than a minute.
+# Reports aged ownership without removing it; appends can continue unrotated.
 function rotate_events() {
   local result diagnostic
   mkdir -p "${ROTATE_LOCK}" 2> /dev/null || return 0
@@ -257,17 +257,8 @@ function rotate_events() {
     result=$?
     ((result == 1)) || return "${result}"
     [[ -n "$(find "${ROTATE_LOCK}/owner" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0
-    # Age-based reclaim can remove a live successor's owner file.
-    # https://github.com/cboone/agent-harness-plugins/issues/673
-    if ! diagnostic="$(rm "${ROTATE_LOCK}/owner" 2>&1)"; then
-      owner_lock_report "cannot reclaim ${ROTATE_LOCK}/owner: ${diagnostic}" append_pending_event
-      return 1
-    fi
-    if owner_lock_reserve "${ROTATE_LOCK}/owner" 9 append_pending_event; then
-      ROTATION_TOKEN="${OWNER_LOCK_TOKEN}"
-    else
-      return "$?"
-    fi
+    owner_lock_report "observed aged rotation owner ${ROTATE_LOCK}/owner; rotation skipped; stop all attention-log writers before manual recovery" append_pending_event
+    return 0
   fi
   [[ "${PENDING_EVENT_ATTEMPTED}" == false ]] || return 1
   if ! diagnostic="$({ printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; } 2>&1)"; then
@@ -410,11 +401,15 @@ function transcript_shows_refusal() {
 # the hook that opened it.
 
 # Retains the session owner's file identity before recording its PID.
-# Reclaims stopped-PID owners or PID-less owners older than a minute.
+# Leaves stale ownership in place: checking a PID or age cannot authorize unlink.
+# Every failure reports why the session update is skipped.
 function lock_session() {
-  local tries=0 owner result
+  local tries=0 owner result diagnostic
   LOCK_DIR="${SESSIONS_DIR}/${SESSION_ID}.lock"
-  mkdir -p "${LOCK_DIR}" 2> /dev/null || return 1
+  if ! diagnostic="$(mkdir -p "${LOCK_DIR}" 2>&1)"; then
+    owner_lock_report "cannot prepare session lock directory ${LOCK_DIR}: ${diagnostic}; session update skipped; check directory permissions and available storage"
+    return 1
+  fi
   while :; do
     if owner_lock_reserve "${LOCK_DIR}/pid" 8; then
       break
@@ -426,17 +421,20 @@ function lock_session() {
     IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
     if { [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2> /dev/null; } \
       || { [[ -z "${owner}" && -n "$(find "${LOCK_DIR}/pid" -maxdepth 0 -mmin +1 2> /dev/null)" ]]; }; then
-      # PID/age reclaim can remove a live successor's owner file.
-      # https://github.com/cboone/agent-harness-plugins/issues/673
-      rm -f "${LOCK_DIR}/pid"
+      owner_lock_report "observed stale session owner ${LOCK_DIR}/pid; session update skipped; stop all attention-log writers before manual recovery"
+      return 1
     fi
     ((tries += 1))
-    ((tries <= 100)) || return 1
+    if ((tries > 100)); then
+      owner_lock_report "session lock retries exhausted at ${LOCK_DIR}/pid after ${tries} attempts; observed owner ${owner:-unrecorded}; session update skipped; investigate the holder and stop all attention-log writers before manual recovery"
+      return 1
+    fi
     sleep 0.1
   done
   SESSION_LOCK_TOKEN="${OWNER_LOCK_TOKEN}"
   LOCK_HELD=true
-  if ! printf '%s\n' "$$" > "${LOCK_DIR}/pid"; then
+  if ! diagnostic="$({ printf '%s\n' "$$" > "${LOCK_DIR}/pid"; } 2>&1)"; then
+    owner_lock_report "cannot record session owner ${LOCK_DIR}/pid: ${diagnostic}; session update skipped"
     unlock_session || :
     return 1
   fi
@@ -512,7 +510,7 @@ function record_state() {
 
 # Opens a state of marker kind $1 and writes event $2 for it.
 function open_state() {
-  [[ -z "${SESSION_ID}" ]] || lock_session || true
+  [[ -z "${SESSION_ID}" ]] || lock_session || return 0
   record_state "${1}" "${2}"
   unlock_session || :
 }
@@ -528,7 +526,8 @@ function on_permission_request() {
 function on_notification() {
   case "${NOTIFICATION_TYPE}" in
     permission_prompt)
-      if [[ -n "${SESSION_ID}" ]] && lock_session; then
+      if [[ -n "${SESSION_ID}" ]]; then
+        lock_session || return 0
         marker_newest_wait
       fi
       if [[ -n "${WAIT_ID}" ]]; then
