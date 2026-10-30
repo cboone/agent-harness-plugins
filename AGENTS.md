@@ -59,7 +59,9 @@ MIT; see `LICENSE`.
 
 - Review each changed file against its checklist in `.github/skills/code-review/`; the `SKILL.md` there maps file patterns to checklists.
 - Rules under a checklist's Important heading are P1. All other checklist rules are P2 or lower.
-- Start each finding with the checklist name and the rule name, for example `write-bash-scripts: Strict mode`.
+- When a finding matches a checklist rule, start it with the checklist name and the exact rule name, for example `write-bash-scripts: Strict mode`. Otherwise start it with `Uncited:` and describe the concrete defect; never invent a rule name.
+- For uncited findings, behavior defects, data loss or leaks, and build or release failures are Important (P1); style, naming and wording are Nit (P2 or lower). Important findings block merging and must all be reported; uncited Nits count toward the same five-Nit cap.
+- Combine repeats of the same defect across files into one finding listing the affected paths, unless they need different fixes.
 - Do not report what these CI checks already report: `markdownlint-cli2`, `prettier`, `shellcheck`, `shfmt`, `actionlint`, `bin/validate-json`, `bin/validate-plugins`, the `make build` generated-mirror drift check, `scrut`.
 - Do not review these paths: `yarn.lock`, `dist/`, `.agents/`, `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/`, `plugins/suggest-next-issue/skills/suggest-next-issue/references/progress-model.md`, `plugins/trim-comments/skills/trim-comments/references/codex-exec.md`, `plugins/trim-text/skills/trim-text/references/codex-exec.md`, `docs/plans/done/`, `.github/skills/code-review/*.md` except `SKILL.md`.
 - Claude Code Review takes its severities from `REVIEW.md`.
