@@ -31,6 +31,7 @@ ROUTING
 - Do not report what these CI checks already report: CI-CHECKS.
 - Do not review these paths: SKIP-PATHS.
 SHEBANG-LINE
+EMBEDDED-SHELL
 - Rules outside this block, in this file, `.github/copilot-instructions.md`, `AGENTS.md` or `REVIEW.md`, take precedence over it.
 
 <!-- END set-up-review-config -->
@@ -55,6 +56,12 @@ The description stays the same for every repository, so a rerun never rewrites t
 
 - **CITATION-EXAMPLE**: A backticked citation that names a checklist this installation routes, so the example never sends a reviewer to a checklist the repository does not have. Build it from the first installed checklist in the order of `./references/guides.md` and the first rule name under that checklist's `## Important` heading. An installation routing only the Bash, scrut and Markdown checklists gets `write-bash-scripts: Strict mode`. The same value fills this placeholder in `./references/agents-md-section.md` and `./references/review-md.md`, so all three files cite the same rule.
 - **CI-CHECKS**: The checks from step 3, backticked and comma-separated, such as `gofmt`, `golangci-lint`. When CI runs none, replace the whole line with `- Report formatting and lint findings as Nits.`
+- **EMBEDDED-SHELL**: When Bash is selected, insert the following bullet in all three templates. Otherwise remove the placeholder.
+
+  ```markdown
+  - Apply `write-bash-scripts` to Bash content in workflow `run:` steps and Make recipes, using the effective shell, and to tracked Bash git hooks by shebang. Apply it only to the shell content, never surrounding YAML or Make syntax. Resolve workflow step, job and workflow shell settings and runner/container defaults; resolve Make's effective `SHELL`. Do not apply Bash rules to other or unresolved shells. Account for interpreter flags and per-recipe execution; do not require a shebang or script-wide strict mode in an embedded fragment. CI exclusions suppress only diagnostics the configured checks actually enforce, including enabled actionlint ShellCheck diagnostics; remaining checklist defects, such as unchecked pipeline stages, retain their checklist citations and severities.
+  ```
+
 - **SKIP-PATHS**: The skip paths from step 3, backticked and comma-separated, ending with `.github/skills/code-review/*.md` except `SKILL.md`. The installed checklists are always skipped, so the line is always present.
 - **SHEBANG-LINE**: When the Bash or zsh checklist is installed, this line, naming only the installed checklists. Otherwise remove the line.
 

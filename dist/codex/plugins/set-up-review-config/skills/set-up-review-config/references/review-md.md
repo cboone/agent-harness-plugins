@@ -17,6 +17,8 @@ When `REVIEW.md` does not exist, write the whole file. When it exists, write onl
 
 Reserve Important for findings that would break behavior, lose or leak data, or break the build or a release, and for the checklist rules below. Other style, naming and wording findings are Nit at most.
 
+EMBEDDED-SHELL
+
 IMPORTANT-RULES
 
 ## Nits
