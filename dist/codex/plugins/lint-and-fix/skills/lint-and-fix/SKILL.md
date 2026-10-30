@@ -22,6 +22,8 @@ The user may provide these options inline:
 
 ## Parent Continuation Contract
 
+Only **enforced** tools govern lint failure, `Unresolved or skipped`, and the push/parent continuation gate. Tools classified as **inferred only** below are advisory: their findings, missing tools, execution errors and unavailable safe checks belong solely on `Advisory (not enforced by project)`, never in required-work failures. Report their actual outcome, including unknown counts, rather than calling an unrun check clean. Host restrictions on required work remain failures.
+
 When another skill invokes `lint-and-fix`, that parent skill may provide an explicit continuation block immediately after the command:
 
 ```text
@@ -40,8 +42,8 @@ Honor this block as part of the `lint-and-fix` invocation.
 - On lint success, no tools detected, or no file changes needed, report the result and allow the parent to continue immediately according to `On lint success`.
 - On unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, report a workflow failure result and list the unresolved items so the parent can follow `On lint failure or skipped required lint work`.
 - A tool that [step 2](#2-consult-project-agent-config) downgraded to check mode is **not** skipped required lint work. When it runs in check mode and finds nothing, that is lint success: report it on the `Check-only by project policy` line, leave `Unresolved or skipped` as `none`, and let the parent continue. When it finds issues that step 6 cannot resolve by hand, that is an ordinary failure and belongs under `Unresolved or skipped`.
-- A tool recorded as `check-only (no safe check command)` **is** skipped required lint work, because nothing ran and the tree was never checked. Report `Lint status: failure` and list the tool under `Unresolved or skipped` with the reason. It must never reach the parent as success: an unrun tool and a tool that ran clean are opposite results, and a parent such as `pr` would otherwise push a tree no one checked.
-- That mode has two sources, and only one of them is policy. Step 2 assigns it when a project rule downgrades a tool and no verified check command exists, and step 4a assigns it when **--check** would otherwise take a write-mode fallback. Name only the first on the `Check-only by project policy` line, since the second is a limit of the user's own dry run and attributing it to the project misreports where the constraint came from. Both still count as skipped required lint work under `Unresolved or skipped`, which is what governs the parent.
+- An enforced tool recorded as `check-only (no safe check command)` **is** skipped required lint work, because nothing ran and the tree was never checked. Report `Lint status: failure` and list the tool under `Unresolved or skipped` with the reason. It must never reach the parent as success: an unrun tool and a tool that ran clean are opposite results, and a parent such as `pr` would otherwise push a tree no one checked.
+- That mode has two sources, and only one of them is policy. Step 2 assigns it when a project rule downgrades a tool and no verified check command exists, and step 4a assigns it when **--check** would otherwise take a write-mode fallback. Name only the first on the `Check-only by project policy` line, since the second is a limit of the user's own dry run and attributing it to the project misreports where the constraint came from. For enforced tools, both still count as skipped required lint work under `Unresolved or skipped`, which is what governs the parent.
 
 Map successful lint work to `Status: success`, a clean no-change result to `no-op`, and failed or skipped required work to `failure`. A question without an answer returns `needs-decision` to the parent without asking independently. A host restriction is a failure, never `no-tools`. Existing `Lint status` values remain unchanged.
 
@@ -53,6 +55,7 @@ Lint status: <success|no-tools|failure>
 Commit: <none|commit SHA>
 Unresolved or skipped: <none|summary>
 Check-only by project policy: <none|tool list>
+Advisory (not enforced by project): <none|tool findings or reason not checked>
 Caller resume target: <target from continuation block>
 ```
 
@@ -93,10 +96,10 @@ Replace `<package-manager-runner>` with the project's local-binary runner: `npx`
 
 1. **Config files**: Use Glob to check for each config pattern in the project root.
 1. **Package.json configuration and scripts**: Read `package.json` for a `prettier` configuration key as well as `lint`, `format`, or `check` scripts. A `prettier` key identifies existing Prettier configuration even when no wrapper script exists.
-1. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, shellcheck and shfmt apply.
+1. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, add shellcheck and shfmt as inferred-only candidates pending enforcement classification.
 1. **Project lint scripts**: Check for `bin/lint`, `scripts/lint`, `script/lint`.
 1. **CI workflow scripts**: Scan CI workflow files for repo-specific linting and validation steps not already covered by other detection methods. See [CI Workflow Detection](#ci-workflow-detection) below.
-1. **Tool availability**: Verify detected tools are installed and can be resolved by the selected runner (check the package manager, project dependencies, and `which`). For Prettier, use the project runner only when it resolves the local dependency; if only a global installation is verified, use the bare `prettier` command.
+1. **Tool availability**: After step 2 classifies enforcement, verify detected tools are installed and can be resolved by the selected runner (check the package manager, project dependencies, and `which`). For Prettier, use the project runner only when it resolves the local dependency; if only a global installation is verified, use the bare `prettier` command.
 
 #### CI Workflow Detection
 
@@ -105,9 +108,9 @@ Scan `.github/workflows/*.yml` and `.github/workflows/*.yaml` files to discover 
 1. **Find workflow files**: Use Glob to find `.github/workflows/*.yml` and `.github/workflows/*.yaml`.
 1. **Identify lint/validation jobs**: Read each workflow file. Look for jobs or steps whose `name` suggests linting, validation, or code quality (keywords: "lint", "check", "validate", "format", "style", "quality", "verify").
 1. **Extract `run:` commands**: From matching jobs and steps, collect all `run:` values.
-1. **Skip reusable workflow calls**: If a job uses `uses: org/repo/.github/workflows/workflow.yml@ref` (a reusable workflow call, e.g., `cboone/gh-actions/.github/workflows/run-go-ci.yml@v4.1.0`, `cboone/gh-actions/.github/workflows/run-rust-ci.yml@v4.1.0`, `cboone/gh-actions/.github/workflows/run-zig-ci.yml@v4.1.0`), skip it entirely. Reusable workflows run in CI only and cannot be executed locally. They are not a source of locally-runnable lint commands.
+1. **Skip reusable workflow calls**: If a job uses `uses: org/repo/.github/workflows/workflow.yml@ref` (a reusable workflow call, e.g., `cboone/gh-actions/.github/workflows/run-go-ci.yml@v4.1.0`, `cboone/gh-actions/.github/workflows/run-rust-ci.yml@v4.1.0`, `cboone/gh-actions/.github/workflows/run-zig-ci.yml@v4.1.0`), do not execute the workflow locally. Its explicit tool selection can establish enforcement, but the workflow call alone is not a locally-runnable lint command. Preserve that evidence for classification below.
 1. **Filter for repo-specific scripts**: Keep commands that invoke project scripts (paths starting with `bin/`, `scripts/`, `script/`, `./bin/`, `./scripts/`, or `./script/`). These are repo-specific validation tools. Also keep commands that invoke standalone tools not already covered by the detection table (e.g., `actionlint`, `taplo check`).
-1. **Deduplicate**: Exclude any commands already covered by earlier detection steps. For example, if `shellcheck` was already detected from shell scripts in the project, do not add a duplicate entry from the CI workflow. Similarly, if `bin/lint` was already detected as a project lint script, skip it.
+1. **Deduplicate**: Merge enforcement evidence into existing entries before excluding duplicate commands. Prefer the repository command and its file selection over a table default. Exclude any commands already covered by earlier detection steps. For example, if `shellcheck` was already detected from shell scripts in the project, do not add a duplicate entry from the CI workflow. Similarly, if `bin/lint` was already detected as a project lint script, skip it.
 1. **Add as tools**: Register each remaining command as a CI workflow script in the detected tools list. Use the script's basename or the tool name as the tool identifier. If two scripts share the same basename (e.g., `bin/check` and `scripts/check`), use the relative path as the identifier to avoid collisions. These scripts typically have no auto-fix mode, so use the same command for both fix and check.
 
 **Example**: A CI workflow containing these steps:
@@ -134,6 +137,14 @@ The detection table reconstructs a plausible lint invocation from the config fil
 
 Read whichever of these exist: `CLAUDE.md` and `AGENTS.md` in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal and not an error, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than reporting a duplicate. Also honor any user-level instructions already present in context.
 
+#### Classify Enforcement
+
+Before selecting runnable commands, inspect tool configs (including tool-specific sections in shared configs), pre-commit configuration/hooks, CI, Makefile targets, package/project lint scripts, agent instructions and tests that execute linters. Add enforced checks absent from the table. Follow referenced local wrappers far enough to identify tools, arguments, allowlists and input scopes; a dependency declaration, filename match or incidental mention alone is not enforcement. A prohibition alone limits authority and does not require a tool to run.
+
+For each tool record **Enforcement** (`enforced` or `inferred only`) and **Evidence** (file and relevant setting, hook, command or test; for inference, the matching file pattern and absence of an enforcement signal). A tool-specific config or an explicit project check establishes enforcement. Retain evidence when deduplicating, including tool selection in reusable CI workflows; retain the existing exclusion of CI-only workflow calls from the local run, report that coverage separately, and use a project-specified local equivalent when available. Missing tools or unsafe checks for required local commands still fail. Preserve existing exclusions and allowlists, including tests that wrap a tool, rather than substituting an unrestricted direct invocation.
+
+With no enforcement signal, keep the tool **inferred only**. Use `check-only (advisory)` with a verified non-writing check command, or `check-only (no safe check command)` with command `none`. Never run an inferred-only fixer or remediate its findings by hand. `--tool` filters selection without promoting inference to enforcement or authorizing writes. Project prohibitions and protected paths still apply to advisory checks.
+
 #### Constraints to Look For
 
 | Constraint                   | What it looks like                                                                                                    | Effect on the run                                                                                                                                                                                                                                                                  |
@@ -149,13 +160,13 @@ Read whichever of these exist: `CLAUDE.md` and `AGENTS.md` in the repository roo
 1. **A documented command beats the table's version of the same tool**, verbatim, including its file selection, once it clears the prohibitions above. Projects narrow a tool's inputs on purpose: a `git ls-files`-driven `shfmt` invocation exists because `shfmt` does not read `.gitignore`, so a tree walk reaches vendored and generated scripts. Do not widen such a command back to a glob, and do not "improve" it.
 1. **A documented order beats the table's order.** The detection table has no notion of ordering between two tools that claim the same files, so two fixers over `**/*.md` will fight without it.
 1. **A documented sequence may name commands detection did not find.** A project entry point can include a checker that has no config file for the table to match, such as a spelling or typo check invoked only from `make lint`. Add those commands to the run, deduplicate them against the detected tools they already cover, and apply any **--tool** filter afterward, so the filter selects from everything that will run rather than from detection alone. Otherwise the skill promises to honor the project's entry point and then silently drops part of it. A documented command the sequence names separately is selectable like any other tool; one the sequence only wraps is not, and [Close the Run](#close-the-run) says what to do about that.
-1. **Detection still supplies everything the config does not mention.** Consulting the agent config narrows, reorders, downgrades, and extends the run; it does not replace detection. Keep every other detected tool.
+1. **Detection still supplies everything the config does not mention.** Consulting the agent config narrows, reorders, downgrades, and extends the run; it does not replace detection. Keep every other detected tool with its enforcement classification; inference alone never authorizes fixing.
 
 #### Record the Outcome
 
 For each tool in the run, whether detection found it or the agent config named it, carry these forward into the remaining steps:
 
-- **Mode**: `fix`, `check-only (project policy)`, `check-only (no auto-fix)`, `check-only (user requested --check)`, or `check-only (no safe check command)`
+- **Mode**: `fix`, `check-only (project policy)`, `check-only (no auto-fix)`, `check-only (user requested --check)`, `check-only (advisory)`, or `check-only (no safe check command)`
 - **Command**: the command that will actually run in step 4
 - **Check command**: the command step 7 will re-run to verify, or `none`
 - **Source**: for a policy downgrade, the file and the rule, quoted in one line
@@ -182,7 +193,7 @@ Treat that list as illustrative, not exhaustive: any command whose check behavio
 
 **If the user's invocation conflicts with a project rule**, for example `--tool markdownlint` in a repository that forbids `markdownlint --fix`, do not resolve it silently in either direction. Run the tool in check mode, report the conflict and its source, and let the user decide whether to override it.
 
-If **no agent config files exist**, or none of them constrain linting, note that and run the detection table as-is. That is the common case and not an error.
+If **no agent config files exist**, or none of them constrain linting, note that and retain the detection candidates with their enforcement classification. Absence of agent config does not make inferred tools enforced. That is the common case and not an error.
 
 #### Close the Run
 
@@ -201,12 +212,12 @@ Before running, display the detected tools, in the order they will run:
 ```text
 ## Detected Linters and Formatters
 
-| Tool | Config | Command | Mode |
-|------|--------|---------|------|
-| prettier | .prettierrc.json | npx prettier --write . | fix |
-| eslint | eslint.config.js | npx eslint --fix . | fix |
-| markdownlint-cli2 | .markdownlint-cli2.jsonc | npx markdownlint-cli2 "**/*.md" | check-only (project policy) |
-| shellcheck | (shell scripts found) | shellcheck bin/* | check-only (no auto-fix) |
+| Tool | Evidence | Enforcement | Command | Mode |
+|------|----------|-------------|---------|------|
+| prettier | .prettierrc.json | enforced | npx prettier --write . | fix |
+| eslint | eslint.config.js | enforced | npx eslint --fix . | fix |
+| markdownlint-cli2 | .markdownlint-cli2.jsonc | enforced | npx markdownlint-cli2 "**/*.md" | check-only (project policy) |
+| shellcheck | shell files only; no enforcement signal | inferred only | shellcheck bin/* | check-only (advisory) |
 ```
 
 Below the table, cite the source of every `check-only (project policy)` mode and of any ordering step 2 imposed:
@@ -222,7 +233,7 @@ If running in **--check** mode, show check commands instead of fix commands. **-
 
 Run every tool in the run sequentially, in the order presented in step 3, including any the agent config added in step 2. For each tool:
 
-**Except `check-only (no safe check command)`.** That mode means step 2 found nothing safe to run, so its `Command` is `none` and there is nothing to execute. Skip it here rather than reaching for the writer it was denied or improvising a command, report it as unresolved, and carry it into steps 5 and 7 with its status.
+**Except `check-only (no safe check command)`.** That mode means step 2 found nothing safe to run, so its `Command` is `none` and there is nothing to execute. Skip it here rather than reaching for the writer it was denied or improvising a command, report it as unresolved if enforced or advisory if inferred only, and carry it into steps 5 and 7 with its status.
 
 #### 4a. Run the Command
 
@@ -248,6 +259,7 @@ Run exactly the recorded command. Do not reconstruct one here, and do not take a
 For each tool, record:
 
 - **Tool**: Name
+- **Enforcement and evidence**: The classification and source step 2 recorded
 - **Mode**: The mode step 2 assigned
 - **Exit code**: 0 (success) or non-zero
 - **Files fixed**: Count from output (if available)
@@ -266,8 +278,15 @@ After all tools run, display a summary:
 | prettier | Ran with fixes | 5 files | 0 |
 | eslint | Ran with fixes | 3 files | 2 errors |
 | markdownlint-cli2 | Checked only (fix not permitted) | n/a | 0 |
-| shellcheck | Check only (no auto-fix) | n/a | 4 warnings |
 ```
+
+Report inferred-only outcomes separately, outside the enforced results table:
+
+```text
+Advisory (not enforced by project): shellcheck (4 warnings), shfmt (unavailable; not checked)
+```
+
+Only enforced findings proceed to step 6 or gate success. Advisory-only runs can succeed with findings and `Unresolved or skipped: none`; they are not `no-tools` when advisory checks ran. Apply this classification even when `--check` ends the workflow here, including the structured parent result.
 
 Keep these statuses distinct, because they mean different things about the tree:
 
@@ -276,7 +295,7 @@ Keep these statuses distinct, because they mean different things about the tree:
 - **`Checked only (fix not permitted)`**: step 2 downgraded the tool. A zero in the `Remaining` column here is a clean result, not a skipped one, but the run still did no fixing, so anything the fixer would have corrected is still uncorrected and appears as a remaining issue instead.
 - **`Check only (no auto-fix)`**: the tool has no fixer at all.
 - **`Check only (--check requested)`**: the user asked for a dry run, so a tool that would have fixed did not. Nothing on disk changed, and anything its fixer would have corrected is still uncorrected.
-- **`Not run (no safe check command)`**: step 2 could not find a command for this tool that is verified not to write, so nothing ran and the tree is unchecked for it. This is never a pass. Put it in the `Status` column, leave `Fixed` as `n/a`, put `unknown` in `Remaining` rather than a zero, and carry it into step 7 and into `Unresolved or skipped`.
+- **`Not run (no safe check command)`**: step 2 could not find a command for this tool that is verified not to write, so nothing ran and the tree is unchecked for it. This is never a pass. Put it in the `Status` column, leave `Fixed` as `n/a`, put `unknown` in `Remaining` rather than a zero, and carry enforced entries into step 7 and into `Unresolved or skipped`; inferred-only entries stay advisory.
 
 Repeat the citation for each `Checked only (fix not permitted)` row below the table.
 
@@ -286,9 +305,9 @@ If all tools passed with zero remaining issues (auto-fix resolved everything), s
 
 ### 6. Fix Remaining Issues
 
-**Check the reported path before editing anything.** A protected path is protected from hand edits whatever reported the finding, so this guard applies to every tool, not only to one step 2 downgraded. A tool with no fixer, or an ordinary tool whose output happens to point at a protected file, reaches this step without passing through any downgrade, and a targeted edit there writes to the tree the project told you not to touch. Leave those findings alone, report them under `Unresolved or skipped` with the path and the rule that protects it, and remediate only where the project documents an exception.
+**Remediate enforced findings only. Check the reported path before editing anything.** A protected path is protected from hand edits whatever reported the finding, so this guard applies to every tool, not only to one step 2 downgraded. A tool with no fixer, or an ordinary tool whose output happens to point at a protected file, reaches this step without passing through any downgrade, and a targeted edit there writes to the tree the project told you not to touch. Leave those findings alone, report them under `Unresolved or skipped` with the path and the rule that protects it, and remediate only where the project documents an exception.
 
-For each remaining issue that auto-fix could not resolve, and whose file is not protected:
+For each remaining **enforced** issue that auto-fix could not resolve, and whose file is not protected:
 
 1. **Read the tool output** to identify the specific error, file, and line number.
 1. **Read the relevant file** at the indicated location.
@@ -323,14 +342,13 @@ Every tool is in check mode here, so [the No-Write Rule](#the-no-write-rule) gov
 | prettier | Pass |
 | eslint | Pass |
 | markdownlint-cli2 | Pass (fix mode not permitted) |
-| shellcheck | Pass (1 advisory skipped) |
 ```
 
-Carry the policy annotation into this table too. Every tool runs in check mode here, so without it a downgraded tool's row is indistinguishable from one whose fixer ran.
+Report advisory verification outcomes on their separate line, including any failed or unrun advisory checks; do not label those as passes. Carry the policy annotation into this table too. Every tool runs in check mode here, so without it a downgraded tool's row is indistinguishable from one whose fixer ran.
 
 **After verification, proceed to step 8 to commit.** Tools that auto-fixed files will have modified files on disk, and those changes must be committed rather than left in the working tree, so this transition happens even when verification reported problems.
 
-**The push is gated on verification, the commit is not.** If any tool ends verification as `Not run (no safe check command)`, or with unresolved findings, step 8 commits what is on disk and stops there. Do not push, and report the run as a lint failure with those tools listed under `Unresolved or skipped`. A commit keeps the fixes that did run; a push publishes a tree where a required tool was never checked, which is the outcome the unrun mode exists to flag. Under a parent continuation block this is the `On lint failure or skipped required lint work` path, so the parent decides what happens next.
+**The push is gated on verification, the commit is not.** If any **enforced** tool ends verification as `Not run (no safe check command)`, or with unresolved findings, step 8 commits what is on disk and stops there. Do not push, and report the run as a lint failure with those tools listed under `Unresolved or skipped`. A commit keeps the fixes that did run; a push publishes a tree where a required tool was never checked, which is the outcome the unrun mode exists to flag. Under a parent continuation block this is the `On lint failure or skipped required lint work` path, so the parent decides what happens next.
 
 **The failure survives every exit from step 8.** The gate suppresses the push; it never adds a commit, and it never turns into a success because nothing needed committing:
 
@@ -349,7 +367,7 @@ Skip this step only if:
 Check for file changes and commit:
 
 1. Run `git status --porcelain` and check whether its output is empty.
-1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." If verification left any tool `Not run (no safe check command)` or with unresolved findings, report that failure alongside it, because a clean tree is not a checked one. If a parent continuation block was supplied, include the final output required by [Parent Continuation Contract](#parent-continuation-contract) and allow the parent workflow to continue according to its continuation block, which is the failure path in that case. Otherwise stop.
+1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No file changes needed." If verification left any **enforced** tool `Not run (no safe check command)` or with unresolved findings, report that failure alongside it, because a clean tree is not a checked one. If a parent continuation block was supplied, include the final output required by [Parent Continuation Contract](#parent-continuation-contract) and allow the parent workflow to continue according to its continuation block, which is the failure path in that case. Otherwise stop.
 1. **If files were modified** (i.e., `git status --porcelain` produced any output): Stage all modified files and commit them.
 1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
@@ -375,6 +393,6 @@ After committing, push to the remote:
 
 Neither bullet is an exception to the No-Write Rule. "Check mode" here means the rule's qualifying command, so where none exists the tool is recorded as `check-only (no safe check command)` and nothing runs, rather than the check falling back to the writer the prohibition was aimed at.
 
-- **CI workflow tool requires setup**: Some CI workflow steps depend on GitHub Actions that install a tool (e.g., `mfinelli/setup-shfmt`). If the tool is not locally available, report the missing tool and suggest installation. Reusable workflow calls (e.g., `cboone/gh-actions/.github/workflows/run-go-ci.yml@v4.1.0`, `cboone/gh-actions/.github/workflows/run-rust-ci.yml@v4.1.0`, `cboone/gh-actions/.github/workflows/run-zig-ci.yml@v4.1.0`) are CI-only and should be skipped entirely.
-- **CI workflow command uses CI-only syntax**: Some `run:` commands use GitHub Actions expressions (`${{ }}`) or environment variables only available in CI. Skip these commands and note them as CI-only.
+- **CI workflow tool requires setup**: Some CI workflow steps depend on GitHub Actions that install a tool (e.g., `mfinelli/setup-shfmt`). If the tool is not locally available, report the missing tool and suggest installation. Reusable workflow calls (e.g., `cboone/gh-actions/.github/workflows/run-go-ci.yml@v4.1.0`, `cboone/gh-actions/.github/workflows/run-rust-ci.yml@v4.1.0`, `cboone/gh-actions/.github/workflows/run-zig-ci.yml@v4.1.0`) are CI-only: do not execute them locally, but retain explicit tool-selection evidence and report CI-only coverage separately from locally required work.
+- **CI workflow command uses CI-only syntax**: Some `run:` commands use GitHub Actions expressions (`${{ }}`) or environment variables only available in CI. Skip these commands and note them as CI-only, retaining any enforcement evidence and project-specified local equivalent.
 - **Pre-commit hook failure on commit**: Fix the issue, re-stage, and create a new commit (never amend).
