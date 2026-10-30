@@ -39,6 +39,8 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 # these variables. Defining them once keeps the test and update targets from
 # drifting apart. CI invokes these targets and uses this same environment.
 SCRUT_ENV := \
+	VERSION_AUDIT_BIN="$(CURDIR)/bin/version-audit" \
+	VERSION_AUDIT_STUB_BIN="$(CURDIR)/tests/fixtures/version-audit-stub" \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
 	CODEX_FAILURE_WATCHER_BIN="$(CURDIR)/plugins/notify/scripts/watch-codex-failures" \
 	CHECK_CODEX_FAILURES_BIN="$(CURDIR)/tests/fixtures/check-codex-failures" \

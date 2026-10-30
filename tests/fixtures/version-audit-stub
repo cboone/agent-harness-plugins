@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Stub registry responses so pip audit tests run offline.
+set -euo pipefail
+
+function main() {
+  [[ "${0##*/}" != gh ]] || return 0
+  if [[ "${0##*/}" == jq ]]; then
+    if [[ "${1}" == -n ]]; then
+      echo 'jq: injected comparison failure' >&2
+      return 5
+    fi
+    exec jq-real "$@"
+  fi
+  case "${*: -1}" in
+    https://pypi.org/pypi/tool/json) printf '{"info":{"version":"0.8.0"}}\n' ;;
+    https://pypi.org/pypi/sample/json) printf '{"info":{"version":"2.0.0"}}\n' ;;
+    https://pypi.org/pypi/components/json) printf '{"info":{"version":"2.10.1"}}\n' ;;
+    https://pypi.org/pypi/postrelease/json) printf '{"info":{"version":"2.0.0.post1"}}\n' ;;
+    *) return 22 ;;
+  esac
+}
+
+main "$@"

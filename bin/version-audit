@@ -226,7 +226,7 @@ function pypi_latest() {
 
 function audit_pip_install_pins() {
   declare -A seen=()
-  local line pkg current latest seen_key
+  local line pkg current latest seen_key numeric_upgrade
   while IFS= read -r line; do
     if [[ "${line}" =~ \'?([a-zA-Z0-9_-]+)==([0-9]+(\.[0-9]+)*)\'? ]]; then
       pkg="${BASH_REMATCH[1]}"
@@ -237,6 +237,15 @@ function audit_pip_install_pins() {
       fi
       seen[${seen_key}]=1
       latest=$(pypi_latest "${pkg}")
+      # Skip numeric downgrades and equivalent releases, including documentation placeholders.
+      if [[ "${latest}" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+        numeric_upgrade=$(jq -n --arg current "${current}" --arg latest "${latest}" '
+          def parts: split(".") | map(tonumber)
+            | until(length == 0 or .[-1] != 0; .[:-1]);
+          ($latest | parts) > ($current | parts)
+        ')
+        [[ "${numeric_upgrade}" == true ]] || continue
+      fi
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "pip / uv install" "${pkg}" "${current}" "${latest}" "skill templates"
       fi
