@@ -1344,3 +1344,27 @@ failed/completion captures are retained. The focused loop end state is
 **clean at Important**, with counts Nit 1, Important 1 and Important 2.
 No finding requires a further behavior round. Post-merge checks follow; the
 known incoming-main operand-contract failure remains assigned elsewhere.
+
+## Validation finding: mode-specific dependencies
+
+The post-merge full run completed all 57 documents: 1,983 tests, with 1,981
+passes and two failures in environment isolation. One is the known incoming-main
+operand contract. The other is an Important integration defect: a public
+review-path fixture intentionally copies only that mode's dependencies, but
+unconditional AST-library imports prevented dispatch and lost its expected
+source-line diagnostic. Reviewer label: testcase unexpected exit code; severity:
+Important; decision: take; review again: behavior changes.
+
+Signed fix 3db6289e moves the AST and capture-library imports after the early
+review-path dispatch. No classifier, mode rule or upstream fixture changed.
+The focused public regression now rejects the unprotected Scrut command at line
+4 and accepts its protected control. The normal checker passes under Bash 3.2;
+a bare-discard control still fails with the expected diagnostic.
+[The fix record](2026-10-29-error-output-lazy-mode-fix.json) retains measured output.
+
+TOOLING directed Critical round 1 for code, errors and tests, keeping the two
+Important rounds already used. Its threshold is Critical-only: take Critical
+findings and record lower findings. Comments and types are omitted because this
+fix moves existing directive text and changes no data model. The fixed review
+base remains 5205fada; full checks follow this confirmation. The incoming-main
+operand defect remains assigned elsewhere.

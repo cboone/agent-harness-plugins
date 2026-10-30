@@ -1,0 +1,32 @@
+{
+  "failure_source": "postmerge Scrut validation",
+  "reviewer_label": "unexpected exit code in review-path-public testcase",
+  "severity": "Important",
+  "impact": "Public review-path mode cannot start from its documented minimal fixture because unrelated AST libraries load before dispatch.",
+  "decision": "taken",
+  "fix_commit": "3db6289e",
+  "fix": "Load capture-child and AST libraries only after the early review-path dispatch returns.",
+  "classifier_changed": false,
+  "public_check": {
+    "exit_status": 0,
+    "output": "public Scrut omission rejected at line 4\npublic protected Scrut commands accepted\n"
+  },
+  "normal_check": {
+    "exit_status": 0,
+    "output": "All Git consumers reset their fixture environment.\n"
+  },
+  "negative_normal_control": {
+    "exit_status": 1,
+    "stdout": "tests/fixtures/output-sample: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  "first_full_suite": {
+    "documents": 57,
+    "tests": 1983,
+    "passed": 1981,
+    "failed": 2,
+    "skipped": 0
+  },
+  "other_failure": "Known unchanged incoming-main operand contract at review-submodule-fixture132-134 and254.",
+  "review_again": "TOOLING directed focused Critical1, code/errors/tests, fixedbase5205, Critical-only threshold; preserve all counts."
+}
