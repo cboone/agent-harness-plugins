@@ -262,7 +262,7 @@ s1 (permission_request Bash, AGE)
 0
 ```
 
-## A lock whose owner has stopped is taken over
+## A stopped owner is reported and left for recovery with writers stopped
 
 ```scrut
 $ fresh
@@ -272,12 +272,135 @@ $ fresh
 > wait "${stopped}"
 > mkdir -p "${ATTENTION_LOG_DIR}/sessions/s1.lock"
 > printf '%s\n' "${stopped}" > "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid"
-> hook PostToolUse '{"tool_name": "Bash", "tool_input": {}, "tool_response": {}, "tool_use_id": "t1"}'
+> hook PostToolUse '{"tool_name": "Bash", "tool_input": {}, "tool_response": {}, "tool_use_id": "t1"}' 2> "${work}/stale-error"
 > events .event | tail -n 1
-> find "${ATTENTION_LOG_DIR}/sessions" -name pid | grep -c pid
-"cleared"
-0
-[1]
+> test "$(cat "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid")" = "${stopped}" && grep -q 'stop all attention-log writers before manual recovery' "${work}/stale-error" && echo 'stale owner retained and reported'
+"permission_request"
+stale owner retained and reported
+```
+
+## Stale observers cannot remove a live successor
+
+The committed fixture pauses after a stopped-PID or age observation, replaces
+that file with a live successor's exclusive reservation, and resumes the
+observer. All three paths preserve ownership and skip the protected update.
+
+```scrut
+$ for kind in session pidless rotation; do
+>   fresh
+>   /bin/bash "${REPO_ROOT}/tests/fixtures/attention-lock-race.bash" "${ATTENTION_LOG_BIN}" "${ATTENTION_LOG_DIR}" "${kind}" || exit 1
+> done
+session: live successor preserved
+pidless: live successor preserved
+rotation: live successor preserved
+```
+
+## Opening hooks skip a stale session without leaving markerless events
+
+Both stopped-PID and aged PID-less owners block requests, prompt notifications
+and both kinds of error stop. After recovery, a new request can be cleared.
+
+```scrut
+$ (exit 0) & stopped=$!; wait "${stopped}"
+> printf '%s\n' '{"type":"system","subtype":"model_refusal_no_fallback"}' > "${work}/blocked-refusal.jsonl"
+> for owner_kind in stopped pidless; do
+>   for opening in request notification error refusal; do
+>     fresh
+>     mkdir -p "${ATTENTION_LOG_DIR}/sessions/s1.lock"
+>     owner="${ATTENTION_LOG_DIR}/sessions/s1.lock/pid"
+>     if [[ "${owner_kind}" == stopped ]]; then printf '%s\n' "${stopped}" > "${owner}"; else : > "${owner}"; touch -t 200001010000 "${owner}"; fi
+>     case "${opening}" in
+>       request) event=PermissionRequest; extra='{"tool_name":"Bash"}' ;;
+>       notification) event=Notification; extra='{"notification_type":"permission_prompt"}' ;;
+>       error) event=StopFailure; extra='{"error":"overloaded"}' ;;
+>       refusal) event=StopFailure; extra="$(jq -nc --arg t "${work}/blocked-refusal.jsonl" '{error:"invalid_request",transcript_path:$t}')" ;;
+>     esac
+>     hook "${event}" "${extra}" 2> "${work}/blocked-opening-error" || exit 1
+>     test -f "${owner}" && test ! -e "${events_file}" && test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && grep -q 'observed stale session owner' "${work}/blocked-opening-error" || exit 1
+>     rm -- "${owner}"
+>     hook PermissionRequest '{"tool_name":"Bash"}' && hook PostToolUse '{"tool_name":"Bash"}' || exit 1
+>     test "$(al pending | wc -l | tr -d ' ')" = 0 && test "$(events .event | tail -1)" = '"cleared"' || exit 1
+>     echo "${owner_kind} ${opening}: skipped; recovery clears"
+>   done
+> done
+stopped request: skipped; recovery clears
+stopped notification: skipped; recovery clears
+stopped error: skipped; recovery clears
+stopped refusal: skipped; recovery clears
+pidless request: skipped; recovery clears
+pidless notification: skipped; recovery clears
+pidless error: skipped; recovery clears
+pidless refusal: skipped; recovery clears
+```
+
+## Lock-directory preparation failures explain skipped opening events
+
+```scrut
+$ for event in PermissionRequest Notification StopFailure; do
+>   fresh
+>   mkdir -p "${ATTENTION_LOG_DIR}/sessions"
+>   chmod 500 "${ATTENTION_LOG_DIR}/sessions"
+>   hook "${event}" '{"notification_type":"permission_prompt","error":"overloaded"}' 2> "${work}/prepare-error" && hook_status=0 || hook_status=$?
+>   chmod 700 "${ATTENTION_LOG_DIR}/sessions"
+>   test "${hook_status}" = 0 && test ! -e "${events_file}" && grep -q 'cannot prepare session lock directory.*s1.lock:.*Permission denied' "${work}/prepare-error" && grep -q 'session update skipped; check directory permissions and available storage' "${work}/prepare-error" || exit 1
+>   hook "${event}" '{"notification_type":"permission_prompt","error":"overloaded"}' || exit 1
+>   test -f "${ATTENTION_LOG_DIR}/sessions/s1.open" && test "$(events .event | wc -l | tr -d ' ')" = 1 || exit 1
+>   echo "${event}: failure reported; repair records"
+> done
+PermissionRequest: failure reported; repair records
+Notification: failure reported; repair records
+StopFailure: failure reported; repair records
+```
+
+## Every session-lock failure explains the skipped update
+
+The committed sleep stub accelerates the unchanged bounded retry loop. Each
+case reaches a different failure exit and requires both a diagnostic and its
+specific explanation.
+
+```scrut
+$ mkdir -p "${work}/failure-bin"
+> cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/failure-bin/sleep"
+> test "$(export PATH="${work}/failure-bin:${PATH}"; command -v sleep)" = "${work}/failure-bin/sleep" || exit 1
+> (exit 0) & stopped=$!; wait "${stopped}"
+> for failure in preparation reservation pid-write stale-owner exhaustion; do
+>   fresh
+>   lock="${ATTENTION_LOG_DIR}/sessions/s1.lock"
+>   mkdir -p "${ATTENTION_LOG_DIR}/sessions"
+>   failure_env=""
+>   case "${failure}" in
+>     preparation) chmod 500 "${ATTENTION_LOG_DIR}/sessions"; explanation='cannot prepare session lock directory' ;;
+>     reservation) mkdir -p "${lock}"; chmod 500 "${lock}"; explanation='cannot create.*s1.lock/pid:.*Permission denied' ;;
+>     pid-write) failure_env="${OWNER_WRITE_FAILURE_ENV}"; explanation='cannot record session owner.*injected owner write failure' ;;
+>     stale-owner) mkdir -p "${lock}"; printf '%s\n' "${stopped}" > "${lock}/pid"; explanation='observed stale session owner' ;;
+>     exhaustion) mkdir -p "${lock}"; printf '%s\n' "$$" > "${lock}/pid"; explanation="session lock retries exhausted.*after 101 attempts; observed owner $$" ;;
+>   esac
+>   PATH="${work}/failure-bin:${PATH}" BASH_ENV="${failure_env}" LOCK_TEST_MODE=write hook PermissionRequest 2> "${work}/failure-error" && hook_status=0 || hook_status=$?
+>   chmod 700 "${ATTENTION_LOG_DIR}/sessions"
+>   test ! -d "${lock}" || chmod 700 "${lock}"
+>   test "${hook_status}" = 0 && test ! -e "${events_file}" && test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" || exit 1
+>   grep -q 'owner-lock:' "${work}/failure-error" && grep -q "${explanation}" "${work}/failure-error" || exit 1
+>   if [[ "${failure}" == exhaustion ]]; then test "$(cat "${lock}/pid")" = "$$" || exit 1; fi
+>   echo "${failure}: skipped update explained"
+> done
+preparation: skipped update explained
+reservation: skipped update explained
+pid-write: skipped update explained
+stale-owner: skipped update explained
+exhaustion: skipped update explained
+```
+
+## Opening hooks still emit events without a usable session ID
+
+```scrut
+$ for event in PermissionRequest Notification StopFailure; do
+>   fresh
+>   hook "${event}" '{"notification_type":"permission_prompt","error":"overloaded"}' 'invalid/id'
+>   events .event
+> done
+"permission_request"
+"permission_waiting"
+"api_error_stop"
 ```
 
 ## A lock whose owner still runs is never taken over
@@ -656,7 +779,7 @@ rotated file kept: yes
 lines: 20
 ```
 
-## An abandoned rotation lock is taken over
+## An aged rotation owner is reported without losing the pending event
 
 ```scrut
 $ fresh
@@ -664,9 +787,10 @@ $ fresh
 > touch "${ATTENTION_LOG_DIR}/rotate.lock/owner"
 > touch -t 202001010000 "${ATTENTION_LOG_DIR}/rotate.lock/owner"
 > head -c 5242880 /dev/zero > "${events_file}"
-> hook PermissionDenied '{"tool_name": "Bash", "tool_input": {"command": "x"}}'
-> echo "rotated: $(wc -c < "${events_file}.1" | tr -d ' '), new lines: $(wc -l < "${events_file}" | tr -d ' '), lock left: $(ls -d "${ATTENTION_LOG_DIR}/rotate.lock/owner" 2> /dev/null | wc -l | tr -d ' ')"
-rotated: 5242880, new lines: 1, lock left: 0
+> BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_REPORT_ORDER=true LOCK_TEST_DIRECTORY="${ATTENTION_LOG_DIR}/rotate.lock" hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/aged-rotation-error"
+> test ! -e "${events_file}.1" && test -f "${ATTENTION_LOG_DIR}/rotate.lock/owner" && test ! -e "${ATTENTION_LOG_DIR}/rotate.lock/reported-before-append" && grep -q 'observed aged rotation owner' "${work}/aged-rotation-error" || exit 1
+> tr -d '\000' < "${events_file}" | jq -r '.event'
+auto_denied
 ```
 
 ## Wait prints the next matching line and the position after it
