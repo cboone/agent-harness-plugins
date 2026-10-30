@@ -5,11 +5,6 @@ set -euo pipefail
 # shellcheck source=bin/lib/git-environment.bash
 source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
 
-# shellcheck source=bin/lib/capture-child.bash
-source "$(dirname "${BASH_SOURCE[0]}")/lib/capture-child.bash"
-# shellcheck source=bin/lib/error-output-ast.bash
-source "$(dirname "${BASH_SOURCE[0]}")/lib/error-output-ast.bash"
-
 function check_fixture_graph() {
   # Trace direct and indirect Git consumers; each caller must reset its own environment.
   awk '
@@ -152,6 +147,11 @@ function main() {
     check_review_fixture_paths "$@"
     return
   fi
+  # shellcheck source=bin/lib/capture-child.bash
+  source "$(dirname "${BASH_SOURCE[0]}")/lib/capture-child.bash"
+  # shellcheck source=bin/lib/error-output-ast.bash
+  source "$(dirname "${BASH_SOURCE[0]}")/lib/error-output-ast.bash"
+
   local ast_scope=false
   if [[ "${1:-}" == --ast-scope ]]; then
     ast_scope=true
