@@ -26,6 +26,8 @@ The skill prefers a unique filename match to the current branch subject. It stri
 
 For example, `feature/123-add-search` matches `2026-09-15-add-search.md`. Unlisted branch categories remain part of the subject, so `hotfix/123-add-search` normalizes to `hotfix-123-add-search`. Without a unique match, the skill selects the most recently modified candidate and explains why. Equal modification times are resolved by ascending repository-relative path. Detached HEAD uses the same fallback. Empty candidate sets require an explicit file path.
 
+When the branch carried an issue prefix, a plan may also match with exactly one trailing `-<issue>` equal to the digits removed from that branch. Thus `feat/4344-auto-promote-production-deploys` matches `2026-09-08-auto-promote-production-deploys-4344.md`. A plan with both leading and trailing issue forms has its leading prefix removed first, then the same trailing comparison applies once. Wrong suffixes and subject substrings do not match. Branches without an issue prefix keep exact matching, preserving numeric subjects such as `upgrade-to-postgres-16`. Issue digits retain leading zeroes. The bundled read-only `scripts/plan-matches-branch` helper performs these comparisons; a helper failure blocks selection instead of falling back.
+
 ## What the Review Covers
 
 The skill reads the plan, repository guidance, relevant current files, and explicit dependencies. Local dependency paths are resolved before reading, including symlink targets, and must remain inside the repository. Outside-repository or ambiguous dependencies are reported as unverified; secret-bearing files and credential locations are excluded from reads and content searches. Explicit plan targets outside the repository remain supported.
@@ -60,6 +62,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
       "Read",
       "Glob",
       "Grep",
+      "Bash(bash */scripts/plan-matches-branch *)",
       "Bash(git branch --show-current)",
       "Bash(git status --short)",
       "Bash(git remote)",

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Compare complete plan and branch subjects, retaining the branch's issue identity.
+set -euo pipefail
+export LC_ALL=C
+
+function normalize() {
+  printf '%s' "${1}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//'
+}
+
+function main() {
+  if [[ $# -ne 2 ]]; then
+    echo 'Usage: plan-matches-branch <branch> <plan-basename.md>' >&2
+    return 2
+  fi
+  local branch="${1}" plan="${2##*/}" issue=""
+  if [[ "${branch}" =~ ^(feature|feat|fix|chore|docs)/ ]]; then
+    branch="${branch#*/}"
+  fi
+  if [[ "${branch}" =~ ^(issue-)?([0-9]+)- ]]; then
+    issue="${BASH_REMATCH[2]}"
+    branch="${branch#"${BASH_REMATCH[0]}"}"
+  fi
+  plan="${plan%.md}"
+  if [[ "${plan}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}- ]]; then
+    plan="${plan#"${BASH_REMATCH[0]}"}"
+  fi
+  if [[ "${plan}" =~ ^(issue-)?[0-9]+- ]]; then
+    plan="${plan#"${BASH_REMATCH[0]}"}"
+  fi
+  branch="$(normalize "${branch}")"
+  plan="$(normalize "${plan}")"
+  if [[ "${plan}" == "${branch}" ]] \
+    || [[ -n "${issue}" && "${plan}" == "${branch}-${issue}" ]]; then
+    echo match
+  else
+    echo no-match
+  fi
+}
+
+main "$@"
