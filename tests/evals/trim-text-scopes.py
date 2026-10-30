@@ -9,6 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests/data/trim-text-default-scopes.json"
 SKILL = ROOT / "plugins/trim-text/skills/trim-text/SKILL.md"
+COMMENT_FIXTURE = ROOT / "tests/data/trim-scope.json"
+COMMENT_SKILL = ROOT / "plugins/trim-comments/skills/trim-comments/SKILL.md"
 
 
 def run(command, cwd):
@@ -26,6 +28,7 @@ def evaluate(out, name, prompt, schema, cwd):
                 "--sandbox", "read-only", "--config", 'approval_policy="never"',
                 "--config", 'web_search="disabled"', "--ephemeral",
                 "--model", "gpt-6.1-sol", "--config", 'model_reasoning_effort="low"',
+                "--config", "model_context_window=872000",
                 "--output-schema", str(schema_path), "--output-last-message", str(reply),
                 prompt,
             ],
@@ -65,13 +68,100 @@ def check_prose(cases, reply, base, note):
     assert note.read_text() == cases[0]["working_text"]
 
 
+def check_comments(cases, replies):
+    for variant in ("alias", "equivalent", "mixed"):
+        selected = [case for case in cases if ("request" if variant == "mixed" else variant) in case]
+        actual = replies[variant]["cases"]
+        assert len(actual) == len(selected), (variant, "Missing or extra cases")
+        for case, result in zip(selected, actual):
+            request = case["request" if variant == "mixed" else variant]
+            assert result["request"] == request, (variant, result)
+            assert len({row["file"] for row in result["eligible"]}) == len(result["eligible"])
+            eligible = {row["file"]: row["lines"] for row in result["eligible"]}
+            profiles = {row["file"]: row["profile"] for row in result["eligible"]}
+            expected_profiles = case.get("profiles", {path: "code-comments" for path in case["expected"]})
+            assert eligible == case["expected"], (request, eligible, case["expected"])
+            assert profiles == expected_profiles, (request, profiles)
+            expected_flags = ["fresh.ts:1"] if "fresh.ts" in case["expected"] else []
+            assert result["flags"] == expected_flags, (request, result["flags"])
+            print(f"{request}: PASS")
+
+
+def fixture_state(fixture):
+    files = {str(path.relative_to(fixture)): path.read_bytes()
+             for path in fixture.rglob("*")
+             if path.is_file() and ".git" not in path.relative_to(fixture).parts}
+    return (run(["git", "rev-parse", "HEAD"], fixture),
+            run(["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"], fixture),
+            (fixture / ".git/index").read_bytes(), files)
+
+
+def evaluate_comments(out):
+    data = json.loads(COMMENT_FIXTURE.read_text())
+    fixture = out / "comment-fixture"
+    fixture.mkdir()
+    run(["git", "init", "-q", "--template=", "-b", "main", "."], fixture)
+    for path, text in data["base_files"].items():
+        (fixture / path).write_text(text)
+    run(["git", "add", "."], fixture)
+    run(["git", "commit", "-S", "-qm", "test: prepare comment scope fixture"], fixture)
+    run(["git", "remote", "add", "origin", "https://github.com/cboone/agent-harness-plugins.git"], fixture)
+    run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], fixture)
+    run(["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"], fixture)
+    run(["git", "checkout", "-q", "-b", "feature/comments"], fixture)
+    for group in ("working_files", "untracked_files"):
+        for path, text in data[group].items():
+            (fixture / path).write_text(text)
+    before = fixture_state(fixture)
+    row_schema = object_schema({
+        "file": {"type": "string"},
+        "lines": {"type": "array", "items": {"type": "integer"}},
+        "profile": {"type": "string"},
+    })
+    result_schema = object_schema({
+        "request": {"type": "string"},
+        "eligible": {"type": "array", "items": row_schema},
+        "flags": {"type": "array", "items": {"type": "string"}},
+    })
+    schema = object_schema({"cases": {"type": "array", "items": result_schema}})
+    replies = {}
+    for variant in ("alias", "equivalent", "mixed"):
+        key = "request" if variant == "mixed" else variant
+        requests = [case[key] for case in data["cases"] if key in case]
+        skill = COMMENT_SKILL if variant == "alias" else SKILL
+        prompt = (
+            f"Follow the skill at {skill} to resolve each request independently. "
+            f"Its trim-text dependency, if needed, is at {SKILL}. "
+            "Every request also has --no-codex. Run it yourself without delegation. "
+            "Stop after scope resolution and classification, before proposing edits. "
+            "No writes, commits, linters or network. origin/main is the verified remote default "
+            "ref in this user's non-fork, non-archived fixture; no PR matches the branch. "
+            "Return eligible comment-start lines or prose-unit start lines and their profiles. "
+            "Include protected comments even when kept or flagged. Flags lists only file:line "
+            "locations whose action is flag. Preserve request order and exact request text. "
+            "Requests: " + json.dumps(requests)
+        )
+        replies[variant] = evaluate(out, f"comments-{variant}", prompt, schema, fixture)
+        assert fixture_state(fixture) == before, (variant, "Dry run changed the fixture")
+    check_comments(data["cases"], replies)
+    print("comments: PASS; independent alias/direct scope, mixed profiles, TODO flags and unchanged state")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path)
     parser.add_argument("--scope-reply", type=Path, help="Check an existing scope reply without model calls")
     parser.add_argument("--prose-only", action="store_true", help="Run only the Git prose boundary check")
+    parser.add_argument("--comments-only", action="store_true", help="Run alias/direct and mixed-file scope checks")
+    parser.add_argument("--comment-replies", type=Path, help="Check existing comments-*-reply.json files without model calls")
     args = parser.parse_args()
     cases = json.loads(FIXTURE.read_text())
+    if args.comment_replies:
+        data = json.loads(COMMENT_FIXTURE.read_text())
+        replies = {variant: json.loads((args.comment_replies / f"comments-{variant}-reply.json").read_text())
+                   for variant in ("alias", "equivalent", "mixed")}
+        check_comments(data["cases"], replies)
+        return
     if args.scope_reply:
         check_scopes(cases, json.loads(args.scope_reply.read_text()))
         return
@@ -84,6 +174,9 @@ def main():
     if any(out.iterdir()):
         parser.error("--out-dir must be empty")
     print(f"Evaluation output: {out}", flush=True)
+    if args.comments_only:
+        evaluate_comments(out)
+        return
     inputs = [{k: v for k, v in case.items()
                if not k.startswith("expected_") and not k.endswith("_text")}
               for case in cases]

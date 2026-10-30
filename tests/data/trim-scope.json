@@ -1,0 +1,54 @@
+{
+  "purpose": "Behavioral scope regression for the trim-comments alias and trim-text profile. Materialize base_files in a disposable Git repository, commit them, then apply working_files and untracked_files without committing. Configure origin/HEAD to origin/main at the base commit. Run each request independently through its named skill, read-only, with --no-codex. Compare the resolved eligible units, not the suggested wording. Source line numbers refer to the working tree.",
+  "base_files": {
+    "sample.ts": "// Unchanged comment outside the changed hunk.\nexport const untouched = 1;\n\n// This counter has a comment directly above code that changes.\nexport const count = 1;\n",
+    "guide.md": "# Guide\n\nThis is basically the old description.\n",
+    "branch": "// This file name is also a trim-text scope selector.\nexport const named = 1;\n"
+  },
+  "working_files": {
+    "sample.ts": "// Unchanged comment outside the changed hunk.\nexport const untouched = 1;\n\n// This counter has a comment directly above code that changes.\nexport const count = 2;\n",
+    "guide.md": "# Guide\n\nThis is basically the updated description.\n"
+  },
+  "untracked_files": {
+    "fresh.ts": "// TODO explain the retry\nexport const retry = 1;\n// This value is basically exported to callers.\nexport const fresh = 3;\n"
+  },
+  "cases": [
+    {
+      "alias": "trim-comments --dry-run",
+      "equivalent": "trim-text branch --profile code-comments --dry-run",
+      "expected": {
+        "sample.ts": [4],
+        "fresh.ts": [1, 3]
+      }
+    },
+    {
+      "alias": "trim-comments sample.ts fresh.ts --dry-run",
+      "equivalent": "trim-text sample.ts fresh.ts --profile code-comments --dry-run",
+      "expected": {
+        "sample.ts": [1, 4],
+        "fresh.ts": [1, 3]
+      }
+    },
+    {
+      "alias": "trim-comments branch --dry-run",
+      "equivalent": "trim-text ./branch --profile code-comments --dry-run",
+      "expected": {
+        "branch": [1]
+      }
+    },
+    {
+      "request": "trim-text branch --dry-run",
+      "expected": {
+        "sample.ts": [4],
+        "fresh.ts": [1, 3],
+        "guide.md": [3]
+      },
+      "profiles": {
+        "sample.ts": "code-comments",
+        "fresh.ts": "code-comments",
+        "guide.md": "none"
+      }
+    }
+  ],
+  "invariants": ["No file, index or commit changes during any dry run.", "The ticketless TODO at fresh.ts:1 is flag, never rewrite or delete.", "Code lines and the unchanged sample.ts:1 comment stay outside branch scope.", "Neither comment-only request includes guide.md or prompts to select a PR body.", "Do not classify a path named branch as a branch selector when it comes through the alias."]
+}
