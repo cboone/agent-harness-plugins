@@ -35,7 +35,7 @@ Given an **issue number**, it fetches the issue and injects the title, labels, a
 
 The invoking agent reads the issue title, labels, and body or task description as task data and supplies a candidate to the launcher. The launcher validates it and inserts the issue number: `feature/add-dark-mode` for issue 42 becomes `feature/42-add-dark-mode`. A repository convention requiring bare slugs yields `42-add-dark-mode`. The number lets the [PR](../pr/README.md) skill link the pull request to the issue. Workmux receives an explicit branch and starts the configured destination agent.
 
-Rerunning for the same issue reuses a local branch that already carries that number, so the same worktree reopens rather than a second one appearing under a differently worded name.
+Rerunning the same issue reuses a local or cached origin branch carrying its number, reopening the same worktree instead of creating another under a different name.
 
 Either way, it creates the worktree via `workmux add` and stops. It does not start the work. To have the new session also plan the issue, use [Address Issue in Worktree](#workmuxstart-issue).
 
@@ -169,7 +169,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 Finds a GitHub issue by number or fuzzy text search, self-assigns the issue, labels it "in progress", and creates a worktree via `workmux add` with the full issue context injected as a prompt. The injected prompt ends with an instruction telling the new session to run `/address-issue <number>` first, so the work begins with a plan that stops for your approval.
 
-The invoking agent generates a semantic branch name from the issue title, labels, and body, treating them as task data before composing the destination prompt and chain footer. The launcher receives the candidate, validates it, and inserts the issue number: `feature/add-dark-mode` for issue 42 becomes `feature/42-add-dark-mode`. Rerunning an issue reuses its matching local branch. Workmux receives an explicit branch and starts the configured destination agent.
+The invoking agent generates a semantic branch name from the issue title, labels, and body, treating them as task data before composing the destination prompt and chain footer. The launcher receives the candidate, validates it, and inserts the issue number: `feature/add-dark-mode` for issue 42 becomes `feature/42-add-dark-mode`. Rerunning an issue reuses its matching local or cached origin branch. Remote-only matches become local tracking branches without fetching. Workmux receives an explicit branch and starts the configured destination agent.
 
 Naming runs in the current session using bundled rules: lowercase kebab-case, an imperative verb and noun, and a `fix/`, `feature/`, `chore/`, or `docs/` prefix. The descriptive slug targets at most five words and 50 characters. Repository-specific naming conventions take precedence. No separate naming command or workmux naming configuration is needed. Explicit user-supplied names bypass generation. See [Create Worktree](#choosing-the-type-prefix).
 
