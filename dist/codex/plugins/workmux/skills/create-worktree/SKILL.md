@@ -174,7 +174,7 @@ Apply these instructions, adapted from [workmux's naming prompt](https://github.
 
 Pass the candidate with `--generated-name "CANDIDATE"`, adding `--issue NUMBER` for an issue. Do not combine generated mode with a positional branch name. An explicit user-supplied branch name bypasses generation and uses the positional form without `--issue`; preserve it exactly.
 
-With `--issue NUMBER`, the launcher reuses one matching local branch and reports `Reusing branch NAME for issue NUMBER`. Multiple matches are listed and stop the launch; ask which branch to use, then pass that exact name positionally. Otherwise it normalizes the candidate and reports `Generated branch name: NAME`. Read the actual selected branch from this output for reporting and resource claims. Issue numbers let the `pr` skill associate the branch with the issue.
+With `--issue NUMBER`, the launcher reuses one matching local or cached origin branch and reports `Reusing branch NAME for issue NUMBER`. Multiple matches are listed and stop the launch; ask which branch to use, then pass that exact name positionally. Otherwise it normalizes the candidate and reports `Generated branch name: NAME`. Read the actual selected branch from this output for reporting and resource claims. Issue numbers let the `pr` skill associate the branch with the issue.
 
 Task descriptions have no issue identifier and naming can vary between runs. When returning to an existing task worktree, use its explicit branch name.
 
@@ -372,7 +372,7 @@ Run every phase 1 check before launching anything, so a problem with the third i
    bash "SCRIPTS_DIR/launch-workmux" --resolve-issue-branch NUMBER
    ```
 
-   Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one. Exit 1 means git could not list local branches: stop, report the error, and remove every JSON file, since no branch choice can be trusted.
+   Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one. Exit 1 means git could not list branches: stop, report the error, and remove every JSON file, since no branch choice can be trusted.
 
 1. **Ask every outstanding question in one batch:** whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file. Recheck the remaining branch choices for duplicates after any choice changes.
 
@@ -433,7 +433,7 @@ Give the error text for any issue that failed, and the state directory for an un
 - If the issue is not found, report that and stop
 - If the issue is closed, warn and ask before proceeding
 - If the launcher rejects the candidate, revise it in this session using the naming rules and retry with `--generated-name "CANDIDATE"`. For obsolete `--auto-name` errors, switch to this interface; do not invoke a naming command.
-- If the launcher reports that the issue matches more than one local branch, show the user the candidates and ask which to use, then re-run with that name in the positional form
+- If the launcher reports multiple branches matching the issue, show the candidates and ask which to use. Re-run with the chosen name in the positional form.
 - If the branch already exists and `--open-if-exists` opens it, note that the prompt is only injected on initial creation. This is the expected path when the launcher reports `Reusing branch`
 - If `--resource` names a resource another worktree holds, report the holder and ask; if the user declines, stop without creating anything
 - If the claim file cannot be read, report the error and ask whether to proceed without a claim. A malformed file is never rewritten automatically
