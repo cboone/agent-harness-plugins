@@ -249,6 +249,8 @@
       // already in progress holds the slot, and the head is running only when
       // it is that branch. Another branch already in progress beside the head
       // is running now, so the head landing frees nothing there.
+      // Every successor companion must have its soft ordering satisfied,
+      // even when its own hard blocker keeps it out of the running set.
       const freedAfter =
         lane.mode === "head" && head != null && running.includes(head)
           ? lane.issues.filter(
@@ -257,7 +259,9 @@
                 !rides(n) &&
                 !running.includes(n) &&
                 waits(n).every((b) => freeingUnit.has(b)) &&
-                afters(n).every((b) => freeingUnit.has(b)),
+                [n, ...(riders.get(n) ?? [])].every((m) =>
+                  afters(m).every((b) => freeingUnit.has(b)),
+                ),
             ).length
           : 0;
       const ranks = new Map();
