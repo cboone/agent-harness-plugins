@@ -22,7 +22,7 @@
 #   - Go in go.mod's `go X.Y.Z` directive (the X.Y-only form is a module-spec
 #     floor and is silently skipped). Drift is checked within the same X.Y
 #     release line.
-#   - Rust in rust-toolchain.toml's `channel = "X.Y.Z"`. Moving channels
+#   - Rust in rust-toolchain.toml or rust-toolchain (TOML or bare). Moving channels
 #     (`stable`, `beta`, `nightly`) are silently skipped. Drift is checked
 #     against absolute latest stable.
 #   - Zig in build.zig.zon's `.minimum_zig_version = "X.Y.Z"`. mlugg/setup-zig
@@ -349,25 +349,63 @@ function audit_go_runtime() {
   fi
 }
 
-# 5. Rust toolchain — read rust-toolchain.toml's `channel = "X.Y.Z"`.
-#
-# Skill step 4 documents `dtolnay/rust-toolchain` plus rust-toolchain.toml as
-# the wiring; the `channel` field carries either a moving channel name
-# (`stable`, `beta`, `nightly`) or an exact `X.Y.Z`. Moving channels are
-# resolved at install time and have no fixed upstream to compare against, so
-# they are silently skipped. Exact channels are audited against the absolute
-# latest stable; Rust's release model does not maintain parallel patch lines
-# the way Ruby and Python do, so same-major filtering would not add value.
+# 5. Rust toolchain: prefer rust-toolchain, then rust-toolchain.toml.
+# Compare exact pins against latest stable; Rust has no parallel patch lines.
 
 function audit_rust_runtime() {
-  local current="" latest
-  if [[ -f "rust-toolchain.toml" ]]; then
-    current=$(awk -F\" '/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"/ {print $2; exit}' rust-toolchain.toml)
+  local current="" latest source=""
+  if [[ -f "rust-toolchain" ]]; then
+    source="rust-toolchain"
+  elif [[ -f "rust-toolchain.toml" ]]; then
+    source="rust-toolchain.toml"
+  else
+    return 0
   fi
-  if [[ -z "${current}" ]]; then
+  # Validate the whole simple TOML form before trusting a channel.
+  current=$(awk '
+    {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      sub(/[[:space:]]+$/, "", line)
+      if (line == "" || line ~ /^#/) next
+      if (line ~ /^\[toolchain\][[:space:]]*(#.*)?$/) {
+        headers++
+        if (headers > 1) invalid = 1
+        next
+      }
+      if (headers != 1) invalid = 1
+      if (line !~ /^[A-Za-z0-9_-]+[[:space:]]*=[[:space:]]*"[^"]*"[[:space:]]*(#.*)?$/ &&
+          line !~ /^[A-Za-z0-9_-]+[[:space:]]*=[[:space:]]*\047[^\047]*\047[[:space:]]*(#.*)?$/) {
+        invalid = 1
+        next
+      }
+      key = line
+      sub(/[[:space:]]*=.*/, "", key)
+      if (seen[key]++) invalid = 1
+      value = line
+      sub(/^[^=]*=[[:space:]]*/, "", value)
+      quote = substr(value, 1, 1)
+      value = substr(value, 2)
+      value = substr(value, 1, index(value, quote) - 1)
+      if ((quote == "\"" && index(value, "\\")) || value ~ /[[:cntrl:]]/) invalid = 1
+      if (key == "channel") {
+        channels++
+        channel = value
+      }
+    }
+    END {if (!invalid && headers == 1 && channels == 1) print channel}
+  ' "${source}")
+  if [[ -z "${current}" && "${source}" == "rust-toolchain" ]]; then
+    current=$(awk '
+      NF {gsub(/^[[:space:]]+|[[:space:]]+$/, ""); channel = $0; lines++}
+      END {if (lines == 1) print channel}
+    ' "${source}")
+  fi
+  if [[ "${current}" =~ ^(stable|beta|nightly)(-.*)?$ ]]; then
     return
   fi
   if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    record_drift "Rust" "unreadable toolchain pin" "unreadable" "manual review" "${source}"
     return
   fi
   latest=$(gh api repos/rust-lang/rust/releases --jq '.[0].tag_name' 2> /dev/null \
@@ -377,7 +415,7 @@ function audit_rust_runtime() {
     return
   fi
   if [[ "${current}" != "${latest}" ]]; then
-    record_drift "Rust" "rustc" "${current}" "${latest}" "rust-toolchain.toml"
+    record_drift "Rust" "rustc" "${current}" "${latest}" "${source}"
   fi
 }
 
