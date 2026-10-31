@@ -46,6 +46,10 @@ jobs:
       - uses: cboone/gh-actions/actions/set-up-actionlint@3c9adb5a8b166444d3c0e3fe606d55f0dc7ac726 # v5.0.0
       - name: Actionlint
         run: actionlint
+      - name: Set up Claude Code
+        run: |
+          npm install --global --prefix "$HOME/.local" "@anthropic-ai/claude-code@$(cat .claude-code-version)"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Validate JSON and plugin structure
         run: make validate
       - name: Validate generated mirrors are up to date

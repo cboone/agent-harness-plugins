@@ -25,6 +25,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u LOCK_TEST_REPORT_ORDER -u LOCK_TEST_ORDER_MARKER \
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
 	-u CLAUDE_MARKETPLACE -u CODEX_MARKETPLACE -u CODEX_DIST_DIR -u CODEX_DIST_LABEL \
+	-u CLAUDE_VALIDATION_LOG -u CLAUDE_VALIDATION_VERSION -u CLAUDE_VALIDATION_FAIL \
 	-u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \
@@ -73,6 +74,7 @@ SCRUT_ENV := \
 	ENVIRONMENT_ISOLATION_BIN="$(CURDIR)/tests/fixtures/environment-isolation" \
 	CHECK_FIXTURE_ENVIRONMENTS_BIN="$(CURDIR)/bin/check-fixture-environments" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \
+	CLAUDE_VALIDATION_FIXTURE_BIN="$(CURDIR)/tests/fixtures/claude-validation-fixture" \
 	LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/workmux/scripts/launch-workmux" \
 	DEPENDABOT_PRS_BIN="$(CURDIR)/plugins/dependabot/scripts/dependabot-prs" \
 	DEPENDABOT_PRS_DATA_DIR="$(CURDIR)/tests/data/dependabot-prs" \
@@ -153,6 +155,7 @@ help:
 	@echo "  test-bash32        Empty-list regressions under macOS /bin/bash 3.2"
 	@echo ""
 	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut."
+	@echo "make validate also requires Claude Code >= $$(cat .claude-code-version) on PATH."
 	@echo "validate-corpus additionally needs jq and mikefarah yq v4."
 
 lint: lint-markdown lint-shell
@@ -178,6 +181,7 @@ validate:
 	bin/check-fixture-environments
 	env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 		-u CODEX_OTHER_SKILL_RESERVE_TOKENS -u CLAUDE_MARKETPLACE bin/validate-plugins
+	bin/validate-claude-plugins
 
 # Deliberately outside validate and test-all. The corpus lives in a separate
 # repository, so it is absent on most checkouts and in CI, and a merge gate that
