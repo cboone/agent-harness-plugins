@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Refuse edit mode when local changes could be mistaken for the fixer's edits.
+# Exit 0 for clean, 1 for dirty or unverifiable, 2 for unexpected arguments.
+set -euo pipefail
+
+function main() {
+  if [[ $# -ne 0 ]]; then
+    echo 'Usage: check-edit-worktree' >&2
+    exit 2
+  fi
+
+  local worktree_state tracked_entries entry gitlink_path hidden_flags=0
+  tracked_entries="$(git --no-pager --no-optional-locks -c core.fsmonitor=false ls-files -v --stage --full-name -- :/)" || {
+    echo 'check-edit-worktree: could not read tracked-file flags' >&2
+    exit 1
+  }
+  # Without -z Git quotes path newlines, so each record starts with its flag.
+  if [[ -n "${tracked_entries}" ]]; then
+    while IFS= read -r entry; do
+      case "${entry}" in
+        ?' 160000 '*)
+          gitlink_path="${entry#*$'\t'}"
+          printf 'check-edit-worktree: --edit does not support gitlinks: %s\n' "${gitlink_path}" >&2
+          exit 1
+          ;;
+        'H '?*) ;;
+        *) hidden_flags=1 ;;
+      esac
+    done <<< "${tracked_entries}"
+  fi
+  if ((hidden_flags)); then
+    echo 'check-edit-worktree: --edit cannot verify hidden index flags; clear assume-unchanged or skip-worktree first' >&2
+    exit 1
+  fi
+
+  worktree_state="$(git --no-pager --no-optional-locks -c core.fsmonitor=false \
+    status --porcelain=v1 --untracked-files=all --ignore-submodules=none)" || {
+    echo 'check-edit-worktree: could not establish a clean working tree' >&2
+    exit 1
+  }
+  if [[ -n "${worktree_state}" ]]; then
+    echo 'check-edit-worktree: --edit requires a clean working tree; commit or stash local changes first' >&2
+    exit 1
+  fi
+}
+
+main "$@"

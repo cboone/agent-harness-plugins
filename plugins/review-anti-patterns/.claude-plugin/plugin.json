@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Review a branch or a fix diff, read-only, against a checklist of the defect patterns that most often survive local review and surface in later Copilot rounds, such as bypassable sanitizers, parallel paths left behind, and docs that disagree with the code.",
+  "description": "Review a branch or a fix diff against a checklist of defects that survive local review, with read-only reports by default and an explicit edit mode for supported fixes.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["anti-patterns", "checklist", "code-review", "copilot", "review"],
   "license": "MIT",
   "name": "review-anti-patterns",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.1.4"
+  "version": "1.2.0"
 }
