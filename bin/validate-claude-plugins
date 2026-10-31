@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Validate the canonical marketplace and plugins with Claude Code's schema.
+set -euo pipefail
+
+function main() {
+  cd -- "${BASH_SOURCE[0]%/*}/.."
+  local minimum min_major min_minor min_patch
+  IFS= read -r minimum < .claude-code-version
+  IFS=. read -r min_major min_minor min_patch <<< "${minimum}"
+  if ! command -v claude > /dev/null; then
+    echo "Claude Code >= ${minimum} is required on PATH for make validate; install or update it manually." >&2
+    return 1
+  fi
+
+  local version major minor patch
+  version="$(claude --version)"
+  if [[ ! "${version}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)[[:space:]]\(Claude\ Code\)$ ]]; then
+    echo "Cannot determine Claude Code version: ${version}" >&2
+    return 1
+  fi
+  # Arithmetic comparisons interpret these decimal-prefixed component values.
+  major="10#${BASH_REMATCH[1]}"
+  minor="10#${BASH_REMATCH[2]}"
+  patch="10#${BASH_REMATCH[3]}"
+  if ((major < min_major || (major == min_major && minor < min_minor) || (major == min_major && minor == min_minor && patch < min_patch))); then
+    echo "Claude Code >= ${minimum} is required; found ${version}. Update it manually." >&2
+    return 1
+  fi
+
+  claude plugin validate .
+  local manifest
+  for manifest in plugins/*/.claude-plugin/plugin.json; do
+    [[ -f "${manifest}" ]] || {
+      echo 'No canonical plugin manifests found.' >&2
+      return 1
+    }
+    claude plugin validate "${manifest%/.claude-plugin/plugin.json}"
+  done
+}
+
+main "$@"

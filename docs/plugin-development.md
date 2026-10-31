@@ -377,6 +377,12 @@ If a plugin needs a `## Recommended Permissions` section, use a copy-pasteable J
 
 Every plugin with a hard external dependency must say so. Two forms are in use, both fine: a `**Requires:**` line in the header block next to `**Type:**` and `**Trigger:**` for one or two tools, or a `## Requirements` section before `## Usage` when the entry needs install instructions or caveats. Do not use both in one README.
 
+## Claude Code schema validation
+
+`make validate` runs the repository's JSON and convention checks, then `bin/validate-claude-plugins` runs `claude plugin validate` against the marketplace and each canonical plugin. Claude Code must already be on PATH at the version in `.claude-code-version` or newer; the target reports a missing or older CLI without installing it. Validation needs no authentication.
+
+CI installs the exact npm version in `.claude-code-version` before running the same target. Update that pin deliberately. Check the marketplace and every plugin with the new version before committing it. CLI advice and warnings retain Claude Code's exit status.
+
 ## Versioning
 
 Each plugin's `.claude-plugin/plugin.json` is the sole version source. If a plugin also has `.codex-plugin/plugin.json`, mirror that version there because validation requires the two manifests to agree. Marketplace entries are registration metadata and contain no version fields.
