@@ -148,6 +148,10 @@ Process and resolve GitHub Copilot automated PR review comments.
 
 **Type:** Skill
 **Trigger:** `/monitor-pr:resolve-copilot-feedback`
+
+Every thread resolution records a GitHub reason: fixed concerns (including earlier fixes) and outdated concerns are **Addressed** (`ADDRESSED`); valid concerns deferred, out of scope or deliberately declined, and unchanged nitpicks, are **Won't fix** (`WONT_FIX`); factually wrong concerns are **Incorrect** (`INVALID`), with an explanatory reply. Pending decisions remain open. Recovery after an existing reply uses the same mapping. The summary records each touched thread's reason, or intended reason if resolution failed. Review-body findings have no thread to resolve.
+
+The bundled helper accepts `resolve THREAD_ID --reason REASON` and `reply-and-resolve THREAD_ID --reason REASON --body-file TMPFILE`. GitHub's GraphQL `resolveReviewThread` mutation accepts `resolutionReason: PullRequestReviewThreadResolutionReason` in its input. Callers outside the skill can omit `--reason` to retain reason-free resolution.
 **Requires:** [`gh`](https://cli.github.com/) (authenticated), and the [Review Anti-Patterns](../review-anti-patterns/README.md) and [Lint and Fix](../lint-and-fix/README.md) skills
 
 ### Installation
