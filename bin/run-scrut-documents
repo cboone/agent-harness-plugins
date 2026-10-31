@@ -11,6 +11,7 @@
 # CI builds its matrix from `--list`, so local runs and CI cover the same
 # documents. The scrut environment comes from the caller, the Makefile's
 # `env $(SCRUT_UNSET) $(SCRUT_ENV)`. Each Scrut process starts through run-scrut.
+# Requires Perl with its core POSIX module for child-only process-group setup.
 #
 # Exit codes:
 #   0 - Every document passed, or --list printed the documents
@@ -24,6 +25,9 @@ set -euo pipefail
 
 # shellcheck source=bin/lib/git-environment.bash
 source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
+
+# Disable inherited job control so only run_in_group establishes worker groups.
+set +m
 
 RUN_SCRUT_WRAPPER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/run-scrut"
 readonly RUN_SCRUT_WRAPPER
@@ -77,6 +81,19 @@ function cleanup() {
   fi
 }
 
+# Set the group only in the child. Bash job control sets it in both processes,
+# which can report EPERM on macOS even when the group was established.
+function run_in_group() {
+  exec perl -MPOSIX -e '
+    # Bash ignores these signals for asynchronous jobs without job control.
+    $SIG{INT} = $SIG{QUIT} = "DEFAULT";
+    defined POSIX::setpgid(0, 0)
+      or die "run-scrut-documents: setpgid: $!\n";
+    exec @ARGV;
+    die "run-scrut-documents: exec $ARGV[0]: $!\n";
+  ' -- "$@"
+}
+
 # Stops the worker process group, which a signal to this script alone misses.
 # Falls back to $! when the signal lands before WORKER_PGID is set.
 # CONT wakes a stopped group so it acts on the TERM.
@@ -87,6 +104,8 @@ function stop_workers() {
     pgid="${!:-}"
   fi
   if [[ -n "${pgid}" ]]; then
+    # Stop the leader first, including before its child-only group setup.
+    kill -TERM -- "${pgid}" 2> /dev/null || true
     kill -TERM -- "-${pgid}" 2> /dev/null || true
     kill -CONT -- "-${pgid}" 2> /dev/null || true
   fi
@@ -193,20 +212,14 @@ function run_parallel() {
 
   printf 'Running %s scrut documents, %s at a time\n' "${count}" "${jobs}"
 
-  # Job control gives xargs its own process group, for stop_workers to signal.
-  # The outer redirect hides a spurious bash "child setpgid" error.
   # Output goes through a FIFO to a `cat` in this script's group, because
   # `stty tostop` stops a background group that writes to the terminal.
   local progress="${LOG_DIR}/progress"
   mkfifo "${progress}"
-  set -m
   # shellcheck disable=SC2016 # $1 and $2 expand in the child bash, not here.
-  {
-    xargs -0 -n 2 -P "${jobs}" bash -c 'run_document "$1" "$2"' run_document \
-      < "${LOG_DIR}/queue" > "${progress}" 2>&1 &
-  } 2> /dev/null
+  run_in_group xargs -0 -n 2 -P "${jobs}" bash -c 'run_document "$1" "$2"' run_document \
+    < "${LOG_DIR}/queue" > "${progress}" 2>&1 &
   WORKER_PGID=$!
-  set +m
   cat "${progress}" &
   PROGRESS_PID=$!
 
@@ -324,10 +337,8 @@ function main() {
     LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/run-scrut-documents.XXXXXX")"
     local status=0
     SINGLE_DOCUMENT="${documents[0]}"
-    set -m
-    "${RUN_SCRUT_WRAPPER}" --shell bash test "${documents[0]}" > "${LOG_DIR}/single.log" 2>&1 &
+    run_in_group "${RUN_SCRUT_WRAPPER}" --shell bash test "${documents[0]}" > "${LOG_DIR}/single.log" 2>&1 &
     WORKER_PGID=$!
-    set +m
     wait "${WORKER_PGID}" || status=$?
     WORKER_PGID=""
     cat "${LOG_DIR}/single.log"

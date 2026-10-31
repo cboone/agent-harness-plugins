@@ -28,6 +28,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \
+	-u PERL5OPT -u PERL5LIB -u SCRUT_GROUP_PROBE_MODE -u SCRUT_GROUP_PROBE_LOG -u SCRUT_GROUP_PROBE_PID \
 	-u CHAIN_CODEX_STUB_MODE \
 	-u EVAL_GH_AUTH -u EVAL_GH_LOG \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
@@ -122,6 +123,7 @@ SCRUT_ENV := \
 	RUN_SCRUT_DOCUMENTS_BIN="$(CURDIR)/bin/run-scrut-documents" \
 	RUN_SCRUT_BIN="$(CURDIR)/bin/run-scrut" \
 	SCRUT_STUB_BIN="$(CURDIR)/tests/fixtures/scrut-stub" \
+	SCRUT_GROUP_PROBE_DIR="$(CURDIR)/tests/fixtures/scrut-group-probe" \
 	TMUX_STUB_BIN="$(CURDIR)/tests/fixtures/tmux-stub" \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
 	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub" \
@@ -152,7 +154,7 @@ help:
 	@echo "  test-all           lint + validate + test-scrut"
 	@echo "  test-bash32        Empty-list regressions under macOS /bin/bash 3.2"
 	@echo ""
-	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut."
+	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut, Perl (core POSIX module)."
 	@echo "validate-corpus additionally needs jq and mikefarah yq v4."
 
 lint: lint-markdown lint-shell
