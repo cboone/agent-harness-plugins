@@ -88,6 +88,7 @@ SCRUT_ENV := \
 	OWNER_LOCK_PROBE_BIN="$(CURDIR)/tests/fixtures/owner-lock-probe" \
 	OWNER_CALL_CONTRACT_BIN="$(CURDIR)/tests/fixtures/check-owner-call-contract" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
+	REPORT_BOARD_EXECUTE_BIN="$(CURDIR)/tests/fixtures/report-board-execute.cjs" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
 	COPILOT_ROUNDS_REPORT_BIN="$(CURDIR)/bin/copilot-rounds-report" \
 	COPILOT_ROUNDS_REPORT_DATA_DIR="$(CURDIR)/tests/data/copilot-rounds-report" \

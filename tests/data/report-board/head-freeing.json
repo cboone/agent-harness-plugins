@@ -1,0 +1,73 @@
+{
+  "board": "backlog-triage",
+  "title": "widgets backlog",
+  "repo": "example/widgets",
+  "sync": {
+    "at": "2026-09-18T14:30:00Z",
+    "branch": "main",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "summary": "Start #1; the successor branch remains queued behind PR #90.",
+  "issues": [
+    {
+      "number": 1,
+      "title": "Settle the schema",
+      "milestone": null,
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
+    },
+    {
+      "number": 3,
+      "title": "Implement the client",
+      "milestone": null,
+      "waitingOn": [1],
+      "blockedBecause": "Needs the schema.",
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
+    },
+    {
+      "number": 4,
+      "title": "Update the client adapter",
+      "milestone": null,
+      "sameBranchAs": 3,
+      "after": [
+        {
+          "pr": 90
+        }
+      ],
+      "progress": null,
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
+    }
+  ],
+  "lanes": [
+    {
+      "key": "L1",
+      "name": "Client",
+      "mode": "head",
+      "issues": [1, 3, 4]
+    }
+  ],
+  "startNow": [
+    {
+      "issue": 1,
+      "why": "Settle the schema first."
+    }
+  ],
+  "schemaVersion": 2,
+  "affinityIgnored": []
+}
