@@ -259,6 +259,134 @@ stub tool error
 [7]
 ```
 
+## Confirm the signal probe exposes ignored interrupts
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
+>   && bash -c 'set +m; "$@" & wait' probe scrut signals.md
+trap -- '' SIGINT
+trap -- '' SIGQUIT
+signal probe ran
+Result: 1 document(s) with 1 testcase(s): 1 succeeded, 0 failed and 0 skipped
+```
+
+## Restore interrupt signal defaults before exec
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] && touch signals.md \
+>   && "${RUN_SCRUT_DOCUMENTS_BIN}" signals.md 2>&1
+signal probe ran
+Result: 1 document(s) with 1 testcase(s): 1 succeeded, 0 failed and 0 skipped
+```
+
+## Confirm the race probe rejects a redundant setup call
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" \
+>   && PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe \
+>     SCRUT_GROUP_PROBE_MODE=race SCRUT_GROUP_PROBE_LOG="${dir}/calls" \
+>     perl -MPOSIX -e 'setpgrp(0, 0) or die "control setup: $!\n"; defined(POSIX::setpgid(0, 0)) and die "probe accepted redundant setup\n"; print "$!\n";' \
+>   && cat calls
+Operation not permitted
+setpgid
+```
+
+## Set the single-document group once with inherited monitor mode
+
+The Perl probe deterministically returns `EPERM` if the child was already made
+a group leader, reproducing the redundant-call failure without relying on
+macOS scheduling. Its log proves the instrument ran. Exported `SHELLOPTS`
+enables monitor mode in the runner unless it explicitly disables job control.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] && touch error.md \
+>   && export PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe \
+>     SCRUT_GROUP_PROBE_MODE=race SCRUT_GROUP_PROBE_LOG="${dir}/calls" \
+>   && { status=0; bash -c 'set -m; export SHELLOPTS; exec "$@"' inherited-monitor "${RUN_SCRUT_DOCUMENTS_BIN}" error.md 2>&1 || status=$?; cat calls; exit "${status}"; }
+stub tool error
+setpgid
+[7]
+```
+
+## Set the parallel-document group once
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub docs \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] && touch docs/a.md docs/error.md \
+>   && export PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe \
+>     SCRUT_GROUP_PROBE_MODE=race SCRUT_GROUP_PROBE_LOG="${dir}/calls" \
+>   && "${RUN_SCRUT_DOCUMENTS_BIN}" docs 2>&1 | grep -v '^finished '; status="${PIPESTATUS[0]}"; cat calls; exit "${status}"
+Running 2 scrut documents, * at a time (glob)
+
+==> docs/a.md: passed (*s) (glob)
+ran docs/a.md
+Result: 1 document(s) with 1 testcase(s): 1 succeeded, 0 failed and 0 skipped
+
+==> docs/error.md: FAILED, exit 7 (*s) (glob)
+stub tool error
+
+1 of 2 scrut documents failed:
+  docs/error.md
+setpgid
+[1]
+```
+
+## Report genuine group setup failures
+
+`EPERM` and `EACCES` are both failures when there is only one setup call.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub && touch tool.md \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
+>   && export PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe SCRUT_GROUP_PROBE_LOG="${dir}/calls" \
+>   && for mode in eperm eacces; do SCRUT_GROUP_PROBE_MODE="${mode}" "${RUN_SCRUT_DOCUMENTS_BIN}" tool.md 2>&1; echo "exit: $?"; done \
+>   && cat calls
+run-scrut-documents: setpgid: Operation not permitted
+exit: 1
+run-scrut-documents: setpgid: Permission denied
+exit: 13
+setpgid
+setpgid
+```
+
+## Report exec failures
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub && touch tool.md \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
+>   && PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe \
+>     SCRUT_GROUP_PROBE_MODE=exec SCRUT_GROUP_PROBE_LOG="${dir}/calls" "${RUN_SCRUT_DOCUMENTS_BIN}" tool.md 2>&1
+run-scrut-documents: exec /nonexistent/run-scrut-wrapper: No such file or directory
+[2]
+```
+
+## Stop a leader before group setup
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub && touch tool.md \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
+>   && { PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe \
+>     SCRUT_GROUP_PROBE_MODE=wait SCRUT_GROUP_PROBE_LOG="${dir}/calls" SCRUT_GROUP_PROBE_PID="${dir}/leader" \
+>     "${RUN_SCRUT_DOCUMENTS_BIN}" tool.md > output 2>&1 & } && runner=$! \
+>   && for ((attempt = 0; attempt < 100; attempt++)); do [[ -s leader ]] && break; sleep 0.1; done \
+>   && kill -TERM "${runner}"; status=0; wait "${runner}" || status=$?; echo "exit: ${status}" \
+>   && cat output && read -r leader < leader \
+>   && if kill -0 "${leader}" 2> /dev/null; then echo 'leader still running'; kill -TERM "${leader}"; exit 1; else echo 'leader stopped'; fi
+exit: 143
+run-scrut-documents: tool.md: interrupted (exit 143)
+leader stopped
+```
+
 ## Report documents that never ran when xargs stops early
 
 The stub stops the worker for `b-kill.md`, so xargs starts no further
