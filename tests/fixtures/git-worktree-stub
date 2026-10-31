@@ -46,17 +46,36 @@ function main() {
     die "expected git -C <path> rev-parse --path-format=absolute --git-dir invocation"
   fi
 
-  # `git for-each-ref --format=... refs/heads/`, used to find an existing
-  # branch for an issue number. One branch name per line in STUB_GIT_BRANCHES.
-  # STUB_GIT_FAIL=for-each-ref fails the listing the way an unreadable
-  # repository would.
-  if [[ $# -eq 3 && "${1}" == "for-each-ref" && "${2}" == --format=* && "${3}" == "refs/heads/" ]]; then
+  # Stub local and origin refs for issue-branch lookup.
+  if [[ $# -eq 4 && "${1}" == "for-each-ref" && "${2}" == '--format=%(refname)' && "${3}" == "refs/heads/" && "${4}" == "refs/remotes/origin/" ]]; then
     if [[ "${STUB_GIT_FAIL:-}" == "for-each-ref" ]]; then
       die "fatal: not a git repository" 128
     fi
-    if [[ -n "${STUB_GIT_BRANCHES:-}" ]]; then
-      printf '%s\n' "${STUB_GIT_BRANCHES}"
-    fi
+    local branch
+    while IFS= read -r branch; do
+      [[ -z "${branch}" ]] || printf 'refs/heads/%s\n' "${branch}"
+    done <<< "${STUB_GIT_BRANCHES:-}"
+    while IFS= read -r branch; do
+      [[ -z "${branch}" ]] || printf 'refs/remotes/origin/%s\n' "${branch}"
+    done <<< "${STUB_GIT_REMOTE_BRANCHES:-}"
+    return 0
+  fi
+
+  if [[ $# -eq 4 && "${1}" == show-ref && "${2}" == --verify && "${3}" == --quiet ]]; then
+    [[ "${STUB_GIT_FAIL:-}" != show-ref ]] || die "fatal: cannot read refs" 128
+    local branch
+    while IFS= read -r branch; do
+      [[ "refs/heads/${branch}" != "${4}" ]] || return 0
+    done <<< "${STUB_GIT_BRANCHES:-}"
+    while IFS= read -r branch; do
+      [[ "refs/remotes/origin/${branch}" != "${4}" ]] || return 0
+    done <<< "${STUB_GIT_REMOTE_BRANCHES:-}"
+    return 1
+  fi
+
+  if [[ $# -eq 4 && "${1}" == branch && "${2}" == --track && "${4}" == "refs/remotes/origin/${3}" ]]; then
+    [[ "${STUB_GIT_FAIL:-}" != branch-track ]] || die "fatal: cannot create tracking branch" 128
+    printf 'tracking: %s -> origin/%s\n' "${3}" "${3}"
     return 0
   fi
 
