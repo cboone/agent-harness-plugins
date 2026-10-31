@@ -76,7 +76,7 @@ read failures gate push; pending siblings stay open
 
 ````scrut
 $ awk '/^### 3\. Reply to and Resolve Threads$/ {section=1; next} section && /^```bash$/ {code=1; next} code && /^```$/ {exit} code {print}' "${REPO_ROOT}/plugins/monitor-pr/skills/resolve-copilot-feedback/SKILL.md"
-bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file TMPFILE
+bash resolve-copilot-threads reply-and-resolve THREAD_ID --reason REASON --body-file TMPFILE
 ````
 
 ## Reply succeeds before resolution
@@ -101,6 +101,77 @@ exit=1; calls=reply
 $ bash "${COPILOT_REPLY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" resolve 2>&1
 Error: Failed to resolve review thread THREAD: sample resolve failure
 exit=1; calls=reply,resolve
+```
+
+## Every reason reaches the mutation on both resolution paths
+
+The committed fixture installs its `gh` stub first on PATH. It invokes the helper
+only if `command -v gh` resolves to that stub. No live thread is used.
+
+```scrut
+$ for reason in ADDRESSED WONT_FIX INVALID; do for operation in resolve reply-and-resolve; do bash "${COPILOT_REPLY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" ok "${operation}" THREAD --reason "${reason}"; done; done
+true
+exit=0; calls=resolve:ADDRESSED
+true
+exit=0; calls=reply,resolve:ADDRESSED
+true
+exit=0; calls=resolve:WONT_FIX
+true
+exit=0; calls=reply,resolve:WONT_FIX
+true
+exit=0; calls=resolve:INVALID
+true
+exit=0; calls=reply,resolve:INVALID
+```
+
+## File-based replies preserve the reason
+
+```scrut
+$ bash "${COPILOT_REPLY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" ok reply-file --reason INVALID
+true
+exit=0; calls=reply,resolve:INVALID
+```
+
+## Invalid reasons cannot mutate a thread
+
+```scrut
+$ for operation in resolve reply-and-resolve; do bash "${COPILOT_REPLY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" ok "${operation}" THREAD --reason Incorrect 2>&1; done
+Error: Resolution reason must be ADDRESSED, WONT_FIX or INVALID
+exit=1; calls=
+Error: Resolution reason must be ADDRESSED, WONT_FIX or INVALID
+exit=1; calls=
+```
+
+## Missing reasons cannot post a reply
+
+```scrut
+$ bash "${COPILOT_REPLY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" ok reply-and-resolve THREAD --reason 2>&1
+Error: Resolution reason must be ADDRESSED, WONT_FIX or INVALID
+exit=1; calls=
+```
+
+## Resolution reasons preserve reply failure handling
+
+```scrut
+$ bash "${COPILOT_REPLY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" reply reply-and-resolve THREAD --reason INVALID 2>&1
+Error: Failed to send reply: sample reply failure
+exit=1; calls=reply
+```
+
+## Resolution errors with a reason preserve the reply
+
+```scrut
+$ bash "${COPILOT_REPLY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" resolve reply-and-resolve THREAD --reason ADDRESSED 2>&1
+Error: Failed to resolve review thread THREAD: sample resolve failure
+exit=1; calls=reply,resolve:ADDRESSED
+```
+
+## Recovery can retain reason-free resolution for existing callers
+
+```scrut
+$ bash "${COPILOT_REPLY_CASE_BIN}" "${RESOLVE_COPILOT_THREADS_BIN}" ok resolve THREAD
+true
+exit=0; calls=resolve
 ```
 
 ## Reply timing and prior-run recovery have one policy location

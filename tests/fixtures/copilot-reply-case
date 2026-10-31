@@ -6,6 +6,7 @@ CASE_DIR=""
 
 function main() {
   local helper="${1:?helper required}" mode="${2:?mode required}" reply_exit
+  shift 2
   CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/copilot-reply.XXXXXX")"
   trap 'rm -r "${CASE_DIR}"' EXIT
   cp "$(dirname "$0")/copilot-reply-gh-stub" "${CASE_DIR}/gh"
@@ -17,11 +18,22 @@ function main() {
   [[ "$(command -v gh)" == "${CASE_DIR}/gh" ]] || return 1
   # Capture failure without invoking the helper in a conditional that suppresses errexit.
   set +e
-  bash "${helper}" reply-and-resolve THREAD --body-file "${CASE_DIR}/body"
+  if [[ "${1:-}" == reply-file ]]; then
+    shift
+    bash "${helper}" reply-and-resolve THREAD "$@" --body-file "${CASE_DIR}/body"
+  elif [[ $# -eq 0 ]]; then
+    bash "${helper}" reply-and-resolve THREAD --body-file "${CASE_DIR}/body"
+  else
+    bash "${helper}" "$@" < "${CASE_DIR}/body"
+  fi
   reply_exit=$?
   set -e
   printf 'exit=%s; calls=' "${reply_exit}"
-  paste -sd , "${CASE_DIR}/calls"
+  if [[ -s "${CASE_DIR}/calls" ]]; then
+    paste -sd , "${CASE_DIR}/calls"
+  else
+    printf '\n'
+  fi
 }
 
 main "$@"

@@ -78,7 +78,7 @@ The thread resolution is NOT optional - it's the primary deliverable of this ski
 
 ```bash
 # Replace THREAD_ID with actual thread ID (e.g., PRRT_kwDONZ...)
-bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file TMPFILE
+bash resolve-copilot-threads reply-and-resolve THREAD_ID --reason REASON --body-file TMPFILE
 ```
 
 Posts the reply in `TMPFILE`, then resolves the thread, and outputs `true` on success. Write the reply from the [Reply Templates](#reply-templates); step 4 says when each reply is posted.
@@ -340,7 +340,7 @@ A review-body concern that step 1d settled as **Matched** takes the category of 
 Use this combined command under [step 4](#4-handle-each-category), which selects thread operations and their timing:
 
 ```bash
-bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file TMPFILE
+bash resolve-copilot-threads reply-and-resolve THREAD_ID --reason REASON --body-file TMPFILE
 ```
 
 Write the body using [Reply Templates](#reply-templates); follow [step 4](#4-handle-each-category) for eligibility and retries.
@@ -353,11 +353,21 @@ Before the first edit, confirm that the required `lint-and-fix` and `review-anti
 
 Every thread gets a short reply from the [Reply Templates](#reply-templates) before it is resolved, so the decision is the first thing a reader sees.
 
+**Resolution reason.** Pass `--reason REASON` on every `resolve` or `reply-and-resolve`, including recovery after an existing reply. Choose from the disposition, not merely the category:
+
+| Disposition                                                                     | GitHub reason | `REASON`    |
+| ------------------------------------------------------------------------------- | ------------- | ----------- |
+| Fixed, including an earlier fix; outdated because the concern no longer applies | Addressed     | `ADDRESSED` |
+| Valid but deferred, out of scope or deliberately declined; unchanged nitpick    | Won't fix     | `WONT_FIX`  |
+| Factually incorrect                                                             | Incorrect     | `INVALID`   |
+
+For Incorrect, post the explanatory Not changing reply before resolution. A declined valid concern is not Incorrect. Pending decisions stay unresolved. Put `--reason` before `--body-file`; substitute the selected enum for `REASON` in examples. Record the selected reason in each touched thread's summary disposition and local Action taken cell, including the intended reason when resolution fails. Review bodies have no resolution reason; threads resolved outside this run are not touched or assigned a new reason.
+
 **When to reply.** A reply that links a commit or file this run changed waits for step 8: record its thread, template and the commit or file it links, and post it with `reply-and-resolve` after the push, so its links work. That covers a Valid or Incorrect reply whose fix or instruction is not pushed yet, an Outdated reply citing an unpushed fix, and a Deferred reply linking an unpushed tracking entry. Unpushed work from an earlier run triggers the entry guard above; report its pending commits under `Still open` rather than resuming it. Every other reply posts now, with `reply-and-resolve`.
 
 **Work an earlier run already did.** Before handling a partially handled thread, including one replied to but unresolved, check:
 
-- **A reply is already there.** When the thread's comments from `fetch` include a reply from the authenticated account that opens with a template's bold decision (`**Fixed**`, `**Not changing:**`, `**Outdated:**`, `**Deferred**` or `**Nitpick, not changing:**`), verify its disposition still holds and any referenced commit or file reached the PR branch before running `resolve THREAD_ID` alone; never post a second reply. A sibling still awaiting a design decision stays unresolved and `Pending`, even if it has an earlier reply. Any other comment from the account, such as a question someone typed by hand, is not a decision and does not count. `fetch` reads a thread's first 20 comments, so on a longer thread open the first comment's `url` to look.
+- **A reply is already there.** When the thread's comments from `fetch` include a reply from the authenticated account that opens with a template's bold decision (`**Fixed**`, `**Not changing:**`, `**Outdated:**`, `**Deferred**` or `**Nitpick, not changing:**`), verify its disposition still holds and any referenced commit or file reached the PR branch before running `resolve THREAD_ID --reason REASON` alone; never post a second reply. A sibling still awaiting a design decision stays unresolved and `Pending`, even if it has an earlier reply. Any other comment from the account, such as a question someone typed by hand, is not a decision and does not count. `fetch` reads a thread's first 20 comments, so on a longer thread open the first comment's `url` to look.
 - **The fix is already on the PR branch.** Reply with the Fixed template citing that commit instead of changing the code again. Reuse an earlier run's fix only after it has reached the PR branch. Unpushed earlier work triggers the entry guard; report it under `Still open`.
 - **The instruction is already there.** When the instruction an Incorrect thread needs is already in the instructions file, quote it rather than adding it twice.
 
@@ -393,7 +403,7 @@ mktemp -u "${TMPDIR:-/tmp}/copilot-reply-XXXXXX"
 bash resolve-copilot-threads reply THREAD_ID --body-file TMPFILE
 
 # Or reply and resolve in one step:
-bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file TMPFILE
+bash resolve-copilot-threads reply-and-resolve THREAD_ID --reason REASON --body-file TMPFILE
 ```
 
 ```bash
@@ -612,9 +622,9 @@ Counts: 3 fetched, 3 resolved, 2 code-change threads, 6 review-body findings, 1 
 
 | Source | Finding | Category | Outcome | Disposition |
 | --- | --- | --- | --- | --- |
-| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212881859) | `src/foo.ts:42` | Valid | Resolved | Fixed null check in commit `abc1234` |
-| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212881910) | `lib/util.js:8` | Valid | Resolved | Added error handling in commit `abc1234` |
-| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212881977) | `docs/api.md:5` | Nitpick | Resolved | Wording matches the rest of the API docs |
+| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212881859) | `src/foo.ts:42` | Valid | Resolved | Addressed: fixed null check in commit `abc1234` |
+| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212881910) | `lib/util.js:8` | Valid | Resolved | Addressed: added error handling in commit `abc1234` |
+| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212881977) | `docs/api.md:5` | Nitpick | Resolved | Won't fix: wording matches the rest of the API docs |
 | [Review body 5035762221](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762221) | `src/foo.ts:42` | Valid | Noted | Restates the thread at `src/foo.ts:42` |
 | [Review body 5035762221](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762221) | `docs/plan.md:243` | Valid | Fixed | Corrected phase status in commit `abc1234` |
 | [Review body 5035762221](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762221) | `src/ui.tsx` - avoid redundant state synchronization | Incorrect | Noted | Upstream component requires the state flow; added Copilot instruction |
@@ -757,8 +767,8 @@ Counts: 2 fetched, 1 resolved, 1 failed, 2 code-change threads, 1 review-body fi
 
 | Source | Finding | Category | Outcome | Disposition |
 | --- | --- | --- | --- | --- |
-| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212881859) | `src/foo.ts:42` | Valid | Resolved | Fixed null check in commit `abc1234` |
-| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212882001) | `src/bar.ts:7` | Valid | Failed | Fixed in commit `abc1234`; reply posted, resolve failed |
+| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212881859) | `src/foo.ts:42` | Valid | Resolved | Addressed: fixed null check in commit `abc1234` |
+| [Thread](https://github.com/OWNER/REPO/pull/54#discussion_r4212882001) | `src/bar.ts:7` | Valid | Failed | Intended Addressed: fixed in commit `abc1234`; reply posted, resolve failed |
 | [Review body 5035762230](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762230) | `src/foo.ts:42` | Valid | Noted | Restates the thread at `src/foo.ts:42` |
 
 </details>
@@ -891,9 +901,9 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 ```markdown
 | Source                                                                                       | Thread ID | Finding                                               | Category  | Action taken                   | Status   |
 | -------------------------------------------------------------------------------------------- | --------- | ----------------------------------------------------- | --------- | ------------------------------ | -------- |
-| Thread                                                                                       | PRRT_xxx  | `src/foo.ts:42`                                       | Nitpick   | Replied and resolved           | Resolved |
-| Thread                                                                                       | PRRT_yyy  | `src/bar.ts:15`                                       | Valid     | Fixed null check               | Resolved |
-| Thread                                                                                       | PRRT_zzz  | `lib/util.js:8`                                       | Outdated  | Code refactored                | Resolved |
+| Thread                                                                                       | PRRT_xxx  | `src/foo.ts:42`                                       | Nitpick   | Won't fix; replied and resolved | Resolved |
+| Thread                                                                                       | PRRT_yyy  | `src/bar.ts:15`                                       | Valid     | Addressed; fixed null check | Resolved |
+| Thread                                                                                       | PRRT_zzz  | `lib/util.js:8`                                       | Outdated  | Addressed; code refactored | Resolved |
 | [Review body 5035762218](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218) | --        | `docs/plan.md:243`                                    | Valid     | Fixed in commit `abc1234`      | Fixed    |
 | [Review body 5035762219](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762219) | --        | `src/ui.tsx` - avoid redundant state synchronization | Nitpick   | Existing flow is intentional   | Noted    |
 ```
