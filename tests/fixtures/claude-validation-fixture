@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Exercise the real Make validation target with an isolated CLI search path.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT:?}/bin/lib/capture-child.bash"
+
+function main() {
+  local scenario="${1}" root make_bin code=0
+  make_bin="$(command -v make)"
+  root="$(mktemp -d "${TMPDIR:-/tmp}/claude-validation.XXXXXX")"
+  readonly CLAUDE_VALIDATION_ROOT="${root}"
+  trap 'rm -r -- "${CLAUDE_VALIDATION_ROOT}"' EXIT
+  mkdir -p "${root}/bin" "${root}/path" "${root}/plugins/alpha/.claude-plugin" "${root}/plugins/beta/.claude-plugin"
+  cp "${REPO_ROOT}/Makefile" "${REPO_ROOT}/.claude-code-version" "${root}/"
+  cp "${REPO_ROOT}/bin/validate-claude-plugins" "${root}/bin/"
+  touch "${root}/plugins/alpha/.claude-plugin/plugin.json" "${root}/plugins/beta/.claude-plugin/plugin.json"
+  local helper
+  for helper in validate-json check-fixture-environments validate-plugins; do
+    printf '#!/bin/bash\nexit 0\n' > "${root}/bin/${helper}"
+    chmod +x "${root}/bin/${helper}"
+  done
+  ln -s /bin/bash "${root}/path/bash"
+  ln -s /usr/bin/env "${root}/path/env"
+  cp "${REPO_ROOT}/tests/fixtures/claude-validation-stub" "${root}/path/claude"
+  IFS= read -r CLAUDE_VALIDATION_VERSION < "${root}/.claude-code-version"
+  export CLAUDE_VALIDATION_VERSION
+  case "${scenario}" in
+    missing) rm -- "${root}/path/claude" ;;
+    old) export CLAUDE_VALIDATION_VERSION=2.1.313 ;;
+    newer) export CLAUDE_VALIDATION_VERSION=2.2.0 ;;
+    leading-zeros) export CLAUDE_VALIDATION_VERSION=02.01.0314 ;;
+    marketplace-failure) export CLAUDE_VALIDATION_FAIL=. ;;
+    plugin-failure) export CLAUDE_VALIDATION_FAIL=plugins/alpha ;;
+    success) ;;
+    *) return 64 ;;
+  esac
+  if [[ "${scenario}" != missing ]]; then
+    [[ "$(PATH="${root}/path" command -v claude)" == "${root}/path/claude" ]] || return 1
+  else
+    ! PATH="${root}/path" command -v claude || return 1
+  fi
+  export CLAUDE_VALIDATION_LOG="${root}/calls"
+  touch "${CLAUDE_VALIDATION_LOG}"
+  capture_child - --stdout "${root}/output" -- \
+    env PATH="${root}/path" "${make_bin}" --no-print-directory -C "${root}" SHELL=/bin/bash validate || code=$?
+  printf 'make status=%s\n' "${code}"
+  cat "${CLAUDE_VALIDATION_LOG}"
+  return "${code}"
+}
+
+unset CLAUDE_VALIDATION_VERSION CLAUDE_VALIDATION_FAIL
+main "$@"

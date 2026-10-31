@@ -393,6 +393,12 @@ function main() {
       if [[ "${scenario}" == fixture-budget ]]; then
         capture_child output -- bash -- "${REPO_ROOT:?}/tests/fixtures/validate-plugin-fixture" valid
       else
+        mkdir -- "${root}/claude-bin"
+        cp -- "${REPO_ROOT}/tests/fixtures/claude-validation-stub" "${root}/claude-bin/claude"
+        export PATH="${root}/claude-bin:${PATH}"
+        [[ "$(command -v claude)" == "${root}/claude-bin/claude" ]] || return 1
+        IFS= read -r CLAUDE_VALIDATION_VERSION < "${REPO_ROOT}/.claude-code-version"
+        export CLAUDE_VALIDATION_VERSION CLAUDE_VALIDATION_LOG="${root}/claude-calls" CLAUDE_VALIDATION_FAIL=''
         capture_child output -- make --no-print-directory -C "${REPO_ROOT:?}" validate
       fi
       ;;

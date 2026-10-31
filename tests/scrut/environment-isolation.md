@@ -326,6 +326,7 @@ env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 * (glob)
 Codex skill inventory: * (glob)
 All plugin validations passed.
+bin/validate-claude-plugins
 ```
 
 ## Validation gate ignores the ambient enabled percentage
@@ -340,6 +341,7 @@ env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 * (glob)
 Codex skill inventory: * (glob)
 All plugin validations passed.
+bin/validate-claude-plugins
 ```
 
 ## Validation gate ignores the ambient reserve
@@ -354,6 +356,7 @@ env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 * (glob)
 Codex skill inventory: * (glob)
 All plugin validations passed.
+bin/validate-claude-plugins
 ```
 
 ## Validator fixtures choose their own budgets
