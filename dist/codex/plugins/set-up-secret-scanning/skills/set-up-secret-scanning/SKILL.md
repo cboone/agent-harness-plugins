@@ -59,6 +59,10 @@ If TruffleHog was selected, read `./references/trufflehog-workflow.md` for the w
 
 Write the file using the Write tool.
 
+Keep the caller jobs named `gitleaks` and `trufflehog`: each caller prefixes every check row emitted by the reusable workflow. With both tools enabled, distinct check names include `gitleaks / Validate inputs`, `gitleaks / gitleaks`, `trufflehog / Validate inputs` and `trufflehog / trufflehog`.
+
+When replacing existing workflows, update any branch-protection required checks that use the old caller prefix to the corresponding new check names after the new workflows have run. Do not require the ambiguous `scan / Validate inputs` name.
+
 ### 5. Optionally Generate Gitleaks Configuration
 
 If gitleaks was selected, ask the user whether they want a `.gitleaks.toml` configuration file.
