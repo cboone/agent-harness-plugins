@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Exercise the template's Rust audit with a local release lookup.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+root=$(mktemp -d "${TMPDIR:-/tmp}/rust-audit.XXXXXX")
+trap 'rm -r -- "${root}"' EXIT
+cd "${root}"
+
+function gh() {
+  [[ "$*" == "api repos/rust-lang/rust/releases --jq .[0].tag_name" ]] || return 1
+  printf '1.90.0\n'
+}
+[[ "$(type -t gh)" == "function" ]] || exit 1
+
+# Load function definitions without running the template's other audits.
+sed '/^# REPLACE: drop audit_/,$d' "${RUST_AUDIT_TEMPLATE:?}" > audit.bash
+git init -q
+drift_rows=()
+# shellcheck disable=SC1091
+source ./audit.bash
+
+case "${1}" in
+  bare) printf '\n  \n 1.76.0 \n\n' > rust-toolchain ;;
+  bare-extra) printf '1.76.0\n1.77.0\n' > rust-toolchain ;;
+  toml) printf '[toolchain]\nchannel = "1.76.0"\n' > rust-toolchain ;;
+  modern) printf '[toolchain]\nchannel = "1.76.0"\n' > rust-toolchain.toml ;;
+  literal | modern-literal)
+    file=rust-toolchain
+    [[ "${1}" == "literal" ]] || file=rust-toolchain.toml
+    printf "[toolchain]\nchannel = '1.76.0'\n" > "${file}"
+    ;;
+  precedence)
+    printf '[toolchain]\nchannel = "1.77.0"\n' > rust-toolchain.toml
+    printf '1.76.0\n' > rust-toolchain
+    ;;
+  empty)
+    : > rust-toolchain
+    printf '[toolchain]\nchannel = "1.76.0"\n' > rust-toolchain.toml
+    ;;
+  quoted-key) printf '[toolchain]\n"channel" = "1.76.0"\n' > rust-toolchain ;;
+  triple-quoted) printf '[toolchain]\nchannel = """1.76.0"""\n' > rust-toolchain ;;
+  malformed) printf '[toolchain]\nchannel = "1.76.0\n' > rust-toolchain ;;
+  malformed-modern) printf '[toolchain]\nchannel = "1.76.0\n' > rust-toolchain.toml ;;
+  mixed-double | mixed-single | multiline | duplicate | duplicate-field | invalid-line | escape | control-double | control-single | literal-backslash | simple-fields)
+    file=rust-toolchain
+    case "${1}" in
+      mixed-double) printf "[toolchain]\nchannel = \"stable'broken\"\n" > "${file}" ;;
+      mixed-single) printf "[toolchain]\nchannel = 'stable\"broken'\n" > "${file}" ;;
+      multiline) printf "[toolchain]\nchannel = '''\nchannel = \"stable\"\n'''\n" > "${file}" ;;
+      duplicate) printf '[toolchain]\nchannel = "stable"\nchannel = "1.76.0"\n' > "${file}" ;;
+      duplicate-field) printf '[toolchain]\nchannel = "stable"\nprofile = "minimal"\nprofile = "complete"\n' > "${file}" ;;
+      escape) printf '%s\n' '[toolchain]' 'channel = "stable"' 'profile = "\q"' > "${file}" ;;
+      control-double) printf '[toolchain]\nchannel = "stable"\nprofile = "bad\001value"\n' > "${file}" ;;
+      control-single) printf "[toolchain]\nchannel = \"stable\"\nprofile = 'bad\001value'\n" > "${file}" ;;
+      literal-backslash) printf '%s\n' '[toolchain]' 'channel = "1.76.0"' "profile = 'path\\q'" > "${file}" ;;
+      invalid-line) printf '[toolchain]\nchannel = "stable"\ninvalid syntax\n' > "${file}" ;;
+      simple-fields) printf '# pin\n\n[toolchain] # runtime\nprofile = "minimal"\nchannel = "1.76.0" # pin\n' > "${file}" ;;
+      *) exit 2 ;;
+    esac
+    if [[ "${2:-}" == "modern" ]]; then
+      mv rust-toolchain rust-toolchain.toml
+    fi
+    ;;
+  missing) ;;
+  moving)
+    for file in rust-toolchain rust-toolchain.toml; do
+      for channel in stable beta nightly; do
+        printf '[toolchain]\nchannel = "%s"\n' "${channel}" > "${file}"
+        audit_rust_runtime
+        printf '%s %s rows=%s\n' "${file}" "${channel}" "${#drift_rows[@]}"
+        if [[ "${file}" == "rust-toolchain" ]]; then
+          printf '%s\n' "${channel}" > "${file}"
+          audit_rust_runtime
+          printf 'bare %s rows=%s\n' "${channel}" "${#drift_rows[@]}"
+        fi
+      done
+      rm -- "${file}"
+    done
+    exit
+    ;;
+  *) exit 2 ;;
+esac
+audit_rust_runtime
+printf 'rows=%s\n' "${#drift_rows[@]}"
+if (("${#drift_rows[@]}" > 0)); then
+  printf '%s\n' "${drift_rows[@]}"
+fi
