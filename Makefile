@@ -119,6 +119,7 @@ SCRUT_ENV := \
 	CODEX_STUB_BIN="$(CURDIR)/tests/fixtures/codex-stub" \
 	CODEX_LAUNCH_CANCEL_ENV="$(CURDIR)/tests/fixtures/codex-launch-cancel.bash" \
 	RESULT_CHECK_JQ="$(CURDIR)/plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq" \
+	CHECK_EDIT_WORKTREE_BIN="$(CURDIR)/plugins/review-anti-patterns/scripts/check-edit-worktree" \
 	RUN_SCRUT_DOCUMENTS_BIN="$(CURDIR)/bin/run-scrut-documents" \
 	RUN_SCRUT_BIN="$(CURDIR)/bin/run-scrut" \
 	SCRUT_STUB_BIN="$(CURDIR)/tests/fixtures/scrut-stub" \

@@ -1,0 +1,14 @@
+{
+  "head": "4e1816eb16fd6230059daa76ae6a59127b1f94f3",
+  "baseline": "5205fada80635f7d9dd4a1967c94a256e60a99cb",
+  "version": "1.180.0",
+  "config": "p/default",
+  "jobs": 2,
+  "findings": 0,
+  "errors": [],
+  "scanned": [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", "Makefile", "README.md", "docs/plans/todo/2026-10-30-review-anti-patterns-edit-mode.md", "docs/reviews/2026-10-30-624-edit-mode-ledger.md", "plugins/review-anti-patterns/.claude-plugin/plugin.json", "plugins/review-anti-patterns/README.md", "plugins/review-anti-patterns/scripts/check-edit-worktree", "plugins/review-anti-patterns/skills/review-anti-patterns/SKILL.md", "plugins/review-anti-patterns/skills/review-anti-patterns/references/edit-mode.md"],
+  "ignored_paths": 8,
+  "parsed_lines_percent_approx": 100.0,
+  "mode": "native baseline, disposable git clone --shared",
+  "repo": "cboone/agent-harness-plugins"
+}
