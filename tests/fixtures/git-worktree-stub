@@ -13,6 +13,16 @@ function die() {
   exit "${2:-1}"
 }
 
+function check_ref_format() {
+  local candidate
+  while IFS= read -r candidate; do
+    [[ "${candidate}" -ef "$0" ]] && continue
+    "${candidate}" check-ref-format --branch "${1}" > /dev/null 2>&1
+    return $?
+  done < <(type -aP git)
+  die "no real Git executable found in PATH" 127
+}
+
 # Answers `git -C <path> rev-parse --path-format=absolute --git-dir` the way git
 # does: an admin directory for a path that is a worktree, and a failure for one
 # that is not. The mapping is /admin/<basename> so a testcase can name an
@@ -67,7 +77,7 @@ function main() {
     if [[ "${STUB_GIT_INVALID_REF:-}" == "1" ]]; then
       return 1
     fi
-    /usr/bin/git check-ref-format --branch "${3}" > /dev/null 2>&1
+    check_ref_format "${3}"
     return $?
   fi
 
