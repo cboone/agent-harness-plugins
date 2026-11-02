@@ -1,0 +1,82 @@
+{
+  "version": "1.180.0",
+  "results": [],
+  "errors": [],
+  "paths": {
+    "scanned": ["Makefile", "docs/plans/todo/2026-11-02-monitor-pr-client-mode.md", "docs/reviews/2026-11-02-monitor-pr-client-mode-codex-round-1.json", "docs/reviews/2026-11-02-monitor-pr-client-mode-codex-round-2.json", "docs/reviews/2026-11-02-monitor-pr-client-mode-ledger.md", "docs/reviews/2026-11-02-monitor-pr-client-mode-plants.json", "docs/reviews/2026-11-02-monitor-pr-client-mode-structural-round-1.json", "docs/reviews/2026-11-02-monitor-pr-client-mode-structural-round-2.json", "docs/reviews/2026-11-02-monitor-pr-client-mode-trims.json", "plugins/monitor-pr/.claude-plugin/plugin.json", "plugins/monitor-pr/README.md", "plugins/monitor-pr/scripts/merge-flow", "plugins/monitor-pr/scripts/resolve-copilot-threads", "plugins/monitor-pr/scripts/watch-policy.jq", "plugins/monitor-pr/skills/monitor/SKILL.md", "plugins/monitor-pr/skills/monitor/references/checkpoint.md", "plugins/monitor-pr/skills/monitor/references/repository-policy.md", "plugins/monitor-pr/skills/resolve-copilot-feedback/SKILL.md"]
+  },
+  "time": {
+    "rules": [],
+    "rules_parse_time": 1.3044919967651367,
+    "profiling_times": {
+      "config_time": 3.3532512187957764,
+      "core_time": 2.1814401149749756,
+      "ignores_time": 0.0025720596313476562,
+      "total_time": 5.747685194015503
+    },
+    "parsing_time": {
+      "total_time": 0.0,
+      "per_file_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_files": []
+    },
+    "scanning_time": {
+      "total_time": 0.5264685153961182,
+      "per_file_time": {
+        "mean": 0.011699300342135958,
+        "std_dev": 0.0011474608845964333
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_files": []
+    },
+    "matching_time": {
+      "total_time": 0.0,
+      "per_file_and_rule_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_rules_on_files": []
+    },
+    "tainting_time": {
+      "total_time": 0.0,
+      "per_def_and_rule_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_rules_on_defs": []
+    },
+    "fixpoint_timeouts": [],
+    "prefiltering": {
+      "project_level_time": 0.0,
+      "file_level_time": 0.0,
+      "rules_with_project_prefilters_ratio": 0.0,
+      "rules_with_file_prefilters_ratio": 0.9779541446208113,
+      "rules_selected_ratio": 0.0291005291005291,
+      "rules_matched_ratio": 0.0291005291005291
+    },
+    "targets": [],
+    "total_bytes": 0,
+    "max_memory_bytes": 2853189568
+  },
+  "engine_requested": "OSS",
+  "interfile_languages_used": [],
+  "skipped_rules": [],
+  "profiling_results": []
+}

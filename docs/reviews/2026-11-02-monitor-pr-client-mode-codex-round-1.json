@@ -1,0 +1,113 @@
+{
+  "statuses": [
+    {
+      "aspect": "code",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    },
+    {
+      "aspect": "errors",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    },
+    {
+      "aspect": "tests",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    },
+    {
+      "aspect": "comments",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    },
+    {
+      "aspect": "types",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    }
+  ],
+  "results": [
+    {
+      "aspect": "code",
+      "findings": [
+        {
+          "confidence": 92,
+          "detail": "The gate validates the saved reviewId and checks the saved PR's live head, but never verifies which PR or review owns the thread_id passed to the mutation. With review 10 authorized, reply can therefore publish to a thread from unapproved review 11 while reviewId remains 10. Resolution also succeeds if fixedThreads contains an ancestral commit for that thread. This is reachable because fetch returns unresolved threads across all reviews.",
+          "file": "plugins/monitor-pr/scripts/resolve-copilot-threads",
+          "fix": "Pass the target thread ID into the client validation and verify its repository, PR and originating review against the authorized round before publishing. Add cases rejecting threads from another review and another PR.",
+          "line": 898,
+          "severity": "important",
+          "title": "Uncited: Bind thread mutations to the authorized PR and review."
+        }
+      ],
+      "reviewed": "1eaa6a4a0c58543daa31311d8bb21009cc25d1eb",
+      "strengths": ["Both skills share explicit repository policy and resume rules.", "Client mutations recheck the live OPEN state and head, including between reply and resolution."],
+      "summary": "Reviewed every scoped diff, including helpers, skills, tests, documentation and generated mirrors. One authorization gap should be fixed. Bash syntax checks passed; integration tests were not run, and live GitHub validation was unavailable."
+    },
+    {
+      "aspect": "errors",
+      "findings": [],
+      "reviewed": "1eaa6a4a0c58543daa31311d8bb21009cc25d1eb",
+      "strengths": ["Client mutations stop with explicit diagnostics when authority, fix ancestry or live PR context checks fail.", "API and parsing failures preserve stderr instead of silently falling back.", "The shared workflow distinguishes unavailable review evidence from an absence of feedback."],
+      "summary": "Reviewed every membership path and the supplied committed diff for error-handling defects; none met the reporting threshold. Runtime tests were not run, and live repository-status verification was blocked by network access."
+    },
+    {
+      "aspect": "tests",
+      "findings": [
+        {
+          "confidence": 97,
+          "detail": "Rating: 8/10. This client dispatch test covers review requests, waits and merge continuation, but never supplies repair or sync candidates. Existing tests for those actions use acme repositories with explicit restrictions. Removing either client-specific block would therefore escape coverage and permit automatic CI fixes or branch synchronization outside the round's authority.",
+          "file": "tests/scrut/monitor-client-policy.md",
+          "fix": "Add client dispatch cases for failed-check repair and DIRTY/BEHIND synchronization, both without approval and with valid round authority. Assert that neither action routes and that both remain reported as blocked work.",
+          "line": 63,
+          "severity": "important",
+          "title": "Uncited: Client repair and synchronization restrictions lack regression tests."
+        },
+        {
+          "confidence": 96,
+          "detail": "Rating: 7/10. Authority tests reject a missing round, a different head and a different review, but every supplied round has a valid authority source and matching PR number. Removing the authority-source validation or PR-number comparison would escape these tests, allowing an incomplete approval record or approval for another PR sharing the same head to enable processing.",
+          "file": "tests/scrut/monitor-client-policy.md",
+          "fix": "Add isolated negative cases for an otherwise valid round with a missing or empty authority source and for a different PR number with matching head and review. Assert rejection before authentication or mutation.",
+          "line": 88,
+          "severity": "important",
+          "title": "Uncited: Round-authority tests omit incomplete approvals and PR mismatches."
+        }
+      ],
+      "reviewed": "1eaa6a4a0c58543daa31311d8bb21009cc25d1eb",
+      "strengths": ["Added integration cases exercise shipped helpers for approved and unapproved mutations, stale heads, closed PRs and changes between reply and resolution.", "Existing tests cover raw review bodies, pagination, audit intake, ancestry failures and partial reply/resolve failures.", "Mutation tests assert actual reply and resolution counts through isolated GitHub stubs."],
+      "summary": "Reviewed the complete declared scope and mapped changed behavior to added and existing tests. Coverage is substantial, with two important authority-policy gaps; Scrut execution was not completed under the read-only restriction."
+    },
+    {
+      "aspect": "comments",
+      "findings": [],
+      "reviewed": "1eaa6a4a0c58543daa31311d8bb21009cc25d1eb",
+      "strengths": ["The shared policy clearly states which default workflow rules client mode overrides.", "Resume documentation preserves authority provenance, review identities and head-specific approval.", "Mutation comments explain why live context is checked between reply and resolution."],
+      "summary": "Reviewed comments and documentation across all 30 scoped paths, including generated mirrors, fixtures and review records, against the implementation. No defects met the reporting threshold; no files were modified."
+    },
+    {
+      "aspect": "types",
+      "findings": [
+        {
+          "confidence": 96,
+          "detail": "ClientRound: invariants require authority to apply only to the approved PR and reviews, including the thread actually mutated. Ratings: encapsulation 5/10, invariant expression 6/10, invariant usefulness 9/10, invariant enforcement 5/10. checked_state validates the saved reviewId against reviewIds, but require_client_live_context receives no thread ID and checks only the saved PR's lifecycle and head. With review 10 approved and reviewId still 10, replying to a thread from unapproved review 11 passes every new gate. The authorization invariant therefore depends on callers keeping two unrelated values consistent.",
+          "file": "plugins/monitor-pr/scripts/resolve-copilot-threads",
+          "fix": "Represent approved thread targets alongside their review and PR identity, then require each mutation's thread ID to match an authorized target before calling GraphQL.",
+          "line": 898,
+          "severity": "important",
+          "title": "Uncited: Round authority is not bound to the thread being mutated."
+        }
+      ],
+      "reviewed": "1eaa6a4a0c58543daa31311d8bb21009cc25d1eb",
+      "strengths": ["Repository restrictions: encapsulation 8/10, expression 8/10, usefulness 9/10, enforcement 9/10; validated identity determines client mode, and missing identity restricts actions to observation and reporting.", "ResolvedPolicy: encapsulation 9/10, expression 9/10, usefulness 9/10, enforcement 9/10; recomputation and equality validation prevent derived permissions from drifting from restrictions.", "FixedThreads: encapsulation 7/10, expression 7/10, usefulness 9/10, enforcement 8/10; resolution requires recorded commit evidence, ADDRESSED, and successful commit-format and ancestry validation."],
+      "summary": "Reviewed all 30 scoped paths, focusing on the changed runtime JSON schemas and their consumers. One important enforcement gap remains: approved review identity is not connected to the thread being mutated."
+    }
+  ],
+  "before_tree": "e822448af21a8024ed91d10a3dafa8549d6dfa3d",
+  "after_tree": "e822448af21a8024ed91d10a3dafa8549d6dfa3d",
+  "scope_changed": false
+}
