@@ -21,3 +21,11 @@ The manual regression passed: `uv run --no-project tests/fixtures/plant-defects-
 Full `make test-scrut` finished: 55 of 56 documents passed. `environment-isolation.md` had 50 successful cases and one failed assertion, “Review fixture manifest satisfies its operand contract”, with the same six known diagnostics from `review-submodule-fixture` at lines 132, 133, 134 and 254. Both files are unchanged from the merge base. No additional failures or skipped cases were reported.
 
 Tidy retains a local pre-tidy backup and rebuilds logical signed commits from the verified merge base; the handoff records the exact-tree comparison. TOOLING merges; no Copilot review requested and no live configuration changed.
+
+## Main synchronization, 2026-11-02
+
+TOOLING relayed the tl27 drain go-ahead and limited tests to owned/conflicted documents plus the error-output and environment-isolation documents, at most two concurrently. The remote branch already contained main `7817cab667d625bce777ad808a327d8e72f1b502` through merge `81e375f967a1ee5e1bf7d173570bc3af39120900`, whose signature GitHub verified. The local checkout fast-forwarded to that branch; merging `origin/main` then reported already up to date. No conflicts, history rewrite or additional merge commit were needed; the branch has no changed Scrut documents relative to main.
+
+The new checker initially rejected the Python regression as non-Bash source without a named exclusion. Added that exact filename to `bin/lib/error-output-policy.json`, with the reason that it is Python, keeps subprocess stderr live and propagates unsuccessful exits. No diagnostics rule changed. The initial environment-isolation run failed on that missing entry; both requested documents were rerun after the fix.
+
+Final checks passed: `check-fixture-environments`, its `--review-paths` mode, the manual Python regression, error-output guard (102 cases) and environment isolation (51 cases), with zero failures or skipped cases. `check-versions` confirmed main's 1.0.4 to branch's 1.0.5 remains forward, generated manifest agrees, and marketplace coverage/version ownership match. No additional bump was needed. No full suite or other merge-changed documents were run for this synchronization, per the go-ahead and thermal limit. Original review round counts and end state remain unchanged.

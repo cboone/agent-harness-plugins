@@ -1,6 +1,10 @@
 {
   "non_bash": [
     {
+      "name": "tests/fixtures/plant-defects-bytecode.py",
+      "reason": "Python bytecode regression, not Bash source; subprocess stderr stays live and check_output propagates nonzero exits."
+    },
+    {
       "name": "bin/lib/error-output-ast.jq",
       "reason": "jq evaluator, not a shell program; its Bash caller checks status and keeps diagnostics live."
     },
