@@ -1,0 +1,17 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "This marker is inside the quoted jq program, so the guard cannot recognize it as a shell exception. The actual shell comment on line 306 already covers the redirects. The same redundant marker appears in plugins/notify/scripts/notify:328, creating two apparent annotation sites where only one is effective.",
+      "file": "plugins/attention-log/scripts/attention-log",
+      "fix": "Remove the error-output-allow comment inside both quoted jq programs. Retain the actual shell comments after the SESSION_NAME fallback assignments.",
+      "line": 302,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Function comments: Remove the ineffective exception markers inside jq."
+    }
+  ],
+  "reviewed": "994c765674a84c3bbad6f97ed104225c92edb0fb",
+  "strengths": ["The development guide clearly distinguishes live forwarding, retained diagnostics and explicit exceptions.", "The plan and ledger accurately preserve both accepted tracking limits without claiming detection or fixes."],
+  "summary": "Reviewed the scoped comments, documentation and historical records against the implementation and tests. Found one comment-only suggestion and no additional Important or Critical documentation defects; no files changed or repository code executed."
+}

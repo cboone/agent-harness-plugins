@@ -83,7 +83,7 @@ function require_shape() {
   local json="${2}"
   local filter="${3}"
 
-  if ! jq -e "${filter}" <<< "${json}" > /dev/null 2>&1; then
+  if ! jq -e "${filter}" <<< "${json}" > /dev/null 2>&1; then # error-output-allow: invalid API JSON receives the named-context diagnostic
     die "unexpected response from ${endpoint}"
   fi
 }
@@ -350,7 +350,7 @@ function main() {
   fi
 
   local daily_file="${data_dir}/daily.json"
-  if [[ -f "${daily_file}" ]] && ! jq -se 'length == 1 and (.[0] | type) == "object"' "${daily_file}" > /dev/null 2>&1; then
+  if [[ -f "${daily_file}" ]] && ! jq -se 'length == 1 and (.[0] | type) == "object"' "${daily_file}" > /dev/null 2>&1; then # error-output-allow: invalid daily JSON receives the named-file diagnostic
     die "${daily_file} is not a single JSON object"
   fi
 

@@ -838,7 +838,7 @@ function usage_error() {
 function require_tools() {
   local tool
   for tool in "$@"; do
-    command -v "${tool}" > /dev/null 2>&1 || die "${E_USAGE}" "${tool} is required but not found"
+    command -v "${tool}" > /dev/null 2>&1 || die "${E_USAGE}" "${tool} is required but not found" # error-output-allow: missing tool receives a specific prerequisite diagnostic
   done
 }
 
@@ -890,7 +890,7 @@ function require_json_file() {
   local path="${1}"
   [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
   jq -e -s 'length == 1 and (.[0] | type == "object")' "${path}" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "${path} must hold exactly one JSON object"
+    || die "${E_INVALID}" "${path} must hold exactly one JSON object" # error-output-allow: invalid JSON receives the input-file validation diagnostic
 }
 
 # Sets CONFIG to the normalized config for a repository named as OWNER/NAME or
@@ -969,7 +969,7 @@ function write_atomic() {
 function start_job() {
   local name="${1}"
   shift
-  "$@" > "${TEMP_DIR}/${name}.json" 2> "${TEMP_DIR}/${name}.err" &
+  "$@" > "${TEMP_DIR}/${name}.json" 2> "${TEMP_DIR}/${name}.err" & # error-output-allow: parallel queries retain stderr and replay it on failed wait
   JOB_PIDS+=("$!")
   JOB_NAMES+=("${name}")
 }
@@ -1057,17 +1057,17 @@ function gather_local() {
   # shows only why.
   : > "${TEMP_DIR}/local-notice.txt"
   local url email base refname committed author name kind counts behind ahead path worktree
-  if ! command -v git > /dev/null 2>&1; then
+  if ! command -v git > /dev/null 2>&1; then # error-output-allow: missing git receives a specific prerequisite diagnostic
     printf '%s: git is not installed, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' "${SCRIPT_NAME}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
   fi
-  if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then # error-output-allow: repository predicate receives the specific checkout diagnostic
     printf '%s: not inside a checkout of %s, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' "${SCRIPT_NAME}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
     return 0
   fi
-  if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then
+  if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then # error-output-allow: missing origin receives the explicit repository-mismatch diagnostic
     printf '%s: this checkout'"'"'s origin is %s, not %s, so the gather reads only the branches GitHub holds, and affinity misses the files on your branches without a pull request\n' \
       "${SCRIPT_NAME}" "${url:-missing}" "${repo}" >> "${TEMP_DIR}/local-notice.txt"
     printf 'null' > "${output}"
@@ -1173,7 +1173,7 @@ function gather_zenhub() {
     } > "${chunk_file}.graphql"
     jq -n --rawfile query "${chunk_file}.graphql" --arg workspace "${workspace}" \
       '{query: $query, variables: {workspaceId: $workspace}}' > "${chunk_file}.payload"
-    zenhub_post "${chunk_file}.payload" > "${chunk_file}.response" 2> "${chunk_file}.err" || {
+    zenhub_post "${chunk_file}.payload" > "${chunk_file}.response" 2> "${chunk_file}.err" || { # error-output-allow: query failure replays the retained chunk error below
       printf '%s: the ZenHub request failed:\n' "${SCRIPT_NAME}" >&2
       sed 's/^/  /' "${chunk_file}.err" "${chunk_file}.response" >&2
       exit "${E_INVALID}"
@@ -1181,9 +1181,9 @@ function gather_zenhub() {
     # A failed lookup leaves its bug without ZenHub state, and the bugs left
     # out are listed below. A missing workspace or an unexpected error stops
     # the gather.
-    if ! jq -e "${ZENHUB_ERROR_DEFS}"'(.data.workspace != null) and (unexpected_errors | length == 0)' "${chunk_file}.response" > /dev/null 2>&1; then
+    if ! jq -e "${ZENHUB_ERROR_DEFS}"'(.data.workspace != null) and (unexpected_errors | length == 0)' "${chunk_file}.response" > /dev/null 2>&1; then # error-output-allow: invalid response is explained by structured errors or the raw response below
       printf '%s: ZenHub returned errors:\n' "${SCRIPT_NAME}" >&2
-      jq -r "${ZENHUB_ERROR_DEFS}"'if .data.workspace == null then "no workspace in the response" else empty end, (unexpected_errors[] | "\(.message // "no message")\(if .path then " (at \(.path | map(tostring) | join(".")))" else "" end)")' "${chunk_file}.response" 2> /dev/null | sed 's/^/  /' >&2 || sed 's/^/  /' "${chunk_file}.response" >&2
+      jq -r "${ZENHUB_ERROR_DEFS}"'if .data.workspace == null then "no workspace in the response" else empty end, (unexpected_errors[] | "\(.message // "no message")\(if .path then " (at \(.path | map(tostring) | join(".")))" else "" end)")' "${chunk_file}.response" 2> /dev/null | sed 's/^/  /' >&2 || sed 's/^/  /' "${chunk_file}.response" >&2 # error-output-allow: failed structured error extraction replays the raw response
       exit "${E_INVALID}"
     fi
     jq 'map({key: .alias, value: .number}) | from_entries | {aliases: .}' "${chunk_file}.aliases" > "${chunk_file}.map"
@@ -1242,7 +1242,7 @@ function cmd_gather() {
     || die "${E_INVALID}" "BUGS_GATHER_NOW must be an ISO 8601 UTC time, such as 2026-10-06T12:00:00Z"
   work_since="$(jq -n -r --arg now "${now}" --argjson days "$(config_field "${config}" '.affinityWorkDays')" \
     '$now | fromdateiso8601 - $days * 86400 | strftime("%Y-%m-%d")')"
-  HOST_NAME="${BUGS_GATHER_HOST:-$(hostname -s 2> /dev/null || hostname)}"
+  HOST_NAME="${BUGS_GATHER_HOST:-$(hostname -s 2> /dev/null || hostname)}" # error-output-allow: short-hostname probe falls back to the portable hostname form
   make_temp_dir
 
   start_job repository github_repository "${repo}"
@@ -1265,7 +1265,7 @@ function cmd_gather() {
   wait_jobs
 
   jq -e '.data.repository != null' "${TEMP_DIR}/repository.json" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "cannot read the repository ${repo}"
+    || die "${E_INVALID}" "cannot read the repository ${repo}" # error-output-allow: invalid repository response receives a structured validation diagnostic
   [[ "$(jq -r '.data.repository.isArchived' "${TEMP_DIR}/repository.json")" != true ]] \
     || die "${E_INVALID}" "${repo} is archived; its bugs cannot change, so there is nothing to sync"
   local default_branch
@@ -1278,9 +1278,9 @@ function cmd_gather() {
   # stops at 1000 results without saying so, so a merged search that returned
   # fewer than it counted was cut short.
   jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls-open.json" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
+    || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted" # error-output-allow: invalid pulls response receives a structured validation diagnostic
   jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/pulls-merged.json" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "the search for your merged pull requests came back without a result count"
+    || die "${E_INVALID}" "the search for your merged pull requests came back without a result count" # error-output-allow: invalid merged response receives a structured validation diagnostic
   jq -e '([.[] | .data.search.nodes | length] | add // 0) >= .[0].data.search.issueCount' "${TEMP_DIR}/pulls-merged.json" > /dev/null \
     || die "${E_INVALID}" "the search for your merged pull requests was cut short, so the areas you worked in would be missing some files"
   for kind in open merged; do
@@ -1295,7 +1295,7 @@ function cmd_gather() {
   fi
   # A missing branch would leave a bug it carries looking unstarted.
   jq -e 'all(.[]; .data.repository.refs.nodes | type == "array")' "${TEMP_DIR}/branches.json" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "the branches came back without a list, so the board cannot be trusted"
+    || die "${E_INVALID}" "the branches came back without a list, so the board cannot be trusted" # error-output-allow: invalid branches response receives a structured validation diagnostic
   gather_local "${repo}" "${default_branch}" "${work_since}"
 
   for search_file in "${TEMP_DIR}"/search-*.json; do
@@ -1363,7 +1363,7 @@ function cache_usable() {
   local path="${1}"
   local check="${2}"
   [[ -f "${path}" ]] || return 1
-  if ! jq -e --argjson version "${CACHE_VERSION}" "${check}" "${path}" > /dev/null 2>&1; then
+  if ! jq -e --argjson version "${CACHE_VERSION}" "${check}" "${path}" > /dev/null 2>&1; then # error-output-allow: invalid cache response selects the cache refresh path
     printf '%s: ignoring %s: it is unreadable or was written by another version of %s\n' "${SCRIPT_NAME}" "${path}" "${SCRIPT_NAME}" >&2
     return 1
   fi
@@ -1391,7 +1391,7 @@ function require_gather() {
   require_json_file "${gather_file}"
   jq -e --argjson version "${CACHE_VERSION}" --arg repo "$(config_field "${config}" '.repo')" \
     '.version == $version and (.repo | ascii_downcase) == ($repo | ascii_downcase) and (.bugs | type == "array")' "${gather_file}" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "${gather_file} is not a gather for this repository"
+    || die "${E_INVALID}" "${gather_file} is not a gather for this repository" # error-output-allow: invalid saved gather receives a structured validation diagnostic
 }
 
 function cmd_moved() {
@@ -1408,7 +1408,7 @@ function require_assessments() {
   local path="${1}"
   [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
   jq -e -s 'length == 1 and (.[0] | type == "array" and all(.[]; type == "object" and (.number | type == "number")))' "${path}" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "${path} must hold one JSON list of assessments, each with a number"
+    || die "${E_INVALID}" "${path} must hold one JSON list of assessments, each with a number" # error-output-allow: invalid saved scores receive a structured validation diagnostic
 }
 
 # Prints the cached assessments, or null when the cache holds none.
@@ -1499,7 +1499,7 @@ function cmd_draft() {
   require_gather "${config}" "${gather_file}"
   require_json_file "${scored_file}"
   jq -e --slurpfile gather "${gather_file}" '.repo == $gather[0].repo and .gatheredAt == $gather[0].gatheredAt and (.tiers | type == "object")' "${scored_file}" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "${scored_file} was not scored from ${gather_file}"
+    || die "${E_INVALID}" "${scored_file} was not scored from ${gather_file}" # error-output-allow: invalid scored data receives a structured validation diagnostic
   require_output_dir "${output_file}"
 
   make_temp_dir
@@ -1519,7 +1519,7 @@ function cmd_save() {
   require_assessments "${assessments_file}"
   require_json_file "${scored_file}"
   jq -e --slurpfile gather "${gather_file}" '.repo == $gather[0].repo and .gatheredAt == $gather[0].gatheredAt' "${scored_file}" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "${scored_file} was not scored from ${gather_file}"
+    || die "${E_INVALID}" "${scored_file} was not scored from ${gather_file}" # error-output-allow: invalid gather metadata receives a structured validation diagnostic
   directory="$(cache_dir "${config}")"
   (umask 077 && mkdir -p -- "${directory}") || die "${E_INVALID}" "cannot create ${directory}"
   make_temp_dir
