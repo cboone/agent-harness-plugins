@@ -39,7 +39,7 @@ $ function prepare_stubs() {
 > }
 > function cleanup_socket_fixture() {
 >   if [[ -n "${socket_pid:-}" ]]; then
->     kill "${socket_pid}" 2> /dev/null || true
+>     kill "${socket_pid}" || true
 >     socket_pid=""
 >   fi
 >   if [[ -n "${tmux_tmpdir:-}" ]]; then

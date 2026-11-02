@@ -22,7 +22,7 @@ $ socket_root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && ln -s "${BASH}" "${socket_bin}/bash" \
 >   && [[ -z "$(PATH="${socket_bin}" type -P perl)" ]] \
 >   && socket_pid="" \
->   && trap 'if [[ -n "${socket_pid}" ]]; then kill "${socket_pid}" 2>/dev/null || true; fi' EXIT \
+>   && trap 'if [[ -n "${socket_pid}" ]]; then kill "${socket_pid}" || true; fi' EXIT \
 >   && { socket_pid="$(PATH="${socket_bin}" "${UNIX_SOCKET_FIXTURE_BIN}" "${socket_root}/server")" || exit "$?"; } \
 >   && [[ "${socket_pid}" =~ ^[0-9]+$ ]] \
 >   && kill -0 "${socket_pid}" \

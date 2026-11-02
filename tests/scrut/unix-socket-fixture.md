@@ -3,6 +3,12 @@
 Simulate permission errors at the language socket API. The fixture must identify
 creation and connection restrictions; other errors remain failures.
 
+## Diagnostic capture
+
+```scrut {fail_fast: true}
+$ source "${REPO_ROOT}/bin/lib/capture-child.bash"
+```
+
 ## Ruby availability
 
 ```scrut {fail_fast: true}
@@ -15,7 +21,7 @@ $ type -P ruby > /dev/null || { echo 'SKIP: Ruby-specific fixture contracts requ
 $ socket_root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && function ruby() { command ruby -rsocket -e 'class << UNIXServer; def new(*); raise Errno::EPERM; end; end' "$@"; } \
 >   && export -f ruby \
->   && "${UNIX_SOCKET_FIXTURE_BIN}" "${socket_root}/server" 2>&1
+>   && capture_child - --error-stdout -- "${UNIX_SOCKET_FIXTURE_BIN}" "${socket_root}/server"
 SKIP: Unix socket creation or connection unavailable: Operation not permitted
 [80]
 ```
@@ -27,7 +33,7 @@ $ socket_root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && function ruby() { command ruby -rsocket -e 'class << UNIXServer; def new(path); File.write(path, %q()); Object.new.tap { |server| def server.close; end }; end; end; class << UNIXSocket; def new(*); raise Errno::EACCES; end; end' "$@"; } \
 >   && export -f ruby \
 >   && exit_code=0 \
->   && "${UNIX_SOCKET_FIXTURE_BIN}" "${socket_root}/server" > "${socket_root}/stdout" 2> "${socket_root}/stderr" || exit_code=$?; cat "${socket_root}/stderr"; test ! -e "${socket_root}/server" && test ! -s "${socket_root}/stdout" && printf 'exit: %s\n' "${exit_code}"
+>   && capture_child diagnostics --stdout "${socket_root}/stdout" --error-stdout -- "${UNIX_SOCKET_FIXTURE_BIN}" "${socket_root}/server" || exit_code=$?; test ! -e "${socket_root}/server" && test ! -s "${socket_root}/stdout" && printf 'exit: %s\n' "${exit_code}"
 SKIP: Unix socket creation or connection unavailable: Permission denied
 exit: 80
 ```
@@ -39,6 +45,6 @@ $ socket_root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && function ruby() { command ruby -rsocket -e 'class << UNIXServer; def new(*); raise Errno::EINVAL; end; end' "$@"; } \
 >   && export -f ruby \
 >   && exit_code=0 \
->   && "${UNIX_SOCKET_FIXTURE_BIN}" "${socket_root}/server" > "${socket_root}/stdout" 2> "${socket_root}/stderr" || exit_code=$?; test -s "${socket_root}/stderr" && test ! -s "${socket_root}/stdout" && printf 'exit: %s\n' "${exit_code}"
+>   && capture_child diagnostics --stdout "${socket_root}/stdout" -- "${UNIX_SOCKET_FIXTURE_BIN}" "${socket_root}/server" || exit_code=$?; test -n "${diagnostics}" && test ! -s "${socket_root}/stdout" && printf 'exit: %s\n' "${exit_code}"
 exit: 1
 ```
