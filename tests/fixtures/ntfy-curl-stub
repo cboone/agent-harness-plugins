@@ -19,7 +19,7 @@ set -euo pipefail
 # Prints the permission bits of a file, with GNU stat first, because BSD stat
 # has no -c.
 function file_mode() {
-  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}"
+  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}" # error-output-allow: GNU stat failure selects the BSD stat fallback
 }
 
 function main() {
@@ -42,7 +42,7 @@ function main() {
 
   if [[ -n "${STUB_CURL_LOG:-}" ]]; then
     {
-      printf 'arg: %s\n' "${args[@]}"
+      printf 'arg: %s\n' ${args[@]+"${args[@]}"}
       printf 'body: %s\n' "${body}"
       local secrets="${NTFY_TOPIC+NTFY_TOPIC }${NTFY_TOKEN+NTFY_TOKEN}"
       printf 'env secrets: %s\n' "${secrets:-none}"

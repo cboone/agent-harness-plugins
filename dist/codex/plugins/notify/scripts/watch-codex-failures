@@ -72,23 +72,23 @@ function main() {
     [[ -z "${owner_pid}" ]] || die '--once and --owner-pid are mutually exclusive'
   else
     [[ "${owner_pid}" =~ ^[1-9][0-9]*$ ]] || die '--owner-pid requires a positive PID'
-    kill -0 "${owner_pid}" 2> /dev/null || die 'the supervising process is not running'
+    kill -0 "${owner_pid}" 2> /dev/null || die 'the supervising process is not running' # error-output-allow: process-existence predicate receives the explicit supervising-process diagnostic
   fi
   case "${tier}" in
     '' | top | lead | worker | untiered) ;;
     *) die 'invalid tier' ;;
   esac
   script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-  exec 3< "${rollout}"
+  exec 3< "${rollout}" # error-output-allow: retain the rollout reader on descriptor 3; open errors remain on stderr under strict mode
   local initial_bytes bytes_read=0
   initial_bytes="$(LC_ALL=C wc -c < "${rollout}")"
   cd -- "${cwd}"
 
-  local line line_bytes partial="" record identity="" subagent=false state=startup action turn kind message key marker payload alerter_path
+  local line line_bytes partial="" record identity="" subagent=false state=startup action turn kind message key marker payload alerter_path claim_error
   [[ "${once}" == false ]] || state=final-drain
   while true; do
     if [[ "${state}" == owner-exit ]]; then
-      if kill -0 "${owner_pid}" 2> /dev/null; then
+      if kill -0 "${owner_pid}" 2> /dev/null; then # error-output-allow: process-existence predicate selects follow or final-drain state
         state=following
         sleep 0.2
       else
@@ -123,20 +123,23 @@ function main() {
       message="$(printf '%s' "${record}" | jq -r '.message')"
       key="$(jq -nc --arg id "${identity}" --arg turn "${turn}" '[$id,$turn]' | shasum -a 256 | cut -d ' ' -f 1)"
       marker="${XDG_CACHE_HOME:-${HOME}/.cache}/agent-harness-notify/codex-failures/${key}"
-      [[ ! -d "${marker}" ]] || continue
+      [[ ! -e "${marker}" && ! -L "${marker}" ]] || continue
       if ! alerter_path="$(command -v alerter)" || [[ ! -f "${alerter_path}" || ! -x "${alerter_path}" ]]; then
         die "alerter is not executable (thread ${identity}, turn ${turn})"
       fi
       mkdir -p "$(dirname "${marker}")"
       # Claim delivery once across concurrent readers and restarts. Never retry an uncertain delivery.
-      if mkdir "${marker}" 2> /dev/null; then
+      if claim_error="$( (
+        set -o noclobber
+        : > "${marker}"
+      ) 2>&1)"; then # error-output-allow: exclusive file claim retains errors for non-contention failure diagnostics
         payload="$(jq -nc --arg kind "${kind}" --arg message "${message}" --arg session_id "${identity}" --arg turn_id "${turn}" \
           --arg session_name "${name}" --arg tmux_session "${tmux_session}" --arg tmux_window "${tmux_window}" \
           '{kind:$kind,message:$message,session_id:$session_id,turn_id:$turn_id,session_name:$session_name,
             tmux_session:$tmux_session,tmux_window:$tmux_window}')"
         printf '%s' "${payload}" | NOTIFY_TIER="${tier}" "${script_dir}/notify" codex-failure
-      elif [[ ! -d "${marker}" ]]; then
-        die 'cannot claim failure delivery'
+      elif [[ ! -e "${marker}" && ! -L "${marker}" ]]; then
+        die "cannot claim failure delivery: ${claim_error}"
       fi
     else
       partial="${partial}${line}"

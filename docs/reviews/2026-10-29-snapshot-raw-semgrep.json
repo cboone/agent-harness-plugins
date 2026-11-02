@@ -1,0 +1,35 @@
+{
+  "version": "1.180.0",
+  "head": "d885939069e9771ffddc6a3137bad60812990b76",
+  "base": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+  "command": "semgrep scan --config auto --baseline-commit 7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71 --json --output <results.json>",
+  "exit_status": 0,
+  "findings": 0,
+  "targets_scanned": 24,
+  "rules_run": 131,
+  "parsed_lines_percent": 64.3,
+  "parser_errors": [
+    {
+      "type": "Syntax error",
+      "path": "plugins/review-pr-with-codex/scripts/review-scope",
+      "code": 3,
+      "level": "warn"
+    },
+    {
+      "type": "Syntax error",
+      "path": "plugins/review-until-clean/scripts/review-scope",
+      "code": 3,
+      "level": "warn"
+    },
+    {
+      "type": "PartialParsing",
+      "path": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "code": 3,
+      "level": "warn"
+    }
+  ],
+  "shellcheck": "passed on all affected files, no new suppressions",
+  "baseline_side": "Semgrep skipped the baseline-side scan because current findings were empty",
+  "metrics": "default, no metrics override",
+  "disposition": "counts under the recorded shell-only incomplete parsing rule; incomplete security coverage disclosed"
+}

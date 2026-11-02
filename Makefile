@@ -28,6 +28,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \
+	-u STUB_SHFMT_REAL_BIN -u STUB_SHFMT_MODE -u ERROR_OUTPUT_SHFMT_STUB_PATH \
 	-u CHAIN_CODEX_STUB_MODE \
 	-u EVAL_GH_AUTH -u EVAL_GH_LOG \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
@@ -74,6 +75,8 @@ SCRUT_ENV := \
 	CATALOG_RELEASE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/catalog-release-fixture" \
 	ENVIRONMENT_ISOLATION_BIN="$(CURDIR)/tests/fixtures/environment-isolation" \
 	CHECK_FIXTURE_ENVIRONMENTS_BIN="$(CURDIR)/bin/check-fixture-environments" \
+	ERROR_OUTPUT_GUARD_BIN="$(CURDIR)/tests/fixtures/error-output-guard" \
+	ERROR_OUTPUT_SHFMT_STUB_BIN="$(CURDIR)/tests/fixtures/error-output-shfmt-stub" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \
 	LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/workmux/scripts/launch-workmux" \
 	DEPENDABOT_PRS_BIN="$(CURDIR)/plugins/dependabot/scripts/dependabot-prs" \
@@ -138,7 +141,7 @@ SHELL_SCRIPTS = $(shell ./bin/list-shell-scripts)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help lint lint-markdown lint-shell format validate validate-corpus build test-scrut test-scrut-update test-all
+.PHONY: help lint lint-markdown lint-shell format validate validate-corpus build test-scrut test-scrut-update test-bash32 test-all
 
 help:
 	@echo "Targets:"
@@ -152,6 +155,7 @@ help:
 	@echo "  test-scrut         Run the scrut documents in parallel (SCRUT_JOBS=N to limit)"
 	@echo "  test-scrut-update  Re-record scrut expectations"
 	@echo "  test-all           lint + validate + test-scrut"
+	@echo "  test-bash32        Empty-list regressions under macOS /bin/bash 3.2"
 	@echo ""
 	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut."
 	@echo "validate-corpus additionally needs jq and mikefarah yq v4."
@@ -168,6 +172,7 @@ lint-shell:
 	@command -v shfmt > /dev/null || { echo "shfmt is required: https://github.com/mvdan/sh" >&2; exit 1; }
 	shellcheck $(SHELL_SCRIPTS)
 	shfmt -d $(SHELL_SCRIPTS)
+	bin/check-fixture-environments --review-paths
 
 format:
 	yarn lint:fix
@@ -202,5 +207,10 @@ test-scrut-update:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
 	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"
 	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut-documents "$(SCRUT_TEST_DIR)"
+
+test-bash32:
+	@/bin/bash -c '[[ $${BASH_VERSINFO[0]} == 3 && $${BASH_VERSINFO[1]} == 2 ]]' || \
+		{ echo 'test-bash32 requires /bin/bash 3.2' >&2; exit 1; }
+	$(MAKE) test-scrut SCRUT_TEST_DIR=tests/scrut/bash-empty-lists.md
 
 test-all: lint validate test-scrut
