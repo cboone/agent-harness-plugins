@@ -163,7 +163,7 @@ The scanned count is reported as a yes/no so an empty scan, which would make the
 zero meaningless, fails the test instead of passing it.
 
 ```scrut
-$ cd "${REPO_ROOT}" && corrupted="$(grep -rlE '< [a-z][a-z0-9-]+ >' plugins/ .claude/ .github/ README.md AGENTS.md 2>/dev/null | wc -l)" && scanned="$(grep -rl 'git ' plugins/ .claude/ 2>/dev/null | wc -l)" && printf 'corrupted=%d scanned_enough=%s\n' "${corrupted}" "$([ "${scanned}" -gt 20 ] && echo yes || echo no)"
+$ cd "${REPO_ROOT}" && corrupted="$(grep -rlE '< [a-z][a-z0-9-]+ >' plugins/ .claude/ .github/ README.md AGENTS.md | wc -l)" && scanned="$(grep -rl 'git ' plugins/ .claude/ | wc -l)" && printf 'corrupted=%d scanned_enough=%s\n' "${corrupted}" "$([ "${scanned}" -gt 20 ] && echo yes || echo no)"
 corrupted=0 scanned_enough=yes
 ```
 
@@ -176,6 +176,33 @@ the read-only aspects, so a fix to either behavior belongs in both copies.
 
 ```scrut
 $ cd "${REPO_ROOT}" && cmp plugins/review-until-clean/scripts/review-scope plugins/review-pr-with-codex/scripts/review-scope && echo identical
+identical
+```
+
+## The duplicated MIT license references stay byte-identical
+
+Each scaffold plugin ships its own references so they resolve inside that
+plugin. The four MIT copies must stay in sync. Lean is excluded because it uses
+Apache 2.0; Zig is excluded because it adds a `build.zig.zon` packaging note.
+
+```scrut
+$ cd "${REPO_ROOT}" \
+>   && cmp plugins/scaffold-go-cli/skills/scaffold-go-cli/references/license.md \
+>     plugins/scaffold-go-library/skills/scaffold-go-library/references/license.md && echo identical
+identical
+```
+
+```scrut
+$ cd "${REPO_ROOT}" \
+>   && cmp plugins/scaffold-go-cli/skills/scaffold-go-cli/references/license.md \
+>     plugins/scaffold-new-repo/skills/scaffold-new-repo/references/license.md && echo identical
+identical
+```
+
+```scrut
+$ cd "${REPO_ROOT}" \
+>   && cmp plugins/scaffold-go-cli/skills/scaffold-go-cli/references/license.md \
+>     plugins/scaffold-rust-cli/skills/scaffold-rust-cli/references/license.md && echo identical
 identical
 ```
 

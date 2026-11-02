@@ -47,9 +47,10 @@ Commands:
   parse-audit                                          Audit pull request JSON read from stdin
   verify-fix <owner> <repo> <pr_number> <head_sha> <fix_commit>
                                                       Check fix ancestry against the recorded PR head
-  resolve <thread_id>                                  Resolve a review thread
+  resolve <thread_id> [--reason <reason>]             Resolve a review thread
   reply <thread_id> [--body-file <path>]               Reply to a review thread
-  reply-and-resolve <thread_id> [--body-file <path>]   Reply and resolve
+  reply-and-resolve <thread_id> [--reason <reason>] [--body-file <path>]
+                                                      Reply and resolve
 
 Options:
   --watch-state <file>    Guard a monitor invocation before auth, API reads or mutations
@@ -57,6 +58,8 @@ Options:
 
 The reply and reply-and-resolve commands read the reply body from --body-file
 or stdin if --body-file is not specified.
+Resolution reasons: ADDRESSED, WONT_FIX, INVALID (GitHub's Incorrect).
+Place --reason before --body-file. Omitting it preserves reason-free resolution.
 
 Copilot files some findings in a review body instead of an inline thread, where
 they have no thread id and cannot be replied to or resolved. fetch-reviews
@@ -76,10 +79,10 @@ Examples:
   ${SCRIPT_NAME} fetch-reviews octocat hello-world 42 --skip 5449428489,5449507605 --head 0123456789abcdef0123456789abcdef01234567
   gh api repos/octocat/hello-world/pulls/42/reviews | ${SCRIPT_NAME} parse-reviews
   ${SCRIPT_NAME} audit octocat hello-world 42
-  ${SCRIPT_NAME} resolve PRRT_kwDONZ...
+  ${SCRIPT_NAME} resolve PRRT_kwDONZ... --reason ADDRESSED
   echo "Explanation here" | ${SCRIPT_NAME} reply PRRT_kwDONZ...
   ${SCRIPT_NAME} reply PRRT_kwDONZ... --body-file response.md
-  ${SCRIPT_NAME} reply-and-resolve PRRT_kwDONZ... --body-file response.md
+  ${SCRIPT_NAME} reply-and-resolve PRRT_kwDONZ... --reason INVALID --body-file response.md
 USAGE_TEXT
 }
 
@@ -89,7 +92,7 @@ function die() {
 }
 
 function require_jq() {
-  if ! command -v jq > /dev/null 2>&1; then
+  if ! command -v jq > /dev/null 2>&1; then # error-output-allow: missing jq receives a specific prerequisite diagnostic
     die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
   fi
 }
@@ -98,11 +101,11 @@ function require_jq() {
 # require_jq so parse-reviews and parse-audit, which only read stdin, run
 # without GitHub credentials.
 function require_gh() {
-  if ! command -v gh > /dev/null 2>&1; then
+  if ! command -v gh > /dev/null 2>&1; then # error-output-allow: missing gh receives a specific prerequisite diagnostic
     die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
   fi
 
-  if ! gh auth status > /dev/null 2>&1; then
+  if ! gh auth status > /dev/null 2>&1; then # error-output-allow: authentication predicate receives a specific prerequisite diagnostic
     die "Not authenticated with GitHub. Run: gh auth login"
   fi
 }
@@ -370,7 +373,7 @@ function do_parse_reviews() {
   # Validate the shape before filtering. A failed gh call, or a hand-piped
   # error payload, otherwise surfaces as an opaque jq indexing error.
   local input_type
-  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then
+  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then # error-output-allow: invalid input receives a structured invalid-input diagnostic
     die "Invalid review JSON: could not parse input as JSON."
   fi
 
@@ -505,7 +508,7 @@ function do_parse_audit() {
   local input
   input="$(cat)"
 
-  if ! jq -e 'type == "object" and ([.reviews, .reviewComments, .issueComments, .threads] | all(type == "array"))' > /dev/null 2>&1 <<< "${input}"; then
+  if ! jq -e 'type == "object" and ([.reviews, .reviewComments, .issueComments, .threads] | all(type == "array"))' > /dev/null 2>&1 <<< "${input}"; then # error-output-allow: invalid review bundle receives the structured validation diagnostic
     die "Invalid audit JSON: expected an object with reviews, reviewComments, issueComments and threads arrays."
   fi
 
@@ -770,13 +773,28 @@ function do_verify_fix() {
   fi
 }
 
+function validate_resolution_reason() {
+  case "${1}" in
+    ADDRESSED | WONT_FIX | INVALID) ;;
+    *) die 'Resolution reason must be ADDRESSED, WONT_FIX or INVALID' ;;
+  esac
+}
+
 # Resolves a review thread via GraphQL mutation.
 # Arguments:
 #   $1 - Thread ID (e.g., PRRT_kwDONZ...)
+#   [--reason <reason>] - Copilot resolution reason
 # Outputs:
 #   "true" on success to stdout
 function do_resolve() {
   local thread_id="${1}"
+  shift
+  local -a reason_args=()
+  if [[ $# -gt 0 ]]; then
+    [[ $# -eq 2 && "${1}" == --reason ]] || die "Usage: ${SCRIPT_NAME} resolve <thread_id> [--reason <reason>]"
+    validate_resolution_reason "${2}"
+    reason_args=(-f "resolutionReason=${2}")
+  fi
 
   local response
 
@@ -785,9 +803,10 @@ function do_resolve() {
   response="$(
     gh api graphql \
       -f threadId="${thread_id}" \
+      ${reason_args[@]+"${reason_args[@]}"} \
       -f query='
-        mutation($threadId: ID!) {
-          resolveReviewThread(input: {threadId: $threadId}) {
+        mutation($threadId: ID!, $resolutionReason: PullRequestReviewThreadResolutionReason) {
+          resolveReviewThread(input: {threadId: $threadId, resolutionReason: $resolutionReason}) {
             thread { isResolved }
           }
         }
@@ -838,13 +857,20 @@ function do_reply() {
 function do_reply_and_resolve() {
   local thread_id="${1}"
   shift
+  local -a reason_args=()
+  if [[ "${1:-}" == --reason ]]; then
+    [[ $# -ge 2 ]] || die 'Resolution reason must be ADDRESSED, WONT_FIX or INVALID'
+    validate_resolution_reason "${2}"
+    reason_args=(--reason "${2}")
+    shift 2
+  fi
 
   local body
   body=$(read_body "$@")
 
   send_reply "${thread_id}" "${body}" > /dev/null
 
-  do_resolve "${thread_id}"
+  do_resolve "${thread_id}" ${reason_args[@]+"${reason_args[@]}"}
 }
 
 function require_watch_action() {
@@ -895,7 +921,7 @@ function main() {
       check_dependencies
       ;;
     verify-fix)
-      command -v git > /dev/null 2>&1 || die "git is required for verify-fix"
+      command -v git > /dev/null 2>&1 || die "git is required for verify-fix" # error-output-allow: missing git receives a specific prerequisite diagnostic
       ;;
     parse-reviews | parse-audit)
       # Reads stdin and touches no GitHub API, so it needs neither the CLI nor
@@ -936,15 +962,15 @@ function main() {
       do_verify_fix "$@"
       ;;
     resolve)
-      [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"
-      do_resolve "$1"
+      [[ $# -lt 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id> [--reason <reason>]"
+      do_resolve "$@"
       ;;
     reply)
       [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply <thread_id> [--body-file <path>]"
       do_reply "$@"
       ;;
     reply-and-resolve)
-      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
+      [[ $# -lt 1 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--reason <reason>] [--body-file <path>]"
       do_reply_and_resolve "$@"
       ;;
     *)

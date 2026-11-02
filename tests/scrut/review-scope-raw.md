@@ -143,7 +143,7 @@ $ export REVIEW_RAW_MUTATION_ROOT="${fixture}/repo" REVIEW_RAW_MUTATION_MARKER="
 >          printf 'two3\n' > "${REVIEW_RAW_MUTATION_ROOT}/f.txt" || return; \
 >          touch "${REVIEW_RAW_MUTATION_MARKER}" || return; fi; command git "$@"; } \
 >   && export -f git && test "$(type -t git)" = function \
->   && code=0 && "${REVIEW_SCOPE_BIN}" --base base > "${fixture}/out" 2> "${fixture}/err" || code=$?; \
+>   && code=0 && "${REVIEW_SCOPE_BIN}" --base base > "${fixture}/out" 2> "${fixture}/err" || code=$?; # error-output-allow: fixture asserts the retained unstable-snapshot diagnostic, failure status and empty stdout
 >   test "${code}" = 1 && test -e "${REVIEW_RAW_MUTATION_MARKER}" && test ! -s "${fixture}/out" \
 >   && cat "${fixture}/err"; unset -f git
 review-scope: the working tree changed while the scope was being read, so the file lists and the snapshot may describe different states; rerun once it has settled

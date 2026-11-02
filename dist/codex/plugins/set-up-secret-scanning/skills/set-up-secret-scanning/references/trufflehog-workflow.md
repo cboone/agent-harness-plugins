@@ -21,7 +21,8 @@ permissions:
   contents: read
 
 jobs:
-  scan:
+  # The caller job prefixes every reusable-workflow check row; keep it tool-specific.
+  trufflehog:
     uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       tool: trufflehog

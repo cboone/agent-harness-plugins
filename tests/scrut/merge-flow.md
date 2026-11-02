@@ -15,7 +15,7 @@ $ work="$(cd -P "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && pwd)" \
 >   && mkdir "${work}/bin" && ln -s "${GH_STUB_BIN}" "${work}/bin/gh" \
 >   && function flow() { PATH="${work}/bin:${PATH}" STUB_GH_DIR="${stub_dir:-${MERGE_FLOW_DATA_DIR}}" "${MERGE_FLOW_BIN}" "$@"; } \
 >   && function watch() { local sequence="${1}"; shift; STUB_GH_PR_VIEW="pr-view/${sequence}.txt" STUB_GH_PR_VIEW_STATE="$(mktemp "${work}/state.XXXXXX")" MERGE_FLOW_INTERVAL=0 flow watch acme widgets 7 1111111111111111111111111111111111111111 "$@"; } \
->   && function git_quiet() { git -c init.defaultBranch=main -c user.name=Test -c user.email=test@example.com "$@" > /dev/null 2>&1; } \
+>   && function git_quiet() { git -c init.defaultBranch=main -c user.name=Test -c user.email=test@example.com "$@" > /dev/null ; } \
 >   && mkdir -p "${work}/remote/acme" && git_quiet init --bare "${work}/remote/acme/widgets.git" \
 >   && git_quiet clone "${work}/remote/acme/widgets.git" "${work}/seed" \
 >   && git_quiet -C "${work}/seed" commit --allow-empty -m base && git_quiet -C "${work}/seed" push origin main \

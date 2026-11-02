@@ -25,9 +25,11 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u LOCK_TEST_REPORT_ORDER -u LOCK_TEST_ORDER_MARKER \
 	-u REVIEW_CASE_CORPUS_DIR -u GITHUB_REPOSITORY \
 	-u CLAUDE_MARKETPLACE -u CODEX_MARKETPLACE -u CODEX_DIST_DIR -u CODEX_DIST_LABEL \
+	-u CLAUDE_VALIDATION_LOG -u CLAUDE_VALIDATION_VERSION -u CLAUDE_VALIDATION_FAIL \
 	-u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \
+	-u STUB_SHFMT_REAL_BIN -u STUB_SHFMT_MODE -u ERROR_OUTPUT_SHFMT_STUB_PATH \
 	-u CHAIN_CODEX_STUB_MODE \
 	-u EVAL_GH_AUTH -u EVAL_GH_LOG \
 	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
@@ -40,6 +42,8 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 # drifting apart. CI invokes these targets and uses this same environment.
 SCRUT_ENV := \
 	CHECK_GITLEAKS_STARTER_BIN="$(CURDIR)/tests/fixtures/check-gitleaks-starter" \
+	VERSION_AUDIT_BIN="$(CURDIR)/bin/version-audit" \
+	VERSION_AUDIT_STUB_BIN="$(CURDIR)/tests/fixtures/version-audit-stub" \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
 	CODEX_FAILURE_WATCHER_BIN="$(CURDIR)/plugins/notify/scripts/watch-codex-failures" \
 	CHECK_CODEX_FAILURES_BIN="$(CURDIR)/tests/fixtures/check-codex-failures" \
@@ -55,6 +59,7 @@ SCRUT_ENV := \
 	COMBINED_WORKTREES_CASE_BIN="$(CURDIR)/tests/fixtures/combined-worktrees-case" \
 	COMBINED_REF_COLLISION_BIN="$(CURDIR)/tests/fixtures/combined-ref-collision" \
 	PR_BRANCH_ISSUES_BIN="$(CURDIR)/plugins/pr/scripts/branch-issues" \
+	GITHUB_SKILL_EXAMPLES_BIN="$(CURDIR)/tests/fixtures/github-skill-examples" \
 	LIST_SHELL_SCRIPTS_BIN="$(CURDIR)/bin/list-shell-scripts" \
 	MATERIALIZE_CASE_BIN="$(CURDIR)/bin/materialize-case" \
 	VALIDATE_CORPUS_BIN="$(CURDIR)/bin/validate-corpus" \
@@ -73,7 +78,10 @@ SCRUT_ENV := \
 	CATALOG_RELEASE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/catalog-release-fixture" \
 	ENVIRONMENT_ISOLATION_BIN="$(CURDIR)/tests/fixtures/environment-isolation" \
 	CHECK_FIXTURE_ENVIRONMENTS_BIN="$(CURDIR)/bin/check-fixture-environments" \
+	ERROR_OUTPUT_GUARD_BIN="$(CURDIR)/tests/fixtures/error-output-guard" \
+	ERROR_OUTPUT_SHFMT_STUB_BIN="$(CURDIR)/tests/fixtures/error-output-shfmt-stub" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \
+	CLAUDE_VALIDATION_FIXTURE_BIN="$(CURDIR)/tests/fixtures/claude-validation-fixture" \
 	LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/workmux/scripts/launch-workmux" \
 	DEPENDABOT_PRS_BIN="$(CURDIR)/plugins/dependabot/scripts/dependabot-prs" \
 	DEPENDABOT_PRS_DATA_DIR="$(CURDIR)/tests/data/dependabot-prs" \
@@ -154,6 +162,7 @@ help:
 	@echo "  test-bash32        Empty-list regressions under macOS /bin/bash 3.2"
 	@echo ""
 	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut."
+	@echo "make validate also requires Claude Code >= $$(cat .claude-code-version) on PATH."
 	@echo "validate-corpus additionally needs jq and mikefarah yq v4."
 
 lint: lint-markdown lint-shell
@@ -179,6 +188,7 @@ validate:
 	bin/check-fixture-environments
 	env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 		-u CODEX_OTHER_SKILL_RESERVE_TOKENS -u CLAUDE_MARKETPLACE bin/validate-plugins
+	bin/validate-claude-plugins
 
 # Deliberately outside validate and test-all. The corpus lives in a separate
 # repository, so it is absent on most checkouts and in CI, and a merge gate that
