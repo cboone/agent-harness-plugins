@@ -40,6 +40,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 
 # Share script and fixture paths between the test and update targets.
 SCRUT_ENV := \
+	CHECK_GITLEAKS_STARTER_BIN="$(CURDIR)/tests/fixtures/check-gitleaks-starter" \
 	RUST_AUDIT_CASE_BIN="$(CURDIR)/tests/fixtures/rust-audit-case" \
 	RUST_AUDIT_TEMPLATE="$(CURDIR)/plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template" \
 	VERSION_AUDIT_BIN="$(CURDIR)/bin/version-audit" \
