@@ -1,6 +1,10 @@
 {
   "non_bash": [
     {
+      "name": "tests/fixtures/scrut-group-probe/ScrutGroupProbe.pm",
+      "reason": "Perl POSIX test module, not Bash source; setup failures and probe diagnostics remain visible to the runner tests."
+    },
+    {
       "name": "bin/lib/error-output-ast.jq",
       "reason": "jq evaluator, not a shell program; its Bash caller checks status and keeps diagnostics live."
     },
