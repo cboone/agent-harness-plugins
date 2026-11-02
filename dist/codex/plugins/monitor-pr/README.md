@@ -6,6 +6,22 @@ Monitor a pull request until its checks pass, Copilot signs off on the current h
 
 See the [installation instructions](../../../../README.md#install).
 
+## Repository policies
+
+Both skills automatically select client mode for `swing-left` repositories.
+Available Copilot feedback is assessed without requesting or waiting for a review.
+The worker proposes severity and take/record calls; the conductor decides. One
+user go-ahead per round covers its fixes, push, short factual replies and resolving
+only threads whose fixing commit is in the PR head. Unfixed threads stay open.
+Summaries go to the conductor and private PR ledger, never a PR comment. Monitoring
+stops at the draft decision, with no reviewer request or merge continuation.
+
+In `cboone` repositories Copilot remains paused: report arriving reviews and act
+on none. Stricter loaded policies still apply. The autonomous workflow described
+below applies to other repositories only where policy permits it. See the shared
+[repository policy](skills/monitor/references/repository-policy.md) for intake,
+round authority, checkpoint and readiness rules.
+
 ## monitor-pr:monitor
 
 Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands.

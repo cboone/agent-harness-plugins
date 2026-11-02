@@ -10,7 +10,11 @@ description: >-
 
 Process and resolve GitHub Copilot's automated PR review comments systematically.
 
-## PR Comments Prohibition (CRITICAL)
+## Repository policy first
+
+Before any workflow section, load [Repository policy and shared Copilot intake](../monitor/references/repository-policy.md). Both entry points use that contract: automatic client mode for `swing-left`, independent report-only Copilot pause for `cboone`, and stricter loaded restrictions everywhere. It overrides default waits, category actions, public summaries and merge continuation. Unknown repository identity permits no action.
+
+## Default PR comment rules
 
 **NEVER leave comments directly on GitHub PRs.** This is strictly forbidden:
 
@@ -32,7 +36,7 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 - Reply and resolve in one step using the script's `reply-and-resolve` command
 - Read the pull request body with `gh pr view --json body`, and correct it in step 8 with `gh pr edit --body-file`. Editing the body is not a PR comment.
 
-**Single exception:** Step 9 uses `gh pr comment` with `--body-file` to post one required final workflow summary after terminal workflow state once PR context exists. This is the ONLY permitted use of `gh pr comment` in this skill. The final summary is blocking: if it cannot be posted, the workflow is incomplete.
+**Default-mode exception only:** Step 9 uses `gh pr comment` with `--body-file` to post one required final workflow summary after terminal workflow state once PR context exists. This is the ONLY permitted use of `gh pr comment` in this skill. The final summary is blocking: if it cannot be posted, the workflow is incomplete.
 
 ## Script Setup
 
@@ -60,7 +64,7 @@ Use the resulting quoted absolute helper path for this session. If path resoluti
 
 The examples below abbreviate that path to just `resolve-copilot-threads` for readability. They are not literal commands: expand the abbreviation when you run one, so every invocation is `bash`, then the **double-quoted** absolute path, then the arguments shown.
 
-## CRITICAL REQUIREMENTS
+## Default workflow requirements
 
 ### YOU MUST RESOLVE THREADS AFTER ADDRESSING THEM
 
@@ -183,15 +187,26 @@ For a parent, keep `Completed`, `No unresolved Copilot feedback`, `Partial` and 
 
 ## Watch policy context
 
-When a monitor parent supplies `WATCH_STATE_FILE`, retain that path for the entire child invocation. Before any API/body read or cached-body processing consult `merge-flow gate read-review` on that state, and consult `classify-review` before classifying. Before fixes, replies, resolutions, summary/body writes or publication consult `process-review`. Every bundled helper invocation in this context uses `--watch-state WATCH_STATE_FILE` before its command; never omit it to obtain standalone behavior. A blocked/malformed/missing policy stops before dependent work and returns the restriction to the parent, without posting a summary that policy forbids. A policy change returns control to the parent for fresh step 1 preparation. Standalone invocations retain their existing workflow and approval requirements.
-
-At child entry, check `process-review` before gathering context or posting anything:
+Every invocation uses prepared repository policy, including standalone calls.
+Retain the parent's `WATCH_STATE_FILE`, or prepare a state path after resolving
+the standalone PR identity as the shared reference describes. Before API/body
+reads or cached-body assessment, consult `read-review` and `classify-review`.
+Client assessment may proceed while `process-review` is blocked; return its
+proposals to the conductor before any action. Consult `process-review` before
+fixes, replies, resolutions or publication. Default-mode summary/body writes
+also require it; client mode never posts a summary or automatically edits the
+PR description. Use `--watch-state WATCH_STATE_FILE` for every helper call.
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" gate process-review < WATCH_STATE_FILE
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" gate read-review < WATCH_STATE_FILE
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" gate classify-review < WATCH_STATE_FILE
 ```
 
-Use the same physical loaded-package root as the feedback helper when the placeholder is literal. Continue only for `allowed: true`; this does not replace the more specific read/classification gates or grant approval.
+Use the same physical loaded-package root as the feedback helper when the
+placeholder is literal. Continue only for `allowed: true`. A missing or malformed
+policy stops dependent work without a public summary. On a policy change,
+reprepare from current instructions before proceeding. Standalone invocation
+never bypasses these gates.
 
 ## Core Workflow
 

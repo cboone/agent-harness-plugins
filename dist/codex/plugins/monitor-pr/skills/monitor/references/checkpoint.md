@@ -44,6 +44,15 @@ Print the exact resume command with the explicit PR number and all effective opt
 
 Say to run that command in this conversation. For transfer to another conversation, say to paste the complete checkpoint first and verify the repository and branch there. Do not create a state file in the monitored repository automatically.
 
+## Repository policy on resume
+
+Retain the verified PR repository, private ledger path, review source identities,
+conductor decisions, each loop's count/stage/end state and round authority source.
+Re-resolve repository policy on every entry. An old autonomous checkpoint grants
+no client write authority. Reconfirm whether the recorded go-ahead applies to the
+same round and head; otherwise set `clientRound` to null. Client resumes use the
+shared policy's optional Copilot intake and draft handoff, with no merge watch.
+
 ## Resume Procedure
 
 1. Match the latest checkpoint to the resolved repository and PR. Restore all watch-state fields before classifying GitHub state. If required fields are missing, report the missing fields and ask for them; do not silently reset guards or infer that no prior action occurred.

@@ -221,7 +221,7 @@ expired
 ## Policy pause allows metadata observation without merge permission
 
 ```scrut
-$ printf '%s\n' '{"restrictions":{"noFix":false,"copilotPaused":true}}' | "${MERGE_FLOW_BIN}" prepare > "${work}/policy" \
+$ printf '%s\n' '{"restrictions":{"repository":"acme/widgets","noFix":false,"copilotPaused":true}}' | "${MERGE_FLOW_BIN}" prepare > "${work}/policy" \
 >   && row '.snapshot.state="CLOSED"' > "${WATCH_TEST_SEQUENCE}" && reset_watch \
 >   && "${MERGE_FLOW_BIN}" --watch-state "${work}/policy" watch-changes acme widgets 7 aaa "${work}/baseline" --once | jq -r '.event'
 closed
@@ -245,7 +245,7 @@ no-read
 ## Blocked metadata permission refuses before any offline call
 
 ```scrut
-$ printf '%s\n' '{"restrictions":{"noFix":false,"copilotPaused":false,"blockedActions":["read-axis"]}}' | "${MERGE_FLOW_BIN}" prepare > "${work}/blocked" \
+$ printf '%s\n' '{"restrictions":{"repository":"acme/widgets","noFix":false,"copilotPaused":false,"blockedActions":["read-axis"]}}' | "${MERGE_FLOW_BIN}" prepare > "${work}/blocked" \
 >   && reset_watch && "${MERGE_FLOW_BIN}" --watch-state "${work}/blocked" watch-changes acme widgets 7 aaa "${work}/baseline" --once 2>&1
 merge-flow: watch policy blocks read-axis (unavailable)
 [1]
@@ -424,7 +424,7 @@ This pins the documented combination contract, not live model tool ordering.
 $ combiner="$(awk '/^jq -nc --argjson review_pending/{take=1} take && /^[`][`][`]/{exit} take{print}' "${MONITOR_SKILL_FILE}")" \
 >   && test -n "${combiner}" \
 >   && observation="$(review_pending=false workflow_pending=true review_diagnostic='' workflow_diagnostic='workflow offline' bash -c "${combiner}")" \
->   && state="$(printf '%s\n' '{"snapshot":{"state":"OPEN"},"restrictions":{"noFix":false,"copilotPaused":false},"candidates":[],"runningPermittedCheck":false}' | "${MERGE_FLOW_BIN}" prepare | jq --argjson observation "${observation}" '.observations=[$observation]')" \
+>   && state="$(printf '%s\n' '{"snapshot":{"state":"OPEN"},"restrictions":{"repository":"acme/widgets","noFix":false,"copilotPaused":false},"candidates":[],"runningPermittedCheck":false}' | "${MERGE_FLOW_BIN}" prepare | jq --argjson observation "${observation}" '.observations=[$observation]')" \
 >   && first="$(printf '%s\n' "${state}" | "${MERGE_FLOW_BIN}" lifecycle | "${MERGE_FLOW_BIN}" dispatch)" \
 >   && printf '%s\n' "${first}" | jq -c '{retry:.route.retry,count:.observationFailures["review-metadata"]}' \
 >   && counts="$(printf '%s\n' "${first}" | jq -c '.observationFailures')" \
