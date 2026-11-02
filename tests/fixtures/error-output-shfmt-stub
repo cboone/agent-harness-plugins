@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Simulate parser failures only for the marked static exception fixture.
+set -euo pipefail
+
+function main() {
+  [[ "$(command -v shfmt)" == "${ERROR_OUTPUT_SHFMT_STUB_PATH:?stub path is required}" ]] || {
+    echo 'parser test requires shfmt to resolve to its committed stub' >&2
+    return 2
+  }
+  [[ -x "${STUB_SHFMT_REAL_BIN:?real shfmt is required}" && "${STUB_SHFMT_REAL_BIN}" != "${ERROR_OUTPUT_SHFMT_STUB_PATH}" ]] || {
+    echo 'parser test requires a distinct real shfmt executable' >&2
+    return 2
+  }
+  local input
+  input="$(mktemp "${TMPDIR:-/tmp}/error-output-parser.XXXXXX")"
+  readonly OUTPUT_GUARD_PARSER_INPUT="${input}"
+  trap 'rm "${OUTPUT_GUARD_PARSER_INPUT}"' EXIT
+  cat > "${input}"
+  if grep -Fq '# OUTPUT_GUARD_PARSER_FAILURE_FIXTURE' "${input}"; then
+    case "${STUB_SHFMT_MODE:?stub mode is required}" in
+      crash)
+        echo 'stub parser crash' >&2
+        return 139
+        ;;
+      terminated)
+        echo 'stub parser termination' >&2
+        return 143
+        ;;
+      io)
+        echo 'stub parser input I/O failure' >&2
+        return 1
+        ;;
+      empty) return 1 ;;
+      invalid-ast)
+        printf '%s\n' '{"Type":"Other"}'
+        return 0
+        ;;
+      *)
+        echo 'unknown parser failure mode' >&2
+        return 2
+        ;;
+    esac
+  fi
+  "${STUB_SHFMT_REAL_BIN}" "$@" < "${input}"
+}
+
+main "$@"

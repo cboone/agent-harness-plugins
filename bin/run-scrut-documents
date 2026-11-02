@@ -105,12 +105,12 @@ function stop_workers() {
   fi
   if [[ -n "${pgid}" ]]; then
     # Stop the leader first, including before its child-only group setup.
-    kill -TERM -- "${pgid}" 2> /dev/null || true
-    kill -TERM -- "-${pgid}" 2> /dev/null || true
-    kill -CONT -- "-${pgid}" 2> /dev/null || true
+    kill -TERM -- "${pgid}" 2> /dev/null || true  # error-output-allow: cleanup tolerates an already stopped leader
+    kill -TERM -- "-${pgid}" 2> /dev/null || true # error-output-allow: cleanup tolerates an already stopped process group
+    kill -CONT -- "-${pgid}" 2> /dev/null || true # error-output-allow: cleanup tolerates an already stopped process group
   fi
   if [[ -n "${PROGRESS_PID}" ]]; then
-    kill -TERM "${PROGRESS_PID}" 2> /dev/null || true
+    kill -TERM "${PROGRESS_PID}" 2> /dev/null || true # error-output-allow: cleanup tolerates an already stopped progress process
   fi
   if [[ -n "${SINGLE_DOCUMENT}" ]]; then
     if [[ -n "${WORKER_PGID}" ]]; then
@@ -140,7 +140,7 @@ function list_documents() {
 
 function default_jobs() {
   local count
-  count="$(getconf _NPROCESSORS_ONLN 2> /dev/null || sysctl -n hw.ncpu 2> /dev/null || true)"
+  count="$(getconf _NPROCESSORS_ONLN 2> /dev/null || sysctl -n hw.ncpu 2> /dev/null || true)" # error-output-allow: platform probes fall back to one worker
   if [[ "${count}" =~ ${POSITIVE_INTEGER} ]]; then
     printf '%s\n' "${count}"
   else
@@ -178,7 +178,7 @@ function run_document() {
   local reason
   local started="${SECONDS}"
 
-  "${RUN_SCRUT_WRAPPER}" --shell bash test "${document}" > "${log}" 2>&1 < /dev/null || status=$?
+  "${RUN_SCRUT_WRAPPER}" --shell bash test "${document}" > "${log}" 2>&1 < /dev/null || status=$? # error-output-allow: document log is replayed by the coordinator with its saved status
   if ((status == 0)) && ! reason="$(check_summary "${document}" "${log}")"; then
     printf '%s\n' "${reason}" >> "${log}"
     status=1
@@ -218,7 +218,7 @@ function run_parallel() {
   mkfifo "${progress}"
   # shellcheck disable=SC2016 # $1 and $2 expand in the child bash, not here.
   run_in_group xargs -0 -n 2 -P "${jobs}" bash -c 'run_document "$1" "$2"' run_document \
-    < "${LOG_DIR}/queue" > "${progress}" 2>&1 &
+    < "${LOG_DIR}/queue" > "${progress}" 2>&1 & # error-output-allow: FIFO streams progress live to the parent cat process
   WORKER_PGID=$!
   cat "${progress}" &
   PROGRESS_PID=$!
@@ -236,8 +236,8 @@ function run_parallel() {
   local -a failed=()
   local status elapsed
   for ((i = 0; i < count; i++)); do
-    status="$(cat "${LOG_DIR}/${i}.status" 2> /dev/null || printf 'missing')"
-    elapsed="$(cat "${LOG_DIR}/${i}.seconds" 2> /dev/null || printf '?')"
+    status="$(cat "${LOG_DIR}/${i}.status" 2> /dev/null || printf 'missing')" # error-output-allow: missing worker receipt becomes an explicit missing status
+    elapsed="$(cat "${LOG_DIR}/${i}.seconds" 2> /dev/null || printf '?')"     # error-output-allow: missing duration is displayed as unknown
     printf '\n'
     if [[ "${status}" == 0 ]]; then
       printf '==> %s: passed (%ss)\n' "${documents[i]}" "${elapsed}"
@@ -337,7 +337,7 @@ function main() {
     LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/run-scrut-documents.XXXXXX")"
     local status=0
     SINGLE_DOCUMENT="${documents[0]}"
-    run_in_group "${RUN_SCRUT_WRAPPER}" --shell bash test "${documents[0]}" > "${LOG_DIR}/single.log" 2>&1 &
+    run_in_group "${RUN_SCRUT_WRAPPER}" --shell bash test "${documents[0]}" > "${LOG_DIR}/single.log" 2>&1 & # error-output-allow: single-document log is replayed after wait and summary validation
     WORKER_PGID=$!
     wait "${WORKER_PGID}" || status=$?
     WORKER_PGID=""

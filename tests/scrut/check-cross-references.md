@@ -19,12 +19,12 @@ All skill cross-references resolve.
 ## Qualified names do not resolve through another plugin
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Use `/missing:other`.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Use `/missing:other`.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Qualified names do not resolve through another plugin
 ::error::plugins/demo/skills/demo/SKILL.md references the skill /missing:other but plugins/missing/skills/other/SKILL.md does not exist
 ```
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Use the `other:missing` skill.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Use the `other:missing` skill.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Qualified names do not resolve through another plugin
 ::error::plugins/demo/skills/demo/SKILL.md references the skill other:missing but plugins/other/skills/missing/SKILL.md does not exist
 ```
 
@@ -55,7 +55,7 @@ All skill cross-references resolve.
 ## A path into this repository that does not resolve is reported
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: A path into this repository that does not resolve is reported
 ::error::plugins/demo/skills/demo/SKILL.md references plugins/other/missing.md but no such path exists in this repository
 ```
 
@@ -72,12 +72,12 @@ All skill cross-references resolve.
 existed, naming a plugin that had been renamed. Both halves are reported.
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '- `setup-ci` (read `plugins/setup-ci/commands/setup-ci.md`)' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | grep -c '^::error::'
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '- `setup-ci` (read `plugins/setup-ci/commands/setup-ci.md`)' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | grep -c '^::error::' # error-output-allow: testcase asserts retained diagnostics: The regression from issue #356
 1
 ```
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Invoke `/setup-ci` to configure CI.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Invoke `/setup-ci` to configure CI.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: The regression from issue #356
 ::error::plugins/demo/skills/demo/SKILL.md references the skill /setup-ci but plugins/setup-ci does not exist
 ```
 
@@ -93,7 +93,7 @@ All skill cross-references resolve.
 ## A sibling reference resolves against the skill directory
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'See `./references/real.md` and `./references/gone.md`.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'See `./references/real.md` and `./references/gone.md`.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: A sibling reference resolves against the skill directory
 ::error::plugins/demo/skills/demo/SKILL.md references ./references/gone.md but plugins/demo/skills/demo/references/gone.md does not exist
 ```
 
@@ -103,7 +103,7 @@ $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'See `./references/r
 executable bit, so only the rest of the subtree is resolved here.
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Load ${CLAUDE_PLUGIN_ROOT}/references/gone.md at startup.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Load ${CLAUDE_PLUGIN_ROOT}/references/gone.md at startup.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: A plugin-root reference resolves against the owning plugin
 ::error::plugins/demo/skills/demo/SKILL.md references ${CLAUDE_PLUGIN_ROOT}/references/gone.md but plugins/demo/references/gone.md does not exist
 ```
 
@@ -123,7 +123,7 @@ All skill cross-references resolve.
 ```
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '<!-- validate-plugins: repository-paths -->' 'Run `bin/real-tool`, then `bin/nonexistent-tool`.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '<!-- validate-plugins: repository-paths -->' 'Run `bin/real-tool`, then `bin/nonexistent-tool`.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: An ambiguous prefix is checked only where the file declares its frame
 ::error::plugins/demo/skills/demo/SKILL.md references bin/nonexistent-tool but no such path exists in this repository
 ```
 
@@ -146,14 +146,14 @@ An entry that matches nothing is itself reported, so an exemption cannot outlive
 the reference it was written for and quietly hollow out the check.
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '<!-- validate-plugins: ignore plugins/other/missing.md -->' 'Nothing references that path any more.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '<!-- validate-plugins: ignore plugins/other/missing.md -->' 'Nothing references that path any more.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: An ignore entry exempts one reference
 ::error::plugins/demo/skills/demo/SKILL.md ignores plugins/other/missing.md but no reference by that name was found; drop the stale ignore entry
 ```
 
 ## A skill name beside the word "skill" must name a plugin
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'The `setup-linters` skill runs after the `demo` skill.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'The `setup-linters` skill runs after the `demo` skill.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: A skill name beside the word "skill" must name a plugin
 ::error::plugins/demo/skills/demo/SKILL.md references the skill setup-linters but plugins/setup-linters does not exist
 ```
 
@@ -321,7 +321,7 @@ reports success having scanned nothing, which is the exact shape of failure this
 check exists to catch, so the default path is exercised on its own.
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: The default scan discovers the files itself
 ::error::plugins/demo/skills/demo/SKILL.md references plugins/other/missing.md but no such path exists in this repository
 ```
 
@@ -329,7 +329,7 @@ Reference material nested under a topic directory is reached too, which the
 `write-*` skills and `set-up-linters` rely on.
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && mkdir -p plugins/demo/skills/demo/references/tools && printf '%s\n' 'See `plugins/other/gone.md`.' > plugins/demo/skills/demo/references/tools/nested.md && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && mkdir -p plugins/demo/skills/demo/references/tools && printf '%s\n' 'See `plugins/other/gone.md`.' > plugins/demo/skills/demo/references/tools/nested.md && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: The default scan discovers the files itself
 ::error::plugins/demo/skills/demo/references/tools/nested.md references plugins/other/gone.md but no such path exists in this repository
 ```
 
@@ -342,7 +342,7 @@ early or reordered.
 $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" \
 >   && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md \
 >   && printf '%s\n' 'See `./references/gone.md`.' > plugins/other/skills/other/SKILL.md \
->   && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | grep '^::error::'
+>   && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | grep '^::error::' # error-output-allow: testcase asserts retained diagnostics: The default scan discovers the files itself
 ::error::plugins/demo/skills/demo/SKILL.md references plugins/other/missing.md but no such path exists in this repository
 ::error::plugins/other/skills/other/SKILL.md references ./references/gone.md but plugins/other/skills/other/references/gone.md does not exist
 ```
@@ -353,14 +353,14 @@ The scan reads declaration comments only from files that carry one, so a
 ```scrut
 $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" \
 >   && printf '%s\n' '<!-- validate-plugins: repository-paths -->' 'Run `bin/nonexistent-tool`.' > plugins/demo/skills/demo/SKILL.md \
->   && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1
+>   && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: The default scan discovers the files itself
 ::error::plugins/demo/skills/demo/SKILL.md references bin/nonexistent-tool but no such path exists in this repository
 ```
 
 ## A findings run exits non-zero
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" > /dev/null 2>&1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" > /dev/null
 [1]
 ```
 

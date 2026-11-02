@@ -180,3 +180,27 @@ failure disclosed. No baseline fixture edits.
 - Source, Makefile, test stub, Perl probe and runner test document remain
   byte-identical to the complete tested tree. Only process records change for
   the publication handoff. Exact-tree signed tidy and publication follow.
+
+## Main merge on 2026-11-02
+
+The standing tl27 decision in the CONDUCTOR window on 2026-10-31, relayed by
+TOOLING on 2026-11-02, covers merging main, conflict resolution, focused checks,
+version checks and the push. No full suite is authorized without its lock.
+
+Merged `origin/main` at `97346bc705628f55f5ee7028bdcb53a5d68b8464`.
+Resolved Makefile by keeping both environment-reset lists. Retained the
+child-only launcher, signal defaults and pre-group leader cancellation while
+integrating main's error-output annotations. Declared the existing Perl probe
+as non-Bash in the new named policy and annotated its two retained-diagnostic
+test captures. No launcher behavior or snapshots changed during resolution.
+
+- Focused Scrut: runner 33, environment-isolation 51 and error-output-guard 102
+  testcases passed, with zero failures or skips.
+- The prior fixture lint failure and environment-isolation assertion now pass
+  with main's fixture correction. Full repository lint passes.
+- JSON, manifests, marketplace and generated-mirror validation pass. Version
+  comparison against main finds no branch plugin content changes or bumps;
+  no replacement version is needed.
+- No full suite was run for this merge. Earlier full-suite and Semgrep results
+  above describe their recorded pre-merge trees. Pushed history is preserved;
+  this update uses a signed merge commit.
