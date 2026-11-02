@@ -1,0 +1,7 @@
+{
+  "aspect": "types",
+  "findings": [],
+  "reviewed": "994c765674a84c3bbad6f97ed104225c92edb0fb",
+  "strengths": ["Exclusion policy: exact fields, unique names, nonempty reasons and rejection of unused exclusions enforce useful invariants; encapsulation 8/10, expression 9/10, usefulness 9/10, enforcement 9/10.", "Shell-unit records: controlled construction and validated AST boundaries preserve unit identity and source-location mapping; encapsulation 8/10, expression 8/10, usefulness 9/10, enforcement 8/10.", "Descriptor state: normalized keys and a centralized, ordered reducer keep supported redirect transitions consistent within the accepted tracking limits; encapsulation 8/10, expression 8/10, usefulness 8/10, enforcement 7/10.", "Finding and report records: explicit classification tags and separate result arrays distinguish parse errors, redirect violations, live forwarding and exclusions; encapsulation 8/10, expression 8/10, usefulness 9/10, enforcement 8/10."],
+  "summary": "Reviewed the scoped changes and relevant callers, tests and records for type invariants; no additional reportable type-design defects were found. This aspect is clean at Nit, with the two explicitly accepted Important tracking limits preserved."
+}

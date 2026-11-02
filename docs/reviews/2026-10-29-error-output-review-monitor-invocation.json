@@ -1,0 +1,65 @@
+{
+  "status": "failed invocation; incomplete review, not a round",
+  "cause": "monitor matched historical diagnostic strings quoted in the changed JSON evidence, not a live logger error",
+  "selected_aspects": ["code", "errors", "tests", "comments", "types"],
+  "launched": [
+    {
+      "aspect": "code",
+      "exit_status": -15,
+      "reply_exists": false,
+      "process": "observed stopped"
+    },
+    {
+      "aspect": "errors",
+      "exit_status": -15,
+      "reply_exists": false,
+      "process": "observed stopped"
+    },
+    {
+      "aspect": "tests",
+      "exit_status": -15,
+      "reply_exists": false,
+      "process": "observed stopped"
+    }
+  ],
+  "not_launched": ["comments", "types"],
+  "actual_host_timeout_comparison": [
+    {
+      "run": "actual-old-failure",
+      "aspect": "code",
+      "actual_timestamped_host_errors": 3
+    },
+    {
+      "run": "actual-old-failure",
+      "aspect": "errors",
+      "actual_timestamped_host_errors": 3
+    },
+    {
+      "run": "actual-old-failure",
+      "aspect": "tests",
+      "actual_timestamped_host_errors": 3
+    },
+    {
+      "run": "current-readonly-run",
+      "aspect": "code",
+      "actual_timestamped_host_errors": 0
+    },
+    {
+      "run": "current-readonly-run",
+      "aspect": "errors",
+      "actual_timestamped_host_errors": 0
+    },
+    {
+      "run": "current-readonly-run",
+      "aspect": "tests",
+      "actual_timestamped_host_errors": 0
+    }
+  ],
+  "scope_changed": false,
+  "head": "db44866aca0e2f20741499d41373515920f1dcfa",
+  "base": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+  "cli": "0.166.0",
+  "retry": "none",
+  "prepared_correction": "anchor detection to timestamped ERROR codex_core::tools::router logger records; validated against old failing and current successful-reading logs",
+  "hook_review_picker": "none observed"
+}

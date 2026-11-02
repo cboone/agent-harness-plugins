@@ -150,7 +150,7 @@ temp cleanup: yes
 ```scrut
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && fence=$'\x60\x60\x60' \
 >   && printf '# A\n\n%sscrut\n$ echo a\nnot a\n%s\n' "${fence}" "${fence}" > a.md \
->   && "${RUN_SCRUT_DOCUMENTS_BIN}" a.md 2>&1 | tail -1; exit "${PIPESTATUS[0]}"
+>   && "${RUN_SCRUT_DOCUMENTS_BIN}" a.md 2>&1 | tail -1; exit "${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: Run a single document directly, with scrut's own output and status
 Result: 1 document(s) with 1 testcase(s): 0 succeeded, 1 failed and 0 skipped
 [50]
 ```
@@ -198,7 +198,7 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub
 >   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
 >   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
 >   && touch docs/missing.md docs/unrecognized.md \
->   && "${RUN_SCRUT_DOCUMENTS_BIN}" docs 2>&1 | grep -v '^finished '; exit "${PIPESTATUS[0]}"
+>   && "${RUN_SCRUT_DOCUMENTS_BIN}" docs 2>&1 | grep -v '^finished '; exit "${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: Reject missing and unrecognized summaries and preserve stderr
 Running 2 scrut documents, * at a time (glob)
 
 ==> docs/missing.md: FAILED, exit 1 (*s) (glob)
@@ -269,7 +269,7 @@ without a result as failed.
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs stub \
 >   && cp "${SCRUT_STUB_BIN}" stub/scrut && touch docs/a.md docs/b-kill.md docs/c.md \
 >   && PATH="${dir}/stub:${PATH}" SCRUT_JOBS=1 "${RUN_SCRUT_DOCUMENTS_BIN}" docs 2> stderr \
->     | grep -E '^(==>|ran |\(not run\)|[0-9]+ of|  docs/)'; status="${PIPESTATUS[0]}"; grep -c 'run was cut short' stderr; exit "${status}"
+>     | grep -E '^(==>|ran |\(not run\)|[0-9]+ of|  docs/)'; status="${PIPESTATUS[0]}"; grep -c 'run was cut short' stderr; exit "${status}" # error-output-allow: testcase asserts retained diagnostics: Report documents that never ran when xargs stops early
 ==> docs/a.md: passed (*s) (glob)
 ran docs/a.md
 ==> docs/b-kill.md: FAILED, exit missing (?s)
@@ -292,9 +292,9 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs
 >   && cp "${SCRUT_STUB_BIN}" stub/scrut && touch docs/a-slow.md docs/b-slow.md \
 >   && { PATH="${dir}/stub:${PATH}" STUB_SCRUT_PIDS="${dir}/pids" TMPDIR="${dir}/tmp" "${RUN_SCRUT_DOCUMENTS_BIN}" docs > /dev/null & } \
 >   && runner=$! \
->   && for ((attempt = 0; attempt < 100; attempt++)); do [[ "$(wc -l < pids 2> /dev/null || echo 0)" -ge 2 ]] && break; sleep 0.1; done \
+>   && for ((attempt = 0; attempt < 100; attempt++)); do [[ "$(wc -l < pids || echo 0)" -ge 2 ]] && break; sleep 0.1; done \
 >   && kill -TERM "${runner}"; status=0; wait "${runner}" || status=$?; echo "exit: ${status}" \
->   && sleep 0.5 && still_running=0 && while read -r pid; do kill -0 "${pid}" 2> /dev/null && still_running=$((still_running + 1)); done < pids; echo "still running: ${still_running}" \
+>   && sleep 0.5 && still_running=0 && while read -r pid; do kill -0 "${pid}" && still_running=$((still_running + 1)); done < pids; echo "still running: ${still_running}" \
 >   && ls -A tmp && echo "temp cleanup: yes"
 exit: 143
 still running: 0
@@ -307,12 +307,12 @@ temp cleanup: yes
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub tmp \
 >   && cp "${SCRUT_STUB_BIN}" stub/scrut && touch slow.md \
 >   && export PATH="${dir}/stub:${PATH}" && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
->   && { STUB_SCRUT_PIDS="${dir}/pids" STUB_SCRUT_CHILD_PIDS="${dir}/children" TMPDIR="${dir}/tmp" "${RUN_SCRUT_DOCUMENTS_BIN}" slow.md > output 2>&1 & } \
->   && runner=$! \
+>   && { STUB_SCRUT_PIDS="${dir}/pids" STUB_SCRUT_CHILD_PIDS="${dir}/children" TMPDIR="${dir}/tmp" "${RUN_SCRUT_DOCUMENTS_BIN}" slow.md > output 2>&1 & } && # error-output-allow: testcase asserts the retained runner cancellation output
+>   runner=$! \
 >   && for ((attempt = 0; attempt < 100; attempt++)); do [[ -s children ]] && break; sleep 0.1; done \
 >   && kill -TERM "${runner}"; status=0; wait "${runner}" || status=$?; echo "exit: ${status}" \
 >   && cat output && sleep 0.5 && still_running=0 \
->   && for record in pids children; do read -r pid < "${record}"; if kill -0 "${pid}" 2> /dev/null; then still_running=$((still_running + 1)); kill -TERM "${pid}"; fi; done \
+>   && for record in pids children; do read -r pid < "${record}"; if kill -0 "${pid}" ; then still_running=$((still_running + 1)); kill -TERM "${pid}"; fi; done \
 >   && echo "still running: ${still_running}" && ls -A tmp && echo 'temp cleanup: yes'
 exit: 143
 run-scrut-documents: slow.md: interrupted (exit 143)

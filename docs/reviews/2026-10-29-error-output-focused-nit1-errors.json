@@ -1,0 +1,17 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 92,
+      "detail": "For a named parse exception, every nonzero parser status is accepted as evidence that the exception remains necessary. If shfmt crashes or is terminated while checking that unit, its diagnostic is captured in parse.err, the unit is excluded, and the subsequent bundle parse overwrites that file. When the remaining units pass, validation succeeds without reporting the unexpected failure and can retain an exemption whose input now parses successfully.",
+      "file": "bin/lib/error-output-ast.bash",
+      "fix": "Capture and classify the parser status separately. Accept only expected syntax or recognized AST limitations; fail validation on crashes, execution failures or I/O errors, replaying parse.err with the affected unit name.",
+      "line": 190,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: Parse exceptions silently accept unexpected parser failures."
+    }
+  ],
+  "reviewed": "994c765674a84c3bbad6f97ed104225c92edb0fb",
+  "strengths": ["Ordinary bundle parse failures replay retained diagnostics and stop validation.", "Named exclusions require reasons, and successfully parsed stale exceptions are rejected.", "Static regression samples exercise error-output handling without executing sample programs."],
+  "summary": "Reviewed error handling in the committed changes and found one additional Important issue in parse-exception handling. The two accepted tracking limits remain separate known limitations. No files were changed, and no repository code or mechanical checks ran."
+}

@@ -72,7 +72,7 @@ function alert_count_is() {
 }
 
 function not_running() {
-  ! kill -0 "${1}" 2> /dev/null
+  ! kill -0 "${1}" 2> /dev/null # error-output-allow: process existence predicate verifies fixture shutdown
 }
 
 # Sets HELD_PID to the held alerter stub's PID; fails if none.
@@ -470,7 +470,7 @@ function main() {
   printf -v quoted_test_dir '%q' "${test_dir}"
   # Also stops held alerter stubs, even after a failed assertion.
   # shellcheck disable=SC2064
-  trap "[[ -z \${NOTIFY_TEST_HOLD:-} ]] || pkill -KILL -f ${quoted_test_dir}/bin/alerter 2> /dev/null || true; rm -rf ${quoted_test_dir}" EXIT
+  trap "[[ -z \${NOTIFY_TEST_HOLD:-} ]] || pkill -KILL -f ${quoted_test_dir}/bin/alerter 2> /dev/null || true; rm -rf ${quoted_test_dir}" EXIT # error-output-allow: fixture cleanup tolerates an already stopped alerter
   : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
   mkdir "${test_dir}/bin"
   export NOTIFY_TEST_LOG="${test_dir}/alerts"
@@ -662,7 +662,7 @@ function main() {
       local hooks sub
       hooks="$(dirname "${NOTIFY_BIN}")/../hooks"
       while IFS= read -r sub; do
-        printf '%s' '{"session_id":"manifest"}' | "${NOTIFY_BIN}" "${sub}" > /dev/null 2>&1 || echo "Not dispatched: ${sub}"
+        printf '%s' '{"session_id":"manifest"}' | "${NOTIFY_BIN}" "${sub}" > /dev/null 2>&1 || echo "Not dispatched: ${sub}" # error-output-allow: manifest dispatch probe reports Not dispatched on failure
       done < <(jq -r '.. | .command? // empty | split(" ") | last' "${hooks}"/*.json | sort -u)
       echo "Every manifest subcommand dispatches"
       return 0
