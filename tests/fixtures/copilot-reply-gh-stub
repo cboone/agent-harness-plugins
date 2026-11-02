@@ -3,7 +3,7 @@
 set -euo pipefail
 
 function main() {
-  local case_dir mode thread_id="" body="" query=""
+  local case_dir mode thread_id="" body="" query="" reason=""
   case_dir="$(cd "$(dirname "$0")" && pwd)"
   mode="$(cat "${case_dir}/mode")"
   if [[ "$*" == 'auth status' ]]; then return; fi
@@ -17,6 +17,7 @@ function main() {
           threadId=*) thread_id="${2#threadId=}" ;;
           body=*) body="${2#body=}" ;;
           query=*) query="${2#query=}" ;;
+          resolutionReason=*) reason="${2#resolutionReason=}" ;;
           *) exit 99 ;;
         esac
         shift 2
@@ -42,7 +43,13 @@ function main() {
       fi
       ;;
     *resolveReviewThread*)
-      printf '%s\n' resolve >> "${case_dir}/calls"
+      if [[ -n "${reason}" ]]; then
+        # shellcheck disable=SC2016 # GraphQL variable references are literal.
+        [[ "${query}" == *'resolutionReason: $resolutionReason'* && "${query}" == *'$resolutionReason: PullRequestReviewThreadResolutionReason'* ]] || exit 99
+        printf 'resolve:%s\n' "${reason}" >> "${case_dir}/calls"
+      else
+        printf '%s\n' resolve >> "${case_dir}/calls"
+      fi
       if [[ "${mode}" == resolve ]]; then
         printf '%s\n' '{"errors":[{"message":"sample resolve failure"}]}'
       else
