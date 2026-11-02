@@ -1,0 +1,17 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "The new reason says the worker persists status before the parent returns. When workmux exceeds the timeout, await_launch returns 124 while the worker remains running; the status file is written only after workmux finishes. The existing timeout tests explicitly exercise this behavior.",
+      "file": "plugins/workmux/scripts/launch-workmux",
+      "fix": "Replace the reason with: '# error-output-allow: detached worker logs output and saves status on completion; timeout preserves the state directory'. Regenerate the mirror.",
+      "line": 689,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Function comments: The detached-launch reason incorrectly promises status before timeout returns."
+    }
+  ],
+  "reviewed": "6c842fd9d46b75ba129c3dd0879ccd63b44bf846",
+  "strengths": ["The development guide clearly explains actual shell annotations, embedded operands and named exclusions.", "The plan and ledger distinguish accepted tracking limits from the newer checks requiring written reasons."],
+  "summary": "Reviewed comments and documentation throughout the specified scope against surrounding code and tests. Found one wording suggestion and no Important or Critical documentation defects; no files changed or repository code executed."
+}

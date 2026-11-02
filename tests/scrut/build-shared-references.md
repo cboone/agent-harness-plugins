@@ -6,22 +6,23 @@ testcase runs in a throwaway tree holding every source path, so
 the script's own list of copies applies unchanged.
 
 ```scrut {fail_fast: true}
-$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash" \
+>   && source "${REPO_ROOT}/tests/fixtures/review-fixture-paths.bash"
 ```
 
 ```scrut
 $ function tree() {
 >   local root
 >   root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
->   mkdir -p "${root}/plugins/workmux/scripts"
+>   mkdir -p -- "${root}/plugins/workmux/scripts"
 >   printf '%s\n' '# Owner lock library' > "${root}/plugins/workmux/scripts/owner-lock.bash"
->   mkdir -p "${root}/plugins/publish-report-board/skills/publish-report-board/references"
+>   mkdir -p -- "${root}/plugins/publish-report-board/skills/publish-report-board/references"
 >   printf '%s\n' '# Progress Model' > "${root}/plugins/publish-report-board/skills/publish-report-board/references/progress-model.md"
->   mkdir -p "${root}/plugins/review-anti-patterns/skills/review-anti-patterns/references"
+>   mkdir -p -- "${root}/plugins/review-anti-patterns/skills/review-anti-patterns/references"
 >   printf '%s\n' '# Running a Skill Through codex exec' > "${root}/plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md"
->   mkdir -p "${root}/plugins/review-until-clean/scripts"
+>   mkdir -p -- "${root}/plugins/review-until-clean/scripts"
 >   printf '%s\n' '# Shared review Git policy' > "${root}/plugins/review-until-clean/scripts/review-git.bash"
->   mkdir -p "${root}/plugins/notify/scripts"
+>   mkdir -p -- "${root}/plugins/notify/scripts"
 >   printf '%s\n' 'def shows_refusal: false;' > "${root}/plugins/notify/scripts/claude-transcript.jq"
 >   printf '%s\n' "${root}"
 > }
@@ -87,7 +88,7 @@ $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" > /dev/null && printf '%s\n' 
 ## A missing source stops the build before any copy is written
 
 ```scrut
-$ cd "$(tree)" && rm "${source_file}" && { "${BUILD_SHARED_REFERENCES_BIN}"; echo "exit ${?}"; } && test ! -e "${copy_file}" && echo "not written"
+$ cd "$(tree)" && rm -- "${source_file}" && { "${BUILD_SHARED_REFERENCES_BIN}"; echo "exit ${?}"; } && test ! -e "${copy_file}" && echo "not written"
 ::error::Shared reference source 'plugins/publish-report-board/skills/publish-report-board/references/progress-model.md' is missing; restore it, or remove its entry from bin/build-shared-references
 1 shared reference error(s) found.
 exit 1

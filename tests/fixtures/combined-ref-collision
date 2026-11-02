@@ -11,7 +11,7 @@ scratch=""
 function expect_collision() {
   local ref="${1}" commit="${2}" error
   # Retain expected failures in error; replay an unexpected diagnostic below.
-  if capture_child error -- git update-ref "${ref}" "${commit}" 2> /dev/null; then
+  if capture_child error -- git update-ref "${ref}" "${commit}" 2> /dev/null; then # error-output-allow: expected collision is captured and checked; unexpected diagnostics are replayed
     echo "expected namespace collision for ${ref}" >&2
     return 1
   fi

@@ -1,0 +1,35 @@
+{
+  "base": "a2e56c535ed6326cc8d531d945fbb6c627a9b335",
+  "head": "220698b8a153e4f0ab559d1e3c67ce19258abea5",
+  "tree": "f0007e5ab047490f625239f250bd82809511564f",
+  "batches": [
+    {
+      "number": 1,
+      "files": ["Makefile", "bin/check-fixture-environments", "bin/lib/capture-child.bash", "bin/materialize-case", "bin/record-traffic", "bin/run-scrut-documents", "bin/validate-corpus", "bin/validate-json", "bin/validate-plugins", "bin/version-audit", "docs/plans/todo/2026-10-28-guard-error-output.md", "docs/reviews/2026-10-28-error-output-anti-incomplete.json", "docs/reviews/2026-10-28-error-output-guard.md", "docs/reviews/2026-10-28-error-output-simplify-invalidated.json", "tests/data/error-output/allowed-capture.bash", "tests/data/error-output/allowed-continued.bash", "tests/data/error-output/allowed-probe.bash", "tests/data/error-output/append-discard.bash", "tests/data/error-output/capture.bash", "tests/data/error-output/combined-discard.bash", "tests/data/error-output/continued-discard.bash", "tests/data/error-output/discard.bash", "tests/data/error-output/empty-reason.bash", "tests/data/error-output/file-capture.bash", "tests/data/error-output/live-stderr.bash", "tests/data/error-output/multiline-capture.bash", "tests/data/error-output/next-line-reason.bash", "tests/fixtures/error-output-guard", "tests/scrut/error-output-guard.md"]
+    },
+    {
+      "number": 2,
+      "files": ["tests/fixtures/check-notifications", "tests/fixtures/codex-stub", "tests/fixtures/copilot-ancestry-case", "tests/fixtures/create-unix-socket", "tests/fixtures/curl-stub", "tests/fixtures/error-output-guard", "tests/fixtures/gh-stub", "tests/fixtures/git-worktree-stub", "tests/fixtures/ntfy-curl-stub", "tests/fixtures/review-corpus-fixture", "tests/fixtures/watch-changes-stub"]
+    },
+    {
+      "number": 3,
+      "files": ["plugins/attention-log/.claude-plugin/plugin.json", "plugins/attention-log/.codex-plugin/plugin.json", "plugins/attention-log/scripts/attention-log", "plugins/notify/.claude-plugin/plugin.json", "plugins/notify/.codex-plugin/plugin.json", "plugins/notify/scripts/notify", "plugins/push-notification/.claude-plugin/plugin.json", "plugins/push-notification/scripts/push-notification"]
+    },
+    {
+      "number": 4,
+      "files": ["plugins/dependabot/.claude-plugin/plugin.json", "plugins/dependabot/scripts/dependabot-prs", "plugins/monitor-pr/.claude-plugin/plugin.json", "plugins/monitor-pr/scripts/merge-flow", "plugins/monitor-pr/scripts/resolve-copilot-threads", "plugins/pin-everything/.claude-plugin/plugin.json", "plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template"]
+    },
+    {
+      "number": 5,
+      "files": ["plugins/publish-report-board/.claude-plugin/plugin.json", "plugins/publish-report-board/scripts/backlog-gather", "plugins/publish-report-board/scripts/bugs-gather", "plugins/publish-report-board/scripts/report-board"]
+    },
+    {
+      "number": 6,
+      "files": ["plugins/review-pr-with-codex/.claude-plugin/plugin.json", "plugins/review-pr-with-codex/scripts/codex-aspects", "plugins/review-pr-with-codex/scripts/review-scope", "plugins/review-until-clean/.claude-plugin/plugin.json", "plugins/review-until-clean/scripts/check-completion", "plugins/review-until-clean/scripts/review-scope", "plugins/review-until-clean/scripts/save-ledger"]
+    },
+    {
+      "number": 7,
+      "files": ["plugins/workmux/.claude-plugin/plugin.json", "plugins/workmux/scripts/compose-issue-prompt", "plugins/workmux/scripts/launch-workmux", "plugins/workmux/scripts/manage-resource-claims"]
+    }
+  ]
+}

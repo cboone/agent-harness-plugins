@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "Criticality: 6/10. The filter tests change raw bytes while normalized content holds, but none keeps raw_tree unchanged while filter output changes tree. Replacing the new raw comparison's append with an overwrite would pass these tests while discarding normalized-only paths and returning changed: [] for a changed clean-filter output. Existing missing-normalized-object coverage checks failure handling, not this union behavior.",
+      "file": "tests/scrut/review-scope-raw.md",
+      "fix": "Add captures that change only a fixture-local clean filter command, leaving file bytes unchanged. Assert equal raw_tree, different tree and snapshot, and the exact changed and outside_scope paths from codex-aspects changes.",
+      "line": 59,
+      "severity": "suggestion",
+      "title": "write-scrut-tests: Behavioral coverage omits normalized-only change reporting."
+    }
+  ],
+  "reviewed": "00da2c4cc09abb4892f56b99da733d15ba7968b1",
+  "strengths": ["Tests distinguish staged-content changes from disk and membership changes.", "Sparse and metadata cases cover availability, exact symlink text, both type transitions and owner-execute changes.", "Recursive and marked mutation fixtures exercise nested reporting and inconsistent-capture refusal.", "Legacy and mixed-format captures assert meaningful changed paths."],
+  "summary": "Reviewed the complete fixed-base membership and mapped changed behavior to added and existing tests. Coverage is broad, with one suggested regression test for the normalized/raw comparison union. No tests, builds or writes were performed."
+}

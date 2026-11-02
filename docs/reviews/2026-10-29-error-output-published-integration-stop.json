@@ -1,0 +1,38 @@
+{
+  "status": "stopped for incoming-main integration and review-base decision",
+  "pr": {
+    "number": 690,
+    "url": "https://github.com/cboone/agent-harness-plugins/pull/690",
+    "is_draft": false,
+    "published_head": "736147778a71db99d4c3774c2ec06b27f5e34361",
+    "mergeable": "CONFLICTING",
+    "merge_state": "DIRTY",
+    "reported_checks": 0
+  },
+  "reviewed_base": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+  "incoming_main": "5205fada80635f7d9dd4a1967c94a256e60a99cb",
+  "preview_tree": "77270ba6f4c23e2467b327562a03ca885b0392ec",
+  "preview_exit": 1,
+  "conflict_paths": [".github/workflows/ci.yml", "bin/check-fixture-environments", "dist/codex/plugins/notify/scripts/watch-codex-failures", "dist/codex/plugins/workmux/scripts/launch-workmux", "plugins/notify/scripts/watch-codex-failures", "plugins/workmux/scripts/launch-workmux", "tests/fixtures/environment-isolation", "tests/fixtures/notify-rollout/mkdir", "tests/scrut/codex-aspects.md"],
+  "actual_merge_started": false,
+  "published_source_changed": false,
+  "integration_questions": ["Preserve the new main --review-paths entry point alongside the AST guard and every fixture rule.", "Retain unconditional shfmt setup needed by the guard while preserving new CI coverage.", "Keep main fixture-operand hardening and the guard fixture layout.", "Accept or reconcile main deletion of the obsolete rollout mkdir stub; regenerate dist copies.", "Pin subsequent integration verification to the new immutable base and preserve completed review counts."],
+  "local_validation": {
+    "documents": 53,
+    "tests": 1925,
+    "passed": 1925,
+    "failed": 0,
+    "skipped": 0,
+    "command": "SCRUT_JOBS=4 make test-all",
+    "exit_status": 0
+  },
+  "tidy": {
+    "base": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+    "before": "dc96e66a1effd0fbfa0e300849d39d7a8931d033",
+    "tree": "cbf9aee10eb0e71de11f617c2d2eccd0cb3f4cd8",
+    "backup": "fix/672-guard-error-discards-pre-tidy-20261029191301",
+    "commits": ["04c2e14c546fde17ea11dbb0bc5a58f10c69f7e6", "b54a3cde2afa74fc47711c9a205fe3a5e7af5f4a", "736147778a71db99d4c3774c2ec06b27f5e34361"],
+    "after": "736147778a71db99d4c3774c2ec06b27f5e34361",
+    "equal_tree": true
+  }
+}
