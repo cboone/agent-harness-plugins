@@ -78,3 +78,17 @@ Current synchronization checks passed:
 | JSON validation                                            | Passed                                                                               |
 
 At most two documents ran concurrently. The version-audit document covered registrations involved in the Makefile conflict and finished before the urgent thermal restriction. No full suite or other merge-only documents were run. The October 30 full-suite result above remains historical; the environment-isolation failure did not recur in this synchronization run. The separate runner document was not rerun. Review round counts and prior end states are unchanged.
+
+### Additional main merge
+
+Signed merge `89df77a2` incorporates main at `eb7378a7340288b49125f0ddf5fe81b75e7b2bbe`. The Makefile registration conflict was resolved by retaining both the starter checker and main's new Rust-audit entries. Version 3.0.6 remains above main's 3.0.5; no further bump was needed, and the generated manifest still matches.
+
+The fixture-environment AST check, review operand contract, version/marketplace checks and scoped Markdown/manifest formatting passed. No new guard exceptions or annotations were added. The current targeted Scrut results are:
+
+| Document              | Result                             |
+| --------------------- | ---------------------------------- |
+| Starter               | 5 passed, none failed or skipped   |
+| Error-output guard    | 102 passed, none failed or skipped |
+| Environment isolation | 51 passed, none failed or skipped  |
+
+Only these three documents ran, with at most two concurrently. No full suite or other merge-only documents were run. The earlier version-audit result above belongs to the preceding synchronization, not this merge. No rebase, force push or review round restart was performed.
