@@ -1,6 +1,6 @@
 # Copilot resolution reason review ledger
 
-`monitor-pr` now passes GitHub resolution reasons, documents the disposition mapping, and preserves reason-free helper callers. Issue [463](https://github.com/cboone/agent-harness-plugins/issues/463). Base: `5205fada80635f7d9dd4a1967c94a256e60a99cb` (`origin/main` merge base).
+`monitor-pr` now passes GitHub resolution reasons, documents the disposition mapping, and preserves reason-free helper callers. Issue [463](https://github.com/cboone/agent-harness-plugins/issues/463). Original review base: `5205fada80635f7d9dd4a1967c94a256e60a99cb` (`origin/main` merge base at the first push).
 
 ## Local reviews
 
@@ -25,3 +25,12 @@ Full review order; no small-change exception. Every review used a fresh read-onl
 - Publication requires signed logical commits rebuilt from the recorded base, preserving the exact tree of `feat/463-copilot-resolution-reason-pre-tidy`. The final mailbox handoff records the tree comparison and ready PR.
 
 The [plan](../plans/done/2026-10-30-copilot-resolution-reason.md) records the schema evidence and prior art. The schema result is also [recorded on the issue](https://github.com/cboone/agent-harness-plugins/issues/463#issuecomment-6537221970).
+
+## Main merge follow-up, 2026-11-02
+
+TOOLING's mailbox messages 000003 and 000004 relayed the tl27 go-ahead for a signed main merge, conflict resolution, versions, focused Scrut and push. Published history remains intact.
+
+- Signed merge `5e972dd4` incorporates `origin/main` at `97346bc705628f55f5ee7028bdcb53a5d68b8464`. Only the canonical `monitor-pr` manifest and its generated mirror conflicted. Main has `3.4.2`; `3.5.0` remains available and is retained. The mirror was regenerated with `make build`. The helper's automatic merge adds upstream diagnostic annotations without changing the reason behavior.
+- `check-versions`: **passed**, comparing with the new merge base `97346bc7`: `monitor-pr` **3.4.2 → 3.5.0**. Marketplace coverage, manifest-owned versions and mirrors are consistent.
+- Project Scrut runs: resolver **66/66**, summary contract **18/18**, environment isolation **51/51**. All three runs exited zero, with zero skipped cases and at most two concurrent documents. Test setups source `bin/lib/git-environment.bash`. The historical fixture assertion now passes with main's fix.
+- No full suite was run and no full-suite lock was taken for this follow-up. Review round counts above remain unchanged. The optional whitespace check reported intentional static guard input spaces inherited byte-for-byte from main; those fixtures were preserved.
