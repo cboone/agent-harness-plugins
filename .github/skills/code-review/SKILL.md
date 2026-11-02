@@ -17,7 +17,9 @@ Apply the checklist that matches each changed file, and apply it only to the lin
 
 ## Reporting
 
-- Start each finding with the checklist name and the rule name, for example `write-bash-scripts: Strict mode`.
+- When a finding matches a checklist rule, start it with the checklist name and the exact rule name, for example `write-bash-scripts: Strict mode`. Otherwise start it with `Uncited:` and describe the concrete defect; never invent a rule name.
+- For uncited findings, behavior defects, data loss or leaks, and build or release failures are Important (P1); style, naming and wording are Nit (P2 or lower). Important findings block merging and must all be reported; uncited Nits count toward the same five-Nit cap.
+- Combine repeats of the same defect across files into one finding listing the affected paths, unless they need different fixes.
 - Rules under a checklist's Important heading block merging. Report each one you find.
 - Rules under a checklist's Nits heading are minor. Report at most five per review, and give the number of any others in the summary.
 - Follow each checklist's Do not flag section.

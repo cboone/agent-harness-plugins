@@ -1,0 +1,509 @@
+{
+  "structural": {
+    "anti": "```json\n{\n  \"status\": \"success\",\n  \"reviewed\": \"5205fada80635f7d9dd4a1967c94a256e60a99cb..working-tree\",\n  \"complete\": true,\n  \"findings\": [],\n  \"unverified\": [\n    \"Repository validation and linting: make validate and make lint were not run; --run-checks was off.\",\n    \"Behavioral scope equivalence: execute the scenarios described in tests/data/trim-scope.json in a disposable repository. Not run because this requires writes and skill executions.\",\n    \"Regression sensitivity: use plant-defects against the scope scenarios. Not run because planting requires edits.\"\n  ],\n  \"not_reviewed\": [],\n  \"excluded\": [\n    \".agents/plugins/marketplace.json\",\n    \"dist/codex/plugins/trim-comments/.claude-plugin/plugin.json\",\n    \"dist/codex/plugins/trim-comments/README.md\",\n    \"dist/codex/plugins/trim-comments/skills/trim-comments/SKILL.md\",\n    \"dist/codex/plugins/trim-text/.claude-plugin/plugin.json\",\n    \"dist/codex/plugins/trim-text/README.md\",\n    \"dist/codex/plugins/trim-text/skills/trim-text/SKILL.md\",\n    \"dist/codex/plugins/trim-text/skills/trim-text/references/code-comments.md\"\n  ]\n}\n```\n\nReview completed: **no concrete introduced defects found at Nit or Important**.\n\nRead all 11 canonical changed files in full: the catalog, root README, plan, both plugin manifests and READMEs, both skills, comment profile, and scope fixture. This includes the fixture\u2019s final working-tree formatting. Examined relevant Commit/PR caller sections, existing scope evaluations, sibling profiles, and the canonical Codex execution reference. No PR body exists, as supplied.\n\nGroups covered: code/configuration, agent prose, and docs. All thirteen checklist items were walked: sibling input forms, boundary arithmetic, stale writes, validator gaps, absent or partial data, untrusted data in commands, tests that cannot fail, crashes instead of reports, unrun platform configuration, unenforced trust boundary, parallel paths, agent-prose control flow, and docs drift.\n\n`jq empty` passed for all four changed canonical JSON files. Behavioral execution and regression sensitivity remain unverified; the new fixture has no executable consumer.\n\nAll eight exclusions above are generated artifacts. Generated `codex-exec.md` copies were also excluded from context reads. Nothing remained unread in scope.\n\nSession could write: **no**, enforced by the read-only sandbox. `--run-checks`: **off**. No network reads, agents, edits, staging, commits, or writing tests ran. Checks left nothing behind.\n\n**clean at Nit**, with the verification limits listed above.",
+    "simplify": "```json\n{\n  \"status\": \"success\",\n  \"complete\": true,\n  \"angles_completed\": [\n    \"cleanup-reuse\",\n    \"cleanup-simplification\",\n    \"cleanup-efficiency\",\n    \"cleanup-altitude\"\n  ],\n  \"findings\": [],\n  \"summary\": \"Completed all four angles inline in report-only mode, as requested. Read all 11 canonical changed files in full and relevant callers against fixed base 5205fada80635f7d9dd4a1967c94a256e60a99cb through the working tree at HEAD 8ae70d15b2f5f054877fcfdb0b48f7b76348648b. No behavior-preserving cleanup with a concrete cost identified. Fixed: 0; skipped proposals: 0. No files changed.\",\n  \"unread_files\": [],\n  \"excluded_paths\": [\n    \"dist/\",\n    \".agents/\",\n    \"generated codex-exec.md copies\"\n  ],\n  \"failed_checks\": [],\n  \"checks_not_run\": [\n    \"Tests, linters and generators\",\n    \"Simplify editing phase\",\n    \"Correctness review and gate\"\n  ]\n}\n```\n\n"
+  },
+  "focused_statuses": [
+    {
+      "aspect": "code",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0,
+      "output": "/private/tmp/trim-597-reviews.EKBWKX/focused/code.json",
+      "log": "/private/tmp/trim-597-reviews.EKBWKX/focused/code.log",
+      "membership_paths": [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", "README.md", "dist/codex/plugins/trim-comments/.claude-plugin/plugin.json", "dist/codex/plugins/trim-comments/README.md", "dist/codex/plugins/trim-comments/skills/trim-comments/SKILL.md", "dist/codex/plugins/trim-text/.claude-plugin/plugin.json", "dist/codex/plugins/trim-text/README.md", "dist/codex/plugins/trim-text/skills/trim-text/SKILL.md", "dist/codex/plugins/trim-text/skills/trim-text/references/code-comments.md", "docs/plans/todo/2026-10-30-fold-trim-comments-into-trim-text.md", "plugins/trim-comments/.claude-plugin/plugin.json", "plugins/trim-comments/README.md", "plugins/trim-comments/skills/trim-comments/SKILL.md", "plugins/trim-text/.claude-plugin/plugin.json", "plugins/trim-text/README.md", "plugins/trim-text/skills/trim-text/SKILL.md", "plugins/trim-text/skills/trim-text/references/code-comments.md", "tests/data/trim-scope.json"]
+    },
+    {
+      "aspect": "errors",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0,
+      "output": "/private/tmp/trim-597-reviews.EKBWKX/focused/errors.json",
+      "log": "/private/tmp/trim-597-reviews.EKBWKX/focused/errors.log",
+      "membership_paths": [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", "README.md", "dist/codex/plugins/trim-comments/.claude-plugin/plugin.json", "dist/codex/plugins/trim-comments/README.md", "dist/codex/plugins/trim-comments/skills/trim-comments/SKILL.md", "dist/codex/plugins/trim-text/.claude-plugin/plugin.json", "dist/codex/plugins/trim-text/README.md", "dist/codex/plugins/trim-text/skills/trim-text/SKILL.md", "dist/codex/plugins/trim-text/skills/trim-text/references/code-comments.md", "docs/plans/todo/2026-10-30-fold-trim-comments-into-trim-text.md", "plugins/trim-comments/.claude-plugin/plugin.json", "plugins/trim-comments/README.md", "plugins/trim-comments/skills/trim-comments/SKILL.md", "plugins/trim-text/.claude-plugin/plugin.json", "plugins/trim-text/README.md", "plugins/trim-text/skills/trim-text/SKILL.md", "plugins/trim-text/skills/trim-text/references/code-comments.md", "tests/data/trim-scope.json"]
+    },
+    {
+      "aspect": "tests",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0,
+      "output": "/private/tmp/trim-597-reviews.EKBWKX/focused/tests.json",
+      "log": "/private/tmp/trim-597-reviews.EKBWKX/focused/tests.log",
+      "membership_paths": [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", "README.md", "dist/codex/plugins/trim-comments/.claude-plugin/plugin.json", "dist/codex/plugins/trim-comments/README.md", "dist/codex/plugins/trim-comments/skills/trim-comments/SKILL.md", "dist/codex/plugins/trim-text/.claude-plugin/plugin.json", "dist/codex/plugins/trim-text/README.md", "dist/codex/plugins/trim-text/skills/trim-text/SKILL.md", "dist/codex/plugins/trim-text/skills/trim-text/references/code-comments.md", "docs/plans/todo/2026-10-30-fold-trim-comments-into-trim-text.md", "plugins/trim-comments/.claude-plugin/plugin.json", "plugins/trim-comments/README.md", "plugins/trim-comments/skills/trim-comments/SKILL.md", "plugins/trim-text/.claude-plugin/plugin.json", "plugins/trim-text/README.md", "plugins/trim-text/skills/trim-text/SKILL.md", "plugins/trim-text/skills/trim-text/references/code-comments.md", "tests/data/trim-scope.json"]
+    },
+    {
+      "aspect": "comments",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0,
+      "output": "/private/tmp/trim-597-reviews.EKBWKX/focused/comments.json",
+      "log": "/private/tmp/trim-597-reviews.EKBWKX/focused/comments.log",
+      "membership_paths": [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", "README.md", "dist/codex/plugins/trim-comments/.claude-plugin/plugin.json", "dist/codex/plugins/trim-comments/README.md", "dist/codex/plugins/trim-comments/skills/trim-comments/SKILL.md", "dist/codex/plugins/trim-text/.claude-plugin/plugin.json", "dist/codex/plugins/trim-text/README.md", "dist/codex/plugins/trim-text/skills/trim-text/SKILL.md", "dist/codex/plugins/trim-text/skills/trim-text/references/code-comments.md", "docs/plans/todo/2026-10-30-fold-trim-comments-into-trim-text.md", "plugins/trim-comments/.claude-plugin/plugin.json", "plugins/trim-comments/README.md", "plugins/trim-comments/skills/trim-comments/SKILL.md", "plugins/trim-text/.claude-plugin/plugin.json", "plugins/trim-text/README.md", "plugins/trim-text/skills/trim-text/SKILL.md", "plugins/trim-text/skills/trim-text/references/code-comments.md", "tests/data/trim-scope.json"]
+    }
+  ],
+  "focused": [
+    {
+      "aspect": "code",
+      "findings": [],
+      "reviewed": "5e2099a50f49e7052bcf7d622331c788eaa03455",
+      "strengths": ["The compatibility alias preserves comment scope and existing options.", "The shared workflow retains protected comments and requires unchanged-code verification."],
+      "summary": "Reviewed all 19 scoped paths, including committed changes and the unstaged fixture update. No introduced defects met the reporting threshold; the change meets the project's standards. Tests were not run during this read-only review."
+    },
+    {
+      "aspect": "errors",
+      "findings": [],
+      "reviewed": "5e2099a50f49e7052bcf7d622331c788eaa03455",
+      "strengths": ["The compatibility alias reports a missing trim-text dependency and leaves files unchanged.", "Unresolved comment-only verification blocks the entire trim commit and must be reported.", "Failed base resolution preserves diagnostics and stops before edits."],
+      "summary": "Reviewed all 19 membership paths across the committed and unstaged changes for error-handling regressions. No introduced defects met the reporting threshold."
+    },
+    {
+      "aspect": "tests",
+      "findings": [
+        {
+          "confidence": 99,
+          "detail": "Criticality: 7/10. No repository test or evaluator consumes this fixture. The existing tests/evals/trim-text-scopes.py reads only trim-text-default-scopes.json and never invokes the alias. Consequently, losing --profile code-comments during handoff could include guide.md or widen comment scope without any existing behavioral assertion failing.",
+          "file": "tests/data/trim-scope.json",
+          "fix": "Add a documented opt-in evaluator that materializes this fixture, invokes both skills independently, and asserts the expected eligible units, profiles, TODO action and unchanged dry-run state. Keep wording comparisons out of the assertions.",
+          "line": 15,
+          "severity": "important",
+          "title": "The scope-equivalence fixture has no executable consumer."
+        }
+      ],
+      "reviewed": "5e2099a50f49e7052bcf7d622331c788eaa03455",
+      "strengths": ["The fixture specifies meaningful scope boundaries, including unchanged comments, untracked files, mixed profiles and a filename matching a selector.", "The existing evaluator checks prose scope selection and preservation of unchanged units, requirements, links and fenced code.", "Existing integration tests cover generated skill fidelity and shared-reference freshness."],
+      "summary": "Reviewed every scoped committed and unstaged change and mapped the changed behavior to existing tests. The main coverage gap is that the new alias-equivalence scenarios are data without an executable evaluator; no tests were run during this read-only review."
+    },
+    {
+      "aspect": "comments",
+      "findings": [],
+      "reviewed": "5e2099a50f49e7052bcf7d622331c788eaa03455",
+      "strengths": ["The alias clearly documents scope preservation, literal-path handling and unavailable dependencies.", "The comment profile explains docstring retention, protected directives and unchanged-code verification."],
+      "summary": "Reviewed all 19 membership paths across the committed and unstaged changes, including documentation, generated copies and fixture comments. No introduced comment or documentation defects warranted reporting; clean at Nit."
+    }
+  ],
+  "initial_evaluations": {
+    "alias-v2": [
+      {
+        "request": "trim-comments --dry-run",
+        "eligible": {
+          "sample.ts": [4],
+          "fresh.ts": [1, 3]
+        },
+        "profiles": {
+          "sample.ts": "code-comments",
+          "fresh.ts": "code-comments"
+        },
+        "flags": ["fresh.ts:1"]
+      },
+      {
+        "request": "trim-comments sample.ts fresh.ts --dry-run",
+        "eligible": {
+          "sample.ts": [1, 4],
+          "fresh.ts": [1, 3]
+        },
+        "profiles": {
+          "sample.ts": "code-comments",
+          "fresh.ts": "code-comments"
+        },
+        "flags": ["fresh.ts:1"]
+      },
+      {
+        "request": "trim-comments branch --dry-run",
+        "eligible": {
+          "branch": [1]
+        },
+        "profiles": {
+          "branch": "code-comments"
+        },
+        "flags": []
+      }
+    ],
+    "equivalent-v2": [
+      {
+        "request": "trim-text branch --profile code-comments --dry-run",
+        "eligible": {
+          "sample.ts": [4],
+          "fresh.ts": [1, 3]
+        },
+        "profiles": {
+          "sample.ts": "code-comments",
+          "fresh.ts": "code-comments"
+        },
+        "flags": ["fresh.ts:1"]
+      },
+      {
+        "request": "trim-text sample.ts fresh.ts --profile code-comments --dry-run",
+        "eligible": {
+          "sample.ts": [1, 4],
+          "fresh.ts": [1, 3]
+        },
+        "profiles": {
+          "sample.ts": "code-comments",
+          "fresh.ts": "code-comments"
+        },
+        "flags": ["fresh.ts:1"]
+      },
+      {
+        "request": "trim-text ./branch --profile code-comments --dry-run",
+        "eligible": {
+          "branch": [1]
+        },
+        "profiles": {
+          "branch": "code-comments"
+        },
+        "flags": []
+      }
+    ],
+    "mixed": [
+      {
+        "request": "trim-text branch --dry-run",
+        "eligible": {
+          "guide.md": [3],
+          "sample.ts": [4],
+          "fresh.ts": [1, 3]
+        },
+        "profiles": {
+          "guide.md": "none",
+          "sample.ts": "code-comments",
+          "fresh.ts": "code-comments"
+        },
+        "flags": ["fresh.ts:1"]
+      }
+    ],
+    "plant": [
+      {
+        "request": "trim-comments --dry-run",
+        "eligible": {},
+        "profiles": {},
+        "flags": [],
+        "error": "The alias explicitly passes --profile none. Its dependency skips source files under an explicit prose profile, while the alias excludes prose documents. No eligible units remain."
+      }
+    ]
+  },
+  "committed_evaluator": {
+    "alias": {
+      "cases": [
+        {
+          "request": "trim-comments --dry-run",
+          "eligible": [
+            {
+              "file": "sample.ts",
+              "lines": [4],
+              "profile": "code-comments"
+            },
+            {
+              "file": "fresh.ts",
+              "lines": [1, 3],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": ["fresh.ts:1"]
+        },
+        {
+          "request": "trim-comments sample.ts fresh.ts --dry-run",
+          "eligible": [
+            {
+              "file": "sample.ts",
+              "lines": [1, 4],
+              "profile": "code-comments"
+            },
+            {
+              "file": "fresh.ts",
+              "lines": [1, 3],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": ["fresh.ts:1"]
+        },
+        {
+          "request": "trim-comments branch --dry-run",
+          "eligible": [
+            {
+              "file": "branch",
+              "lines": [1],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": []
+        }
+      ]
+    },
+    "equivalent": {
+      "cases": [
+        {
+          "request": "trim-text branch --profile code-comments --dry-run",
+          "eligible": [
+            {
+              "file": "sample.ts",
+              "lines": [4],
+              "profile": "code-comments"
+            },
+            {
+              "file": "fresh.ts",
+              "lines": [1, 3],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": ["fresh.ts:1"]
+        },
+        {
+          "request": "trim-text sample.ts fresh.ts --profile code-comments --dry-run",
+          "eligible": [
+            {
+              "file": "sample.ts",
+              "lines": [1, 4],
+              "profile": "code-comments"
+            },
+            {
+              "file": "fresh.ts",
+              "lines": [1, 3],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": ["fresh.ts:1"]
+        },
+        {
+          "request": "trim-text ./branch --profile code-comments --dry-run",
+          "eligible": [
+            {
+              "file": "branch",
+              "lines": [1],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": []
+        }
+      ]
+    },
+    "mixed": {
+      "cases": [
+        {
+          "request": "trim-text branch --dry-run",
+          "eligible": [
+            {
+              "file": "guide.md",
+              "lines": [3],
+              "profile": "none"
+            },
+            {
+              "file": "sample.ts",
+              "lines": [4],
+              "profile": "code-comments"
+            },
+            {
+              "file": "fresh.ts",
+              "lines": [1, 3],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": ["fresh.ts:1"]
+        }
+      ]
+    }
+  },
+  "planted_evaluator": {
+    "alias": {
+      "cases": [
+        {
+          "request": "trim-comments --dry-run",
+          "eligible": [
+            {
+              "file": "guide.md",
+              "lines": [3],
+              "profile": "none"
+            }
+          ],
+          "flags": []
+        },
+        {
+          "request": "trim-comments sample.ts fresh.ts --dry-run",
+          "eligible": [],
+          "flags": []
+        },
+        {
+          "request": "trim-comments branch --dry-run",
+          "eligible": [],
+          "flags": []
+        }
+      ]
+    },
+    "equivalent": {
+      "cases": [
+        {
+          "request": "trim-text branch --profile code-comments --dry-run",
+          "eligible": [
+            {
+              "file": "sample.ts",
+              "lines": [4],
+              "profile": "code-comments"
+            },
+            {
+              "file": "fresh.ts",
+              "lines": [1, 3],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": ["fresh.ts:1"]
+        },
+        {
+          "request": "trim-text sample.ts fresh.ts --profile code-comments --dry-run",
+          "eligible": [
+            {
+              "file": "sample.ts",
+              "lines": [1, 4],
+              "profile": "code-comments"
+            },
+            {
+              "file": "fresh.ts",
+              "lines": [1, 3],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": ["fresh.ts:1"]
+        },
+        {
+          "request": "trim-text ./branch --profile code-comments --dry-run",
+          "eligible": [
+            {
+              "file": "branch",
+              "lines": [1],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": []
+        }
+      ]
+    },
+    "mixed": {
+      "cases": [
+        {
+          "request": "trim-text branch --dry-run",
+          "eligible": [
+            {
+              "file": "guide.md",
+              "lines": [3],
+              "profile": "none"
+            },
+            {
+              "file": "sample.ts",
+              "lines": [4],
+              "profile": "code-comments"
+            },
+            {
+              "file": "fresh.ts",
+              "lines": [1, 3],
+              "profile": "code-comments"
+            }
+          ],
+          "flags": ["fresh.ts:1"]
+        }
+      ]
+    }
+  },
+  "trims": {
+    "trim-comments": "Files classified:\n\n- `tests/evals/trim-text-scopes.py`: `code-comments`. No comments or docstrings intersect changed hunks or sit directly above changed code.\n\nNo changes proposed.\n\nScope used the supplied base `5205fada80635f7d9dd4a1967c94a256e60a99cb` through the working tree. No untracked files were found.\n\nSkipped:\n\n- Generated `dist/` and `.agents/` files; `codex-exec.md` copies excluded.\n- Changed Markdown files, including skills, references, READMEs, plan and ledger: prose is outside the alias\u2019s `code-comments` profile.\n- Catalog/plugin JSON and `tests/data/trim-scope.json`: data, without eligible comments.\n- `docs/reviews/2026-10-30-fold-trims-evidence.json`: protected exact review record.\n\nQuoted labels, scenario strings and commands remain unchanged. Verification, linting and tests were not run because `--dry-run` skips those steps. No edits, commits, delegation, nested Codex processes or network/base/PR lookups occurred.",
+    "trim-text": "Files classified:\n\n- `README.md`: none\n- `docs/plans/todo/2026-10-30-fold-trim-comments-into-trim-text.md`: none\n- `docs/reviews/2026-10-30-fold-trims-ledger.md`: none\n- `plugins/trim-comments/README.md`: none\n- `plugins/trim-comments/skills/trim-comments/SKILL.md`: agent-instructions\n- `plugins/trim-text/README.md`: none\n- `plugins/trim-text/skills/trim-text/SKILL.md`: agent-instructions\n- `plugins/trim-text/skills/trim-text/references/code-comments.md`: agent-instructions\n- `tests/evals/README.md`: none\n- `tests/evals/trim-text-scopes.py`: code-comments; no eligible changed comments\n\nCompared eligible changed units through the working tree against supplied base `5205fada80635f7d9dd4a1967c94a256e60a99cb` (`origin/main`).\n\n| Location | Action | Before | After |\n| --- | --- | --- | --- |\n| `plugins/trim-comments/README.md:14` | Rewrite | The shared standard and workflow now live in `trim-text`; the comment profile retains test scaffolding, stylesheet rules, protected comments, ticketless TODO flags, worked examples and comment-only verification. | The shared standard and workflow live in `trim-text`; the comment profile retains test scaffolding, stylesheet rules, protected comments, ticketless TODO flags, worked examples and comment-only verification. |\n| `plugins/trim-text/skills/trim-text/references/code-comments.md:118` | Rewrite | The consequence-chain rewrite keeps its reason because it meets a \"Keep these\" criterion: without it, someone would make timeouts non-retryable. | The consequence-chain rewrite keeps its reason to prevent someone from making timeouts non-retryable. |\n\nSkipped: generated `dist/` and `.agents/`; raw evidence `docs/reviews/2026-10-30-fold-trims-evidence.json`; plugin manifests with version-only changes; structured test fixtures and scenario strings. Catalog descriptions that must match verbatim, quoted reviewer labels, examples and commands were preserved. No changed `codex-exec.md` copies appeared.\n\nMeaning preservation checked manually. Linters, validators, unchanged-code checks and tests were not run because `--dry-run` skips verification. No network/base/PR lookups, edits, commits, delegation or nested Codex processes."
+  },
+  "semgrep": {
+    "baseline": "5205fada80635f7d9dd4a1967c94a256e60a99cb",
+    "head": "bcd37313",
+    "command": "SEMGREP_REPO_NAME=cboone/agent-harness-plugins semgrep scan --config auto --baseline-commit 5205fada80635f7d9dd4a1967c94a256e60a99cb --json",
+    "output": {
+      "version": "1.180.0",
+      "results": [],
+      "errors": [],
+      "paths": {
+        "scanned": [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", "README.md", "docs/plans/todo/2026-10-30-fold-trim-comments-into-trim-text.md", "docs/reviews/2026-10-30-fold-trims-evidence.json", "docs/reviews/2026-10-30-fold-trims-ledger.md", "plugins/trim-comments/.claude-plugin/plugin.json", "plugins/trim-comments/README.md", "plugins/trim-comments/skills/trim-comments/SKILL.md", "plugins/trim-text/.claude-plugin/plugin.json", "plugins/trim-text/README.md", "plugins/trim-text/skills/trim-text/SKILL.md", "plugins/trim-text/skills/trim-text/references/code-comments.md"]
+      },
+      "time": {
+        "rules": [],
+        "rules_parse_time": 0.7626039981842041,
+        "profiling_times": {
+          "config_time": 2.5622751712799072,
+          "core_time": 1.8891918659210205,
+          "ignores_time": 0.0024061203002929688,
+          "total_time": 4.632235050201416
+        },
+        "parsing_time": {
+          "total_time": 0.0,
+          "per_file_time": {
+            "mean": 0.0,
+            "std_dev": 0.0
+          },
+          "very_slow_stats": {
+            "time_ratio": 0.0,
+            "count_ratio": 0.0
+          },
+          "very_slow_files": []
+        },
+        "scanning_time": {
+          "total_time": 1.9342286586761475,
+          "per_file_time": {
+            "mean": 0.06239447286052088,
+            "std_dev": 0.021856319964020605
+          },
+          "very_slow_stats": {
+            "time_ratio": 0.0,
+            "count_ratio": 0.0
+          },
+          "very_slow_files": []
+        },
+        "matching_time": {
+          "total_time": 0.0,
+          "per_file_and_rule_time": {
+            "mean": 0.0,
+            "std_dev": 0.0
+          },
+          "very_slow_stats": {
+            "time_ratio": 0.0,
+            "count_ratio": 0.0
+          },
+          "very_slow_rules_on_files": []
+        },
+        "tainting_time": {
+          "total_time": 0.0,
+          "per_def_and_rule_time": {
+            "mean": 0.0,
+            "std_dev": 0.0
+          },
+          "very_slow_stats": {
+            "time_ratio": 0.0,
+            "count_ratio": 0.0
+          },
+          "very_slow_rules_on_defs": []
+        },
+        "fixpoint_timeouts": [],
+        "prefiltering": {
+          "project_level_time": 0.0,
+          "file_level_time": 0.0,
+          "rules_with_project_prefilters_ratio": 0.0,
+          "rules_with_file_prefilters_ratio": 0.9835345773874863,
+          "rules_selected_ratio": 0.01756311745334797,
+          "rules_matched_ratio": 0.01756311745334797
+        },
+        "targets": [],
+        "total_bytes": 0,
+        "max_memory_bytes": 5729608192
+      },
+      "engine_requested": "OSS",
+      "interfile_languages_used": [],
+      "skipped_rules": [],
+      "profiling_results": []
+    }
+  },
+  "full_suite": {
+    "commands": ["make test-all: 2", "make validate: 0", "make test-scrut: 2"],
+    "documents": 56,
+    "passed_documents": 55,
+    "failed_documents": 1,
+    "testcases": 1881,
+    "succeeded": 1880,
+    "failed": 1,
+    "skipped": 0,
+    "failed_document_output": "==> tests/scrut/environment-isolation.md: FAILED, exit 50 (146s)\n// =============================================================================\n// @ tests/scrut/environment-isolation.md:39\n// -----------------------------------------------------------------------------\n// # Review fixture manifest satisfies its operand contract\n// -----------------------------------------------------------------------------\n// $ \"${CHECK_FIXTURE_ENVIRONMENTS_BIN}\" --review-paths\n// =============================================================================\n\nunexpected exit code\n  expected: 0\n  actual:   1\n\n## STDOUT\n#> tests/fixtures/review-submodule-fixture:132: git needs a rooted operand or --\n#> tests/fixtures/review-submodule-fixture:133: git needs a rooted operand or --\n#> tests/fixtures/review-submodule-fixture:133: git needs a rooted operand or --\n#> tests/fixtures/review-submodule-fixture:134: git needs a rooted operand or --\n#> tests/fixtures/review-submodule-fixture:254: mv needs a rooted operand or --\n#> tests/fixtures/review-submodule-fixture:254: mv needs a rooted operand or --\n## STDERR\n\n\nResult: 1 document(s) with 51 testcase(s): 50 succeeded, 1 failed and 0 skipped\n",
+    "finished_documents": ["finished tests/scrut/backlog-gather.md: passed (7s)", "finished tests/scrut/base-resolution.md: passed (6s)", "finished tests/scrut/bash-empty-lists.md: passed (1s)", "finished tests/scrut/attention-log.md: passed (32s)", "finished tests/scrut/build-codex-marketplace.md: passed (2s)", "finished tests/scrut/build-review-checklists.md: passed (3s)", "finished tests/scrut/build-shared-references.md: passed (1s)", "finished tests/scrut/chain-adapters.md: passed (3s)", "finished tests/scrut/check-cross-references.md: passed (3s)", "finished tests/scrut/bugs-gather.md: passed (45s)", "finished tests/scrut/codex-cleanup.md: passed (6s)", "finished tests/scrut/codex-aspects.md: passed (48s)", "finished tests/scrut/codex-failure-rollouts.md: passed (35s)", "finished tests/scrut/compose-issue-prompt.md: passed (1s)", "finished tests/scrut/copilot-fix-ancestry.md: passed (4s)", "finished tests/scrut/copilot-rounds-report.md: passed (4s)", "finished tests/scrut/copilot-summary-contract.md: passed (1s)", "finished tests/scrut/default-branch-fallback.md: passed (0s)", "finished tests/scrut/dependabot-prs.md: passed (8s)", "finished tests/scrut/combined-worktrees.md: passed (28s)", "finished tests/scrut/launch-workmux-options.md: passed (26s)", "finished tests/scrut/environment-isolation.md: FAILED, exit 50 (146s)", "finished tests/scrut/manage-resource-claims.md: passed (70s)", "finished tests/scrut/merge-flow.md: passed (7s)", "finished tests/scrut/monitor-dispatch.md: passed (8s)", "finished tests/scrut/notification-failures.md: passed (12s)", "finished tests/scrut/notification-hooks.md: passed (0s)", "finished tests/scrut/notification-sounds.md: passed (21s)", "finished tests/scrut/launch-workmux.md: passed (246s)", "finished tests/scrut/notification-tiers.md: passed (18s)", "finished tests/scrut/owner-call-contract.md: passed (0s)", "finished tests/scrut/owner-lock.md: passed (1s)", "finished tests/scrut/progress-model.md: passed (1s)", "finished tests/scrut/push-notification.md: passed (5s)", "finished tests/scrut/record-traffic.md: passed (3s)", "finished tests/scrut/refusal-classifier-contract.md: passed (10s)", "finished tests/scrut/repo-tooling.md: passed (6s)", "finished tests/scrut/report-board-bugs.md: passed (3s)", "finished tests/scrut/report-board.md: passed (16s)", "finished tests/scrut/resolve-copilot-threads.md: passed (5s)", "finished tests/scrut/result-check.md: passed (0s)", "finished tests/scrut/review-completion.md: passed (2s)", "finished tests/scrut/notifications.md: passed (64s)", "finished tests/scrut/review-scope-disk-metadata.md: passed (4s)", "finished tests/scrut/review-scope-raw.md: passed (14s)", "finished tests/scrut/review-corpus.md: passed (22s)", "finished tests/scrut/review-scope-sparse.md: passed (4s)", "finished tests/scrut/review-scope-submodule-consumers.md: passed (120s)", "finished tests/scrut/review-scope-submodules.md: passed (126s)", "finished tests/scrut/run-scrut-documents.md: passed (5s)", "finished tests/scrut/review-scope.md: passed (23s)", "finished tests/scrut/validate-plugins-codex-exec.md: passed (96s)", "finished tests/scrut/validate-plugins-catalog.md: passed (259s)", "finished tests/scrut/watch-changes.md: passed (13s)", "finished tests/scrut/workmux-sandbox.md: passed (100s)", "finished tests/scrut/validate-plugins-skills.md: passed (330s)"],
+    "lock_owner": "597-fold-trim-comments pid=73910",
+    "lock_released": true,
+    "tooling_disposition": "Native sequence 000002: carry the known fixture failure through push and ready PR; complete the proposed locked sequence."
+  }
+}
