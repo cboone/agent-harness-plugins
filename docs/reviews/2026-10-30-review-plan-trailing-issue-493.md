@@ -71,3 +71,18 @@ The baseline fixture error is the only remaining test limitation. Neither the ag
 `check-versions`: `review-plan` advances from `1.1.0` to `1.1.1`, a patch fix to existing matching behavior. All 60 plugins have matching marketplace coverage, valid manifest-owned versions and matching Codex manifests where present; marketplace entries and metadata contain no version fields. The generated review-plan mirror was rebuilt. No other plugin version changes.
 
 Completed plan moves to `docs/plans/done/`. Tidy preserves the exact checked tree in logical signed feature, test and process-document commits; its backup and equality result are reported in the mailbox handoff. Later changes after the Semgrep scan contain only process records and the plan's completed location; the shipped comparator, skill, README, manifests and generated plugin are unchanged from the scanned head. Push and ready PR are authorized by the brief. TOOLING owns merge. No live configuration, hook activation, credential or notification changes.
+
+## Main refresh on 2026-11-02
+
+TOOLING relayed the tl27 drain go-ahead for a signed merge, bounded checks and push. Signed merge `b67f0510` incorporates `origin/main` at `7817cab6` without rebasing or rewriting pushed history. The only conflict was adjacent Makefile registrations; both `PLAN_MATCHES_BRANCH_BIN` and main's `GITHUB_SKILL_EXAMPLES_BIN` were retained. The comparator, selection rules and existing snapshots are unchanged.
+
+`check-versions` passes: main still has `review-plan` at `1.1.0`, so this branch's `1.1.1` is the required forward patch version. No additional bump or generated-file edit is needed. All 61 plugins have consistent marketplace coverage and manifest-owned versions, including matching Codex manifests where present.
+
+`bin/check-fixture-environments` passes with main's error-output AST guard, and its separate `--review-paths` mode passes. No retained-diagnostic annotation is needed in this branch's changes. Focused Scrut checks, all run through `make test-scrut SCRUT_TEST_DIR=tests/scrut/<name>.md`, completed with no failures or skips:
+
+- `plan-matches-branch.md`: 28 of 28 cases passed.
+- `github-skill-examples.md`: 4 of 4 cases passed, checking the other conflicted registration.
+- `error-output-guard.md`: 102 of 102 cases passed.
+- `environment-isolation.md`: 51 of 51 cases passed; the earlier fixture baseline failure is resolved by the merged main changes.
+
+Only these four documents ran. On receipt of the thermal limit, the first three had finished and only environment isolation remained running; no further concurrent test work started. The other documents imported from main and the full suite were not run, as directed. Existing review counts and end states carry forward; the conflict resolution changes no matching behavior. TOOLING retains CI and merge ownership.
