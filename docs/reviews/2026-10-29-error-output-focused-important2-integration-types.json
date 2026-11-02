@@ -1,0 +1,7 @@
+{
+  "aspect": "types",
+  "findings": [],
+  "reviewed": "445aa43eee880cf6c8eb77f2b3212ec910d69c5d",
+  "strengths": ["Policy entries enforce exact fields, unique names, nonempty reasons and rejection of unused exclusions; encapsulation 8/10, invariant expression 8/10, usefulness 9/10, enforcement 9/10.", "Shell-unit metadata derives source coordinates centrally and validates matching AST boundaries before analysis; encapsulation 8/10, invariant expression 8/10, usefulness 9/10, enforcement 8/10.", "Literal decoding distinguishes unresolved words from known empty strings using null, preserving uncertainty explicitly; encapsulation 9/10, invariant expression 8/10, usefulness 9/10, enforcement 9/10.", "Descriptor state normalizes numeric identifiers and centralizes ordered destination updates, duplication and closure; encapsulation 8/10, invariant expression 7/10, usefulness 9/10, enforcement 8/10.", "Finding and report records use centralized constructors and explicit categories, separating errors, live forwarding and exclusions; encapsulation 8/10, invariant expression 8/10, usefulness 9/10, enforcement 8/10."],
+  "summary": "Reviewed the declared changes for type design, including the new shell/jq data contracts and their callers and tests. No introduced type-design defects warrant reporting; clean at Important."
+}

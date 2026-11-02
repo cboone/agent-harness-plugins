@@ -1,0 +1,109 @@
+{
+  "main": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+  "branch_before_merge": "03f28347729d874a27c31576145a37660c454a85",
+  "rare_physical_site_count": 13,
+  "rare_canonical_site_count": 5,
+  "generated_instances": 8,
+  "total_unreasoned_findings": 69,
+  "findings_by_kind": {
+    "discard": 22,
+    "capture": 34,
+    "stream-context": 13
+  },
+  "sites": [
+    {
+      "file": "plugins/attention-log/scripts/owner-lock.bash",
+      "line": 42,
+      "source": "      exec 8>&-",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/attention-log/scripts/owner-lock.bash",
+      "line": 48,
+      "source": "      exec 9>&-",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/attention-log/scripts/owner-lock.bash",
+      "line": 88,
+      "source": "    8) { exec 8> \"${path}\"; } 2>> \"${diagnostic}\" || result=$? ;;",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/attention-log/scripts/owner-lock.bash",
+      "line": 89,
+      "source": "    9) { exec 9> \"${path}\"; } 2>> \"${diagnostic}\" || result=$? ;;",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/notify/scripts/watch-codex-failures",
+      "line": 82,
+      "source": "  exec 3< \"${rollout}\"",
+      "canonical_file": "plugins/notify/scripts/watch-codex-failures",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/publish-report-board/scripts/owner-lock.bash",
+      "line": 42,
+      "source": "      exec 8>&-",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/publish-report-board/scripts/owner-lock.bash",
+      "line": 48,
+      "source": "      exec 9>&-",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/publish-report-board/scripts/owner-lock.bash",
+      "line": 88,
+      "source": "    8) { exec 8> \"${path}\"; } 2>> \"${diagnostic}\" || result=$? ;;",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/publish-report-board/scripts/owner-lock.bash",
+      "line": 89,
+      "source": "    9) { exec 9> \"${path}\"; } 2>> \"${diagnostic}\" || result=$? ;;",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/workmux/scripts/owner-lock.bash",
+      "line": 42,
+      "source": "      exec 8>&-",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/workmux/scripts/owner-lock.bash",
+      "line": 48,
+      "source": "      exec 9>&-",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/workmux/scripts/owner-lock.bash",
+      "line": 88,
+      "source": "    8) { exec 8> \"${path}\"; } 2>> \"${diagnostic}\" || result=$? ;;",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    },
+    {
+      "file": "plugins/workmux/scripts/owner-lock.bash",
+      "line": 89,
+      "source": "    9) { exec 9> \"${path}\"; } 2>> \"${diagnostic}\" || result=$? ;;",
+      "canonical_file": "plugins/workmux/scripts/owner-lock.bash",
+      "constructs": ["exec redirection"]
+    }
+  ],
+  "annotations_added_at_new_rare_sites": 0,
+  "guard_exit_status": 1,
+  "parse_and_graph": "Complete native AST report was produced; fixture graph passed before JSON emission."
+}

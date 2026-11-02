@@ -126,7 +126,7 @@ $ cp "${FIXTURE}/cleanup/statuses.json" "${FIXTURE}/cleanup-good-statuses.json" 
 >   && { "${CODEX_ASPECTS_BIN}" prompt --aspect simplify --scope "${FIXTURE}/scope.json" \
 >          --cleanup-dir "${FIXTURE}/cleanup" > "${FIXTURE}/cleanup-failed.prompt" 2> "${FIXTURE}/cleanup-failed.err"; echo "exit=$?"; } \
 >   && tail -1 "${FIXTURE}/cleanup-failed.err" \
->   && cp "${FIXTURE}/cleanup-good-statuses.json" "${FIXTURE}/cleanup/statuses.json"
+>   && cp "${FIXTURE}/cleanup-good-statuses.json" "${FIXTURE}/cleanup/statuses.json" # error-output-allow: snapshot replays retained cleanup rejection diagnostics and exit status
 exit=1
 codex-aspects: invalid cleanup review inputs
 ```
@@ -139,7 +139,7 @@ $ cp "${FIXTURE}/cleanup/cleanup-altitude.json" "${FIXTURE}/altitude-good.json" 
 >   && { "${CODEX_ASPECTS_BIN}" prompt --aspect simplify --scope "${FIXTURE}/scope.json" \
 >          --cleanup-dir "${FIXTURE}/cleanup" > "${FIXTURE}/cleanup-stale.prompt" 2> "${FIXTURE}/cleanup-stale.err"; echo "exit=$?"; } \
 >   && sed "s|${FIXTURE}|FIXTURE|g" "${FIXTURE}/cleanup-stale.err" \
->   && cp "${FIXTURE}/altitude-good.json" "${FIXTURE}/cleanup/cleanup-altitude.json"
+>   && cp "${FIXTURE}/altitude-good.json" "${FIXTURE}/cleanup/cleanup-altitude.json" # error-output-allow: snapshot replays retained stale-snapshot diagnostics and exit status
 exit=1
 Cleanup reviewer cleanup-altitude (FIXTURE/cleanup/cleanup-altitude.json): the output reviewed a different snapshot; rerun this reviewer against the current scope
 codex-aspects: invalid cleanup review inputs
@@ -207,7 +207,7 @@ $ cp -R "${FIXTURE}/cleanup" "${FIXTURE}/missing-angle" \
 >          --statuses "${FIXTURE}/code-statuses.json" --reviewed-aspect code \
 >          > "${FIXTURE}/boundary.err" 2>&1; echo "exit=$?"; } \
 >   && sed "s|${FIXTURE}|FIXTURE|g" "${FIXTURE}/boundary.err" \
->   && test ! -e "${FIXTURE}/unexpected-edit-missing-angle"
+>   && test ! -e "${FIXTURE}/unexpected-edit-missing-angle" # error-output-allow: snapshot replays retained missing-angle rejection and verifies no editor ran
 exit=1
 Cleanup statuses at FIXTURE/missing-angle/statuses.json: cleanup angle coverage is missing or duplicated; rerun cleanup against the current scope
 codex-aspects: invalid cleanup review inputs
@@ -225,7 +225,7 @@ $ cp -R "${FIXTURE}/cleanup" "${FIXTURE}/duplicate-angle" \
 >          --statuses "${FIXTURE}/code-statuses.json" --reviewed-aspect code \
 >          > "${FIXTURE}/boundary.err" 2>&1; echo "exit=$?"; } \
 >   && sed "s|${FIXTURE}|FIXTURE|g" "${FIXTURE}/boundary.err" \
->   && test ! -e "${FIXTURE}/unexpected-edit-duplicate-angle"
+>   && test ! -e "${FIXTURE}/unexpected-edit-duplicate-angle" # error-output-allow: snapshot replays retained duplicate-angle rejection and verifies no editor ran
 exit=1
 Cleanup statuses at FIXTURE/duplicate-angle/statuses.json: cleanup angle coverage is missing or duplicated; rerun cleanup against the current scope
 codex-aspects: invalid cleanup review inputs
@@ -243,7 +243,7 @@ $ cp -R "${FIXTURE}/cleanup" "${FIXTURE}/different-membership" \
 >          --statuses "${FIXTURE}/code-statuses.json" --reviewed-aspect code \
 >          > "${FIXTURE}/boundary.err" 2>&1; echo "exit=$?"; } \
 >   && sed "s|${FIXTURE}|FIXTURE|g" "${FIXTURE}/boundary.err" \
->   && test ! -e "${FIXTURE}/unexpected-edit-different-membership"
+>   && test ! -e "${FIXTURE}/unexpected-edit-different-membership" # error-output-allow: snapshot replays retained membership rejection and verifies no editor ran
 exit=1
 Cleanup statuses at FIXTURE/different-membership/statuses.json: cleanup membership differs from the current scope; rerun cleanup against the current scope
 codex-aspects: invalid cleanup review inputs

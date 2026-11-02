@@ -1,0 +1,17 @@
+{
+  "aspect": "simplify",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "The redirect reducer repeats the same descriptor-duplication operator check when determining destinations, moves, and closures. Naming that shared condition would make the related rules easier to follow.",
+      "file": "bin/lib/error-output-ast.jq",
+      "fix": "Bind ($op | IN(\">&\", \"<&\")) once as $duplicates and reuse it in the three existing conditions, preserving target checks and descriptor-update order.",
+      "line": 46,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Naming: Name the descriptor-duplication predicate once."
+    }
+  ],
+  "reviewed": "517ff6e4fd88a828ad6279b4223603a23bcdb414",
+  "strengths": ["Descriptor propagation reuses the ordered redirect reducer.", "Static regression samples cover inherited destinations and exec variants without executing sample programs."],
+  "summary": "Reviewed descriptor propagation, exec-stream detection, and associated tests and documentation. Found one optional clarity improvement; no files changed or repository code executed."
+}
