@@ -204,3 +204,25 @@ test captures. No launcher behavior or snapshots changed during resolution.
 - No full suite was run for this merge. Earlier full-suite and Semgrep results
   above describe their recorded pre-merge trees. Pushed history is preserved;
   this update uses a signed merge commit.
+
+## Second main refresh on 2026-11-02
+
+TOOLING relayed the same tl27 authority for a further main merge, focused checks
+and push. Merged `origin/main` at
+`7817cab667d625bce777ad808a327d8e72f1b502`. The sole conflict was Makefile help
+text. Kept the runner's Perl requirement and main's new Claude validation
+requirement; `make help` renders both. The runner, its tests and its existing
+AST error-output policy declaration merged unchanged.
+
+JSON, plugin manifests, catalog and generated-mirror validation passed.
+`check-fixture-environments` passed. No branch plugin content or version changes
+remain against main, so no plugin bump applies. No full suite runs in this
+refresh. Under TOOLING's thermal restriction, verification is limited to the
+runner document, environment-isolation and error-output-guard, with at most two
+documents running together. Other documents imported from main are left to CI.
+
+All three focused documents passed: runner 33, environment-isolation 51 and
+error-output-guard 102 testcases, zero failures or skips. Ledger Markdown lint
+and formatting pass; branch whitespace check passes. No new correctness review
+round was started for the help-text conflict resolution. Earlier review counts
+and their clean-at-Important end states remain unchanged.

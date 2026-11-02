@@ -179,6 +179,33 @@ $ cd "${REPO_ROOT}" && cmp plugins/review-until-clean/scripts/review-scope plugi
 identical
 ```
 
+## The duplicated MIT license references stay byte-identical
+
+Each scaffold plugin ships its own references so they resolve inside that
+plugin. The four MIT copies must stay in sync. Lean is excluded because it uses
+Apache 2.0; Zig is excluded because it adds a `build.zig.zon` packaging note.
+
+```scrut
+$ cd "${REPO_ROOT}" \
+>   && cmp plugins/scaffold-go-cli/skills/scaffold-go-cli/references/license.md \
+>     plugins/scaffold-go-library/skills/scaffold-go-library/references/license.md && echo identical
+identical
+```
+
+```scrut
+$ cd "${REPO_ROOT}" \
+>   && cmp plugins/scaffold-go-cli/skills/scaffold-go-cli/references/license.md \
+>     plugins/scaffold-new-repo/skills/scaffold-new-repo/references/license.md && echo identical
+identical
+```
+
+```scrut
+$ cd "${REPO_ROOT}" \
+>   && cmp plugins/scaffold-go-cli/skills/scaffold-go-cli/references/license.md \
+>     plugins/scaffold-rust-cli/skills/scaffold-rust-cli/references/license.md && echo identical
+identical
+```
+
 ## Every `$(< path)` read in the bundled scripts is guarded for the same path
 
 A `"$(< path)"` expansion that fails does so _during expansion_, not as a command, so neither a redirection on the assignment nor a trailing `||` catches it: Bash exits with its own unprefixed diagnostic and the script's error handling never runs. The path must therefore be tested before it is read, with `-f` as well as `-r`, because `-r` is true for a readable directory. The matcher allows the optional whitespace Bash permits after `<`, so a read written `$(<"${path}")` is counted rather than skipped.

@@ -1,6 +1,6 @@
 # Trim Text
 
-Trim and rewrite prose, such as PR and issue bodies and agent instructions, so it leads with what the reader needs and the minimum why, without changing what it says.
+Trim and rewrite prose and code comments so each leads with what the reader needs and the minimum why, without changing what it says.
 
 **Type:** Skill
 **Trigger:** `/trim-text` (also activates automatically)
@@ -11,12 +11,13 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-The skill applies the standard from [Trim Comments](../trim-comments/README.md) to prose. It leads with what the reader needs, then the minimum reason, and cuts the rest: narration of how the author got there, consequence chains, arguments for decisions already made, hedges, jargon, and facts that go stale. Text stays when a reader would otherwise do the wrong thing, when something deliberate looks wrong, or when an external constraint drives it.
+The skill trims prose and source comments in one invocation, using a shared standard and profiles for each kind of text. It leads with what the reader needs, then the minimum reason, and cuts the rest: narration of how the author got there, consequence chains, arguments for decisions already made, hedges, jargon, and facts that go stale. Text stays when a reader would otherwise do the wrong thing, when something deliberate looks wrong, or when an external constraint drives it.
 
 A profile adapts the standard to each kind of text:
 
 - **PR and issue bodies:** the change or the problem first, without restating the title, the diff, or the commit list.
 - **Agent instructions:** `AGENTS.md`, `CLAUDE.md`, skills, Copilot instructions, and global instructions. This profile leans toward keeping and flagging, because a rule that looks redundant is often the fix for a past failure.
+- **Code comments:** source files, tests, scripts, stylesheets and markup. This profile preserves code and protected comments, flags ticketless TODOs, and checks that only eligible comments changed.
 - **None:** pasted text and commit message bodies get the shared standard alone.
 
 Every rewrite must preserve meaning: no claim added, no "must" turned into "should", and every condition and exception kept. Deleted text is limited to what the standard cuts, and the only statement of a requirement is never deleted. A claim that is no longer true is corrected when you run the skill directly, and flagged when another skill calls it. The skill leaves quotations, legal text, generated files, code blocks, and text that must match another file verbatim alone.
@@ -48,7 +49,9 @@ How it applies the result depends on the input:
 /trim-text docs/guide.md --profile none --no-commit
 ```
 
-With no scope argument, a branch with an open PR offers its body (default) or branch changes. Without a PR, default to branch changes. Explicit `branch` selects changed prose, including local on-disk changes and untracked prose, compared with the merge base of the PR's remote base or the verified remote default branch. `--base` selects another comparison ref. Unchanged prose and unrelated edits remain untouched; the existing file verification and commit rules apply.
+With no scope argument, a branch with an open PR offers its body (default) or branch changes. Without a PR, default to branch changes. Explicit `branch` selects changed prose and comments, including local on-disk changes and untracked files, compared with the merge base of the PR's remote base or the verified remote default branch. `--base` selects another comparison ref. Unchanged prose and unrelated edits remain untouched; the existing file verification and commit rules apply.
+
+`trim-text branch` handles prose and source comments together, selecting a profile per file. `trim-text branch --profile code-comments` selects comments only, using the verified remote default branch. This is also the no-argument scope of the compatible `trim-comments` alias. A single named comment stays limited to that comment.
 
 `--profile` overrides the profile detected from the input. `--dry-run` reports the proposed changes without editing anything. `--no-commit` edits files and verifies them but leaves the edits uncommitted. `--no-codex` classifies file paths in the current session instead of through Codex.
 
@@ -78,12 +81,15 @@ If you already have a `permissions.allow` array, merge these entries into it. Th
 
 ## Examples
 
+- "trim this branch": trims changed prose and comments with a profile per file
+- "trim comments in src/send.ts": trims comments while preserving the code
+
 - "tighten the PR body": trims the open PR's description, after you approve the diff
 - "this instruction is too long": rewrites the instruction in place
 - "trim this" with pasted text: returns a shorter version
 
 ## See Also
 
-- [Trim Comments](../trim-comments/README.md): the same standard for code comments
+- [Trim Comments](../trim-comments/README.md): the compatibility alias for the code-comments profile
 - [Write Markdown](../write-markdown/README.md): Markdown formatting conventions
 - [All plugins](../../README.md)
