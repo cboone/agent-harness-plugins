@@ -19,9 +19,15 @@ Reserve Important for findings that would break behavior, lose or leak data, or 
 
 IMPORTANT-RULES
 
+## Reporting
+
+- When a finding matches a checklist rule, start it with the checklist name and the exact rule name, for example CITATION-EXAMPLE. Otherwise start it with `Uncited:` and describe the concrete defect; never invent a rule name.
+- For uncited findings, behavior defects, data loss or leaks, and build or release failures are Important (P1); style, naming and wording are Nit (P2 or lower). Important findings block merging and must all be reported; uncited Nits count toward the same five-Nit cap.
+- Combine repeats of the same defect across files into one finding listing the affected paths, unless they need different fixes.
+
 ## Nits
 
-This file does not carry the checklists' Nit rules. An agent reading it may not open another file, so what it guarantees is the Important rules above; the full Nit lists live in the checklists under `.github/skills/code-review/`, where Copilot code review applies them file by file. Report the Nits you can see in the diff yourself, and when one matches a rule you know from a checklist, start the finding with the checklist name and the rule name, for example CITATION-EXAMPLE.
+This file does not carry the checklists' Nit rules. An agent reading it may not open another file, so what it guarantees is the Important rules above; the full Nit lists live in the checklists under `.github/skills/code-review/`, where Copilot code review applies them file by file. Report the Nits visible in the diff using the citation or uncited form above.
 
 ## Cap the nits
 

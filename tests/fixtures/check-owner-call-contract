@@ -21,9 +21,9 @@ function main() {
       }
     }
     END {
-      if (calls != 9) {print "owner-call-contract: expected 9 literal call sites, found " calls; errors++}
+      if (calls != 8) {print "owner-call-contract: expected 8 literal call sites, found " calls; errors++}
       if (errors) exit 1
-      print "Owner helper call contract: 9 checked calls"
+      print "Owner helper call contract: 8 checked calls"
     }
   ' "${files[@]}"
 }

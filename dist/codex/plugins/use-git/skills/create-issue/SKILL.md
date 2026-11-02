@@ -43,20 +43,22 @@ Follow [the tmpfile procedure](../use-git/references/tmpfile-pattern.md) for non
 Run a single, short `gh issue create` command using the tmpfile path from step 3:
 
 ```bash
-gh issue create --title "Issue title here" --body-file TMPFILE
+gh issue create --title 'Issue title here' --body-file TMPFILE
 ```
 
 Add optional flags as needed:
 
 ```bash
-gh issue create --title "Issue title here" --body-file TMPFILE --label "bug" --label "enhancement" --assignee "@me"
+gh issue create --title 'Issue title here' --body-file TMPFILE --label "bug" --label "enhancement" --assignee "@me"
 ```
 
 For a different repository:
 
 ```bash
-gh issue create --repo owner/repo --title "Issue title here" --body-file TMPFILE
+gh issue create --repo owner/repo --title 'Issue title here' --body-file TMPFILE
 ```
+
+Single-quote agent-written titles so backticks, `$()` and `$NAME` stay literal. Rephrase titles containing apostrophes or encode each apostrophe as `'\''`, for example `--title 'Fix parser'\''s handling'`.
 
 The write and `gh issue create` are dependent calls. Keep them sequential as the tmpfile reference requires; an empty body can still produce a successful command and an issue URL.
 
