@@ -215,7 +215,7 @@ function usage_error() {
 
 # Sets FILE_SIZE to the size of file $1 in bytes, or 0 when it is missing.
 function file_size() {
-  FILE_SIZE="$(wc -c < "${1}" 2> /dev/null)" || FILE_SIZE=0
+  FILE_SIZE="$(wc -c < "${1}" 2> /dev/null)" || FILE_SIZE=0 # error-output-allow: missing optional log has size zero
   FILE_SIZE="${FILE_SIZE//[!0-9]/}"
 }
 
@@ -230,7 +230,7 @@ function strip_zeros() {
 function file_inode() {
   local listing
   FILE_INODE=""
-  listing="$(ls -di "${1}" 2> /dev/null)" || return 0
+  listing="$(ls -di "${1}" 2> /dev/null)" || return 0 # error-output-allow: missing optional log has no inode identity
   read -r FILE_INODE _ <<< "${listing}"
 }
 
@@ -250,16 +250,16 @@ function append_pending_event() {
 # Reclaims owners older than a minute.
 function rotate_events() {
   local result diagnostic
-  mkdir -p "${ROTATE_LOCK}" 2> /dev/null || return 0
+  mkdir -p "${ROTATE_LOCK}" || return 0
   if owner_lock_reserve "${ROTATE_LOCK}/owner" 9 append_pending_event; then
     ROTATION_TOKEN="${OWNER_LOCK_TOKEN}"
   else
     result=$?
     ((result == 1)) || return "${result}"
-    [[ -n "$(find "${ROTATE_LOCK}/owner" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0
+    [[ -n "$(find "${ROTATE_LOCK}/owner" -maxdepth 0 -mmin +1 2> /dev/null)" ]] || return 0 # error-output-allow: missing rotation owner means there is no stale reservation to reclaim
     # Age-based reclaim can remove a live successor's owner file.
     # https://github.com/cboone/agent-harness-plugins/issues/673
-    if ! diagnostic="$(rm "${ROTATE_LOCK}/owner" 2>&1)"; then
+    if ! diagnostic="$(rm "${ROTATE_LOCK}/owner" 2>&1)"; then # error-output-allow: reclaim retains merged errors and reports them after appending the pending event
       owner_lock_report "cannot reclaim ${ROTATE_LOCK}/owner: ${diagnostic}" append_pending_event
       return 1
     fi
@@ -270,7 +270,7 @@ function rotate_events() {
     fi
   fi
   [[ "${PENDING_EVENT_ATTEMPTED}" == false ]] || return 1
-  if ! diagnostic="$({ printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; } 2>&1)"; then
+  if ! diagnostic="$({ printf '%s\n' "$$" > "${ROTATE_LOCK}/owner"; } 2>&1)"; then # error-output-allow: owner PID write retains merged errors and reports them after appending the pending event
     owner_lock_report "cannot record rotation owner ${ROTATE_LOCK}/owner: ${diagnostic}" append_pending_event
     return 1
   fi
@@ -341,7 +341,7 @@ function read_hook_fields() {
   fields="$(printf '%s' "${HOOK_INPUT}" | jq -r --arg sep "${FIELD_SEP}" \
     '[.session_id, .transcript_path, .agent_id, .tool_name, .notification_type, .error, .session_title]
       | map(strings // "" | gsub("[\u0000-\u001f]"; ""))
-      | join($sep)' 2> /dev/null)" || return 1
+      | join($sep)' 2> /dev/null)" || return 1 # error-output-allow: unparseable optional event is rejected
   IFS="${FIELD_SEP}" read -r SESSION_ID TRANSCRIPT_PATH AGENT_ID TOOL_NAME NOTIFICATION_TYPE ERROR_TYPE SESSION_TITLE \
     <<< "${fields}" || true
   if [[ "${SESSION_ID}" =~ ^[A-Za-z0-9_-]+$ ]]; then
@@ -362,7 +362,7 @@ function read_session_name() {
           if $record.type == "agent-name" then ($record.agentName | strings) // .
           elif $record.type == "custom-title" then ($record.customTitle | strings) // .
           else . end)
-        // empty' 2> /dev/null)" || SESSION_NAME=""
+        // empty' 2> /dev/null)" || SESSION_NAME="" # error-output-allow: optional transcript metadata may be absent
   fi
   if [[ -z "${SESSION_NAME}" && -n "${SESSION_ID}" && -f "${SESSIONS_DIR}/${SESSION_ID}.name" ]]; then
     IFS= read -r SESSION_NAME < "${SESSIONS_DIR}/${SESSION_ID}.name" || true
@@ -379,7 +379,7 @@ function read_tmux() {
   TMUX_SOCKET="${socket_path##*/}"
   TMUX_PANE_ID="${TMUX_PANE}"
   names="$(tmux display-message -t "${TMUX_PANE}" -p \
-    "#{session_name}${FIELD_SEP}#{window_name}${FIELD_SEP}#{window_id}" 2> /dev/null)" || return 0
+    "#{session_name}${FIELD_SEP}#{window_name}${FIELD_SEP}#{window_id}" 2> /dev/null)" || return 0 # error-output-allow: unreachable tmux pane leaves optional name metadata unavailable
   [[ "${names}" == *"${FIELD_SEP}"*"${FIELD_SEP}"* ]] || return 0
   IFS="${FIELD_SEP}" read -r TMUX_SESSION TMUX_WINDOW TMUX_WINDOW_ID <<< "${names}" || true
 }
@@ -389,7 +389,7 @@ function transcript_shows_refusal() {
   [[ -f "${TRANSCRIPT_PATH}" ]] || return 1
   local attempt
   for attempt in 1 2 3 4 5; do
-    if tail -n 20 "${TRANSCRIPT_PATH}" 2> /dev/null | jq -Rne "${TRANSCRIPT_JQ} shows_refusal" > /dev/null 2>&1; then
+    if tail -n 20 "${TRANSCRIPT_PATH}" 2> /dev/null | jq -Rne "${TRANSCRIPT_JQ} shows_refusal" > /dev/null 2>&1; then # error-output-allow: transcript refusal predicate retries unavailable or incomplete transcript data
       return 0
     fi
     if ((attempt < 5)); then
@@ -414,7 +414,7 @@ function transcript_shows_refusal() {
 function lock_session() {
   local tries=0 owner result
   LOCK_DIR="${SESSIONS_DIR}/${SESSION_ID}.lock"
-  mkdir -p "${LOCK_DIR}" 2> /dev/null || return 1
+  mkdir -p "${LOCK_DIR}" || return 1
   while :; do
     if owner_lock_reserve "${LOCK_DIR}/pid" 8; then
       break
@@ -423,9 +423,9 @@ function lock_session() {
     fi
     ((result == 1)) || return 1
     owner=""
-    IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true
+    IFS= read -r owner < "${LOCK_DIR}/pid" 2> /dev/null || true # error-output-allow: lock PID may not have been written yet
     if { [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2> /dev/null; } \
-      || { [[ -z "${owner}" && -n "$(find "${LOCK_DIR}/pid" -maxdepth 0 -mmin +1 2> /dev/null)" ]]; }; then
+      || { [[ -z "${owner}" && -n "$(find "${LOCK_DIR}/pid" -maxdepth 0 -mmin +1 2> /dev/null)" ]]; }; then # error-output-allow: process-existence predicate selects stale session-owner reclaim # error-output-allow: missing session owner is not eligible for age-based reclaim
       # PID/age reclaim can remove a live successor's owner file.
       # https://github.com/cboone/agent-harness-plugins/issues/673
       rm -f "${LOCK_DIR}/pid"
@@ -596,7 +596,7 @@ function on_session_end() {
 # on stdout and exits 0, so no output can be read as a decision.
 function do_hook() {
   local hook_event="${1:-}" input_head="" session_pattern='"session_id":"([A-Za-z0-9_-]+)"'
-  exec > /dev/null
+  exec > /dev/null # error-output-allow: hook stdout stays silent so output cannot be interpreted as a decision
   trap 'unlock_session || :; exit 0' EXIT
   # The log holds paths and session names, so only this user may read it.
   umask 077

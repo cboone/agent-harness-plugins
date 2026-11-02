@@ -1,0 +1,26 @@
+{
+  "aspect": "simplify",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "The Scrut live-forwarding condition appears in both the inclusion filter and kind selection. Naming it once makes the negated pipeline expression easier to follow and keeps both decisions visibly aligned.",
+      "file": "bin/lib/error-output-ast.jq",
+      "fix": "Bind ($scrut and $dest == \"stdout\") as $live_forward, then reuse it in both expressions while preserving the $closes override.",
+      "line": 65,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Naming: Name the live-forwarding condition once."
+    },
+    {
+      "confidence": 100,
+      "detail": "The new exception comment repeats the immediately preceding test heading. Similar annotations throughout the changed Scrut documents add substantial repeated text without further explaining why diagnostic capture is allowed.",
+      "file": "tests/scrut/attention-log.md",
+      "fix": "Keep the required marker with a concise reason such as '# error-output-allow: snapshot asserts merged stderr', omitting the copied heading where redundant.",
+      "line": 60,
+      "severity": "suggestion",
+      "title": "write-scrut-tests: Explained tests: Avoid repeating headings in exception reasons."
+    }
+  ],
+  "reviewed": "26cfad21e08a72ab8ecd39f264bb98ba2b546edf",
+  "strengths": ["Source extraction, parsing and policy validation have distinct responsibilities.", "Static samples make individual acceptance and rejection cases easy to trace."],
+  "summary": "Reviewed the complete committed scope and found two optional clarity improvements. No files were changed, and no mechanical checks or repository scripts were run."
+}
