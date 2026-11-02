@@ -2,6 +2,9 @@
 # codex-aspects -- Render, run and validate the review-pr-with-codex aspects.
 set -euo pipefail
 
+# Only the child wrapper establishes aspect process groups.
+set +m
+
 # Make `set -e` apply inside command substitutions, where Bash supports it.
 shopt -s inherit_errexit 2> /dev/null || true # error-output-allow: Bash 3.2 lacks inherit_errexit; later commands check status explicitly
 
@@ -54,30 +57,74 @@ CANCEL_STATUS=0
 STOP_POLL_LIMIT=50
 readonly STOP_POLL_LIMIT
 
-# Treat failed or empty inspection as active; ignore terminated processes awaiting collection.
-function group_active() {
-  local group="${1}" pgid state
-  if ! ps -axo pgid=,stat= > "${TMP_DIR}/groups" 2> "${TMP_DIR}/groups.err" \
-    || [[ -s "${TMP_DIR}/groups.err" || ! -s "${TMP_DIR}/groups" ]]; then # error-output-allow: inspection failure is treated as active and retains diagnostic artifacts
-    return 0
+# Set the group in the child only, avoiding Bash job-control setpgid races.
+function run_in_group() {
+  exec perl -MPOSIX -e '
+    $SIG{INT} = $SIG{QUIT} = "DEFAULT";
+    defined POSIX::setpgid(0, 0)
+      or die "codex-aspects: setpgid: $!\n";
+    exec @ARGV;
+    die "codex-aspects: exec $ARGV[0]: $!\n";
+  ' -- "$@"
+}
+
+# Return 0 for an active owned target, 1 for a completed/reused target, 2 if
+# inspection fails. A live leader must still be this shell's child. Recorded
+# leaderless groups are targeted by ID; reuse between inspections is not excluded.
+function signal_group() {
+  local signal="${1}" group="${2}" pid parent pgid state target
+  local leader_parent="" leader_pgid="" leader_state="" members=false
+  if ! ps -axo pid=,ppid=,pgid=,stat= > "${TMP_DIR}/groups" 2> "${TMP_DIR}/groups.err" \
+    || [[ -s "${TMP_DIR}/groups.err" || ! -s "${TMP_DIR}/groups" ]]; then # error-output-allow: failed inspection retains diagnostics and reports incomplete cancellation
+    return 2
   fi
-  while read -r pgid state; do
-    if [[ "${pgid}" == "${group}" && "${state}" != *Z* ]]; then return 0; fi
+  while read -r pid parent pgid state; do
+    if [[ "${pid}" == "${group}" ]]; then
+      leader_parent="${parent}"
+      leader_pgid="${pgid}"
+      leader_state="${state}"
+    fi
+    if [[ "${pgid}" == "${group}" && "${state}" != *Z* ]]; then members=true; fi
   done < "${TMP_DIR}/groups"
-  return 1
+
+  if [[ -n "${leader_parent}" ]]; then
+    [[ "${leader_parent}" == "$$" ]] || return 1
+    if [[ "${leader_pgid}" == "${group}" && "${members}" == true ]]; then
+      target="-${group}"
+    elif [[ "${leader_state}" != *Z* ]]; then
+      target="${group}"
+    elif [[ "${members}" == true ]]; then
+      target="-${group}"
+    else
+      return 1
+    fi
+  elif [[ "${members}" == true ]]; then
+    target="-${group}"
+  else
+    return 1
+  fi
+  kill -"${signal}" -- "${target}" 2> /dev/null || true # error-output-allow: an owned target can finish between inspection and signalling
+  return 0
 }
 
 # Signal entire recorded groups, escalating to KILL, then verify completion.
 function stop_running_codex() {
-  local pid group attempt active="false" signal
+  local pid group attempt index result active="false" signal
+  local pids_to_reap=()
+  pids_to_reap=(${RUNNING_PIDS[@]+"${RUNNING_PIDS[@]}"})
   for ((attempt = 0; attempt < STOP_POLL_LIMIT; attempt += 1)); do
     active="false"
     signal=TERM
     if ((attempt >= STOP_POLL_LIMIT / 2)); then signal=KILL; fi
-    for group in ${RUNNING_GROUPS[@]+"${RUNNING_GROUPS[@]}"}; do
-      # Repeat delivery so descendants created by a TERM handler are covered.
-      kill -"${signal}" -- "-${group}" 2> /dev/null || true # error-output-allow: cancellation tolerates an already stopped process group
-      if group_active "${group}"; then active="true"; fi
+    for index in ${RUNNING_GROUPS[@]+"${!RUNNING_GROUPS[@]}"}; do
+      group="${RUNNING_GROUPS[${index}]}"
+      result=0
+      signal_group "${signal}" "${group}" || result=$?
+      if ((result == 1)); then
+        unset 'RUNNING_GROUPS[index]' 'RUNNING_PIDS[index]'
+      else
+        active="true"
+      fi
     done
     if [[ "${active}" == "false" ]]; then break; fi
     sleep 0.1
@@ -86,7 +133,7 @@ function stop_running_codex() {
     echo "${SCRIPT_NAME}: cancellation is incomplete; a process is active or its state could not be checked" >&2
     return 1
   fi
-  for pid in ${RUNNING_PIDS[@]+"${RUNNING_PIDS[@]}"}; do
+  for pid in ${pids_to_reap[@]+"${pids_to_reap[@]}"}; do
     wait "${pid}" 2> /dev/null || true # error-output-allow: cancellation reaps children without replacing the selected cancellation status
   done
   RUNNING_PIDS=()
@@ -1069,6 +1116,7 @@ function cmd_run() {
   [[ -n "${out_dir}" ]] || die "--out-dir is required"
   [[ -d "${out_dir}" ]] || die "--out-dir '${out_dir}' is not an existing directory"
   require_command codex
+  require_command perl
   require_command ps
 
   local top_level out_physical
@@ -1141,11 +1189,11 @@ function cmd_run() {
       extra_args=(--config 'sandbox_workspace_write.network_access=false' --add-dir "${top_level}")
     fi
 
-    # Bash monitor mode creates a process group led by $!, on macOS and Linux.
-    # Disable it after launch so helper commands do not create additional jobs.
+    # The wrapper preserves $! through group setup and exec.
+    # Keep codex at line start so rule 23 recognizes the wrapped run.
     LAUNCHING=true
-    set -m
-    codex exec \
+    run_in_group \
+      codex exec \
       --cd "${TMP_DIR}/work" \
       --skip-git-repo-check \
       --sandbox "${sandbox}" \
@@ -1162,7 +1210,6 @@ function cmd_run() {
       < /dev/null > "${out_physical}/${aspect}.log" 2>&1 & # error-output-allow: standalone runner checks status and reply after wait and retains logs
     RUNNING_PIDS+=("$!")
     RUNNING_GROUPS+=("$!")
-    set +m
     LAUNCHING=false
     if ((CANCEL_STATUS != 0)); then exit "${CANCEL_STATUS}"; fi
   done
@@ -1174,6 +1221,7 @@ function cmd_run() {
     aspect="${aspects[${index}]}"
     exit_code=0
     wait "${RUNNING_PIDS[${index}]}" || exit_code=$?
+    unset 'RUNNING_PIDS[index]'
     statuses+=("$(aspect_status "${aspect}" "${out_physical}/${aspect}.json" "${snapshot}" \
       "${exit_code}" "${out_physical}/${aspect}.log" "${members}")")
   done
