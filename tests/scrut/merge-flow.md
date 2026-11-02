@@ -387,7 +387,7 @@ The guarded command runs against the local repository fixture, including its rea
 
 ```scrut
 $ dir="$(clone)" && state="$(mktemp "${work}/policy.XXXXXX")" \
->   && printf '%s\n' '{"restrictions":{"noFix":false,"copilotPaused":false}}' | "${MERGE_FLOW_BIN}" prepare > "${state}" \
+>   && printf '%s\n' '{"restrictions":{"repository":"acme/widgets","noFix":false,"copilotPaused":false}}' | "${MERGE_FLOW_BIN}" prepare > "${state}" \
 >   && (cd "${dir}" && "${MERGE_FLOW_BIN}" --watch-state "${state}" sync acme widgets main "${merge_sha}") | jq -c '{synced,reason}' \
 >   && test "$(git -C "${dir}" rev-parse main)" = "${merge_sha}" && echo moved
 {"synced":true,"reason":null}

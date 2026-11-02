@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "command": "SCRUT_JOBS=2 make test-all",
+  "head": "44f6da761bca452efdfe2fa3a29e416131586761",
+  "started": "2026-11-02 13:16:31 EST",
+  "finished": "2026-11-02 13:34:48 EST",
+  "thermal": ["Note: No thermal warning level has been recorded", "Note: No performance warning level has been recorded", "Note: No CPU power status has been recorded"],
+  "lint": "passed, check-only for broad Markdown writers by project policy",
+  "validate": "passed",
+  "documents": 76,
+  "testcases": 2214,
+  "succeeded": 2214,
+  "failed": 0,
+  "skipped": 0,
+  "lock_released": true,
+  "full_runs": 1
+}

@@ -72,6 +72,7 @@ SCRUT_ENV := \
 	COPILOT_GH_STUB_BIN="$(CURDIR)/tests/fixtures/copilot-gh-stub" \
 	COPILOT_SWEEP_CASE_BIN="$(CURDIR)/tests/fixtures/copilot-sweep-case" \
 	COPILOT_ANCESTRY_CASE_BIN="$(CURDIR)/tests/fixtures/copilot-ancestry-case" \
+	CLIENT_POLICY_CASE_BIN="$(CURDIR)/tests/fixtures/client-policy-case" \
 	COPILOT_REPLY_CASE_BIN="$(CURDIR)/tests/fixtures/copilot-reply-case" \
 	COPILOT_GH_DATA_DIR="$(CURDIR)/tests/data/copilot-gh" \
 	CROSS_REFERENCE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/cross-reference-fixture" \

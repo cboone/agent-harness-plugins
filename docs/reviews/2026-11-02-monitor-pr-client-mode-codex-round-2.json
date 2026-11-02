@@ -1,0 +1,84 @@
+{
+  "statuses": [
+    {
+      "aspect": "code",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    },
+    {
+      "aspect": "errors",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    },
+    {
+      "aspect": "tests",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    },
+    {
+      "aspect": "comments",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    },
+    {
+      "aspect": "types",
+      "status": "ok",
+      "reason": null,
+      "exit_code": 0
+    }
+  ],
+  "results": [
+    {
+      "aspect": "code",
+      "findings": [],
+      "reviewed": "709571f57d23fda4ca326d052c38b2108b7f9635",
+      "strengths": ["Both entry points share repository policy, approval, resume and handoff rules.", "Client mutations verify thread ownership, review identity, live PR context and fixing-commit ancestry."],
+      "summary": "Reviewed every scoped committed change and found no reportable defects; the change meets the project's standards. Bash syntax and read-only jq policy checks passed; integration tests were not run, and GitHub metadata verification was blocked by network access."
+    },
+    {
+      "aspect": "errors",
+      "findings": [],
+      "reviewed": "709571f57d23fda4ca326d052c38b2108b7f9635",
+      "strengths": ["Client mutations stop with diagnostics when policy, ancestry or live-thread validation fails.", "API and parsing failures preserve diagnostics without silently permitting writes.", "The shared workflow distinguishes unavailable review evidence from absent feedback and requires inspection before retrying uncertain writes."],
+      "summary": "Reviewed all 31 membership paths and the supplied committed diff for error-handling defects; none met the reporting threshold. Bash syntax checks passed for all four changed scripts. Integration tests were not run under the read-only restriction, and live GitHub verification was unavailable because the network query failed."
+    },
+    {
+      "aspect": "tests",
+      "findings": [],
+      "reviewed": "709571f57d23fda4ca326d052c38b2108b7f9635",
+      "strengths": ["Integration tests cover approved mutations, incomplete approvals, mismatched targets, stale heads, closed PRs and read failures.", "A head change between reply and resolution is tested with explicit mutation counts.", "Client dispatch tests cover automatic repair and synchronization restrictions with and without round approval.", "Existing suites cover complete feedback intake, ancestry failures and partial reply/resolution failures."],
+      "summary": "Reviewed all 31 scoped paths and mapped changed behavior to new and existing tests. No reportable coverage gaps remain; runtime tests were not run under the read-only restriction."
+    },
+    {
+      "aspect": "comments",
+      "findings": [
+        {
+          "confidence": 96,
+          "detail": "The send_reply comment documents only two arguments, but the function now accepts a validation kind and resolution reason. Those arguments make combined operations verify fixing-commit evidence before posting the reply; a future caller following the documented interface could omit that preflight.",
+          "file": "plugins/monitor-pr/scripts/resolve-copilot-threads",
+          "fix": "Add: '#   $3 - Validation kind: reply (default), or resolve for combined operations' and '#   $4 - Resolution reason; client resolve validation requires ADDRESSED'. Explain that combined operations use resolve validation before publishing the reply.",
+          "line": 159,
+          "severity": "suggestion",
+          "title": "write-bash-scripts: Function comments: Document the new reply-validation arguments."
+        }
+      ],
+      "reviewed": "709571f57d23fda4ca326d052c38b2108b7f9635",
+      "strengths": ["The shared policy explicitly identifies which default workflow rules client mode overrides.", "Resume documentation preserves approval provenance and requires policy revalidation.", "Mutation documentation accurately explains repeated live-context and fixing-commit checks."],
+      "summary": "Reviewed comments and documentation across every scoped path against the implementation. One function-comment omission merits improvement; no important or critical documentation defects were found. No files were changed or tests run."
+    },
+    {
+      "aspect": "types",
+      "findings": [],
+      "reviewed": "709571f57d23fda4ca326d052c38b2108b7f9635",
+      "strengths": ["RepositoryRestrictions: encapsulation 8/10, invariant expression 8/10, usefulness 9/10, enforcement 9/10; validated repository identity determines policy, unknown identity restricts actions, and stricter restrictions remain effective.", "ResolvedPolicy: encapsulation 9/10, invariant expression 9/10, usefulness 9/10, enforcement 9/10; recomputation and equality checks prevent derived permissions from diverging from validated restrictions.", "ClientRound: encapsulation 8/10, invariant expression 9/10, usefulness 10/10, enforcement 9/10; construction validates authority provenance, repository, positive integer identifiers and full head SHA, then binds authority to the OPEN snapshot and selected review.", "ClientThreadContext: encapsulation 8/10, invariant expression 8/10, usefulness 10/10, enforcement 9/10; each mutation verifies the actual thread's identity, repository, PR, review, unresolved state, Copilot opener and live OPEN/head context.", "FixedThreads: encapsulation 7/10, invariant expression 7/10, usefulness 9/10, enforcement 9/10; resolution requires recorded commit evidence, ADDRESSED and verified ancestry, while reply-only operations can leave unfixed findings open."],
+      "summary": "Reviewed all 31 membership paths and the supplied committed diff for type invariants and their consumers; no reportable defects remain, clean at Important. A read-only policy-construction probe passed; integration suites were not run, and live GitHub verification was blocked by network access."
+    }
+  ],
+  "before_tree": "cf9a8f086fa4b1e2d8b2542d39b925daeba37a05",
+  "after_tree": "cf9a8f086fa4b1e2d8b2542d39b925daeba37a05",
+  "scope_changed": false
+}

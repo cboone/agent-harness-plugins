@@ -19,6 +19,10 @@ This skill starts where `pr` stops. It is not a passive observer: it repairs fai
 
 Execution begins at step 1 policy preparation before any axis read, classification or action. This applies to every section and example, including Dependabot overrides, error handling, restored phases and callback events. Those sections describe candidate behavior; the one prepared policy governs entry to all of it.
 
+## Repository policy first
+
+Before any workflow section, load [Repository policy and shared Copilot intake](./references/repository-policy.md). Both entry points use that contract: automatic client mode for `swing-left`, independent report-only Copilot pause for `cboone`, and stricter loaded restrictions everywhere. It overrides default waits, category actions, public summaries and merge continuation. Unknown repository identity permits no action.
+
 ## Options
 
 The user may provide these options inline:
@@ -108,7 +112,7 @@ test -x "${policy_helper}" || exit 1
 
 Use the resulting quoted absolute helper path for this session. If path resolution or the executable check fails, stop and report the unavailable helper; do not select another installed version. When `realpath` is unavailable, the host's file tools may resolve the same symlink chain explicitly; if they cannot, report the limitation.
 
-Write raw watch metadata with a `restrictions` object containing current `noFix` and `copilotPaused` booleans plus a `blockedActions` array for additional host or workflow restrictions. These values come from current instructions and effective options, never cached permission values. Also carry `triageAfter` (a nonnegative integer or `"never"`) and `earlierReviewCount` (the known count or null, never an invented zero). Resolve and store the returned `policy` in watch state before any axis read:
+Write raw watch metadata with a `restrictions` object containing the verified `repository` (`OWNER/REPO`), client `clientRound` authority or null, and current `noFix` and `copilotPaused` booleans plus a `blockedActions` array for additional host or workflow restrictions. These values come from current instructions and effective options, never cached permission values. Also carry `triageAfter` (a nonnegative integer or `"never"`) and `earlierReviewCount` (the known count or null, never an invented zero). Resolve and store the returned `policy` in watch state before any axis read:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" prepare < RAW_STATE_JSON > WATCH_STATE_JSON
@@ -316,6 +320,8 @@ The background watch keeps its existing consecutive-poll failure bound.
 Reduce the snapshot to the four axes in [Ready Criteria](#ready-criteria).
 
 ### 4. Classify and Dispatch
+
+For client mode, collect available feedback for assessment under the shared repository policy, then report a closed round gate to the conductor. Never contribute request/wait/confirmation candidates. Use the client readiness and handoff rules instead of the default four-axis Copilot requirement or step 8 merge path. Paused `cboone` arrivals contribute reports only.
 
 Use the lifecycle already computed once from this tick's snapshot before collecting candidates. MERGED admits only an unhandled post-merge candidate; CLOSED admits no work. For OPEN, collect matching conditions in the order below without routing them. The shared eligibility predicate checks every candidate against that lifecycle and the prepared policy; OPEN-only actions cannot survive a terminal state. A forbidden action becomes a `Would do` line in the report, never a route and never work to wait for. Route only the first remaining permitted action. If none remains, wait only for a running permitted check. Otherwise end with the policy-limited terminal report: `Status: unavailable`, every would-do line and remaining axis, the named parent resume target when supplied, and the scheduler cancellation outcome. Cancel the selected scheduler before returning; if cancellation fails, report that failure. Never offer a merge or start a merge watch from this terminal result. Do not invent pending work from a forbidden review request, repair, sync or merge.
 

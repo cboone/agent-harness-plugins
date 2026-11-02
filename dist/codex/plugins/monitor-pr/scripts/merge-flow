@@ -681,7 +681,18 @@ function main() {
   [[ $# -eq 0 ]] || shift
   if [[ -n "${watch_state}" ]]; then
     case "${command}" in
-      watch-changes | copilot-status) require_watch_action "${watch_state}" read-axis ;;
+      watch-changes | copilot-status)
+        require_watch_action "${watch_state}" read-axis
+        if [[ "${command}" == copilot-status ]]; then
+          require_watch_action "${watch_state}" wait-review
+        else
+          for action in "$@"; do
+            if [[ "${action}" == --review-wait ]]; then
+              require_watch_action "${watch_state}" wait-review
+            fi
+          done
+        fi
+        ;;
       policy | watch)
         for action in read-axis merge; do require_watch_action "${watch_state}" "${action}"; done
         ;;

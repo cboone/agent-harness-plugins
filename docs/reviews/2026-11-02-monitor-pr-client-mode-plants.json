@@ -1,0 +1,99 @@
+{
+  "baseline_passed": true,
+  "restored_passed": true,
+  "client_cases": 34,
+  "source_plants": 16,
+  "judge_plants": 2,
+  "results": [
+    {
+      "plant": "actual-review",
+      "caught": true,
+      "case": "Actual thread ownership"
+    },
+    {
+      "plant": "actual-pr",
+      "caught": true,
+      "case": "Actual thread ownership"
+    },
+    {
+      "plant": "actual-repository",
+      "caught": true,
+      "case": "Actual thread ownership"
+    },
+    {
+      "plant": "actual-author",
+      "caught": true,
+      "case": "Actual thread ownership"
+    },
+    {
+      "plant": "actual-unresolved",
+      "caught": true,
+      "case": "Actual thread ownership"
+    },
+    {
+      "plant": "actual-node-id",
+      "caught": true,
+      "case": "Actual thread ownership"
+    },
+    {
+      "plant": "actual-head",
+      "caught": true,
+      "case": "A remote head change"
+    },
+    {
+      "plant": "actual-open",
+      "caught": true,
+      "case": "Every client mutation refuses"
+    },
+    {
+      "plant": "fix-ancestry",
+      "caught": true,
+      "case": "A fixing commit outside"
+    },
+    {
+      "plant": "approval-source",
+      "caught": true,
+      "case": "Incomplete approval evidence"
+    },
+    {
+      "plant": "approval-pr",
+      "caught": true,
+      "case": "Another PR cannot reuse"
+    },
+    {
+      "plant": "approval-repository",
+      "caught": true,
+      "case": "Another repository cannot reuse"
+    },
+    {
+      "plant": "saved-head",
+      "caught": true,
+      "case": "Approved round authority fails closed"
+    },
+    {
+      "plant": "repair-scope",
+      "caught": true,
+      "case": "A round approval cannot authorize"
+    },
+    {
+      "plant": "sync-scope",
+      "caught": true,
+      "case": "A round approval cannot authorize"
+    },
+    {
+      "plant": "owner-pause",
+      "caught": true,
+      "case": "The independent cboone pause"
+    },
+    {
+      "plant": "judge-counts",
+      "caught": true,
+      "case": "Actual thread ownership"
+    },
+    {
+      "plant": "judge-diagnostic",
+      "caught": true,
+      "case": "Actual thread ownership"
+    }
+  ]
+}

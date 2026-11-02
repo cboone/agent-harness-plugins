@@ -7,6 +7,9 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
+# Set by main; mutation helpers revalidate this invocation's prepared policy.
+WATCH_STATE_PATH=""
+
 # =============================================================================
 # Copilot author detection heuristics
 # =============================================================================
@@ -147,11 +150,15 @@ function read_body() {
 # Arguments:
 #   $1 - Thread ID (e.g., PRRT_kwDONZ...)
 #   $2 - Reply body text
+#   $3 - Validation kind: reply (default), or resolve for combined operations
+#   $4 - Resolution reason; client resolve validation requires ADDRESSED
 # Outputs:
 #   Comment ID to stdout
 function send_reply() {
   local thread_id="${1}"
   local body="${2}"
+
+  require_client_live_context "${thread_id}" "${3:-reply}" "${4:-}"
 
   local response
   local comment_id
@@ -789,14 +796,18 @@ function validate_resolution_reason() {
 function do_resolve() {
   local thread_id="${1}"
   shift
+  local reason=""
   local -a reason_args=()
   if [[ $# -gt 0 ]]; then
     [[ $# -eq 2 && "${1}" == --reason ]] || die "Usage: ${SCRIPT_NAME} resolve <thread_id> [--reason <reason>]"
     validate_resolution_reason "${2}"
+    reason="${2}"
     reason_args=(-f "resolutionReason=${2}")
   fi
 
   local response
+
+  require_client_live_context "${thread_id}" resolve "${reason}"
 
   # shellcheck disable=SC2016
   # $variables in the query are GraphQL references, not shell variables
@@ -857,10 +868,12 @@ function do_reply() {
 function do_reply_and_resolve() {
   local thread_id="${1}"
   shift
+  local reason=""
   local -a reason_args=()
   if [[ "${1:-}" == --reason ]]; then
     [[ $# -ge 2 ]] || die 'Resolution reason must be ADDRESSED, WONT_FIX or INVALID'
     validate_resolution_reason "${2}"
+    reason="${2}"
     reason_args=(--reason "${2}")
     shift 2
   fi
@@ -868,19 +881,85 @@ function do_reply_and_resolve() {
   local body
   body=$(read_body "$@")
 
-  send_reply "${thread_id}" "${body}" > /dev/null
+  send_reply "${thread_id}" "${body}" resolve "${reason}" > /dev/null
 
   do_resolve "${thread_id}" ${reason_args[@]+"${reason_args[@]}"}
 }
 
 function require_watch_action() {
-  local state_file="${1}" action="${2}" helper_dir result
+  local state_file="${1}" action="${2}" helper_dir result state
   [[ -f "${state_file}" ]] || die "watch state is unavailable"
+  state="$(cat "${state_file}")" || die "watch state cannot be read"
   helper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-  result="$(bash "${helper_dir}/merge-flow" gate "${action}" < "${state_file}")" || die "invalid watch policy"
+  result="$(bash "${helper_dir}/merge-flow" gate "${action}" <<< "${state}")" || die "invalid watch policy"
   if ! jq -e '.allowed == true' > /dev/null <<< "${result}"; then
     die "watch policy blocks ${action} ($(jq -r '.status' <<< "${result}"))"
   fi
+  if [[ "${3:-}" == emit-state ]]; then
+    printf '%s\n' "${state}"
+  fi
+}
+
+# Every mutation validates live lifecycle and head, including between a reply and resolution.
+function require_client_live_context() {
+  local thread_id="${1}" kind="${2:-reply}" reason="${3:-}"
+  [[ -n "${WATCH_STATE_PATH}" ]] || return 0
+  local state client_mode target repository pr head review_id remote error_detail fix verified
+  state="$(require_watch_action "${WATCH_STATE_PATH}" process-review emit-state)" || return 1
+  client_mode="$(jq -er '.policy.clientMode | tostring' <<< "${state}")" || die 'client mode unavailable'
+  [[ "${client_mode}" == true ]] || return 0
+  target="$(jq -er '[.policy.restrictions.repository, .snapshot.number, .snapshot.headRefOid, .reviewId] | @tsv' <<< "${state}")" || die 'client target unavailable'
+  IFS=$'\t' read -r repository pr head review_id <<< "${target}"
+  if [[ "${kind}" == resolve ]]; then
+    [[ "${reason}" == ADDRESSED ]] || die 'client resolution requires --reason ADDRESSED'
+    fix="$(jq -er --arg thread "${thread_id}" '.fixedThreads[$thread] | strings | select(length > 0)' <<< "${state}")" || die 'client resolution requires a fixing commit'
+    verified="$(do_verify_fix "${repository%%/*}" "${repository#*/}" "${pr}" "${head}" "${fix}")" || die 'client fix ancestry unavailable'
+    [[ "${verified}" == true ]] || die 'client fixing commit is absent from PR head'
+  fi
+  # shellcheck disable=SC2016 # GraphQL variables are literal query bindings.
+  remote="$(
+    gh api graphql -f threadId="${thread_id}" -f query='
+    query($threadId: ID!) {
+      node(id: $threadId) {
+        __typename
+        id
+        ... on PullRequestReviewThread {
+          isResolved
+          pullRequest { number state headRefOid repository { nameWithOwner } }
+          comments(first: 1) {
+            nodes {
+              author { login }
+              body
+              pullRequestReview { reviewId: fullDatabaseId }
+            }
+          }
+        }
+      }
+    }'
+  )" || die 'client thread context unavailable'
+  if jq -e '.errors != null and .errors != []' > /dev/null <<< "${remote}"; then
+    error_detail="$(jq -r '.errors | if type == "array" then map(.message // "unknown GraphQL error") | join("; ") else error("invalid GraphQL errors") end' <<< "${remote}")" || die 'client thread context invalid'
+    die "client thread context unavailable: ${error_detail:-unknown GraphQL error}"
+  fi
+  # shellcheck disable=SC2016 # jq variables are literal filter bindings.
+  jq -e --arg thread "${thread_id}" --arg repository "${repository}" \
+    --argjson pr "${pr}" --arg head "${head}" --arg review "${review_id}" \
+    --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
+    --arg actions_login "${COPILOT_ACTIONS_LOGIN}" --arg severity_pattern "${COPILOT_SEVERITY_PATTERN}" '
+      def text: if type == "string" then . else "" end;
+      def copilot($opener):
+        ($opener.author.login | text | ascii_downcase) as $login
+        | ($direct_logins | any(. == $login))
+          or ($login == $actions_login and ($opener.body | text | test($severity_pattern; "i")));
+      .data.node as $node
+      | $node.comments.nodes[0] as $opener
+      | $node.__typename == "PullRequestReviewThread" and $node.id == $thread
+        and $node.isResolved == false and ($node.comments.nodes | length) == 1
+        and ($node.pullRequest.repository.nameWithOwner | text | ascii_downcase) == ($repository | ascii_downcase)
+        and $node.pullRequest.number == $pr
+        and $node.pullRequest.state == "OPEN" and $node.pullRequest.headRefOid == $head
+        and ($opener.pullRequestReview.reviewId | tostring) == $review and copilot($opener)
+    ' > /dev/null <<< "${remote}" || die 'client thread does not match approved PR, review or live context'
 }
 
 function main() {
@@ -891,6 +970,7 @@ function main() {
     [[ -n "${watch_state}" ]] || die "watch state path must not be empty"
     shift 2
   fi
+  WATCH_STATE_PATH="${watch_state}"
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
     exit 0

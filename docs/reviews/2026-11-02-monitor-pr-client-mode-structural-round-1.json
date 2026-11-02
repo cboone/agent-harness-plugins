@@ -1,0 +1,54 @@
+{
+  "anti": {
+    "status": "success",
+    "reviewed": "41be42039adb83f0f509bfba15eb3ebf7d954e16..working-tree",
+    "complete": true,
+    "findings": [
+      {
+        "title": "Stale writes: validate live client authority before every thread mutation",
+        "file": "plugins/monitor-pr/scripts/resolve-copilot-threads",
+        "line": 890,
+        "severity": "important",
+        "detail": "Reply-only operations skip the live-head check entirely. If another push changes the PR after round approval, an otherwise valid saved state still permits reply, contrary to the shared contract that an unexpected remote head invalidates authority. Resolution paths also read only headRefOid, so a PR closed without changing its head still passes. Check the live head and OPEN state for every client mutation, retaining the additional fix-ancestry requirement for resolution.",
+        "evidence": "main maps reply to process-review, whose gate compares cached snapshot fields with cached clientRound fields. require_client_fix returns immediately for reply; do_reply then calls send_reply. For resolve and reply-and-resolve, the fresh gh pr view at line 901 requests only headRefOid. repository-policy.md:90-93 invalidates authority on unexpected remote heads, and watch-policy.jq:162 requires an OPEN snapshot."
+      },
+      {
+        "title": "Tests that cannot fail: isolate the head-mismatch rejection",
+        "file": "tests/scrut/monitor-client-policy.md",
+        "line": 88,
+        "severity": "nit",
+        "detail": "The head-mismatch testcase omits snapshot.state and reviewId. It therefore remains successful if the snapshot-head comparison is removed, because the OPEN-state and authorized-review checks independently reject it. Supply OPEN and an authorized reviewId so the head mismatch is the sole invalid field.",
+        "evidence": "checked_state rejects snapshot.state != OPEN or a reviewId absent from clientRound.reviewIds in the same condition as the head comparison. Both unrelated failures occur in this input, and the test asserts only exit code 5. The moved-head fixture tests the separate live-head check, so it does not cover removal of the snapshot-head comparison."
+      }
+    ],
+    "unverified": ["make test-scrut: not run because project test execution was prohibited.", "make validate: not run because executing repository validators was outside this read-only review.", "yarn lint: Markdown checks were not run because project command execution was outside scope.", "plant-defects skill: test sensitivity was assessed by reading only; planting and executing defects would require writes and test execution."],
+    "not_reviewed": [],
+    "excluded": ["dist/codex/plugins/monitor-pr/.claude-plugin/plugin.json", "dist/codex/plugins/monitor-pr/README.md", "dist/codex/plugins/monitor-pr/scripts/merge-flow", "dist/codex/plugins/monitor-pr/scripts/resolve-copilot-threads", "dist/codex/plugins/monitor-pr/scripts/watch-policy.jq", "dist/codex/plugins/monitor-pr/skills/monitor/SKILL.md", "dist/codex/plugins/monitor-pr/skills/monitor/references/checkpoint.md", "dist/codex/plugins/monitor-pr/skills/monitor/references/repository-policy.md", "dist/codex/plugins/monitor-pr/skills/resolve-copilot-feedback/SKILL.md"],
+    "report": "Reviewed all 18 canonical changed files in full, including the committed plan, both skills, shared references, scripts, fixtures and all five changed Scrut documents. Used the supplied merge base against origin/main without default-branch lookup. Working tree was clean. No PR body exists according to the parent's supplied lookup. The nine listed dist files were excluded as generated; no changed .agents files were found.\n\nGroups: code, agent prose and docs. Walked all thirteen checklist items: Sibling input forms, Boundary arithmetic, Stale writes, Validator gaps, Absent or partial data, Untrusted data in commands, Tests that cannot fail, Crashes instead of reports, Unrun platform configuration, Unenforced trust boundary, Parallel paths, Agent-prose control flow and Docs drift.\n\nResults: 1 Important finding and 1 Nit. For the mutation finding, examined reply, resolve, reply-and-resolve, their shared gates, cached round validation and the moved-head fixture. For the test finding, examined the valid authorized fixture, wrong-review case, snapshot validator and separate live-head check.\n\nRead-only checks passed: bash -n, shellcheck and shfmt -d over all four changed shell scripts; jq empty over the canonical plugin manifest. Project tests, validators, Markdown checks and defect planting remain unverified as listed.\n\nSession could write: no, enforced by the filesystem sandbox. --run-checks: off. No files were created or modified. No network access, delegation or child Codex run occurred. Review ran directly in this fresh context as requested."
+  },
+  "simplify": {
+    "status": "completed_with_suggestions",
+    "complete": true,
+    "findings": [
+      {
+        "severity": "suggestion",
+        "file": "plugins/monitor-pr/scripts/resolve-copilot-threads",
+        "line": 894,
+        "title": "Uncited: Read resolution metadata in one projection",
+        "detail": "Angle: Efficiency. Each client resolution launches three consecutive jq processes to read repository, PR number and head from the same validated state file. Combining these projections removes two process launches and two file parses per resolution. Disposition: skipped because this review is report-only.",
+        "fix": "Extract the three fields with one checked jq invocation, then unpack them using a delimiter excluded by their validated formats. Preserve the surrounding reason, fix-ancestry and remote-head checks.",
+        "confidence": 0.97
+      },
+      {
+        "severity": "suggestion",
+        "file": "tests/fixtures/client-policy-case",
+        "line": 39,
+        "title": "Uncited: Centralize repeated fixture state rewrites",
+        "detail": "Angles: Reuse and Altitude. Six branches repeat the same jq-to-next-file and rename sequence. Maintaining that transport requires coordinating six copies and obscures each branch's actual policy change. Disposition: skipped because this review is report-only.",
+        "fix": "Use one fixture-local function accepting jq arguments to transform raw through next and rename it after success. Keep mode-specific filters, operation order and failure propagation unchanged.",
+        "confidence": 0.96
+      }
+    ],
+    "summary": "Completed one report-only structural Nit round against merge base 41be42039adb83f0f509bfba15eb3ebf7d954e16 at HEAD 9bd7b6d46b96737fc51c37ac20dc087fac487a24. Read all 18 canonical changed files and tests in full, including the committed plan. Completed Altitude, Efficiency, Reuse and Simplification inline, as requested. Fixed: 0; skipped: 2. Generated dist/ and .agents/ were excluded. No PR body exists. No edits, test execution, delegation or network access occurred."
+  }
+}

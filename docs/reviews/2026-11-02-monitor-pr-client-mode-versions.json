@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "base": "41be42039adb83f0f509bfba15eb3ebf7d954e16",
+  "changed_plugins": [
+    {
+      "plugin": "monitor-pr",
+      "base": "3.5.0",
+      "current": "3.6.0",
+      "level": "minor: new client policy capability"
+    }
+  ],
+  "registered_plugins": 61,
+  "coverage": "all source plugins registered; no orphan entries",
+  "version_ownership": "Claude manifests only; no marketplace versions",
+  "matching_codex_manifests": 2
+}

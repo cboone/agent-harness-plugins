@@ -89,18 +89,50 @@ def checked_candidates:
         then error("candidate accepts only a known action and string detail")
         else (.action | checked_action) as $action | .action = $action end);
 
+def checked_repository:
+  if type != "string" or (test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$") | not)
+  then error("repository must be an explicit owner/name") else . end;
+
+# Repository policy is independent of a stricter loaded Copilot pause.
+def repository_policy:
+  if has("repository") and .repository != null then
+    .repository |= checked_repository
+  else .repository = null end
+  | (if .repository == null then "unknown" else .repository | split("/")[0] | ascii_downcase end) as $owner
+  | .clientMode = ($owner == "swing-left")
+  | .ownerPaused = ($owner == "cboone")
+  | .identityUnknown = ($owner == "unknown");
+
+def checked_client_round:
+  if . == null then .
+  elif type != "object" or (.repository | type) != "string" or (.authority | type) != "string" or (.authority | test("\\S") | not)
+    or (.prNumber | type) != "number" or .prNumber < 1 or (.prNumber | floor) != .prNumber
+    or (.head | type) != "string" or (.head | test("^[0-9a-f]{40}$") | not)
+    or (.reviewIds | type) != "array" or (.reviewIds | length) == 0
+    or (.reviewIds | all(type == "number" and . > 0 and floor == .) | not)
+    or ((keys - ["repository", "authority", "prNumber", "head", "reviewIds"]) | length) != 0
+  then error("invalid client round authority") else .repository |= checked_repository end;
+
 def resolve_policy:
   if type != "object" then error("restrictions must be an object") else . end
   | if (.noFix | type) != "boolean" or (.copilotPaused | type) != "boolean"
-    or ((keys - ["noFix", "copilotPaused", "blockedActions"]) | length) != 0
+    or ((keys - ["noFix", "copilotPaused", "blockedActions", "repository", "clientRound"]) | length) != 0
     then error("unknown or malformed restriction") else . end
+  | repository_policy
+  | (.clientRound | checked_client_round) as $round
+  | . as $context
   | (if has("blockedActions") then .blockedActions else [] end) as $extra
   | ($extra | checked_actions) as $extra
   | (no_fix_actions | checked_actions) as $no_fix
   | (pause_actions | checked_actions) as $pause
-  | {noFix, copilotPaused, blockedActions: ($extra | unique)} as $raw
-  | (if .copilotPaused then $pause else [] end) as $paused
-  | ((if .noFix then $no_fix else [] end) + $paused + $extra | checked_actions | unique) as $initial
+  | {noFix, copilotPaused, repository, clientRound: $round, blockedActions: ($extra | unique)} as $raw
+  | (if .copilotPaused or .ownerPaused then $pause else [] end) as $paused
+  | (if .clientMode then
+       ["request-review", "wait-review", "confirm-review", "merge", "post-merge", "notify", "file-deferred", "sync", "repair", "triage-review"]
+       + (if $round == null then ["process-review"] else [] end)
+     elif .identityUnknown then without_actions(actions; ["read-axis", "report", "escalate"])
+     else [] end) as $repository_blocks
+  | ((if .noFix then $no_fix else [] end) + $paused + $extra + $repository_blocks | checked_actions | unique) as $initial
   | ($initial
     + (if action_member($initial; "read-axis") then without_actions(actions; ["report", "escalate"]) else [] end)
     | checked_actions | unique) as $axis
@@ -112,7 +144,7 @@ def resolve_policy:
     + (if action_member($reads; "request-review") or action_member($reads; "wait-review") then ["confirm-review"] else [] end)
     + (if action_member($reads; "sync") or action_member($reads; "notify") then ["post-merge"] else [] end)
     | checked_actions | unique) as $blocked
-  | {version: 1, restrictions: $raw, blockedActions: $blocked, pausedActions: $paused,
+  | {version: 2, clientMode: $context.clientMode, restrictions: $raw, blockedActions: $blocked, pausedActions: $paused,
      lifecycleActions: lifecycle_actions,
      allowedActions: without_actions(actions; $blocked)};
 
@@ -125,7 +157,15 @@ def checked_state:
   | if ($policy.lifecycleActions | type) != "object" then error("invalid lifecycle actions") else . end
   | ($policy.lifecycleActions | map_values(checked_actions)) as $life_lists
   | ($policy.restrictions | resolve_policy) as $expected
-  | if $policy != $expected then error("invalid resolved watch policy") else . end;
+  | if $policy != $expected then error("invalid resolved watch policy") else . end
+  | .reviewId as $review_id
+  | if $policy.clientMode and $policy.restrictions.clientRound != null then
+      $policy.restrictions.clientRound as $round
+      | if ($policy.restrictions.repository | ascii_downcase) != ($round.repository | ascii_downcase)
+           or .snapshot.state != "OPEN" or .snapshot.number != $round.prNumber or .snapshot.headRefOid != $round.head
+           or ($round.reviewIds | index($review_id // -1)) == null
+        then error("client round authority does not match repository, open PR, head or review") else . end
+    else . end;
 
 def gate($action):
   ($action | checked_action) as $action
@@ -142,6 +182,7 @@ if length != 1 then error("needs exactly one watch snapshot") else .[0] end
     | (.restrictions | resolve_policy) as $policy
     | del(.restrictions, .lifecycle) | .policy = $policy
     | if has("candidates") then .candidates |= checked_candidates else . end
+    | checked_state
   else
     checked_state
     | if $mode == "lifecycle" then .lifecycle = (.snapshot.state | lifecycle)
