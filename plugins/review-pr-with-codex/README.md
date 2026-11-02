@@ -60,6 +60,7 @@ Before editing, four independent read-only cleanup reviewers cover reuse, simpli
 ## Requirements
 
 - [`codex`](https://github.com/openai/codex), authenticated. Install via Homebrew: `brew install codex`. Codex CLI subagents require the `multi_agent` feature.
+- Perl with its core POSIX module for child-side process groups.
 - `git`, `ps` and [`jq`](https://jqlang.org/). Process inspection verifies cancelled descendants stopped; a sandbox denial means incomplete cancellation. Helpers emit and validate JSON with `jq`.
 
 ## Usage
