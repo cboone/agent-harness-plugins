@@ -71,4 +71,12 @@ The full run exited 2: 56 of 57 documents passed, including all seven new cases.
 
 Added the established reset to the new document setup. The existing guard detected the omission before the fix. Subsequent affected checks: the seven-case document passed; `make validate` passed JSON, fixture environments and every plugin validation; environment-isolation.md passed 50 of 51 cases, with only its known review-submodule-fixture operand assertion failing. No second full suite or lock acquisition occurred. The correction changes test setup only, so no further behavioral review round is required.
 
-Known baseline failures remain outside scope and are not described as passes. No production code changed after its review or scan.
+The baseline failures above describe the original run and are not described as passes. Later merge follow-up results are recorded below. No production logic changed after its review or scan.
+
+## Error-output guard compatibility after merging main
+
+The tl27 drain go-ahead, relayed by TOOLING, covered fixing the branch after GitHub merged main at `ef43435918618ee1df714a6006090173a8442db0`. Fast-forwarded locally without rewriting pushed history. The new guard rejected the Node fixture without a language exclusion and the manual retained diagnostic capture in the new setup.
+
+Registered the exact Node fixture with a non-Bash reason in the existing error-output policy, and replaced manual capture with the shared `capture_child` helper. Renderer failures still replay diagnostics and return their status. The merge base already carries publish-report-board 1.3.5, so the required version check advances this branch to 1.3.6; `make build` regenerated its mirror. No head-freeing logic changed.
+
+Both fixture checker modes passed. Targeted Scrut results: error-output-guard.md 102/102, environment-isolation.md 51/51, report-board-head-freeing.md 7/7. The earlier fixture operand failure is resolved by main. Scoped formatting and Markdown lint passed. No full suite or additional review round ran; existing review counts and end states carry forward. Tests ran at most two documents concurrently, restricted to the requested documents under the thermal limit.

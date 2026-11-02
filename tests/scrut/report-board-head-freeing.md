@@ -7,16 +7,10 @@ rendered wording. Preserve row states as an independent assertion.
 
 ```scrut {fail_fast: true}
 $ source "${REPO_ROOT}/bin/lib/git-environment.bash" &&
+> source "${REPO_ROOT}/bin/lib/capture-child.bash" &&
 > dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" &&
 > function render_board() {
->   local result render_status
->   if result="$("${REPORT_BOARD_BIN}" render --standalone "${1}" "${2}" 2>&1)"; then
->     return 0
->   else
->     render_status=$?
->     printf '%s\n' "${result}" >&2
->     return "${render_status}"
->   fi
+>   capture_child - -- "${REPORT_BOARD_BIN}" render --standalone "${1}" "${2}"
 > }
 ```
 
