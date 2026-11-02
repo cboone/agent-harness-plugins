@@ -24,6 +24,7 @@
 #                   <CODEX_STUB_PID_DIR>/<aspect>.child.pid and the stub's own
 #                   to <aspect>.pid, then wait until stopped, writing no
 #                   output. The child stands in for a process Codex starts.
+#   orphan-exit     leave a sleeping descendant, record its PID and exit validly
 #   hang-family     orphan a grandchild before cancellation, then start another
 #                   from the TERM handler; record both in CODEX_STUB_PID_DIR.
 #
@@ -38,6 +39,11 @@ set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
+
+# Record the exec-preserved leader PID and group for launch isolation tests.
+if [[ -n "${CODEX_STUB_GROUP_DIR:-}" ]]; then
+  ps -p "$$" -o pid=,pgid= > "${CODEX_STUB_GROUP_DIR}/$$"
+fi
 
 function die() {
   echo "${SCRIPT_NAME}: ${1}" >&2
@@ -149,6 +155,7 @@ function main() {
       printf 'stdin: %s\n' "${stdin_kind}"
     } > "${CODEX_STUB_LOG_DIR}/${aspect}.args"
     printf '%s\n' "${work_dir}" > "${CODEX_STUB_LOG_DIR}/${aspect}.cwd"
+    trap -p INT QUIT > "${CODEX_STUB_LOG_DIR}/${aspect}.signals"
   fi
 
   local mode
@@ -183,6 +190,13 @@ function main() {
       print_output "${aspect}" "${snapshot}" "" > "${output}"
       echo "stub: simulated failure after writing output" >&2
       exit 1
+      ;;
+    orphan-exit)
+      local pid_dir="${CODEX_STUB_PID_DIR:?CODEX_STUB_PID_DIR is required for orphan-exit mode}"
+      sleep 300 &
+      echo "$!" > "${pid_dir}/${aspect}.orphan.pid"
+      echo "$$" > "${pid_dir}/${aspect}.pid"
+      print_output "${aspect}" "${snapshot}" "" > "${output}"
       ;;
     hang-family)
       local pid_dir="${CODEX_STUB_PID_DIR:?CODEX_STUB_PID_DIR is required for hang-family mode}"

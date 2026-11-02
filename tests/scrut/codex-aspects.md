@@ -381,6 +381,96 @@ errors
 tests
 ```
 
+## Launches are silent and each aspect leads a distinct process group
+
+The DEBUG hook checks monitor mode at PID registration, so restoring the old
+launch path fails even without the platform's intermittent Bash diagnostic. The
+stub records its actual PID and PGID after exec.
+
+```scrut
+$ mkdir -- "${FIXTURE}/groups" \
+>   && BASH_ENV="${REPO_ROOT}/tests/fixtures/codex-monitor-env.bash" \
+>      CODEX_STUB_GROUP_DIR="${FIXTURE}/groups" \
+>      "${CODEX_ASPECTS_BIN}" run --aspect code --aspect errors \
+>      --scope "${FIXTURE}/scope.json" --out-dir "${FIXTURE}/out" \
+>      > "${FIXTURE}/groups-status.json" 2> "${FIXTURE}/groups.err" \
+>   && test ! -s "${FIXTURE}/groups.err" \
+>   && ! grep -i setpgid "${FIXTURE}/out/code.log" "${FIXTURE}/out/errors.log" \
+>   && jq -e 'length == 2 and all(.status == "ok")' "${FIXTURE}/groups-status.json" \
+>   && cat "${FIXTURE}/groups/"* | awk '$1 != $2 { bad = 1 } { groups[$2] = 1; count++ } END { for (g in groups) unique++; if (bad || count != 2 || unique != 2) exit 1; print "two isolated aspect groups" }' # error-output-allow: testcase asserts that retained launch diagnostics are empty
+true
+two isolated aspect groups
+```
+
+## Workers restore interrupt and quit defaults
+
+```scrut
+$ test -f "${FIXTURE}/log/code.signals" && test -f "${FIXTURE}/log/errors.signals" \
+>   && test ! -s "${FIXTURE}/log/code.signals" && test ! -s "${FIXTURE}/log/errors.signals" \
+>   && echo 'interrupt and quit defaults restored'
+interrupt and quit defaults restored
+```
+
+## Cancellation before child-side group setup stops the leader
+
+Reuse the Scrut runner's Perl probe to pause inside the actual setpgid call.
+Cancellation must stop the leader even though its process group does not exist.
+
+```scrut
+$ mkdir -- "${FIXTURE}/early-out" \
+>   && { PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe \
+>        SCRUT_GROUP_PROBE_MODE=wait SCRUT_GROUP_PROBE_LOG="${FIXTURE}/early-probe.log" \
+>        SCRUT_GROUP_PROBE_PID="${FIXTURE}/early.pid" \
+>        "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
+>        --out-dir "${FIXTURE}/early-out" > "${FIXTURE}/early-status.json" & } \
+>   && helper=$! \
+>   && for attempt in $(seq 50); do [ -s "${FIXTURE}/early.pid" ] && break; sleep 0.1; done \
+>   && leader="$(cat "${FIXTURE}/early.pid")" \
+>   && group="$(ps -p "${leader}" -o pgid= | tr -d ' ')" \
+>   && test "${leader}" != "${group}" \
+>   && kill -TERM "${helper}" \
+>   && { wait "${helper}"; echo "helper exit=$?"; } \
+>   && test ! -e "${FIXTURE}/early-out/code.json" \
+>   && { state="$(ps -p "${leader}" -o stat=)"; test -z "${state}" || [[ "${state}" == *Z* ]]; } \
+>   && echo 'leader stopped before exec'
+helper exit=143
+leader stopped before exec
+```
+
+## Ownership checks reject reused PIDs and preserve group cleanup
+
+A sourced fixture runs the actual cleanup functions with ps and kill replaced by
+shell functions that refuse unexpected queries and record every signal. A
+simulated stopped pre-group child ignores TERM until KILL, independently of
+platform signal behavior. No real PID is signalled by this fixture.
+
+```scrut
+$ for mode in reused pregroup group orphan; do
+>   BASH_ENV="${REPO_ROOT}/tests/fixtures/codex-signal-probe.bash" \
+>     SIGNAL_PROBE_CASE="${mode}" SIGNAL_PROBE_LOG="${FIXTURE}/signal-${mode}.log" \
+>     "${CODEX_ASPECTS_BIN}" schema || break
+> done
+reused: no signal
+pregroup: PID TERM and KILL
+group: process group TERM
+orphan: process group TERM
+```
+
+## Child-side group setup failure remains visible
+
+```scrut
+$ mkdir -- "${FIXTURE}/group-failure-out" \
+>   && { PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe \
+>        SCRUT_GROUP_PROBE_MODE=eperm SCRUT_GROUP_PROBE_LOG="${FIXTURE}/failure-probe.log" \
+>        "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
+>        --out-dir "${FIXTURE}/group-failure-out" > "${FIXTURE}/failure-status.json"; echo "exit=$?"; } \
+>   && jq -r '.[0].status' "${FIXTURE}/failure-status.json" \
+>   && grep '^codex-aspects: setpgid:' "${FIXTURE}/group-failure-out/code.log"
+exit=3
+failed
+codex-aspects: setpgid: Operation not permitted
+```
+
 ## Stopping the helper stops its Codex runs
 
 A run left going after the helper stops could keep reading, or for `simplify`
@@ -513,26 +603,52 @@ child stopped
 no write after cancellation
 ```
 
+## Cancellation retains groups after their leader was waited for
+
+The first aspect exits with a descendant still running. A DEBUG hook cancels at
+the second wait, after the first PID was removed. Both groups must stop, and an
+unrelated process must remain running.
+
+```scrut
+$ mkdir -- "${FIXTURE}/waited-pids" "${FIXTURE}/waited-out" \
+>   && { sleep 300 & } && unrelated=$! \
+>   && BASH_ENV="${REPO_ROOT}/tests/fixtures/codex-wait-cancel.bash" \
+>      CODEX_STUB_MODES="code=orphan-exit errors=hang" CODEX_STUB_PID_DIR="${FIXTURE}/waited-pids" \
+>      "${CODEX_ASPECTS_BIN}" run --aspect code --aspect errors --scope "${FIXTURE}/scope.json" \
+>      --out-dir "${FIXTURE}/waited-out" > "${FIXTURE}/waited.log" 2>&1; echo "helper exit=$?" && # error-output-allow: testcase asserts retained cancellation diagnostics and status
+>   grep '^waited aspect PID removed before cancellation$' "${FIXTURE}/waited.log" || true
+>   for entry in code.orphan errors errors.child; do
+>        pid="$(cat "${FIXTURE}/waited-pids/${entry}.pid")" || break
+>        state="$(ps -p "${pid}" -o stat=)"
+>        if [ -n "${state}" ] && [[ "${state}" != *Z* ]]; then
+>          echo "${entry} still running"; kill -KILL "${pid}"
+>        else echo "${entry} stopped"; fi
+>      done
+>   kill -0 "${unrelated}" && echo 'unrelated still running'
+>   kill "${unrelated}" && { wait "${unrelated}" || true; }
+helper exit=143
+waited aspect PID removed before cancellation
+code.orphan stopped
+errors stopped
+errors.child stopped
+unrelated still running
+```
+
 ## Denied process inspection retains artifacts and reports incomplete cancellation
 
 ```scrut
-$ mkdir -- "${FIXTURE}/denied-bin" "${FIXTURE}/denied-pids" "${FIXTURE}/denied-out" \
->   && printf '#!/bin/sh\necho "inspection denied" >&2\nexit 2\n' > "${FIXTURE}/denied-bin/ps" \
->   && chmod +x "${FIXTURE}/denied-bin/ps" \
->   && { PATH="${FIXTURE}/denied-bin:${PATH}" CODEX_STUB_MODES="code=hang" CODEX_STUB_PID_DIR="${FIXTURE}/denied-pids" \
->        "${CODEX_ASPECTS_BIN}" run --aspect code --scope "${FIXTURE}/scope.json" \
->        --out-dir "${FIXTURE}/denied-out" > "${FIXTURE}/denied.log" 2>&1 & } \
->   && helper=$! \
->   && for attempt in $(seq 50); do [ -s "${FIXTURE}/denied-pids/code.child.pid" ] && break; sleep 0.1; done \
->   && kill -TERM "${helper}" \
->   && { wait "${helper}"; echo "helper exit=$?"; } \
->   && grep 'cancellation is incomplete' "${FIXTURE}/denied.log" \
+$ BASH_ENV="${REPO_ROOT}/tests/fixtures/codex-signal-probe.bash" \
+>   SIGNAL_PROBE_CASE=denied SIGNAL_PROBE_LOG="${FIXTURE}/denied-signals.log" \
+>   "${CODEX_ASPECTS_BIN}" schema > "${FIXTURE}/denied.log" 2>&1; echo "helper exit=$?" && # error-output-allow: testcase asserts retained cancellation diagnostics and status
+>   grep 'cancellation is incomplete' "${FIXTURE}/denied.log" \
 >   && retained="$(sed -n 's/^codex-aspects: retained cancellation artifacts in //p' "${FIXTURE}/denied.log")" \
 >   && test -d "${retained}" && echo 'artifacts retained' \
->   && rm -r -- "${retained}" # error-output-allow: testcase asserts retained diagnostics: Denied process inspection retains artifacts and reports incomplete cancellation
+>   && test ! -s "${FIXTURE}/denied-signals.log" && echo 'no signals without ownership' \
+>   && rm -r -- "${retained}"
 helper exit=4
 codex-aspects: cancellation is incomplete; a process is active or its state could not be checked
 artifacts retained
+no signals without ownership
 ```
 
 ## A prompt too large for one argument stops the run before Codex starts
