@@ -330,3 +330,18 @@ error-output-guard.md, plus the guard on the merged tree. Imported main changes
 to other Scrut documents are left to CI. No full suite is run without its lock.
 The earlier full-suite result remains evidence for the earlier published head,
 not a claim about this merged tree. Focused results are recorded below.
+
+Focused synchronization results: attention-log 68/68, environment isolation
+51/51 and error-output guard 102/102, with zero failures and zero skips. Each
+project Scrut command exited zero. The actual merged-tree fixture/error-output
+guard, ShellCheck, shfmt and Bash 3.2 syntax check passed. `make build` regenerated
+the mirror, which matches the canonical script.
+
+The `check-versions` workflow uses current main `97346bc7` as the merge base:
+attention-log is the sole changed plugin, 1.0.3 to 1.0.4, with base/current
+Claude and Codex parity and matching regenerated versions. All 60 marketplace
+registrations and manifest-only version ownership pass.
+
+Signed merge `9d2a9c0f` has parents `66b6d285` and `97346bc7`; published history
+was preserved. No rebase, force push, full suite or additional review loop was
+run. Existing review counts and the hook-review merge gate remain unchanged.
