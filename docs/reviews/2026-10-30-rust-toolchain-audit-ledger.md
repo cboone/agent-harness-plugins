@@ -323,3 +323,35 @@ Version checks after fetching main confirm `pin-everything` 1.2.5 to 1.2.6,
 forward patch direction and catalog/generated version parity. No live config
 changed. Final publication evidence includes the exact-tree tidy comparison
 and PR link in the worker's mailbox handoff.
+
+## 2026-11-02 main integration
+
+TOOLING relayed the tl27 drain go-ahead to merge main, advance conflicting
+plugin versions, satisfy the diagnostics guard and run targeted checks only.
+The checkout first fast-forwarded to the existing published integration head
+`01144e2c`; none of that history was rewritten.
+
+Merged `origin/main` at `7817cab667d625bce777ad808a327d8e72f1b502` with signed
+merge commit `c4cc589a`. The only conflict was the Makefile's fixture-variable
+list. Both Rust audit variables and both incoming version-audit variables were
+preserved. Main holds pin-everything 1.2.6, so signed commit `c4aa8ff5` advances
+the canonical version to 1.2.7 and regenerates its mirror.
+
+Validation:
+
+- `make build`: passed; generated changes are limited to the version mirror.
+- Check-versions: pin-everything 1.2.6 to 1.2.7 is forward; marketplace coverage,
+  manifest-only ownership and generated/Codex version parity passed.
+- `bin/check-fixture-environments`: passed, including the error-output AST
+  checks. No new reason comments, parser exceptions or guard-policy changes
+  were needed in this branch's changes.
+- `bin/check-fixture-environments --review-paths`: passed.
+- Rust audit document: 35 of 35 testcases passed.
+- Error-output guard document: 102 of 102 testcases passed.
+- Environment-isolation document: 51 of 51 testcases passed. The fixture
+  failure documented in the earlier full-suite history is no longer present
+  after integrating main.
+
+At most two documents ran concurrently, each with `SCRUT_JOBS=1`. No full
+suite ran. Rust behavior is unchanged by this integration; earlier review
+round counts and end states remain intact. Pushed history is preserved.
