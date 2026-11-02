@@ -95,7 +95,7 @@ function remove_file_if_present() {
     return 0
   fi
 
-  if rm -- "${file}" 2> /dev/null; then
+  if rm -- "${file}"; then
     return 0
   fi
 
@@ -165,7 +165,7 @@ function worktree_path_for_branch() {
   local branch="${1}"
   local porcelain line path="" branch_ref=""
 
-  if ! porcelain="$(git worktree list --porcelain 2> /dev/null)"; then
+  if ! porcelain="$(git worktree list --porcelain 2> /dev/null)"; then # error-output-allow: inventory failure receives the explicit worktree-list diagnostic
     return 2
   fi
 
@@ -239,7 +239,7 @@ function resolved_tmux_env() {
   while IFS= read -r socket; do
     while IFS='|' read -r pane_id pane_command pane_path server_pid; do
       if [[ -d "${pane_path}" ]]; then
-        if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then
+        if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then # error-output-allow: unresolvable pane directory is skipped during discovery
           continue
         fi
       fi
@@ -252,7 +252,7 @@ function resolved_tmux_env() {
 
       candidate="${socket},${server_pid},${pane_id}"
       count=$((count + 1))
-    done < <(tmux -S "${socket}" list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}|#{pid}' 2> /dev/null || true)
+    done < <(tmux -S "${socket}" list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}|#{pid}' 2> /dev/null || true) # error-output-allow: unreachable tmux socket contributes no candidates
   done < <(tmux_socket_candidates)
 
   if ((count == 1)); then
@@ -269,13 +269,13 @@ function codex_pane_for_path() {
 
   [[ -n "${tmux_env}" ]] || return 0
   [[ -d "${worktree_path}" ]] || return 0
-  if ! worktree_path="$(cd "${worktree_path}" 2> /dev/null && pwd -P)"; then
+  if ! worktree_path="$(cd "${worktree_path}" 2> /dev/null && pwd -P)"; then # error-output-allow: unresolvable worktree directory skips optional pane discovery
     return 0
   fi
 
   while IFS='|' read -r pane_id pane_command pane_path; do
     if [[ -d "${pane_path}" ]]; then
-      if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then
+      if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then # error-output-allow: unresolvable pane directory is skipped during discovery
         continue
       fi
     fi
@@ -288,7 +288,7 @@ function codex_pane_for_path() {
 
     candidate="${pane_id}"
     count=$((count + 1))
-  done < <(env "TMUX=${tmux_env}" tmux list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}' 2> /dev/null || true)
+  done < <(env "TMUX=${tmux_env}" tmux list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}' 2> /dev/null || true) # error-output-allow: missing tmux server contributes no candidates
 
   if ((count == 1)); then
     printf '%s' "${candidate}"
@@ -330,7 +330,7 @@ function send_prompt_to_codex_pane() {
     env "TMUX=${tmux_env}" tmux send-keys -t "${pane_id}" Enter
     tmux_status=$?
   fi
-  env "TMUX=${tmux_env}" tmux delete-buffer -b "${buffer}" > /dev/null 2>&1
+  env "TMUX=${tmux_env}" tmux delete-buffer -b "${buffer}" > /dev/null 2>&1 # error-output-allow: buffer cleanup is best effort after prompt handoff
   set -e
 
   if ((tmux_status == 0)); then
@@ -465,7 +465,7 @@ function validate_branch_name() {
     die "branch name starting with a hyphen: ${name}"
   fi
 
-  if command -v git > /dev/null && ! git check-ref-format --branch "${name}" > /dev/null 2>&1; then
+  if command -v git > /dev/null && ! git check-ref-format --branch "${name}" > /dev/null 2>&1; then # error-output-allow: branch predicate receives the explicit invalid-name diagnostic
     die "git rejects branch name: ${name}"
   fi
 }
@@ -543,12 +543,12 @@ function run_detached_launch() {
   trap '' HUP
 
   # Captured with `||`, not `set +e`: the helper re-enables errexit on return.
-  run_workmux_and_cleanup_prompt "${prompt_file}" "$@" > "${state_dir}/log" 2>&1 || status=$?
+  run_workmux_and_cleanup_prompt "${prompt_file}" "$@" > "${state_dir}/log" 2>&1 || status=$? # error-output-allow: standalone detached-launch protocol saves status and replays its log
   {
     printf '%s\n' "${status}" > "${state_dir}/status.tmp" \
       && mv -- "${state_dir}/status.tmp" "${state_dir}/status"
   } || true
-  mkdir "${state_dir}/handoff" 2> /dev/null || true
+  mkdir "${state_dir}/handoff" 2> /dev/null || true # error-output-allow: handoff directory creation is best effort after status is persisted
 }
 
 # Polls for the handoff directory because it determines who cleans up the state directory.
@@ -562,8 +562,8 @@ function await_launch() {
     attempts=$((attempts - 1))
   done
 
-  if [[ ! -d "${state_dir}/handoff" ]] && mkdir "${state_dir}/handoff" 2> /dev/null; then
-    cat "${state_dir}/log" 2> /dev/null || true
+  if [[ ! -d "${state_dir}/handoff" ]] && mkdir "${state_dir}/handoff" 2> /dev/null; then # error-output-allow: exclusive handoff claim selects which process replays the log
+    cat "${state_dir}/log" 2> /dev/null || true                                           # error-output-allow: handoff log may already have been consumed during cleanup
     printf '%s: workmux add for %s is still running after %ss; stopped waiting\n' "${SCRIPT_NAME}" "${branch}" "${timeout}" >&2
     lookup_status=0
     worktree_path="$(worktree_path_for_branch "${branch}")" || lookup_status=$?
@@ -576,8 +576,8 @@ function await_launch() {
     return 124
   fi
 
-  status="$(cat "${state_dir}/status" 2> /dev/null || true)"
-  cat "${state_dir}/log" 2> /dev/null || true
+  status="$(cat "${state_dir}/status" 2> /dev/null || true)" # error-output-allow: missing status is detected by the caller as an incomplete launch
+  cat "${state_dir}/log" 2> /dev/null || true                # error-output-allow: handoff log may already have been consumed during cleanup
   if [[ "${status}" != "0" ]]; then
     workmux_diagnose_launch_failure "${state_dir}/log"
   fi
@@ -686,7 +686,7 @@ function do_launch() {
   # stderr is discarded to hide a spurious bash "child setpgid" error, printed
   # when the parent sets the group first.
   set -m
-  { run_detached_launch "${state_dir}" "${prompt_file}" "${cmd[@]}" < /dev/null > /dev/null 2>&1 & } 2> /dev/null
+  { run_detached_launch "${state_dir}" "${prompt_file}" "${cmd[@]}" < /dev/null > /dev/null 2>&1 & } 2> /dev/null # error-output-allow: detached worker logs output and saves status on completion; timeout preserves the state directory
   set +m
   disown
   await_launch "${state_dir}" "${branch}" "${timeout}" "${await_completion}"
