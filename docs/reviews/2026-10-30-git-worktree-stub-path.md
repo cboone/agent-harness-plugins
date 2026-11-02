@@ -13,3 +13,10 @@
 - Final lint: Markdown, Prettier, ShellCheck, shfmt and separately invoked actionlint passed; the known fixture operand check remains failed and outside scope. `lint-and-fix --no-push` made no changes. No required tool was unavailable.
 - Version check: all 60 catalog entries passed repository validation. No plugin changed, so no version bump applies.
 - Tidy verification: compare the backed-up tree with rebuilt signed fixture, tests and docs commits using `git diff --quiet fix/440-git-worktree-stub-path-pre-tidy HEAD`; the workstream mailbox records the result after execution.
+
+## Main sync on 2026-11-02
+
+- Signed merge `75b876bf` incorporates `origin/main` at `97346bc7`. The only conflict was the delegated ref-validation call: PATH discovery remains unchanged, and main's error-output annotation now covers the actual suppressed predicate. Pushed history is preserved.
+- `make lint` and plugin validation pass, including the formerly failing fixture operand check. Version comparison against the new main base finds no changed plugins; all 60 catalog entries validate, and no bump applies.
+- Focused Scrut documents pass: Git stub (5), launcher (68), launcher options (16), resource claims (109), monitor dispatch (62), and environment isolation (51). Total: 311 passed, zero failed or skipped. Only these six documents ran, sequentially with `SCRUT_JOBS=2`; no full suite was repeated.
+- Conflict resolution changes no behavior from the reviewed implementation. Review counts and the original clean-at-Nit result remain unchanged.
