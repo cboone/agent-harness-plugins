@@ -119,7 +119,7 @@ function die() {
 function require_tools() {
   local tool
   for tool in "$@"; do
-    if ! command -v "${tool}" > /dev/null 2>&1; then
+    if ! command -v "${tool}" > /dev/null 2>&1; then # error-output-allow: missing tool receives a specific prerequisite diagnostic
       case "${tool}" in
         jq) die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/" "${EXIT_NOT_CONFIGURED}" ;;
         *) die "${tool} is required but not found" "${EXIT_NOT_CONFIGURED}" ;;
@@ -137,7 +137,7 @@ function cleanup() {
 # Prints a file's permission bits, following a symlink. GNU stat first: BSD
 # stat has no -c.
 function file_mode() {
-  stat -L -c '%a' "${1}" 2> /dev/null || stat -L -f '%Lp' "${1}"
+  stat -L -c '%a' "${1}" 2> /dev/null || stat -L -f '%Lp' "${1}" # error-output-allow: GNU stat failure selects the BSD stat fallback
 }
 
 function is_config_key() {
@@ -370,7 +370,7 @@ function backend_ntfy_send() {
   # The server may have published before the transport failed, so this means
   # unconfirmed, not undelivered.
   local response
-  if ! response="$(printf '%s' "${payload}" | curl "${curl_args[@]}" --data-binary @- "${url}" 2>&1)"; then
+  if ! response="$(printf '%s' "${payload}" | curl "${curl_args[@]}" --data-binary @- "${url}" 2>&1)"; then # error-output-allow: standalone plugin redacts response and errors before reporting failed confirmation
     echo "${SCRIPT_NAME}: ntfy did not confirm the notification: $(ntfy_redact "${response}")" >&2
     return 1
   fi
@@ -379,7 +379,7 @@ function backend_ntfy_send() {
   # publish. The answer holds the topic, so only redacted error text is printed.
   # jq's own message tells non-JSON apart from a jq that could not run.
   local parse_error status=0
-  parse_error="$(jq empty 2>&1 <<< "${response}")" || status=$?
+  parse_error="$(jq empty 2>&1 <<< "${response}")" || status=$? # error-output-allow: standalone plugin redacts jq diagnostics before reporting failed confirmation
   if ((status != 0)); then
     echo "${SCRIPT_NAME}: could not read the answer from ${url} as JSON (jq exited ${status}: $(ntfy_redact "${parse_error%%$'\n'*}")), so delivery is unconfirmed. Check NTFY_SERVER and any proxy in between." >&2
     return 1

@@ -1,0 +1,17 @@
+{
+  "aspect": "code",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "In a default stdout Scrut block, `\\exec 1>/dev/null; some-command 2>&1` bypasses the guard. Bash resolves `\\exec` to the exec builtin, but `plain` returns null for literal words containing backslashes. Consequently, changes_shell_stdout misses the persistent redirect, and the later stderr merge is exempted as live forwarding although it writes to /dev/null. This is additional to the accepted saved-alias and composed-prefix cases.",
+      "file": "bin/lib/error-output-ast.jq",
+      "fix": "Decode statically escaped command names before recognizing exec, or conservatively withhold live-forwarding exemptions when a command name is unresolved and redirects stdout. Add a static regression case for escaped exec.",
+      "line": 26,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: Escaped exec names bypass stdout-change detection."
+    }
+  ],
+  "reviewed": "994c765674a84c3bbad6f97ed104225c92edb0fb",
+  "strengths": ["AST parsing distinguishes actual redirects and comments from quoted text.", "Static regression samples exercise rejection without executing sample programs."],
+  "summary": "Reviewed the committed scope and found one additional Important guard bypass. The two explicitly accepted limits remain separate and are not re-reported. No files were changed, and no repository code or mechanical checks were run."
+}
