@@ -89,7 +89,7 @@ function die() {
 }
 
 function require_jq() {
-  if ! command -v jq > /dev/null 2>&1; then
+  if ! command -v jq > /dev/null 2>&1; then # error-output-allow: missing jq receives a specific prerequisite diagnostic
     die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
   fi
 }
@@ -98,11 +98,11 @@ function require_jq() {
 # require_jq so parse-reviews and parse-audit, which only read stdin, run
 # without GitHub credentials.
 function require_gh() {
-  if ! command -v gh > /dev/null 2>&1; then
+  if ! command -v gh > /dev/null 2>&1; then # error-output-allow: missing gh receives a specific prerequisite diagnostic
     die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
   fi
 
-  if ! gh auth status > /dev/null 2>&1; then
+  if ! gh auth status > /dev/null 2>&1; then # error-output-allow: authentication predicate receives a specific prerequisite diagnostic
     die "Not authenticated with GitHub. Run: gh auth login"
   fi
 }
@@ -370,7 +370,7 @@ function do_parse_reviews() {
   # Validate the shape before filtering. A failed gh call, or a hand-piped
   # error payload, otherwise surfaces as an opaque jq indexing error.
   local input_type
-  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then
+  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then # error-output-allow: invalid input receives a structured invalid-input diagnostic
     die "Invalid review JSON: could not parse input as JSON."
   fi
 
@@ -505,7 +505,7 @@ function do_parse_audit() {
   local input
   input="$(cat)"
 
-  if ! jq -e 'type == "object" and ([.reviews, .reviewComments, .issueComments, .threads] | all(type == "array"))' > /dev/null 2>&1 <<< "${input}"; then
+  if ! jq -e 'type == "object" and ([.reviews, .reviewComments, .issueComments, .threads] | all(type == "array"))' > /dev/null 2>&1 <<< "${input}"; then # error-output-allow: invalid review bundle receives the structured validation diagnostic
     die "Invalid audit JSON: expected an object with reviews, reviewComments, issueComments and threads arrays."
   fi
 
@@ -895,7 +895,7 @@ function main() {
       check_dependencies
       ;;
     verify-fix)
-      command -v git > /dev/null 2>&1 || die "git is required for verify-fix"
+      command -v git > /dev/null 2>&1 || die "git is required for verify-fix" # error-output-allow: missing git receives a specific prerequisite diagnostic
       ;;
     parse-reviews | parse-audit)
       # Reads stdin and touches no GitHub API, so it needs neither the CLI nor
