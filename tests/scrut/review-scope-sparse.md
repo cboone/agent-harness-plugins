@@ -124,7 +124,7 @@ $ export REVIEW_SPARSE_ROOT="${fixture}/repo" REVIEW_SPARSE_MARKER="${fixture}/f
 >        if [[ "${tagged}" == true && ! -e "${REVIEW_SPARSE_MARKER}" ]]; then \
 >          rm "${REVIEW_SPARSE_ROOT}/src/a" || return; touch "${REVIEW_SPARSE_MARKER}"; fi; } \
 >   && export -f git && test "$(type -t git)" = function \
->   && code=0 && "${REVIEW_SCOPE_BIN}" --base HEAD > "${fixture}/out" 2> "${fixture}/err" || code=$?; \
+>   && code=0 && "${REVIEW_SCOPE_BIN}" --base HEAD > "${fixture}/out" 2> "${fixture}/err" || code=$?; # error-output-allow: fixture asserts the retained disappearing-path diagnostic, failure status and empty stdout
 >   test "${code}" = 1 && test -e "${REVIEW_SPARSE_MARKER}" && test ! -s "${fixture}/out" \
 >   && cat "${fixture}/err"; unset -f git
 review-scope: raw working-tree file changed type or disappeared: src/a

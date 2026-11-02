@@ -708,7 +708,7 @@ if ! [[ "${CODEX_OTHER_SKILL_RESERVE_TOKENS}" =~ ^(0|[1-9][0-9]{0,8})$ ]]; then
   codex_settings_valid=false
 fi
 
-marketplace_name="$(jq -r '.name // empty' "${CODEX_MARKETPLACE}" 2> /dev/null || true)"
+marketplace_name="$(jq -r '.name // empty' "${CODEX_MARKETPLACE}" 2> /dev/null || true)" # error-output-allow: invalid manifest fields produce the validator error below
 inventory_count=0
 inventory_withheld=0
 inventory_entries=""
@@ -735,7 +735,7 @@ for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
 
   plugin_manifest="${CODEX_DIST_DIR}/plugins/${skill_plugin}/.codex-plugin/plugin.json"
   [[ -f "${plugin_manifest}" ]] || plugin_manifest="${CODEX_DIST_DIR}/plugins/${skill_plugin}/.claude-plugin/plugin.json"
-  plugin_version="$(jq -r '.version // empty' "${plugin_manifest}" 2> /dev/null || true)"
+  plugin_version="$(jq -r '.version // empty' "${plugin_manifest}" 2> /dev/null || true)" # error-output-allow: invalid plugin versions produce the validator error below
 
   # Codex cuts an over-long description to 1,021 characters plus "...". The
   # length is already an error above; mirroring the cut keeps the total honest.
@@ -891,7 +891,7 @@ function validate_review_checklists() {
     name="${committed##*/}"
     if [[ ! -f "${expected_dir}/${name}" ]]; then
       error "Review checklist copy '${committed}' has no source checklist; run make build"
-    elif ! grep -qF "./references/checklists/${name}" "${REVIEW_GUIDES_FILE}" 2> /dev/null; then
+    elif ! grep -qF "./references/checklists/${name}" "${REVIEW_GUIDES_FILE}" 2> /dev/null; then # error-output-allow: missing checklist links produce the validator error below
       error "'${REVIEW_GUIDES_FILE}' does not name ./references/checklists/${name}; add detection and routing rules for it"
     fi
   done

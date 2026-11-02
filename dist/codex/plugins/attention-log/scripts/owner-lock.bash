@@ -25,7 +25,7 @@ function owner_lock_report() {
 
 function owner_lock_inode() {
   local listing
-  if ! listing="$(ls -diL -- "${1}" 2>&1)"; then
+  if ! listing="$(ls -diL -- "${1}" 2>&1)"; then # error-output-allow: inode lookup retains merged diagnostics and reports failure with the reservation path
     owner_lock_report "cannot inspect reservation ${1}: ${listing}" "${2:-}"
     return 1
   fi
@@ -39,13 +39,13 @@ function owner_lock_inode() {
 function owner_lock_close() {
   case "${1}" in
     8)
-      exec 8>&-
+      exec 8>&- # error-output-allow: close only the retained reservation descriptor 8; standard streams remain unchanged
       OWNER_LOCK_TOKEN_8=""
       OWNER_LOCK_PATH_8=""
       OWNER_LOCK_INODE_8=""
       ;;
     9)
-      exec 9>&-
+      exec 9>&- # error-output-allow: close only the retained reservation descriptor 9; standard streams remain unchanged
       OWNER_LOCK_TOKEN_9=""
       OWNER_LOCK_PATH_9=""
       OWNER_LOCK_INODE_9=""
@@ -78,20 +78,20 @@ function owner_lock_reserve() {
       ;;
   esac
   [[ ! -e "${path}" && ! -L "${path}" ]] || return 1
-  if ! diagnostic="$(mktemp "${path}.diagnostic.XXXXXX" 2>&1)"; then
+  if ! diagnostic="$(mktemp "${path}.diagnostic.XXXXXX" 2>&1)"; then # error-output-allow: temporary-file creation retains merged diagnostics and reports failure with the reservation path
     owner_lock_report "cannot create ${path}: ${diagnostic}" "${before_report}"
     return 2
   fi
   [[ ! -o noclobber ]] || had_noclobber=true
   set -o noclobber
   case "${slot}" in
-    8) { exec 8> "${path}"; } 2>> "${diagnostic}" || result=$? ;;
-    9) { exec 9> "${path}"; } 2>> "${diagnostic}" || result=$? ;;
+    8) { exec 8> "${path}"; } 2>> "${diagnostic}" || result=$? ;; # error-output-allow: reserve only descriptor 8; status and retained stderr are checked and reported below
+    9) { exec 9> "${path}"; } 2>> "${diagnostic}" || result=$? ;; # error-output-allow: reserve only descriptor 9; status and retained stderr are checked and reported below
     *) result=2 ;;
   esac
   [[ "${had_noclobber}" == true ]] || set +o noclobber
   error="$(cat "${diagnostic}")" || error='cannot read reservation diagnostic'
-  if ! cleanup_error="$(rm -- "${diagnostic}" 2>&1)"; then
+  if ! cleanup_error="$(rm -- "${diagnostic}" 2>&1)"; then # error-output-allow: diagnostic-file removal retains merged errors and reports cleanup failure
     owner_lock_report "cannot remove reservation diagnostic ${diagnostic}: ${cleanup_error}" "${before_report}"
   fi
   if ((result != 0)); then
@@ -147,7 +147,7 @@ function owner_lock_release() {
     owner_lock_close "${slot}"
     return 1
   fi
-  error="$(rm -- "${path}" 2>&1)" || result=$?
+  error="$(rm -- "${path}" 2>&1)" || result=$? # error-output-allow: reservation removal retains merged errors and returns the original failure status
   if ((result != 0)); then
     owner_lock_report "cannot release ${path}: ${error}"
   fi
