@@ -142,6 +142,19 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "description": "Print 50 dot lines to scroll the visible conversation off screen while keeping the session.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["conversation", "dots", "screen", "scroll"],
+      "license": "MIT",
+      "name": "dots",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "category": "issues-and-worktrees",
+      "source": "./plugins/dots"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "code-quality",
       "description": "Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",

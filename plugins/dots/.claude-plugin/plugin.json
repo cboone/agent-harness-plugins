@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Print 50 dot lines to scroll the visible conversation off screen while keeping the session.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["conversation", "dots", "screen", "scroll"],
+  "license": "MIT",
+  "name": "dots",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
