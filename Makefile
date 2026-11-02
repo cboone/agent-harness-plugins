@@ -29,6 +29,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \
+	-u PERL5OPT -u PERL5LIB -u SCRUT_GROUP_PROBE_MODE -u SCRUT_GROUP_PROBE_LOG -u SCRUT_GROUP_PROBE_PID \
 	-u STUB_SHFMT_REAL_BIN -u STUB_SHFMT_MODE -u ERROR_OUTPUT_SHFMT_STUB_PATH \
 	-u CHAIN_CODEX_STUB_MODE \
 	-u EVAL_GH_AUTH -u EVAL_GH_LOG \
@@ -37,11 +38,11 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME -u XDG_STATE_HOME \
 	-u PUSH_NOTIFICATION_BACKEND -u PUSH_NOTIFICATION_CONFIG -u NTFY_SERVER -u NTFY_TOPIC -u NTFY_TOKEN
 
-# Every scrut test resolves the script or fixture it exercises through one of
-# these variables. Defining them once keeps the test and update targets from
-# drifting apart. CI invokes these targets and uses this same environment.
+# Share script and fixture paths between the test and update targets.
 SCRUT_ENV := \
 	CHECK_GITLEAKS_STARTER_BIN="$(CURDIR)/tests/fixtures/check-gitleaks-starter" \
+	RUST_AUDIT_CASE_BIN="$(CURDIR)/tests/fixtures/rust-audit-case" \
+	RUST_AUDIT_TEMPLATE="$(CURDIR)/plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template" \
 	VERSION_AUDIT_BIN="$(CURDIR)/bin/version-audit" \
 	VERSION_AUDIT_STUB_BIN="$(CURDIR)/tests/fixtures/version-audit-stub" \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
@@ -59,6 +60,7 @@ SCRUT_ENV := \
 	COMBINED_WORKTREES_CASE_BIN="$(CURDIR)/tests/fixtures/combined-worktrees-case" \
 	COMBINED_REF_COLLISION_BIN="$(CURDIR)/tests/fixtures/combined-ref-collision" \
 	PR_BRANCH_ISSUES_BIN="$(CURDIR)/plugins/pr/scripts/branch-issues" \
+	PLAN_MATCHES_BRANCH_BIN="$(CURDIR)/plugins/review-plan/scripts/plan-matches-branch" \
 	GITHUB_SKILL_EXAMPLES_BIN="$(CURDIR)/tests/fixtures/github-skill-examples" \
 	LIST_SHELL_SCRIPTS_BIN="$(CURDIR)/bin/list-shell-scripts" \
 	MATERIALIZE_CASE_BIN="$(CURDIR)/bin/materialize-case" \
@@ -97,6 +99,7 @@ SCRUT_ENV := \
 	OWNER_LOCK_PROBE_BIN="$(CURDIR)/tests/fixtures/owner-lock-probe" \
 	OWNER_CALL_CONTRACT_BIN="$(CURDIR)/tests/fixtures/check-owner-call-contract" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
+	REPORT_BOARD_EXECUTE_BIN="$(CURDIR)/tests/fixtures/report-board-execute.cjs" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
 	COPILOT_ROUNDS_REPORT_BIN="$(CURDIR)/bin/copilot-rounds-report" \
 	COPILOT_ROUNDS_REPORT_DATA_DIR="$(CURDIR)/tests/data/copilot-rounds-report" \
@@ -128,9 +131,11 @@ SCRUT_ENV := \
 	CODEX_STUB_BIN="$(CURDIR)/tests/fixtures/codex-stub" \
 	CODEX_LAUNCH_CANCEL_ENV="$(CURDIR)/tests/fixtures/codex-launch-cancel.bash" \
 	RESULT_CHECK_JQ="$(CURDIR)/plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq" \
+	CHECK_EDIT_WORKTREE_BIN="$(CURDIR)/plugins/review-anti-patterns/scripts/check-edit-worktree" \
 	RUN_SCRUT_DOCUMENTS_BIN="$(CURDIR)/bin/run-scrut-documents" \
 	RUN_SCRUT_BIN="$(CURDIR)/bin/run-scrut" \
 	SCRUT_STUB_BIN="$(CURDIR)/tests/fixtures/scrut-stub" \
+	SCRUT_GROUP_PROBE_DIR="$(CURDIR)/tests/fixtures/scrut-group-probe" \
 	TMUX_STUB_BIN="$(CURDIR)/tests/fixtures/tmux-stub" \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
 	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub" \
@@ -161,7 +166,7 @@ help:
 	@echo "  test-all           lint + validate + test-scrut"
 	@echo "  test-bash32        Empty-list regressions under macOS /bin/bash 3.2"
 	@echo ""
-	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut."
+	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut, Perl (core POSIX module)."
 	@echo "make validate also requires Claude Code >= $$(cat .claude-code-version) on PATH."
 	@echo "validate-corpus additionally needs jq and mikefarah yq v4."
 

@@ -1,6 +1,10 @@
 {
   "non_bash": [
     {
+      "name": "tests/fixtures/scrut-group-probe/ScrutGroupProbe.pm",
+      "reason": "Perl POSIX test module, not Bash source; setup failures and probe diagnostics remain visible to the runner tests."
+    },
+    {
       "name": "bin/lib/error-output-ast.jq",
       "reason": "jq evaluator, not a shell program; its Bash caller checks status and keeps diagnostics live."
     },
@@ -71,6 +75,10 @@
     {
       "name": "tests/fixtures/review-path-contract.jq",
       "reason": "jq syntax contract for fixed review-fixture paths; check_review_fixture_paths invokes it through jq, not Bash."
+    },
+    {
+      "name": "tests/fixtures/report-board-execute.cjs",
+      "reason": "Node.js VM and DOM fixture executed by node, not Bash; its Scrut caller keeps failure diagnostics live."
     }
   ],
   "parse_exceptions": []
