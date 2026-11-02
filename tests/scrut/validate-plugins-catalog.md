@@ -74,7 +74,7 @@ The limits below use explicit fixture arguments; the recorded budget is never
 raised to fit content.
 
 ```scrut
-$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid 2>&1 | grep '^Codex skill inventory:'
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid 2>&1 | grep '^Codex skill inventory:' # error-output-allow: testcase asserts retained diagnostics: The Codex skill inventory fits Codex's discovery budget
 Codex skill inventory: the * most expensive of * skills (75 percent) cost * of 4290 tokens available under the 5440-token budget for gpt-6.1-sol. Withheld from implicit invocation and not charged: *. (glob)
 ```
 
@@ -87,7 +87,7 @@ a whole one, and that the counted skill is the most expensive one: no other
 line, even with the 18-token roots table row, reaches 256 tokens.
 
 ```scrut
-$ { "${VALIDATE_PLUGIN_FIXTURE_BIN}" oversized-description --enabled-percent 1 2>&1; echo "exit ${?}"; } | awk '{ print } /^Codex skill inventory:/ { verdict = ($5 == 1 && $14 >= 256) ? "the most expensive skill is counted" : "unexpected selection: " $5 " costing " $14 } END { print verdict }'
+$ { "${VALIDATE_PLUGIN_FIXTURE_BIN}" oversized-description --enabled-percent 1 2>&1; echo "exit ${?}"; } | awk '{ print } /^Codex skill inventory:/ { verdict = ($5 == 1 && $14 >= 256) ? "the most expensive skill is counted" : "unexpected selection: " $5 " costing " $14 } END { print verdict }' # error-output-allow: testcase asserts retained diagnostics: The Codex skill inventory fits Codex's discovery budget
 ::error::Skill 'plugins/release/skills/release/SKILL.md' description is 1100 characters, exceeding the 1024-character limit
 Codex skill inventory: the 1 most expensive of * skills (1 percent) cost * (glob)
 1 plugin validation error(s) found.
@@ -132,7 +132,7 @@ Names and paths count. Here the counted descriptions alone fit the budget, as a
 description-only check would measure them, but their full lines do not.
 
 ```scrut
-$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" path-overhead 2>&1 | sed -nE 's/^::error::Codex skill inventory costs ([0-9]+) tokens, over the ([0-9]+) available.* Descriptions are ([0-9]+) of .*/\1 \2 \3/p' | awk '{ print (($3 + 3) / 4 <= $2 && $2 < $1) ? "descriptions fit; names and paths exceed the budget" : "premise not met: " $0 }'
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" path-overhead 2>&1 | sed -nE 's/^::error::Codex skill inventory costs ([0-9]+) tokens, over the ([0-9]+) available.* Descriptions are ([0-9]+) of .*/\1 \2 \3/p' | awk '{ print (($3 + 3) / 4 <= $2 && $2 < $1) ? "descriptions fit; names and paths exceed the budget" : "premise not met: " $0 }' # error-output-allow: testcase asserts retained diagnostics: The Codex skill inventory fits Codex's discovery budget
 descriptions fit; names and paths exceed the budget
 ```
 
@@ -159,7 +159,7 @@ the withheld skills. Charging the whole catalog keeps another skill from taking
 its place among the counted share.
 
 ```scrut
-$ charged() { "${VALIDATE_PLUGIN_FIXTURE_BIN}" "${1}" --enabled-percent 100 2>&1 | awk '/^Codex skill inventory:/ { withheld = 0; if (match($0, /not charged: [0-9]+/)) withheld = substr($0, RSTART + 13, RLENGTH - 13); print $9, $14, withheld }'; }
+$ charged() { "${VALIDATE_PLUGIN_FIXTURE_BIN}" "${1}" --enabled-percent 100 2>&1 | awk '/^Codex skill inventory:/ { withheld = 0; if (match($0, /not charged: [0-9]+/)) withheld = substr($0, RSTART + 13, RLENGTH - 13); print $9, $14, withheld }'; } # error-output-allow: testcase asserts retained diagnostics: The Codex skill inventory fits Codex's discovery budget
 > read -r count tokens withheld <<< "$(charged valid)"
 > read -r count_after tokens_after withheld_after <<< "$(charged translated-frontmatter)"
 > [[ ${count_after} -eq $((count - 1)) && ${tokens_after} -lt ${tokens} && ${withheld_after} -eq $((withheld + 1)) ]] && echo "withheld skill is not charged"
