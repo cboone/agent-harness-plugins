@@ -281,7 +281,10 @@ tmux: delete-buffer socket=/tmp/tmux-501/projects buffer=workmux-prompt-feature-
 $ state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
->   && chmod +x "${stub_dir}/workmux" \
+>   && cp "${WORKTREE_GIT_STUB_BIN}" "${stub_dir}/git" \
+>   && chmod +x "${stub_dir}/workmux" "${stub_dir}/git" \
+>   && test "$(PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" command -v workmux)" = "${stub_dir}/workmux" \
+>   && test "$(PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" command -v git)" = "${stub_dir}/git" \
 >   && printf '%s\n' 'Prompt body' \
 >     | env -u TMUX PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb bash "${LAUNCH_WORKMUX_BIN}" "feature/no-tmux-command"
 workmux add
@@ -300,7 +303,10 @@ prompt-file-exists: yes
 $ state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
->   && chmod +x "${stub_dir}/workmux" \
+>   && cp "${WORKTREE_GIT_STUB_BIN}" "${stub_dir}/git" \
+>   && chmod +x "${stub_dir}/workmux" "${stub_dir}/git" \
+>   && test "$(PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" command -v workmux)" = "${stub_dir}/workmux" \
+>   && test "$(PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" command -v git)" = "${stub_dir}/git" \
 >   && printf '%s\n' 'Issue body' \
 >     | env -u TMUX PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb bash "${LAUNCH_WORKMUX_BIN}" "feature/no-tmux-command-issue"
 workmux add
@@ -407,7 +413,7 @@ $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
 >     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' bash "${LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue 387 2>&1; } || exit_code=$?; if compgen -G "${launch_tmp}/workmux-*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
-launch-workmux: issue 387 matches more than one local branch:
+launch-workmux: issue 387 matches more than one branch:
   feature/387-one
   fix/387-two
 launch-workmux: pass an explicit branch name instead
@@ -659,7 +665,7 @@ user/feature/42-earlier
 ```scrut
 $ prepare_stubs \
 >   && env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' bash "${LAUNCH_WORKMUX_BIN}" --resolve-issue-branch 387 2>&1
-launch-workmux: issue 387 matches more than one local branch:
+launch-workmux: issue 387 matches more than one branch:
   feature/387-one
   fix/387-two
 launch-workmux: pass an explicit branch name instead
@@ -675,7 +681,7 @@ An empty answer would read as "no existing branch", so a failed listing exits
 $ prepare_stubs \
 >   && env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_FAIL=for-each-ref bash "${LAUNCH_WORKMUX_BIN}" --resolve-issue-branch 42 2>&1
 git: fatal: not a git repository
-launch-workmux: cannot list local branches to look for issue 42
+launch-workmux: cannot list branches to look for issue 42
 [1]
 ```
 
