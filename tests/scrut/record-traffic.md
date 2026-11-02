@@ -153,12 +153,12 @@ $ api="$(api_variant)" \
 Omitting `DATA_DIR` prints the usage and exits 2.
 
 ```scrut
-$ "${RECORD_TRAFFIC_BIN}" --repo cboone/agent-harness-plugins 2>&1 | head -n 1
+$ "${RECORD_TRAFFIC_BIN}" --repo cboone/agent-harness-plugins 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Errors
 Usage: record-traffic [--repo OWNER/REPO] [--today YYYY-MM-DD] DATA_DIR
 ```
 
 ```scrut
-$ "${RECORD_TRAFFIC_BIN}" --repo cboone/agent-harness-plugins > /dev/null 2>&1; echo "exit ${?}"
+$ "${RECORD_TRAFFIC_BIN}" --repo cboone/agent-harness-plugins > /dev/null ; echo "exit ${?}"
 exit 2
 ```
 
@@ -194,7 +194,7 @@ A `daily.json` that is not one JSON object stops the run before anything is fetc
 
 ```scrut
 $ mkdir "${work}/corrupt" && printf '{}\n{}\n' > "${work}/corrupt/daily.json" \
->   && record "${RECORD_TRAFFIC_DATA_DIR}" "${work}/corrupt" 2>&1 | sed "s#${work}#WORK#"; (exit "${PIPESTATUS[0]}")
+>   && record "${RECORD_TRAFFIC_DATA_DIR}" "${work}/corrupt" 2>&1 | sed "s#${work}#WORK#"; (exit "${PIPESTATUS[0]}") # error-output-allow: testcase asserts retained diagnostics: Errors
 record-traffic: WORK/corrupt/daily.json is not a single JSON object
 [1]
 ```

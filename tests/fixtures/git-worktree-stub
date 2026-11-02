@@ -17,7 +17,7 @@ function check_ref_format() {
   local candidate
   while IFS= read -r candidate; do
     [[ "${candidate}" -ef "$0" ]] && continue
-    "${candidate}" check-ref-format --branch "${1}" > /dev/null 2>&1
+    "${candidate}" check-ref-format --branch "${1}" > /dev/null 2>&1 # error-output-allow: branch validity predicate returns the real git status
     return $?
   done < <(type -aP git)
   die "no real Git executable found in PATH" 127
