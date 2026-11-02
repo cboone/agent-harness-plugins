@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Claude CLI stand-in, confined to the validation fixture.
+set -euo pipefail
+
+function main() {
+  : "${CLAUDE_VALIDATION_LOG:?Fixture log is required}"
+  if [[ "$*" == --version ]]; then
+    printf '%s (Claude Code)\n' "${CLAUDE_VALIDATION_VERSION:?Fixture version is required}"
+    return
+  fi
+  [[ $# == 3 && "${1}" == plugin && "${2}" == validate ]] || return 64
+  printf '%s\n' "${3}" >> "${CLAUDE_VALIDATION_LOG}"
+  if [[ "${3}" == "${CLAUDE_VALIDATION_FAIL:-}" ]]; then
+    echo "Schema rejected: ${3}" >&2
+    return 7
+  fi
+}
+
+main "$@"
