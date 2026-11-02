@@ -57,3 +57,24 @@ TOOLING directed publication after the full suite, with both unrelated failures 
 The full suite used two concurrent documents. It began before TOOLING introduced the shared full-suite lock; the lock was claimed at the end and released by an exit trap. No full-suite rerun was performed.
 
 Local review end states: structural clean at Nit; aspects clean at Important.
+
+## Main synchronization, 2026-11-02
+
+Signed merge `4fbdc91a` incorporates main at `7817cab667d625bce777ad808a327d8e72f1b502`. The only conflict was the Makefile's fixture registrations; both the starter checker and main's version-audit entries were retained. Main already held secret-scanning version 3.0.5, so the canonical manifest and generated mirror now use 3.0.6.
+
+The remote branch also contained an earlier main merge, `6555c7b5`. Signed merge `6566415b` preserves that history without changing the tree produced by `4fbdc91a`. No rebase or force push was used.
+
+Current synchronization checks passed:
+
+| Check                                                      | Result                                                                               |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Starter Scrut document                                     | 5 passed, none failed or skipped                                                     |
+| Version-audit Scrut document                               | 8 passed, none failed or skipped                                                     |
+| Error-output guard Scrut document                          | 102 passed, none failed or skipped                                                   |
+| Environment-isolation Scrut document                       | 51 passed, none failed or skipped                                                    |
+| Fixture environments, including the error-output AST guard | Passed without added exceptions or annotations                                       |
+| Review fixture operand contract                            | Passed                                                                               |
+| Version and marketplace checks                             | 3.0.5 to 3.0.6; generated manifest matches; registration and version ownership valid |
+| JSON validation                                            | Passed                                                                               |
+
+At most two documents ran concurrently. The version-audit document covered registrations involved in the Makefile conflict and finished before the urgent thermal restriction. No full suite or other merge-only documents were run. The October 30 full-suite result above remains historical; the environment-isolation failure did not recur in this synchronization run. The separate runner document was not rerun. Review round counts and prior end states are unchanged.
