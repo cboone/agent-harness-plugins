@@ -1,0 +1,54 @@
+{
+  "round": "focused Important2 integration",
+  "base": "5205fada80635f7d9dd4a1967c94a256e60a99cb",
+  "head": "54d3d451ce9ed7621b4b2ec967b996b681fe378f",
+  "scope_changed": false,
+  "aspects": [
+    {
+      "aspect": "code",
+      "exit_status": 0,
+      "findings": 0,
+      "reviewed": "445aa43eee880cf6c8eb77f2b3212ec910d69c5d",
+      "retained": true
+    },
+    {
+      "aspect": "errors",
+      "exit_status": 0,
+      "findings": 0,
+      "reviewed": "445aa43eee880cf6c8eb77f2b3212ec910d69c5d",
+      "retained": true
+    },
+    {
+      "aspect": "tests",
+      "exit_status": 0,
+      "findings": 0,
+      "reviewed": "445aa43eee880cf6c8eb77f2b3212ec910d69c5d",
+      "retained": true
+    },
+    {
+      "aspect": "comments",
+      "exit_status": 0,
+      "findings": 0,
+      "reviewed": "445aa43eee880cf6c8eb77f2b3212ec910d69c5d",
+      "retained": false
+    },
+    {
+      "aspect": "types",
+      "exit_status": 0,
+      "findings": 0,
+      "reviewed": "445aa43eee880cf6c8eb77f2b3212ec910d69c5d",
+      "retained": false
+    }
+  ],
+  "end_state": "clean at Important",
+  "failed_original_comments": "wrong snapshot; invalid output never repaired or used",
+  "cancelled_original_types": "exit -15; no reply",
+  "completion_authority": "TOOLING authorized comments/types only at unchanged snapshot, reusing three valid aspects; same round and counts",
+  "schema": "reviewed enum bound to expected snapshot; existing validation contract unchanged",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "window": 872000,
+  "sandbox": "read-only",
+  "actual_host_errors": 0,
+  "hook_picker": "none"
+}

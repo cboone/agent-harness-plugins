@@ -11,11 +11,11 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-The skill reviews the comments in a branch's changed code and keeps, rewrites, or deletes each one. It flags ticketless `TODO` comments and comments whose meaning is unclear instead of changing them. Its standard is one line by default: what the code is doing, then the minimum reason. A comment earns its place when someone would otherwise "fix" the code and break it, when deliberate code looks wrong, when an external constraint drives it, or when the reader cannot follow the code without a pointer to another file.
+This compatibility alias invokes [Trim Text](../trim-text/README.md) with its `code-comments` profile. Install both plugins. The shared standard and workflow live in `trim-text`; the comment profile retains test scaffolding, stylesheet rules, protected comments, ticketless TODO flags, worked examples and comment-only verification.
 
-It cuts runtime trivia, consequence chains, arguments for decisions the code has already made, mock comments that narrate the author's thinking, CSS comments that restate the declaration, and jargon. It also favors wording that stays true: no line numbers, no counts or "currently", and comments anchored to the code beside them rather than to code elsewhere.
+Existing calls and options keep their scope. No arguments means comments within or directly above changed code since the remote default branch's merge base, including staged, unstaged and untracked files. Explicit paths mean all comments in those files; a single named comment means only that comment. Prose files and symlinks are skipped. The target edits only comments, checks that code stays unchanged, runs relevant checks, commits only eligible files and never pushes. Report-only Codex proposals retain the read-only sandbox. If `trim-text` is unavailable, the alias reports that without editing files.
 
-The scope defaults to comments in or directly above code changed since the base branch, including uncommitted and untracked files. The skill edits only comments, leaves directive and pragma comments alone, checks the edited files with the project's formatter and linter in check mode, its type checker, and its tests, and reports a before-and-after table. It then commits its edits locally and never pushes. A file that already held your uncommitted work stays uncommitted, so the commit does not carry your own changes, and the report names any committed content the skill did not write. It does not commit on a detached HEAD, on the default branch, or when it cannot tell which branch is the default. The report also covers which checks ran, the commit's branch, and any change a commit hook made.
+For one mixed prose/comment pass, use `trim-text branch`. `trim-text branch --profile code-comments` is the equivalent of the alias's no-argument scope.
 
 ## Requirements
 

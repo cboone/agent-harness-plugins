@@ -58,7 +58,7 @@ function die() {
 }
 
 function require_jq() {
-  if ! command -v jq > /dev/null 2>&1; then
+  if ! command -v jq > /dev/null 2>&1; then # error-output-allow: missing jq receives a specific prerequisite diagnostic
     die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
   fi
 }
@@ -67,13 +67,13 @@ function require_jq() {
 # require_jq so summarize, which only transforms JSON on stdin, runs in
 # environments with no GitHub credentials (the test suite, for example).
 function require_gh() {
-  if ! command -v gh > /dev/null 2>&1; then
+  if ! command -v gh > /dev/null 2>&1; then # error-output-allow: missing gh receives a specific prerequisite diagnostic
     die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
   fi
 
   # gh auth token checks only the active account. gh auth status fails when any
   # account on any host has a problem, even one this script never uses.
-  if ! gh auth token > /dev/null 2>&1; then
+  if ! gh auth token > /dev/null 2>&1; then # error-output-allow: authentication predicate receives a specific prerequisite diagnostic
     die "Not authenticated with GitHub. Run: gh auth login"
   fi
 }
@@ -205,7 +205,7 @@ function complete_files() {
   local number
   while IFS= read -r number; do
     if gh api --paginate --slurp "repos/${repo}/pulls/${number}/files?per_page=100" \
-      > "${list_file}.pages" 2> /dev/null; then
+      > "${list_file}.pages" 2> /dev/null; then # error-output-allow: failed pagination preserves the partial-list state reported by summarize
       jq -c --arg number "${number}" '{key: $number, value: [.[][] | {path: .filename}]}' \
         "${list_file}.pages" >> "${lines_file}"
     fi
@@ -256,7 +256,7 @@ function fetch_comparisons() {
     # The commit list is paginated, so authors are gathered across every page;
     # a non-Dependabot commit on a later page would otherwise go uncounted.
     if gh api --paginate --slurp "repos/${repo}/compare/${base_ref}...${head_sha}?per_page=100" \
-      > "${work_dir}/compare.pages" 2> /dev/null; then
+      > "${work_dir}/compare.pages" 2> /dev/null; then # error-output-allow: failed comparison is represented as unavailable, never mergeable
       jq -c --arg number "${number}" \
         '{key: $number, value: {status: .[0].status, aheadBy: .[0].ahead_by, behindBy: .[0].behind_by, authors: [.[].commits[] | (.author.login // .commit.author.name // "")]}}' \
         "${work_dir}/compare.pages" >> "${lines_file}"
@@ -279,7 +279,7 @@ function fetch_alerts() {
   local work_dir="${2}"
 
   if gh api --paginate --slurp "repos/${repo}/dependabot/alerts?state=open&per_page=100" \
-    > "${work_dir}/alerts.raw" 2> "${work_dir}/alerts.err"; then
+    > "${work_dir}/alerts.raw" 2> "${work_dir}/alerts.err"; then # error-output-allow: API failures are read from alerts.err and classified below
     jq '{available: true, reason: null, items: [.[][]]}' "${work_dir}/alerts.raw" > "${work_dir}/alerts.json"
   else
     local reason
@@ -303,7 +303,7 @@ function do_summarize() {
   # Validate the shape before filtering, so a failed gh call or a hand-piped
   # error payload produces a clear message instead of an opaque jq error.
   local input_type
-  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then
+  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then # error-output-allow: invalid input receives a structured invalid-input diagnostic
     die "Invalid bundle: could not parse input as JSON."
   fi
 
@@ -316,7 +316,7 @@ function do_summarize() {
   fi
 
   local missing
-  missing="$(jq -r '. as $bundle | [("repo", "defaultBranch", "dependabot") | select(. as $key | $bundle | has($key) | not)] | join(", ")' <<< "${input}" 2> /dev/null || true)"
+  missing="$(jq -r '. as $bundle | [("repo", "defaultBranch", "dependabot") | select(. as $key | $bundle | has($key) | not)] | join(", ")' <<< "${input}" 2> /dev/null || true)" # error-output-allow: missing bundle keys receive the named-key diagnostic below
   if [[ -n "${missing}" ]]; then
     die "Invalid bundle: missing required field(s): ${missing}."
   fi

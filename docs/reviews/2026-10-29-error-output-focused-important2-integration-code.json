@@ -1,0 +1,7 @@
+{
+  "aspect": "code",
+  "findings": [],
+  "reviewed": "445aa43eee880cf6c8eb77f2b3212ec910d69c5d",
+  "strengths": ["Integration preserves both checker modes and existing fixture rules.", "Static regressions cover parser failures, stream boundaries and explicit exceptions."],
+  "summary": "Reviewed the supplied committed scope, relevant callers, tests and records. The change meets the project's standards within the documented accepted limits: clean at Important. Review remained read-only; no repository code or mechanical checks ran."
+}
