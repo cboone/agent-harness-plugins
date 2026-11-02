@@ -25,3 +25,14 @@ uv run --no-project tests/evals/anti-patterns-edit.py \
 ```
 
 `--check-only` validates a saved `--out-dir` without model calls. The runner refuses optimized Python so its assertions cannot disappear. The runner refuses nonempty output directories for live attempts. Coverage is checked from captured Git trees, the actual final input manifest and phase results; those artifacts do not prove every future model run will follow the workflow.
+
+## Comment alias and mixed scope
+
+The same runner consumes [comment scope scenarios](../data/trim-scope.json) with `--comments-only`. It materializes a signed Git fixture, invokes the alias and its direct `trim-text` equivalents independently, and checks exact eligible units, per-file profiles, ticketless TODO flags, and unchanged files, index and HEAD. A mixed prose/comment branch case checks both profiles together. Expected results stay outside model prompts; suggested wording is not compared.
+
+```bash
+uv run --no-project --python 3.13 tests/evals/trim-text-scopes.py --comments-only \
+  --out-dir "$(mktemp -d "${TMPDIR:-/tmp}/trim-comments-eval.XXXXXX")"
+```
+
+`--comment-replies PATH` checks saved `comments-alias-reply.json`, `comments-equivalent-reply.json` and `comments-mixed-reply.json` without model calls. It checks reported scope and classification only; unchanged Git state is checked during live evaluation.

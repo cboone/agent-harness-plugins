@@ -322,7 +322,7 @@ Usage: check-edit-worktree
 ## Git failure never means clean
 
 ```scrut
-$ cd "${FIXTURE}/.." && "${CHECK_EDIT_WORKTREE_BIN}" > "${FIXTURE}/failure.log" 2>&1
+$ cd "${FIXTURE}/.." && "${CHECK_EDIT_WORKTREE_BIN}" > "${FIXTURE}/failure.log" 2>&1 # error-output-allow: next snapshot asserts the retained Git-failure diagnostic
 [1]
 ```
 
