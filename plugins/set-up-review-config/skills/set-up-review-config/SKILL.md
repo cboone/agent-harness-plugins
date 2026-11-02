@@ -46,10 +46,14 @@ List tracked files with `git ls-files`, so `.gitignore` applies. Exclude `vendor
 
 Apply the detection rules in `./references/guides.md` to choose the guides and their routing globs. Record, for the report, files that match no supported guide because their checklist does not exist yet, such as Pandoc-academic Markdown and POSIX `sh` scripts.
 
+Inspect embedded shell as well as standalone scripts: Bash in workflow `run:` steps or Make recipes selects the Bash checklist even without a script file. Follow the effective-shell and content-only routing rules in `./references/guides.md`.
+
 ### 3. Detect What CI Enforces and What to Skip
 
 1. **CI checks**: Read `.github/workflows/*.yml` and `.github/workflows/*.yaml`, both of which GitHub runs, and the Makefile targets or package scripts they call. List only checks that CI actually runs, such as `gofmt`, `goimports`, `go vet`, `golangci-lint`, `shellcheck`, `shfmt`, `zsh -n`, `markdownlint-cli2`, `prettier`, `cspell`, `lake build` and `lake lint`. Note which of them read Markdown, since step 7 runs those on the written files. When a workflow calls a reusable workflow, read the called workflow if it is reachable and list the checks its inputs enable; otherwise name the reusable workflow and its inputs.
 1. **Skip paths**: List the paths reviewers should ignore that exist in the repository: lockfiles (`go.sum`, `yarn.lock`, `package-lock.json`, `pnpm-lock.yaml`, `Cargo.lock`, `lake-manifest.json`, `*.lock`), vendored directories, and generated files or mirrors that the repository documents as generated. Always add the checklists this skill installs, as `.github/skills/code-review/*.md` except `SKILL.md`: they are verbatim copies that a rerun replaces, so a finding in one cannot be fixed in the repository.
+
+For actionlint, check whether ShellCheck is available in CI, enabled and configured for the relevant shell and diagnostics. Its presence does not mean every Bash checklist rule is enforced. Preserve checklist review for defects outside those diagnostics; do not duplicate diagnostics CI already reports.
 
 ### 4. Resolve Pinned Links
 
@@ -85,6 +89,7 @@ Fill the templates in `./references/code-review-skill.md`, `./references/agents-
 
 1. `.github/skills/code-review/SKILL.md` has `name: code-review` and a non-empty `description` in its frontmatter.
 1. Every checklist named in the routing list exists and starts with the managed first line, and no managed checklist file is left unrouted.
+1. When Bash is selected, all three managed blocks include EMBEDDED-SHELL's filled instruction. Embedded paths route shell content only, even when standalone-script routing excludes YAML. The copied Bash Important rules in `REVIEW.md` have the same scope.
 1. `.github/skills/code-review/SKILL.md` and `REVIEW.md` each have exactly one BEGIN line followed by one END line, and so does `AGENTS.md` unless the user declined creating it.
 1. The root `AGENTS.md` plus the largest nested `AGENTS.md` chain stays under 32 KiB, the default budget Codex reads. Warn when it does not.
 1. Run the repository's own Markdown linter, formatter and spell checker on the written files, the way its CI does. The checklists are installed verbatim, so never edit them to satisfy a tool:

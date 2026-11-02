@@ -33,6 +33,16 @@ When either shell guide is installed, the entry skill's reporting rules include 
 - **Exclude**: Files whose shebang names another shell, including a `*.sh` or `*.bash` file that does.
 - **Checklist**: `./references/checklists/write-bash-scripts.md`
 
+### Embedded Bash
+
+Select `write-bash-scripts` even when the repository's only Bash is embedded. Inspect tracked `.github/workflows/*.yml` and `.github/workflows/*.yaml` for `run:` steps. Resolve the effective shell from step `shell`, job and workflow `defaults.run.shell`, then runner and container defaults. Explicit Bash and implicit Bash on non-Windows runners qualify; default container `sh`, Windows PowerShell, explicit non-Bash shells and unresolved dynamic shells do not. Report unsupported or unresolved shells rather than guessing.
+
+Inspect tracked Makefiles and included makefiles for recipes whose effective `SHELL` selects Bash, including target-specific settings or an explicit Bash invocation. Default POSIX `sh` recipes do not qualify. Tracked git hooks follow the shebang rule regardless of their directory; do not read untracked `.git/hooks` or live hooks selected by local configuration.
+
+For embedded Bash, add the concrete containing paths or workflow globs to the Bash routing bullet with the qualifier "Bash content only, not the surrounding YAML or Make syntax". Keep these separate from standalone-script globs and their exclusions, so an exclusion such as `**/*.yml` for standalone scripts cannot exclude the embedded content. An installation with only embedded Bash still installs and routes the Bash checklist.
+
+Fill EMBEDDED-SHELL in all three templates whenever Bash is selected, including when only standalone Bash exists today. In `REVIEW.md`, put it before the copied Important rules so those rules have the same content boundary as the entry skill.
+
 ## write-zsh-scripts
 
 - **Detect**: Tracked `*.zsh`, `*.plugin.zsh` or `*.zsh-theme` files; zsh startup files (`.zshrc`, `.zshenv`, `.zprofile`, `.zlogin`, `.zlogout`, with or without the leading dot); files whose first line is `#compdef` or `#autoload`; and any other tracked file whose shebang names zsh, whether or not it has an extension.

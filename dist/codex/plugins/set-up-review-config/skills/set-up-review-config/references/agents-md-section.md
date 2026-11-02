@@ -14,6 +14,7 @@ Append the heading and the block when the file has no `## Code Review Rules` hea
 <!-- BEGIN set-up-review-config -->
 
 - Review each changed file against its checklist in `.github/skills/code-review/`; the `SKILL.md` there maps file patterns to checklists.
+EMBEDDED-SHELL
 - Rules under a checklist's Important heading are P1. All other checklist rules are P2 or lower.
 - When a finding matches a checklist rule, start it with the checklist name and the exact rule name, for example CITATION-EXAMPLE. Otherwise start it with `Uncited:` and describe the concrete defect; never invent a rule name.
 - For uncited findings, behavior defects, data loss or leaks, and build or release failures are Important (P1); style, naming and wording are Nit (P2 or lower). Important findings block merging and must all be reported; uncited Nits count toward the same five-Nit cap.
