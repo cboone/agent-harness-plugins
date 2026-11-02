@@ -156,27 +156,27 @@ USAGE_TEXT
 # Truncation runs in jq so lengths count characters whatever the hook's locale.
 function truncate_with_ellipsis() {
   printf '%s' "${1}" | jq -Rrs --argjson n "${2:-80}" \
-    'if length <= $n then . elif $n < 1 then "" else .[0:$n - 1] + "…" end' 2> /dev/null || true
+    'if length <= $n then . elif $n < 1 then "" else .[0:$n - 1] + "…" end' 2> /dev/null || true # error-output-allow: optional notification text truncation falls back to empty text
 }
 
 # Keeps the end of the text, so a long path still shows its file name.
 function truncate_from_left() {
   printf '%s' "${1}" | jq -Rrs --argjson n "${2}" \
-    'if length <= $n then . elif $n < 1 then "" else "…" + .[length - $n + 1:] end' 2> /dev/null || true
+    'if length <= $n then . elif $n < 1 then "" else "…" + .[length - $n + 1:] end' 2> /dev/null || true # error-output-allow: optional notification text truncation falls back to empty text
 }
 
 function summarize_reply() {
-  printf '%s' "${1}" | jq -Rrs --argjson limit "${2:-${BODY_LIMIT}}" "${SUMMARY_JQ}" 2> /dev/null || true
+  printf '%s' "${1}" | jq -Rrs --argjson limit "${2:-${BODY_LIMIT}}" "${SUMMARY_JQ}" 2> /dev/null || true # error-output-allow: unparseable optional summary falls back to empty text
 }
 
 # Prints the hook payload's string field $1 without NUL bytes, or nothing.
 function hook_string() {
-  printf '%s' "${HOOK_INPUT}" | jq -r --arg key "${1}" '.[$key] // empty | strings | gsub("\u0000"; "")' 2> /dev/null || true
+  printf '%s' "${HOOK_INPUT}" | jq -r --arg key "${1}" '.[$key] // empty | strings | gsub("\u0000"; "")' 2> /dev/null || true # error-output-allow: missing or malformed optional hook field becomes empty
 }
 
 function repo_root() {
   local root
-  root="$(git rev-parse --show-toplevel 2> /dev/null)" || root=""
+  root="$(git rev-parse --show-toplevel 2> /dev/null)" || root="" # error-output-allow: non-repository hook input has no repository label
   printf '%s' "${root:-${PWD}}"
 }
 
@@ -184,7 +184,7 @@ function repo_root() {
 # primary checkout's git directory, so its parent names the repository.
 function repo_name() {
   local common name
-  common="$(git rev-parse --path-format=absolute --git-common-dir 2> /dev/null)" || common=""
+  common="$(git rev-parse --path-format=absolute --git-common-dir 2> /dev/null)" || common="" # error-output-allow: non-repository hook input has no common directory label
   if [[ -z "${common}" ]]; then
     basename "${PWD}"
     return
@@ -258,7 +258,7 @@ function resolve_sound() {
 
 function compute_branch_suffix() {
   local branch
-  branch="$(git branch --show-current 2> /dev/null)" || branch=""
+  branch="$(git branch --show-current 2> /dev/null)" || branch="" # error-output-allow: detached or non-repository hook input has no branch label
   branch="${branch:-unknown}"
   if [[ "${branch}" == */* ]]; then
     branch="${branch#*/}"
@@ -274,8 +274,8 @@ function compute_pane_title() {
     return 0
   fi
   local title
-  title="$(tmux display-message -t "${TMUX_PANE}" -p '#T' 2> /dev/null)" || return 0
-  title="$(printf '%s' "${title}" | jq -Rr 'sub("^[^\\p{L}\\p{N}#(\\[]+"; "") | sub("\\s+$"; "")' 2> /dev/null)" || return 0
+  title="$(tmux display-message -t "${TMUX_PANE}" -p '#T' 2> /dev/null)" || return 0                                         # error-output-allow: unreachable tmux pane skips title decoration
+  title="$(printf '%s' "${title}" | jq -Rr 'sub("^[^\\p{L}\\p{N}#(\\[]+"; "") | sub("\\s+$"; "")' 2> /dev/null)" || return 0 # error-output-allow: unparseable optional title skips title decoration
   local cwd_basename
   cwd_basename="$(basename "${PWD}")"
   case "${title}" in
@@ -331,7 +331,7 @@ function read_session_name() {
         if $record.type == "agent-name" then ($record.agentName | strings) // .
         elif $record.type == "custom-title" then ($record.customTitle | strings) // .
         else . end)
-      // empty' 2> /dev/null)" || SESSION_NAME=""
+      // empty' 2> /dev/null)" || SESSION_NAME="" # error-output-allow: optional transcript metadata may be absent
 }
 
 # Sets TMUX_SESSION and TMUX_WINDOW for $TMUX_PANE, or leaves them empty.
@@ -339,7 +339,7 @@ function read_tmux_names() {
   [[ "${EXPLICIT_CONTEXT:-false}" == false ]] || return 0
   [[ -n "${TMUX_PANE:-}" ]] || return 0
   local names
-  names="$(tmux display-message -t "${TMUX_PANE}" -p "#{session_name}${TMUX_FIELD_SEP}#{window_name}" 2> /dev/null)" || return 0
+  names="$(tmux display-message -t "${TMUX_PANE}" -p "#{session_name}${TMUX_FIELD_SEP}#{window_name}" 2> /dev/null)" || return 0 # error-output-allow: unreachable tmux pane skips window decoration
   [[ "${names}" == *"${TMUX_FIELD_SEP}"* ]] || return 0
   TMUX_SESSION="${names%%"${TMUX_FIELD_SEP}"*}"
   TMUX_WINDOW="${names#*"${TMUX_FIELD_SEP}"}"
@@ -351,7 +351,7 @@ function read_tmux_names() {
 function compute_place() {
   local transcript_path="${1}" window
   [[ -n "${TMUX_SESSION}" ]] || return 0
-  window="$(printf '%s' "${TMUX_WINDOW}" | jq -Rr 'gsub("\\p{Co}"; "") | gsub("^\\s+|\\s+$"; "")' 2> /dev/null)" || window=""
+  window="$(printf '%s' "${TMUX_WINDOW}" | jq -Rr 'gsub("\\p{Co}"; "") | gsub("^\\s+|\\s+$"; "")' 2> /dev/null)" || window="" # error-output-allow: unparseable optional window label becomes empty
   if [[ -z "${window}" ]]; then
     read_session_name "${transcript_path}"
     window="${SESSION_NAME}"
@@ -573,10 +573,10 @@ readonly ANSWERED_JQ
 # Prints file $1 newest line first. Stock macOS has tail -r but no tac. Its
 # stderr is silenced because jq stops reading at the turn's prompt.
 function reverse_lines() {
-  if command -v tac > /dev/null 2>&1; then
-    tac "${1}" 2> /dev/null
+  if command -v tac > /dev/null 2>&1; then # error-output-allow: tool availability selects GNU or BSD transcript reversal
+    tac "${1}" 2> /dev/null                # error-output-allow: optional transcript can disappear during notification
   else
-    tail -r "${1}" 2> /dev/null
+    tail -r "${1}" 2> /dev/null # error-output-allow: optional transcript can disappear during notification
   fi
 }
 
@@ -585,7 +585,7 @@ function extract_last_assistant_text() {
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
-  reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null || true
+  reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null || true # error-output-allow: missing or unparseable optional transcript has no last text
 }
 
 # Prints "headless" for `codex exec`, `e` or `review`, "interactive" for another
@@ -596,7 +596,7 @@ function extract_last_assistant_text() {
 function codex_parent_command() {
   local tty args word
   local -a words
-  read -r tty args <<< "$(ps -ww -o tty=,args= -p "${PPID}" 2> /dev/null)" || return 0
+  read -r tty args <<< "$(ps -ww -o tty=,args= -p "${PPID}" 2> /dev/null)" || return 0 # error-output-allow: unavailable parent process skips terminal targeting
   read -r -a words <<< "${args}"
   [[ "${#words[@]}" -gt 0 && "${words[0]##*/}" == codex ]] || return 0
   for word in "${words[@]:1}"; do
@@ -633,14 +633,14 @@ function turn_started_by_user() {
     if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
       return 0
     fi
-    origin="$(reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${TURN_ORIGIN_JQ}" 2> /dev/null)" || true
+    origin="$(reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${TURN_ORIGIN_JQ}" 2> /dev/null)" || true # error-output-allow: missing or unparseable optional transcript has no origin
     [[ "${origin}" != background ]]
     return
   fi
   # `codex exec --ephemeral` writes no transcript, so the parent still decides.
   if [[ -n "${transcript_path}" && -f "${transcript_path}" ]]; then
     session_source="$(head -n 1 "${transcript_path}" 2> /dev/null \
-      | jq -r 'select(.type == "session_meta") | .payload.source | if type == "object" then "subagent" else strings end' 2> /dev/null)" || session_source=""
+      | jq -r 'select(.type == "session_meta") | .payload.source | if type == "object" then "subagent" else strings end' 2> /dev/null)" || session_source="" # error-output-allow: optional transcript metadata may be absent
   fi
   [[ "${session_source}" != subagent ]] || return 1
   case "$(codex_parent_command)" in
@@ -658,7 +658,7 @@ function turn_answered_prompt() {
   if [[ "${HARNESS}" != claude || -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 1
   fi
-  answered="$(reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${ANSWERED_JQ}" 2> /dev/null)" || true
+  answered="$(reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${ANSWERED_JQ}" 2> /dev/null)" || true # error-output-allow: missing or unparseable optional transcript has no answered prompt
   [[ "${answered}" == answered ]]
 }
 
@@ -669,7 +669,7 @@ function get_pending_tool_use() {
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
-  reverse_lines "${transcript_path}" | jq -Rnc --arg wanted "${2:-}" --argjson plan "${3:-false}" "${TURN_JQ} ${PENDING_JQ}" 2> /dev/null || true
+  reverse_lines "${transcript_path}" | jq -Rnc --arg wanted "${2:-}" --argjson plan "${3:-false}" "${TURN_JQ} ${PENDING_JQ}" 2> /dev/null || true # error-output-allow: missing or unparseable optional transcript has no pending prompt
 }
 
 # -----------------------------------------------------------------------------
@@ -681,7 +681,7 @@ function tool_name() {
   if [[ -z "${tool_json}" ]]; then
     return 0
   fi
-  printf '%s' "${tool_json}" | jq -r '.name // empty' 2> /dev/null || true
+  printf '%s' "${tool_json}" | jq -r '.name // empty' 2> /dev/null || true # error-output-allow: malformed optional tool metadata has no name
 }
 
 # Shows a path relative to the repository root, or under ~, keeping its end.
@@ -739,7 +739,7 @@ function tool_preview() {
     *) return 0 ;;
   esac
   local preview
-  preview="$(printf '%s' "${tool_json}" | jq -r "(${field}) // empty | strings" 2> /dev/null)" || preview=""
+  preview="$(printf '%s' "${tool_json}" | jq -r "(${field}) // empty | strings" 2> /dev/null)" || preview="" # error-output-allow: malformed optional tool metadata has no preview
   if [[ -z "${preview}" ]]; then
     return 0
   fi
@@ -762,7 +762,7 @@ function plan_heading() {
   printf '%s' "${1}" | jq -r '
     (.input.plan // "") | strings
     | sub("^\\s*(#{1,6}|[-*+>]|[0-9]+\\.)\\s+"; "") | gsub("\\*\\*|`"; "")
-  ' 2> /dev/null || true
+  ' 2> /dev/null || true # error-output-allow: malformed optional tool metadata has no question preview
 }
 
 # -----------------------------------------------------------------------------
@@ -776,11 +776,11 @@ function run_alerter() {
   shift
   alerter "$@" --timeout "${FIRE_TIMEOUT}" &
   local pid=$! waited=0 backend_status
-  while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do
+  while [[ "${waited}" -lt "${WAIT_LIMIT}" ]] && kill -0 "${pid}" 2> /dev/null; do # error-output-allow: process existence predicate bounds alerter wait
     sleep 1
     waited=$((waited + 1))
   done
-  if [[ -n "${failure_context}" ]] && ! kill -0 "${pid}" 2> /dev/null; then
+  if [[ -n "${failure_context}" ]] && ! kill -0 "${pid}" 2> /dev/null; then # error-output-allow: process-existence predicate selects backend status collection
     if wait "${pid}"; then
       return 0
     else
@@ -789,7 +789,7 @@ function run_alerter() {
       return "${backend_status}"
     fi
   fi
-  kill -KILL "${pid}" 2> /dev/null || true
+  kill -KILL "${pid}" 2> /dev/null || true # error-output-allow: cleanup tolerates an already stopped alerter
 }
 
 # Fires alerter detached, so the harness is never blocked.
@@ -802,7 +802,7 @@ function fire_alerter_detached() {
   group="${group}-${SESSION_KEY}"
   if [[ "${group}" == *-stop-* ]]; then
     # mkdir is atomic, including when concurrent Stop hooks arrive.
-    if ! mkdir "${STATE_DIR}/completed" 2> /dev/null; then
+    if ! mkdir "${STATE_DIR}/completed" 2> /dev/null; then # error-output-allow: exclusive completed marker prevents duplicate notifications
       return 0
     fi
     if originating_pane_visible; then
@@ -822,9 +822,9 @@ function fire_alerter_detached() {
     ${sound_args[@]+"${sound_args[@]}"} \
     --group "${group}" \
     --app-icon "${icon}" \
-    > /dev/null 2>&"${error_fd}" < /dev/null &
+    > /dev/null 2>&"${error_fd}" < /dev/null & # error-output-allow: failure notifications keep stderr live through descriptor 2; ordinary detached notifications are silent
   # disown fails without job control, and set -e would then skip the notification.
-  disown 2> /dev/null || true
+  disown 2> /dev/null || true # error-output-allow: disown is optional in shells without a managed background job
 }
 
 # -----------------------------------------------------------------------------
@@ -836,7 +836,7 @@ function failure_is_refusal() {
   local transcript_path="${1}" attempt
   [[ "$(hook_string error)" == invalid_request && -f "${transcript_path}" ]] || return 1
   for attempt in 1 2 3 4 5; do
-    if tail -n 20 "${transcript_path}" 2> /dev/null | jq -Rne "${TURN_JQ} shows_refusal" > /dev/null 2>&1; then
+    if tail -n 20 "${transcript_path}" 2> /dev/null | jq -Rne "${TURN_JQ} shows_refusal" > /dev/null 2>&1; then # error-output-allow: transcript refusal predicate retries unavailable or incomplete transcript data
       return 0
     fi
     if ((attempt < 5)); then sleep 0.5; fi
@@ -1008,11 +1008,11 @@ function do_stop() {
     .last_assistant_message // empty | strings
     | (try fromjson catch null) as $j
     | (if ($j | type) == "object" and ($j.summary | type) == "string" then $j.summary else . end)
-    | .[0:20000] | gsub("\u0000"; "")' 2> /dev/null)" || reply=""
+    | .[0:20000] | gsub("\u0000"; "")' 2> /dev/null)" || reply="" # error-output-allow: malformed optional hook reply becomes empty
   # Only a payload without the field falls back to the transcript; an empty
   # reply stays empty rather than borrowing an earlier message.
   if [[ "${HARNESS}" == claude ]] \
-    && [[ "$(printf '%s' "${HOOK_INPUT}" | jq -r 'has("last_assistant_message")' 2> /dev/null)" == false ]]; then
+    && [[ "$(printf '%s' "${HOOK_INPUT}" | jq -r 'has("last_assistant_message")' 2> /dev/null)" == false ]]; then # error-output-allow: malformed optional hook input does not trigger transcript fallback
     reply="$(extract_last_assistant_text "${transcript_path}")"
   fi
 
@@ -1044,7 +1044,7 @@ function host_terminal_bundle() {
       printf '%s' "${__CFBundleIdentifier}"
       return 0
     fi
-    program="$(tmux show-environment -g TERM_PROGRAM 2> /dev/null)" || return 1
+    program="$(tmux show-environment -g TERM_PROGRAM 2> /dev/null)" || return 1 # error-output-allow: unavailable terminal metadata skips focus detection
     program="${program#TERM_PROGRAM=}"
   fi
   case "${program}" in
@@ -1064,9 +1064,9 @@ function originating_pane_visible() {
   [[ -n "${TMUX_PANE:-}" && -n "${TMUX:-}" ]] || return 1
   local bundle front clients
   bundle="$(host_terminal_bundle)" || return 1
-  front="$(osascript -l JavaScript -e 'ObjC.import("AppKit"); ObjC.unwrap($.NSWorkspace.sharedWorkspace.frontmostApplication.bundleIdentifier)' 2> /dev/null)" || return 1
+  front="$(osascript -l JavaScript -e 'ObjC.import("AppKit"); ObjC.unwrap($.NSWorkspace.sharedWorkspace.frontmostApplication.bundleIdentifier)' 2> /dev/null)" || return 1 # error-output-allow: unavailable frontmost application skips focus detection
   [[ "${front}" == "${bundle}" ]] || return 1
-  clients="$(tmux list-clients -F '#{pane_id}|#{client_flags}' 2> /dev/null)" || return 1
+  clients="$(tmux list-clients -F '#{pane_id}|#{client_flags}' 2> /dev/null)" || return 1 # error-output-allow: unreachable tmux server skips focus detection
   local visible flags
   while IFS='|' read -r visible flags; do
     [[ "${visible}" == "${TMUX_PANE}" && ",${flags}," == *,focused,* ]] && return 0
@@ -1087,10 +1087,10 @@ function do_question() {
     | (if ($input | type) == "string" then ($input | fromjson? // {}) else $input end)
     | (if type == "object" then .questions else null end) as $q
     | [($q | if type == "array" then .[] else empty end) | objects | .question | strings | gsub("\n"; " ")]
-  ' 2> /dev/null)" || questions='[]'
-  count="$(printf '%s' "${questions}" | jq -r 'length' 2> /dev/null)" || count=0
+  ' 2> /dev/null)" || questions='[]'                                             # error-output-allow: malformed optional question list becomes empty
+  count="$(printf '%s' "${questions}" | jq -r 'length' 2> /dev/null)" || count=0 # error-output-allow: malformed optional question count becomes zero
   [[ "${count}" =~ ^[0-9]+$ ]] || count=0
-  first="$(printf '%s' "${questions}" | jq -r '.[0] // empty' 2> /dev/null)" || first=""
+  first="$(printf '%s' "${questions}" | jq -r '.[0] // empty' 2> /dev/null)" || first="" # error-output-allow: missing optional first question becomes empty
 
   local title="Question" suffix="" body
   if [[ "${count}" -gt 1 ]]; then
@@ -1161,19 +1161,19 @@ function main() {
   HOOK_INPUT="$(cat)"
   # Subagent payloads carry agent_id; ignore them so they neither post a banner
   # nor reset the completion marker.
-  if [[ -n "$(printf '%s' "${HOOK_INPUT}" | jq -r '.agent_id // empty' 2> /dev/null)" ]]; then
+  if [[ -n "$(printf '%s' "${HOOK_INPUT}" | jq -r '.agent_id // empty' 2> /dev/null)" ]]; then # error-output-allow: missing optional agent ID selects the main-session path
     return 0
   fi
   HARNESS="claude"
   [[ "${1:-}" == codex-* ]] && HARNESS="codex"
   local session_id
-  session_id="$(printf '%s' "${HOOK_INPUT}" | jq -r '.session_id // .sessionId // empty' 2> /dev/null)" || session_id=""
+  session_id="$(printf '%s' "${HOOK_INPUT}" | jq -r '.session_id // .sessionId // empty' 2> /dev/null)" || session_id="" # error-output-allow: missing optional session ID uses the remaining completion-key fields
   SESSION_KEY="$(printf '%s' "${HARNESS}|${session_id}|${TMUX:-}|${TMUX_PANE:-}|${PWD}" | shasum -a 256 | cut -d ' ' -f 1)"
   STATE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/agent-harness-notify/${SESSION_KEY}"
   mkdir -p "${STATE_DIR}"
 
   case "${1:-}" in
-    cc-turn-start | codex-turn-start) rmdir "${STATE_DIR}/completed" 2> /dev/null || true ;;
+    cc-turn-start | codex-turn-start) rmdir "${STATE_DIR}/completed" 2> /dev/null || true ;; # error-output-allow: missing completion marker is expected at turn start
     cc-question) do_question "claude-code" ;;
     codex-question) do_question "codex" ;;
     cc-elicit) do_cc_elicit ;;

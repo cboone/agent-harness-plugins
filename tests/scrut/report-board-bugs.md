@@ -20,7 +20,7 @@ $ function board_with() {
 > }
 > function problems() {
 >   local result
->   if result="$("${REPORT_BOARD_BIN}" validate "$(board_with "${1}")" 2>&1)"; then
+>   if result="$("${REPORT_BOARD_BIN}" validate "$(board_with "${1}")" 2>&1)"; then # error-output-allow: fixture retains diagnostics for explicit output and status assertions
 >     printf 'validate passed, but this case expects problems\n'
 >   fi
 >   grep '^  - ' <<< "${result}"
@@ -211,7 +211,7 @@ $ "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/bugs.json" "$(board_wi
 ## Render draws a bugs board from its own template
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${page}" 2>&1 | sed 's|to .*/board.html|to PAGE|' && head -n 1 "${page}" && grep -c 'Bug triage · ' "${page}" && ! grep -q __BOARD_ "${page}" && echo "no placeholders left"
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${page}" 2>&1 | sed 's|to .*/board.html|to PAGE|' && head -n 1 "${page}" && grep -c 'Bug triage · ' "${page}" && ! grep -q __BOARD_ "${page}" && echo "no placeholders left" # error-output-allow: testcase asserts retained diagnostics: Render draws a bugs board from its own template
 report-board: rendered 4 critical, 4 high priority, 20 open bugs to PAGE
 <title>widgets bugs</title>
 1
@@ -221,7 +221,7 @@ no placeholders left
 ## The embedded bugs data survives a round trip
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${dir}/board.html" 2> /dev/null && jq -S . "${REPORT_BOARD_DATA_DIR}/bugs.json" > "${dir}/rendered.json" && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -S . > "${dir}/extracted.json" && diff "${dir}/rendered.json" "${dir}/extracted.json" && echo identical
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${dir}/board.html" && jq -S . "${REPORT_BOARD_DATA_DIR}/bugs.json" > "${dir}/rendered.json" && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -S . > "${dir}/extracted.json" && diff "${dir}/rendered.json" "${dir}/extracted.json" && echo identical
 identical
 ```
 
@@ -231,7 +231,7 @@ An empty section draws its heading and one line, so an empty Critical reads as a
 finding.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.lower += [.critical[] | {item, reason: "cleared"}] | (.bugs[] | select(.tier == "critical") | .tier) = "lower" | .critical = []' "${REPORT_BOARD_DATA_DIR}/bugs.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" 2>&1 | sed 's|to .*/board.html|to PAGE|'
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.lower += [.critical[] | {item, reason: "cleared"}] | (.bugs[] | select(.tier == "critical") | .tier) = "lower" | .critical = []' "${REPORT_BOARD_DATA_DIR}/bugs.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" 2>&1 | sed 's|to .*/board.html|to PAGE|' # error-output-allow: testcase asserts retained diagnostics: A board with nothing in Critical still validates and renders
 report-board: rendered 0 critical, 4 high priority, 20 open bugs to PAGE
 ```
 
@@ -276,7 +276,7 @@ The cases above read the problem lines through `grep`, which hides the exit
 status, so this one checks it directly.
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" validate "$(board_with '.summary = null')" > /dev/null 2>&1
+$ "${REPORT_BOARD_BIN}" validate "$(board_with '.summary = null')" > /dev/null
 [1]
 ```
 

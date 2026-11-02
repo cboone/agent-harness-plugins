@@ -1067,7 +1067,7 @@ function usage_error() {
 }
 
 function require_jq() {
-  command -v jq > /dev/null 2>&1 || die "${E_USAGE}" "jq is required but not found: https://jqlang.org/download/"
+  command -v jq > /dev/null 2>&1 || die "${E_USAGE}" "jq is required but not found: https://jqlang.org/download/" # error-output-allow: missing jq receives a specific prerequisite diagnostic
 }
 
 function require_file() {
@@ -1087,8 +1087,8 @@ function operand() {
 # file, or several documents back to back, without complaint.
 function require_single_document() {
   local data_file="${1}"
-  jq empty "${data_file}" 2> /dev/null || die "${E_INVALID}" "${data_file} is not valid JSON"
-  jq -e -s 'length == 1' "${data_file}" > /dev/null 2>&1 || die "${E_INVALID}" "${data_file} must hold exactly one JSON document"
+  jq empty "${data_file}" 2> /dev/null || die "${E_INVALID}" "${data_file} is not valid JSON"                                     # error-output-allow: invalid JSON receives a named input-file diagnostic
+  jq -e -s 'length == 1' "${data_file}" > /dev/null 2>&1 || die "${E_INVALID}" "${data_file} must hold exactly one JSON document" # error-output-allow: multiple JSON values receive the explicit one-document diagnostic
 }
 
 # Prints the board type a data file names, or nothing when it names none.
@@ -1316,7 +1316,7 @@ function write_new_output() {
     die "${E_INVALID}" "cannot write ${output_file}"
   fi
 
-  if ln -- "${temp_file}" "${output_file}" 2> /dev/null; then
+  if ln -- "${temp_file}" "${output_file}" 2> /dev/null; then # error-output-allow: failed hard link selects the exclusive-create fallback
     # ln puts the link inside a directory that appeared at the path since the
     # check, so take it back out.
     if [[ -d "${output_file}" ]]; then
@@ -1326,7 +1326,7 @@ function write_new_output() {
   elif [[ -e "${output_file}" || -L "${output_file}" ]]; then
     die "${E_INVALID}" "${output_file} already exists; name a new page file"
   else
-    if ! (set -o noclobber && : > "${output_file}") 2> /dev/null; then
+    if ! (set -o noclobber && : > "${output_file}") 2> /dev/null; then # error-output-allow: exclusive-create failure receives a contextual diagnostic
       require_new_output "${output_file}"
       die "${E_INVALID}" "cannot write ${output_file}"
     fi
@@ -1360,7 +1360,7 @@ function write_output() {
     # it fails without printing. The other order is not safe, because GNU reads
     # -f as --file-system and writes filesystem details to stdout before it
     # fails, which would land in mode alongside the real value.
-    mode="$(stat -c '%a' "${output_file}" 2> /dev/null || stat -f '%Lp' "${output_file}" 2> /dev/null)" || mode=""
+    mode="$(stat -c '%a' "${output_file}" 2> /dev/null || stat -f '%Lp' "${output_file}" 2> /dev/null)" || mode="" # error-output-allow: GNU and BSD stat probes fall back to unknown file mode
   fi
   if [[ -z "${mode}" ]]; then
     current_umask="$(umask)"
@@ -1412,23 +1412,23 @@ function read_board_data() {
   local payload count
 
   require_file "${source_file}"
-  if jq -e 'type == "object"' "${source_file}" > /dev/null 2>&1; then
+  if jq -e 'type == "object"' "${source_file}" > /dev/null 2>&1; then # error-output-allow: JSON-object predicate selects structured input or text input
     require_single_document "${source_file}"
     jq -e "${NO_CONTROL_FILTER}" "${source_file}" > /dev/null 2>&1 \
-      || die "${E_INVALID}" "${source_file} holds control characters in its board data"
+      || die "${E_INVALID}" "${source_file} holds control characters in its board data" # error-output-allow: control-character validation receives the explicit invalid-input diagnostic
     jq '.' "${source_file}"
     return 0
   fi
   payload="$(extract_payload "${source_file}")" || die "${E_INVALID}" "${source_file} is neither board data nor a rendered board"
   # Exactly one JSON object: a page carrying a second document is rejected
   # rather than read, since compare would otherwise see only the first.
-  count="$(jq -s 'length' <<< "${payload}" 2> /dev/null)" || count=0
+  count="$(jq -s 'length' <<< "${payload}" 2> /dev/null)" || count=0 # error-output-allow: unparseable payload count becomes invalid-payload status
   [[ "${count}" -le 1 ]] || die "${E_INVALID}" "${source_file} holds more than one JSON document in its board data"
-  if [[ "${count}" -ne 1 ]] || ! jq -e 'type == "object"' <<< "${payload}" > /dev/null 2>&1; then
+  if [[ "${count}" -ne 1 ]] || ! jq -e 'type == "object"' <<< "${payload}" > /dev/null 2>&1; then # error-output-allow: invalid JSON receives the explicit invalid-payload diagnostic
     die "${E_INVALID}" "${source_file} holds no board data; render it with report-board first"
   fi
   jq -e "${NO_CONTROL_FILTER}" <<< "${payload}" > /dev/null 2>&1 \
-    || die "${E_INVALID}" "${source_file} holds control characters in its board data"
+    || die "${E_INVALID}" "${source_file} holds control characters in its board data" # error-output-allow: control-character validation receives the explicit invalid-payload diagnostic
   jq '.' <<< "${payload}"
 }
 
@@ -1475,8 +1475,8 @@ function cmd_render() {
   # follows a symlink, so a link to the data file is caught here too.
   if [[ -e "${output_file}" ]]; then
     local data_id page_id
-    data_id="$(stat -c '%d:%i' "${data_file}" 2> /dev/null || stat -f '%d:%i' "${data_file}" 2> /dev/null)" || data_id=""
-    page_id="$(stat -c '%d:%i' "${output_file}" 2> /dev/null || stat -f '%d:%i' "${output_file}" 2> /dev/null)" || page_id=""
+    data_id="$(stat -c '%d:%i' "${data_file}" 2> /dev/null || stat -f '%d:%i' "${data_file}" 2> /dev/null)" || data_id=""     # error-output-allow: GNU and BSD identity probes fall back to unknown identity
+    page_id="$(stat -c '%d:%i' "${output_file}" 2> /dev/null || stat -f '%d:%i' "${output_file}" 2> /dev/null)" || page_id="" # error-output-allow: GNU and BSD identity probes fall back to unknown identity
     if [[ -n "${data_id}" && "${data_id}" == "${page_id}" ]]; then
       die "${E_INVALID}" "${output_file} is the data file; name a page file to write instead"
     fi
