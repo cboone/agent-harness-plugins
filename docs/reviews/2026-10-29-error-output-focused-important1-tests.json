@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "Rating 7/10. These exec cases now assert rejection of the unreasoned exec construct, masking whether the subsequent stderr merge is checked. No case annotates only an exec on one line, then leaves `some-command 2>&1` unannotated on the next. Removing the block-wide stdout-uncertainty check would leave these snapshots satisfied while silently accepting that later diagnostic discard. The allowed escaped-exec control annotates both operations on the same line, so it does not cover this contract.",
+      "file": "tests/scrut/error-output-guard.md",
+      "fix": "Add a static sample with a reasoned `exec >/dev/null` followed on a separate line by an unreasoned stderr merge. Assert the capture diagnostic and status 1, with a positive control that explicitly reasons both operations.",
+      "line": 602,
+      "severity": "important",
+      "title": "write-scrut-tests: Relevant error output: Exec tests omit merges after an allowed exec."
+    }
+  ],
+  "reviewed": "6c842fd9d46b75ba129c3dd0879ccd63b44bf846",
+  "strengths": ["Static samples cover redirect spellings, descriptor inheritance, reason boundaries, coprocesses and exec variants without executing sample programs.", "Parser tests cover crashes, termination, invalid output and stale diagnostics after input-open failures.", "Existing integration tests cover diagnostic replay and status preservation, while recorded plants demonstrate regression sensitivity."],
+  "summary": "Reviewed the scoped changes, accompanying tests, existing integrations and recorded evidence by inspection. One Important coverage gap remains where exec-context rejection masks the later stderr-merge contract; no repository code or checks were run."
+}

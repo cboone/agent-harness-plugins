@@ -25,7 +25,7 @@ report-board: rendered 7 issues in 3 lanes to */board.html (glob)
 ## Render fills both placeholders
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null && head -n 1 "${page}" && ! grep -q __BOARD_ "${page}" && echo "no placeholders left"
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" && head -n 1 "${page}" && ! grep -q __BOARD_ "${page}" && echo "no placeholders left"
 <title>widgets backlog</title>
 no placeholders left
 ```
@@ -36,7 +36,7 @@ A later re-sync reads the previous board back out of the published page, so
 what `extract` returns must be exactly what `render` was given.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2> /dev/null && jq -S . "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/rendered.json" && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -S . > "${dir}/extracted.json" && diff "${dir}/rendered.json" "${dir}/extracted.json" && echo identical
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" && jq -S . "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/rendered.json" && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -S . > "${dir}/extracted.json" && diff "${dir}/rendered.json" "${dir}/extracted.json" && echo identical
 identical
 ```
 
@@ -46,7 +46,7 @@ The title and the payload both come from board data, so a title carrying the
 data placeholder must not capture the data slot.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.title = "widgets __BOARD_DATA__ backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" 2> /dev/null && head -n 1 "${dir}/board.html" && jq -S . "${dir}/data.json" > "${dir}/rendered.json" && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -S . > "${dir}/extracted.json" && diff "${dir}/rendered.json" "${dir}/extracted.json" && echo identical
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.title = "widgets __BOARD_DATA__ backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" && head -n 1 "${dir}/board.html" && jq -S . "${dir}/data.json" > "${dir}/rendered.json" && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -S . > "${dir}/extracted.json" && diff "${dir}/rendered.json" "${dir}/extracted.json" && echo identical
 <title>widgets __BOARD_DATA__ backlog</title>
 identical
 ```
@@ -57,7 +57,7 @@ The title is HTML-escaped, and a `</script>` inside any string stays inside the
 data element: the page still has exactly its two closing script tags.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.title = "a <b> & \"c\"" | .summary = "</script><script>alert(1)</script>"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" 2> /dev/null && head -n 1 "${dir}/board.html" && grep -o '</script>' "${dir}/board.html" | wc -l | tr -d ' ' && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -r .summary
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.title = "a <b> & \"c\"" | .summary = "</script><script>alert(1)</script>"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" && head -n 1 "${dir}/board.html" && grep -o '</script>' "${dir}/board.html" | wc -l | tr -d ' ' && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -r .summary
 <title>a &lt;b&gt; &amp; &quot;c&quot;</title>
 2
 </script><script>alert(1)</script>
@@ -69,7 +69,7 @@ The local fallback board holds issue data. A page written under a strict umask
 stays as strict when a later session runs under a looser one.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1 && chmod 600 "${dir}/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1) && { stat -c '%a' "${dir}/board.html" 2> /dev/null || stat -f '%Lp' "${dir}/board.html"; }
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null && chmod 600 "${dir}/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null ) && { stat -c '%a' "${dir}/board.html" || stat -f '%Lp' "${dir}/board.html"; }
 600
 ```
 
@@ -79,7 +79,7 @@ Only a page that does not exist yet follows the umask, so preserving a mode
 never makes every board private by accident.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (umask 077 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1) && { stat -c '%a' "${dir}/board.html" 2> /dev/null || stat -f '%Lp' "${dir}/board.html"; }
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && (umask 077 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null ) && { stat -c '%a' "${dir}/board.html" || stat -f '%Lp' "${dir}/board.html"; }
 600
 ```
 
@@ -97,7 +97,7 @@ report-board: */board.json is the data file; name a page file to write instead (
 ## Standalone output is a complete document
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render --standalone "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null && head -n 3 "${page}" && tail -n 1 "${page}"
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render --standalone "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" && head -n 3 "${page}" && tail -n 1 "${page}"
 <!DOCTYPE html>
 <html lang="en">
 <meta charset="utf-8">
@@ -536,7 +536,7 @@ The page turns a branch carrier into a branch comparison, so it reaches
 the same rule.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress.carrier = {"branch": "../other"}) | on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"branch": "a/../b"}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v startNow
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(105; .progress.carrier = {"branch": "../other"}) | on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"branch": "a/../b"}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v startNow # error-output-allow: testcase asserts retained diagnostics: A branch carrier with a dot segment
 report-board: */data.json is not valid board data: (glob)
   - #101: progress.extraCarriers must be a list of carriers, empty when there are none
   - #105: progress.carrier must name exactly one of pr, branch, label, or pipeline, and only a branch may add local: true
@@ -794,7 +794,7 @@ reaches the page escaped and cannot be mistaken for the element `extract` looks
 for.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.title = "widgets id=\"board-data\" backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render --standalone "${dir}/data.json" "${dir}/page.html" > /dev/null 2>&1 && "${REPORT_BOARD_BIN}" extract "${dir}/page.html" | jq -r '.title'
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.title = "widgets id=\"board-data\" backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render --standalone "${dir}/data.json" "${dir}/page.html" > /dev/null && "${REPORT_BOARD_BIN}" extract "${dir}/page.html" | jq -r '.title'
 widgets id="board-data" backlog
 ```
 
@@ -833,7 +833,7 @@ report-board: */previous.json holds control characters in its board data (glob)
 ## Compare reads the previous board out of a rendered page
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null && "${REPORT_BOARD_BIN}" compare "${page}" "${REPORT_BOARD_DATA_DIR}/backlog-triage-next.json" | tail -n 1
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" && "${REPORT_BOARD_BIN}" compare "${page}" "${REPORT_BOARD_DATA_DIR}/backlog-triage-next.json" | tail -n 1
 - Reworded: summary; the startNow note
 ```
 
@@ -1155,7 +1155,7 @@ report-board: */data.json is not valid board data: (glob)
 ## Progress has the shape of the progress model
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("shipped"; {"pr": 0}) | .flags = ["quiet", "stale", "local", "quiet"] | .nextMove = "everyone" | .note = "x")) | on(102; .progress = (progress("draft"; {"pr": 4}) | .flags = ["leftover-label"] | .host = "studio" | .lastActivity = "yesterday")) | on(103; .progress = "branch")' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v startNow
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("shipped"; {"pr": 0}) | .flags = ["quiet", "stale", "local", "quiet"] | .nextMove = "everyone" | .note = "x")) | on(102; .progress = (progress("draft"; {"pr": 4}) | .flags = ["leftover-label"] | .host = "studio" | .lastActivity = "yesterday")) | on(103; .progress = "branch")' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v startNow # error-output-allow: testcase asserts retained diagnostics: Progress has the shape of the progress model
 report-board: */data.json is not valid board data: (glob)
   - #101: progress.stage must be one of started, branch, draft, awaiting-review, needs-author, ready-to-merge, close-out
   - #101: progress.carrier must name exactly one of pr, branch, label, or pipeline, and only a branch may add local: true
@@ -1187,7 +1187,7 @@ report-board: */data.json is not valid board data: (glob)
 ## Area names must be defined
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.areas = [{"name": "docs", "paths": ["docs/"]}, {"name": "ci", "paths": [".github/**"], "owner": "x"}, {"paths": ["x"]}] | (.issues[] | select(.number == 105)).areas = ["docs", "website", "docs"] | (.issues[] | select(.number == 106)).areas = "ci"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v contention
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.areas = [{"name": "docs", "paths": ["docs/"]}, {"name": "ci", "paths": [".github/**"], "owner": "x"}, {"paths": ["x"]}] | (.issues[] | select(.number == 105)).areas = ["docs", "website", "docs"] | (.issues[] | select(.number == 106)).areas = "ci"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -v contention # error-output-allow: testcase asserts retained diagnostics: Area names must be defined
 report-board: */data.json is not valid board data: (glob)
   - area ci: owner is not an area field
   - areas[2]: expected an object with a name
@@ -1280,13 +1280,13 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DAT
 ## Validate accepts local only on a branch carrier
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"branch": "fix/101-y", "local": true}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -c 'progress\.'
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"branch": "fix/101-y", "local": true}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep -c 'progress\.' # error-output-allow: testcase asserts retained diagnostics: Validate accepts local only on a branch carrier
 0
 [1]
 ```
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"pr": 4, "local": true}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep 'progress\.'
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq -L "${REPORT_BOARD_DATA_DIR}" 'include "progress"; on(101; .progress = (progress("draft"; {"pr": 3}) | .extraCarriers = [{"pr": 4, "local": true}]))' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1 | grep 'progress\.' # error-output-allow: testcase asserts retained diagnostics: Validate accepts local only on a branch carrier
   - #101: progress.extraCarriers must be a list of carriers, empty when there are none
 ```
 
@@ -1332,7 +1332,7 @@ report-board: * is a directory; name the page file to write (glob)
 ## The rendered page follows the umask
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null) && ls -l "${page}" | cut -c1-10
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" ) && ls -l "${page}" | cut -c1-10
 -rw-r--r--
 ```
 
@@ -1341,7 +1341,7 @@ $ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && (umask 022 &&
 The page still renders, and like any new file under that umask, it has no permissions.
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && (umask 0777 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null) && ls -l "${page}" | cut -c1-10
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && (umask 0777 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" ) && ls -l "${page}" | cut -c1-10
 ----------
 ```
 
@@ -1395,7 +1395,7 @@ Both boards carry the same styles, written into the page so a published board
 stays one file.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/backlog.html" 2> /dev/null && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${dir}/bugs.html" 2> /dev/null && grep -c -e '--primary: #26292e;' -e '^\.rank-row {' "${dir}/backlog.html" "${dir}/bugs.html"
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/backlog.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${dir}/bugs.html" && grep -c -e '--primary: #26292e;' -e '^\.rank-row {' "${dir}/backlog.html" "${dir}/bugs.html"
 */backlog.html:2 (glob)
 */bugs.html:2 (glob)
 ```
@@ -1407,7 +1407,7 @@ Starter writes the stylesheet through the same function as render without
 validating board data.
 
 ```scrut
-$ dir="$(isolated_tree)" && cp "$(shipped starter/report.html)" "${dir}/templates/starter/" && printf '%s\n' 'a::after { content: "\2022 & ${x} \\ %s"; }' > "${dir}/templates/board.css" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && grep -c -F 'a::after { content: "\2022 & ${x} \\ %s"; }' "${dir}/report.html"
+$ dir="$(isolated_tree)" && cp "$(shipped starter/report.html)" "${dir}/templates/starter/" && printf '%s\n' 'a::after { content: "\2022 & ${x} \\ %s"; }' > "${dir}/templates/board.css" && "${dir}/scripts/report-board" starter "${dir}/report.html" && grep -c -F 'a::after { content: "\2022 & ${x} \\ %s"; }' "${dir}/report.html"
 1
 ```
 
@@ -1458,7 +1458,7 @@ HTML reads tag names in any letter case, so the placement check does too, and
 whitespace around the placeholder is part of the element.
 
 ```scrut
-$ dir="$(isolated_tree)" && printf 'a { color: red; }\n' > "${dir}/templates/board.css" && printf '<STYLE media="screen">\n  /* __BOARD_STYLES__ */\n</STYLE >\n' > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2> /dev/null && cat "${dir}/report.html"
+$ dir="$(isolated_tree)" && printf 'a { color: red; }\n' > "${dir}/templates/board.css" && printf '<STYLE media="screen">\n  /* __BOARD_STYLES__ */\n</STYLE >\n' > "${dir}/templates/starter/report.html" && "${dir}/scripts/report-board" starter "${dir}/report.html" && cat "${dir}/report.html"
 <STYLE media="screen">
   a { color: red; }
 </STYLE >
@@ -1507,7 +1507,7 @@ report-board: wrote a starter page to */report.html (glob)
 ## Starter inlines the shared stylesheet
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter "${page}" 2> /dev/null && grep -c -e '--primary: #26292e;' -e '^\.rank-row {' -e '^\.aside {' "${page}"
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter "${page}" && grep -c -e '--primary: #26292e;' -e '^\.rank-row {' -e '^\.aside {' "${page}"
 3
 ```
 
@@ -1516,7 +1516,7 @@ $ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BO
 Nothing is left for a hand edit to trip over.
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter "${page}" 2> /dev/null && ! grep -q '__BOARD_' "${page}"
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter "${page}" && ! grep -q '__BOARD_' "${page}"
 ```
 
 ## Starter writes a page with no board data
@@ -1524,7 +1524,7 @@ $ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BO
 A hand-laid page is a snapshot, so there is nothing for extract to read.
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter "${page}" 2> /dev/null && "${REPORT_BOARD_BIN}" extract "${page}" 2>&1
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter "${page}" && "${REPORT_BOARD_BIN}" extract "${page}" 2>&1
 report-board: */report.html is neither board data nor a rendered board (glob)
 [1]
 ```
@@ -1532,7 +1532,7 @@ report-board: */report.html is neither board data nor a rendered board (glob)
 ## Standalone starter is a complete document
 
 ```scrut
-$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter --standalone "${page}" 2> /dev/null && head -n 3 "${page}" && tail -n 1 "${page}"
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter --standalone "${page}" && head -n 3 "${page}" && tail -n 1 "${page}"
 <!DOCTYPE html>
 <html lang="en">
 <meta charset="utf-8">
@@ -1601,7 +1601,7 @@ templates
 ## Starter usage error
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" starter 2>&1 | head -n 1
+$ "${REPORT_BOARD_BIN}" starter 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Starter usage error
 report-board: starter takes an output path
 ```
 
@@ -1610,7 +1610,7 @@ report-board: starter takes an output path
 With no output path and with two.
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" starter > /dev/null 2>&1; echo "exit $?"; "${REPORT_BOARD_BIN}" starter one.html two.html > /dev/null 2>&1; echo "exit $?"
+$ "${REPORT_BOARD_BIN}" starter > /dev/null ; echo "exit $?"; "${REPORT_BOARD_BIN}" starter one.html two.html > /dev/null ; echo "exit $?"
 exit 2
 exit 2
 ```
@@ -1620,21 +1620,21 @@ exit 2
 An Artifact read returns the page wrapped in the host's own document.
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/page.html" 2> /dev/null && { printf '<!doctype html><html><head></head><body>\n'; cat "${dir}/page.html"; printf '</body></html>\n'; } > "${dir}/wrapped.html" && "${REPORT_BOARD_BIN}" extract "${dir}/wrapped.html" | jq -r .title
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/page.html" && { printf '<!doctype html><html><head></head><body>\n'; cat "${dir}/page.html"; printf '</body></html>\n'; } > "${dir}/wrapped.html" && "${REPORT_BOARD_BIN}" extract "${dir}/wrapped.html" | jq -r .title
 widgets backlog
 ```
 
 ## Render usage error
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" render only-one.json 2>&1 | head -n 1
+$ "${REPORT_BOARD_BIN}" render only-one.json 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Render usage error
 report-board: render takes a data file and an output path
 ```
 
 ## Compare usage error
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" compare only-one.json 2>&1 | head -n 1
+$ "${REPORT_BOARD_BIN}" compare only-one.json 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Compare usage error
 report-board: compare takes the previous board and the current data
 ```
 
@@ -1648,27 +1648,27 @@ Usage:
 ## Missing command
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" 2>&1 | head -n 1
+$ "${REPORT_BOARD_BIN}" 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Missing command
 report-board: a command is required
 ```
 
 ## Missing command exit code
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" > /dev/null 2>&1
+$ "${REPORT_BOARD_BIN}" > /dev/null
 [2]
 ```
 
 ## Unknown command
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" frobnicate 2>&1 | head -n 1
+$ "${REPORT_BOARD_BIN}" frobnicate 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Unknown command
 report-board: unknown command: frobnicate
 ```
 
 ## Unknown command exit code
 
 ```scrut
-$ "${REPORT_BOARD_BIN}" frobnicate > /dev/null 2>&1
+$ "${REPORT_BOARD_BIN}" frobnicate > /dev/null
 [2]
 ```

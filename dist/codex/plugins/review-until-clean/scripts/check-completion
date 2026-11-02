@@ -27,11 +27,11 @@ function main() {
   [[ -f "${reply}" ]] || failed 'no output file was written'
   [[ -r "${reply}" ]] || failed 'the output file is unreadable'
   diagnostic="$(LC_ALL=C grep -q '[^[:space:]]' "${reply}" 2>&1)" \
-    || failed 'the output file has no review text' "${diagnostic}"
+    || failed 'the output file has no review text' "${diagnostic}" # error-output-allow: standalone plugin replays diagnostic through failed on nonzero status
   if [[ "${format}" == json ]]; then
-    diagnostic="$(command -v jq 2>&1 > /dev/null)" || failed 'jq is required for JSON output' "${diagnostic}"
+    diagnostic="$(command -v jq 2>&1 > /dev/null)" || failed 'jq is required for JSON output' "${diagnostic}" # error-output-allow: standalone plugin replays diagnostic through failed on nonzero status
     diagnostic="$(jq -e -s 'length == 1' "${reply}" 2>&1 > /dev/null)" \
-      || failed 'the output is not exactly one JSON value' "${diagnostic}"
+      || failed 'the output is not exactly one JSON value' "${diagnostic}" # error-output-allow: standalone plugin replays diagnostic through failed on nonzero status
   fi
   printf 'Reviewer completion: passed\n'
 }
