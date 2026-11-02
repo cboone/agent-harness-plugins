@@ -16,7 +16,7 @@ Install review guidance that three automated pull request reviewers read, built 
 | Codex cloud review  | `## Code Review Rules` sections in `AGENTS.md`                                       | A managed block in that section of the root `AGENTS.md`                                |
 | Claude Code Review  | The root `REVIEW.md`, plus `CLAUDE.md` as nit-level context                          | A managed block in `REVIEW.md`, including every checklist's Important rules            |
 
-The checklists are bundled in `./references/checklists/`, one per style guide, and are installed verbatim beside the entry `SKILL.md`. Every rule has a bold name, and findings cite it as `<guide>: <rule name>`, for example `write-go-code: Checked errors`.
+The checklists are bundled in `./references/checklists/`, one per style guide, and are installed verbatim beside the entry `SKILL.md`. Every rule has a bold name, and matching findings cite it as `<guide>: <rule name>`, for example `write-go-code: Checked errors`. Findings outside the checklists use `Uncited:` with an impact-based severity, never a fabricated rule name. Combine repeats of one defect, listing their affected paths.
 
 ## Options
 

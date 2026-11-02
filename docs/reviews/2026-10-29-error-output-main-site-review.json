@@ -1,0 +1,315 @@
+[
+  {
+    "file": "plugins/workmux/scripts/owner-lock.bash",
+    "original_line": 28,
+    "annotation_line": 28,
+    "source": "  if ! listing=\"$(ls -diL -- \"${1}\" 2>&1)\"; then",
+    "reason": "inode lookup retains merged diagnostics and reports failure with the reservation path"
+  },
+  {
+    "file": "plugins/workmux/scripts/owner-lock.bash",
+    "original_line": 42,
+    "annotation_line": 42,
+    "source": "      exec 8>&-",
+    "reason": "close only the retained reservation descriptor 8; standard streams remain unchanged"
+  },
+  {
+    "file": "plugins/workmux/scripts/owner-lock.bash",
+    "original_line": 48,
+    "annotation_line": 48,
+    "source": "      exec 9>&-",
+    "reason": "close only the retained reservation descriptor 9; standard streams remain unchanged"
+  },
+  {
+    "file": "plugins/workmux/scripts/owner-lock.bash",
+    "original_line": 81,
+    "annotation_line": 81,
+    "source": "  if ! diagnostic=\"$(mktemp \"${path}.diagnostic.XXXXXX\" 2>&1)\"; then",
+    "reason": "temporary-file creation retains merged diagnostics and reports failure with the reservation path"
+  },
+  {
+    "file": "plugins/workmux/scripts/owner-lock.bash",
+    "original_line": 88,
+    "annotation_line": 88,
+    "source": "    8) { exec 8> \"${path}\"; } 2>> \"${diagnostic}\" || result=$? ;;",
+    "reason": "reserve only descriptor 8; status and retained stderr are checked and reported below"
+  },
+  {
+    "file": "plugins/workmux/scripts/owner-lock.bash",
+    "original_line": 89,
+    "annotation_line": 89,
+    "source": "    9) { exec 9> \"${path}\"; } 2>> \"${diagnostic}\" || result=$? ;;",
+    "reason": "reserve only descriptor 9; status and retained stderr are checked and reported below"
+  },
+  {
+    "file": "plugins/workmux/scripts/owner-lock.bash",
+    "original_line": 94,
+    "annotation_line": 94,
+    "source": "  if ! cleanup_error=\"$(rm -- \"${diagnostic}\" 2>&1)\"; then",
+    "reason": "diagnostic-file removal retains merged errors and reports cleanup failure"
+  },
+  {
+    "file": "plugins/workmux/scripts/owner-lock.bash",
+    "original_line": 150,
+    "annotation_line": 150,
+    "source": "  error=\"$(rm -- \"${path}\" 2>&1)\" || result=$?",
+    "reason": "reservation removal retains merged errors and returns the original failure status"
+  },
+  {
+    "file": "plugins/notify/scripts/watch-codex-failures",
+    "original_line": 75,
+    "annotation_line": 75,
+    "source": "    kill -0 \"${owner_pid}\" 2> /dev/null || die 'the supervising process is not running'",
+    "reason": "process-existence predicate receives the explicit supervising-process diagnostic"
+  },
+  {
+    "file": "plugins/notify/scripts/watch-codex-failures",
+    "original_line": 82,
+    "annotation_line": 82,
+    "source": "  exec 3< \"${rollout}\"",
+    "reason": "retain the rollout reader on descriptor 3; open errors remain on stderr under strict mode"
+  },
+  {
+    "file": "plugins/notify/scripts/watch-codex-failures",
+    "original_line": 91,
+    "annotation_line": 91,
+    "source": "      if kill -0 \"${owner_pid}\" 2> /dev/null; then",
+    "reason": "process-existence predicate selects follow or final-drain state"
+  },
+  {
+    "file": "plugins/notify/scripts/watch-codex-failures",
+    "original_line": 132,
+    "annotation_line": 132,
+    "source": "      if mkdir \"${marker}\" 2> /dev/null; then",
+    "reason": "exclusive delivery claim diagnoses failure unless another reader already owns the marker"
+  },
+  {
+    "file": "plugins/attention-log/scripts/attention-log",
+    "original_line": 259,
+    "annotation_line": 259,
+    "source": "    [[ -n \"$(find \"${ROTATE_LOCK}/owner\" -maxdepth 0 -mmin +1 2> /dev/null)\" ]] || return 0",
+    "reason": "missing rotation owner means there is no stale reservation to reclaim"
+  },
+  {
+    "file": "plugins/attention-log/scripts/attention-log",
+    "original_line": 262,
+    "annotation_line": 262,
+    "source": "    if ! diagnostic=\"$(rm \"${ROTATE_LOCK}/owner\" 2>&1)\"; then",
+    "reason": "reclaim retains merged errors and reports them after appending the pending event"
+  },
+  {
+    "file": "plugins/attention-log/scripts/attention-log",
+    "original_line": 273,
+    "annotation_line": 273,
+    "source": "  if ! diagnostic=\"$({ printf '%s\\n' \"$$\" > \"${ROTATE_LOCK}/owner\"; } 2>&1)\"; then",
+    "reason": "owner PID write retains merged errors and reports them after appending the pending event"
+  },
+  {
+    "file": "plugins/attention-log/scripts/attention-log",
+    "original_line": 392,
+    "annotation_line": 392,
+    "source": "    if tail -n 20 \"${TRANSCRIPT_PATH}\" 2> /dev/null | jq -Rne \"${TRANSCRIPT_JQ} shows_refusal\" > /dev/null 2>&1; then",
+    "reason": "transcript refusal predicate retries unavailable or incomplete transcript data"
+  },
+  {
+    "file": "plugins/attention-log/scripts/attention-log",
+    "original_line": 427,
+    "annotation_line": 428,
+    "source": "    if { [[ -n \"${owner}\" ]] && ! kill -0 \"${owner}\" 2> /dev/null; } \\",
+    "reason": "process-existence predicate selects stale session-owner reclaim"
+  },
+  {
+    "file": "plugins/attention-log/scripts/attention-log",
+    "original_line": 428,
+    "annotation_line": 428,
+    "source": "      || { [[ -z \"${owner}\" && -n \"$(find \"${LOCK_DIR}/pid\" -maxdepth 0 -mmin +1 2> /dev/null)\" ]]; }; then # error-output-allow: process-existence predicate selects stale session-owner reclaim",
+    "reason": "missing session owner is not eligible for age-based reclaim"
+  },
+  {
+    "file": "plugins/attention-log/scripts/attention-log",
+    "original_line": 253,
+    "source": "  mkdir -p \"${ROTATE_LOCK}\" 2> /dev/null || return 0",
+    "fix": "keep directory-creation errors live; existing return status retained"
+  },
+  {
+    "file": "plugins/attention-log/scripts/attention-log",
+    "original_line": 417,
+    "source": "  mkdir -p \"${LOCK_DIR}\" 2> /dev/null || return 1",
+    "fix": "keep directory-creation errors live; existing return status retained"
+  },
+  {
+    "file": "plugins/notify/scripts/notify",
+    "original_line": 783,
+    "annotation_line": 783,
+    "source": "  if [[ -n \"${failure_context}\" ]] && ! kill -0 \"${pid}\" 2> /dev/null; then",
+    "reason": "process-existence predicate selects backend status collection"
+  },
+  {
+    "file": "plugins/notify/scripts/notify",
+    "original_line": 825,
+    "annotation_line": 825,
+    "source": "    > /dev/null 2>&\"${error_fd}\" < /dev/null &",
+    "reason": "failure notifications keep stderr live through descriptor 2; ordinary detached notifications are silent"
+  },
+  {
+    "file": "plugins/notify/scripts/notify",
+    "original_line": 839,
+    "annotation_line": 839,
+    "source": "    if tail -n 20 \"${transcript_path}\" 2> /dev/null | jq -Rne \"${TURN_JQ} shows_refusal\" > /dev/null 2>&1; then",
+    "reason": "transcript refusal predicate retries unavailable or incomplete transcript data"
+  },
+  {
+    "file": "plugins/workmux/scripts/resource-diagnostics.bash",
+    "original_line": 31,
+    "annotation_line": 31,
+    "source": "  output=\"$(cat \"${log_file}\" 2> /dev/null)\" || return 0",
+    "reason": "optional extra diagnosis tolerates an unreadable log after the original failure was reported"
+  },
+  {
+    "file": "tests/fixtures/check-codex-failures",
+    "original_line": 15,
+    "annotation_line": 15,
+    "source": "    kill \"${pid}\" 2> /dev/null || true",
+    "reason": "owned test process may already have exited during cleanup"
+  },
+  {
+    "file": "tests/fixtures/check-codex-failures",
+    "original_line": 16,
+    "annotation_line": 16,
+    "source": "    wait \"${pid}\" 2> /dev/null || true",
+    "reason": "cleanup reaps owned processes regardless of their exit status"
+  },
+  {
+    "file": "tests/fixtures/check-codex-failures",
+    "original_line": 243,
+    "annotation_line": 243,
+    "source": "        wait \"${OTHER_PID}\" 2> /dev/null || true",
+    "reason": "owned supervisor termination status is expected during shutdown synchronization"
+  },
+  {
+    "file": "tests/fixtures/check-codex-failures",
+    "original_line": 255,
+    "annotation_line": 255,
+    "source": "        wait \"${OTHER_PID}\" 2> /dev/null || true",
+    "reason": "owned supervisor termination status is expected during shutdown synchronization"
+  },
+  {
+    "file": "tests/fixtures/check-codex-failures",
+    "original_line": 259,
+    "annotation_line": 259,
+    "source": "        if ! kill -0 \"${CHILD_PID}\" 2> /dev/null; then break; fi",
+    "reason": "owned watcher existence predicate bounds fixture shutdown wait"
+  },
+  {
+    "file": "tests/fixtures/notify-rollout/mkdir",
+    "original_line": 11,
+    "annotation_line": 11,
+    "source": "        if /bin/mkdir \"${barrier}/first\" 2> /dev/null; then",
+    "reason": "exclusive barrier creation elects the first reader; the second creates its own marker"
+  },
+  {
+    "file": "tests/scrut/attention-log.md",
+    "original_line": 336,
+    "annotation_line": 336,
+    "source": "> payload '{\"tool_name\":\"Bash\"}' | env -u TMUX -u TMUX_PANE BASH_ENV=\"${OWNER_WRITE_FAILURE_ENV}\" LOCK_TEST_MODE=write /bin/bash \"${ATTENTION_LOG_BIN}\" hook PostToolUse 2> \"${work}/pid-write-error\"",
+    "reason": "fixture asserts retained owner-write diagnostics and subsequent lock recovery"
+  },
+  {
+    "file": "tests/scrut/attention-log.md",
+    "original_line": 352,
+    "annotation_line": 352,
+    "source": "> payload '{\"tool_name\":\"Bash\"}' | env -u TMUX -u TMUX_PANE PATH=\"${work}/release-bin:${PATH}\" LOCK_TEST_REAL_RM=\"$(command -v rm)\" LOCK_TEST_MODE=cleanup LOCK_TEST_DIRECTORY=\"${lock}\" LOCK_TEST_REPORT_ORDER=true BASH_ENV=\"${OWNER_WRITE_FAILURE_ENV}\" /bin/bash \"${ATTENTION_LOG_BIN}\" hook PermissionDenied 2> \"${work}/release-error\"",
+    "reason": "fixture asserts retained unlink diagnostics and pending-event ordering"
+  },
+  {
+    "file": "tests/scrut/attention-log.md",
+    "original_line": 364,
+    "annotation_line": 364,
+    "source": "> payload '{\"tool_name\":\"Bash\"}' | env -u TMUX -u TMUX_PANE BASH_ENV=\"${OWNER_WRITE_FAILURE_ENV}\" LOCK_TEST_MODE=write /bin/bash \"${ATTENTION_LOG_BIN}\" hook PermissionDenied 2> \"${work}/rotation-pid-error\"",
+    "reason": "fixture asserts retained rotation-owner write diagnostics"
+  },
+  {
+    "file": "tests/scrut/attention-log.md",
+    "original_line": 376,
+    "annotation_line": 376,
+    "source": "> hook PostToolUse '{\"tool_name\":\"Bash\"}' 2> \"${work}/session-reserve-error\"",
+    "reason": "fixture asserts retained reservation permission diagnostics and recovery"
+  },
+  {
+    "file": "tests/scrut/attention-log.md",
+    "original_line": 391,
+    "annotation_line": 391,
+    "source": "> BASH_ENV=\"${OWNER_WRITE_FAILURE_ENV}\" LOCK_TEST_REPORT_ORDER=true LOCK_TEST_DIRECTORY=\"${ATTENTION_LOG_DIR}/rotate.lock\" LOCK_TEST_ORDER_MARKER=\"${ATTENTION_LOG_DIR}/early-report\" hook PermissionDenied '{\"tool_name\":\"Bash\"}' 2> \"${work}/rotation-reserve-error\"",
+    "reason": "fixture asserts retained rotation permission diagnostics and append ordering"
+  },
+  {
+    "file": "tests/scrut/attention-log.md",
+    "original_line": 668,
+    "annotation_line": 668,
+    "source": "> echo \"rotated: $(wc -c < \"${events_file}.1\" | tr -d ' '), new lines: $(wc -l < \"${events_file}\" | tr -d ' '), lock left: $(ls -d \"${ATTENTION_LOG_DIR}/rotate.lock/owner\" 2> /dev/null | wc -l | tr -d ' ')\"",
+    "reason": "snapshot counts zero remaining owner paths after successful rotation"
+  },
+  {
+    "file": "tests/scrut/bugs-gather.md",
+    "original_line": 61,
+    "annotation_line": 61,
+    "source": ">     \"${work}/config.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/scored.json\" 2>&1)\" || status=$?",
+    "reason": "fixture checks merged failure diagnostics and status for each owner-lock fault"
+  },
+  {
+    "file": "tests/scrut/bugs-gather.md",
+    "original_line": 691,
+    "annotation_line": 691,
+    "source": "$ cache=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && mkdir -p \"${cache}/report-boards/bugs/github.com/acme/widgets/save.lock\" && touch \"${cache}/report-boards/bugs/github.com/acme/widgets/save.lock/owner\" && bugs XDG_CACHE_HOME=\"${cache}\" save \"${work}/config.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/scored.json\" 2>&1 | sed \"s|${cache}|CACHE|g\"; echo \"exit ${PIPESTATUS[0]}\"; ls \"${cache}/report-boards/bugs/github.com/acme/widgets\"",
+    "reason": "snapshot checks normalized lock-contention diagnostics and producer status"
+  },
+  {
+    "file": "tests/scrut/bugs-gather.md",
+    "original_line": 708,
+    "annotation_line": 710,
+    "source": ">   && { bugs PATH=\"${cache}/bin:${stub_dir}:${PATH}\" LOCK_TEST_REAL_MKDIR=\"$(command -v mkdir)\" LOCK_TEST_DIRECTORY=\"${lock}\" XDG_CACHE_HOME=\"${cache}\" save \"${work}/config.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/scored.json\" 2>&1; echo \"exit=$?\"; } | sed \"s|${cache}|CACHE|g\" \\",
+    "reason": "snapshot checks lock-contention diagnostics, status and unchanged owner"
+  },
+  {
+    "file": "tests/scrut/codex-cleanup.md",
+    "original_line": 127,
+    "annotation_line": 129,
+    "source": ">          --cleanup-dir \"${FIXTURE}/cleanup\" > \"${FIXTURE}/cleanup-failed.prompt\" 2> \"${FIXTURE}/cleanup-failed.err\"; echo \"exit=$?\"; } \\",
+    "reason": "snapshot replays retained cleanup rejection diagnostics and exit status"
+  },
+  {
+    "file": "tests/scrut/codex-cleanup.md",
+    "original_line": 140,
+    "annotation_line": 142,
+    "source": ">          --cleanup-dir \"${FIXTURE}/cleanup\" > \"${FIXTURE}/cleanup-stale.prompt\" 2> \"${FIXTURE}/cleanup-stale.err\"; echo \"exit=$?\"; } \\",
+    "reason": "snapshot replays retained stale-snapshot diagnostics and exit status"
+  },
+  {
+    "file": "tests/scrut/codex-cleanup.md",
+    "original_line": 208,
+    "annotation_line": 210,
+    "source": ">          > \"${FIXTURE}/boundary.err\" 2>&1; echo \"exit=$?\"; } \\",
+    "reason": "snapshot replays retained missing-angle rejection and verifies no editor ran"
+  },
+  {
+    "file": "tests/scrut/codex-cleanup.md",
+    "original_line": 226,
+    "annotation_line": 228,
+    "source": ">          > \"${FIXTURE}/boundary.err\" 2>&1; echo \"exit=$?\"; } \\",
+    "reason": "snapshot replays retained duplicate-angle rejection and verifies no editor ran"
+  },
+  {
+    "file": "tests/scrut/codex-cleanup.md",
+    "original_line": 244,
+    "annotation_line": 246,
+    "source": ">          > \"${FIXTURE}/boundary.err\" 2>&1; echo \"exit=$?\"; } \\",
+    "reason": "snapshot replays retained membership rejection and verifies no editor ran"
+  },
+  {
+    "file": "tests/scrut/manage-resource-claims.md",
+    "original_line": 97,
+    "annotation_line": 97,
+    "source": ">     WORKTREE_RESOURCES_FILE=\"${claim_file}\" bash \"${MANAGE_RESOURCE_CLAIMS_BIN}\" claim logic --worktree /repo/wt-live --branch main 2>&1)\" || status=$?",
+    "reason": "fixture checks merged failure diagnostics and status for each owner-lock fault"
+  }
+]

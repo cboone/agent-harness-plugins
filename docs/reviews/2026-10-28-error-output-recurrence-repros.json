@@ -1,0 +1,26 @@
+[
+  {
+    "case": "quoted-hash-token-split",
+    "source": "some-command \"literal # data\" 2\\\n>/dev/null",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "case": "stderr-output-close",
+    "source": "some-command 2>&-",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "case": "stderr-input-close",
+    "source": "some-command 2<&-",
+    "syntax_exit": 0,
+    "guard_exit": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  }
+]

@@ -2,6 +2,42 @@
 
 Read this before changing plugin sources, catalog metadata or plugin documentation. Unless the surrounding text says otherwise, paths in code spans are relative to the repository root. See [the root instructions](../AGENTS.md) for validation and writing conventions.
 
+## Shell error-output validation
+
+`make validate`, included in `make test-all` and CI, runs
+`bin/check-fixture-environments`. The checker preserves the fixture-environment
+rules and uses the pinned shfmt JSON AST to inspect shell scripts and Scrut shell
+blocks. Keep stderr live, or retain diagnostics through `capture_child`. An
+intentional discard or separate replay protocol needs an actual shell comment
+`# error-output-allow: reason` on the parsed command line. Quoted marker text does
+not grant an exception.
+
+The checker inspects descriptor 2 redirects, duplication, moves and closure in command order. Scrut's default live output forwarding can be asserted directly; local
+captures and configured alternative streams require an explicit reason. A Scrut
+block that changes the shell stdout descriptor with `exec` also needs explicit
+reasons for stderr merges; its forwarding destination cannot be assumed live. The
+checker fails on unparseable input. An unavoidable parser limitation requires an
+exact file or `FILE#block-N` entry with a reason in
+`bin/lib/error-output-policy.json`; stale exceptions fail too. Non-Bash files in
+script directories need a named language-specific exclusion in the same policy.
+
+`bin/check-fixture-environments --ast-scope` lists checked units, live forwarding,
+named exclusions and embedded operand spans with reasons. Embedded text is not
+reparsed as shell code, including commands assembled for another interpreter;
+parsed command substitutions inside operands remain checked. Static samples under
+`tests/data/error-output/` are copied into isolated trees by the guard tests and
+are never executed.
+
+Rare stream-changing forms require reasons at their construct: persistent exec
+redirections, unresolved literal-only exec-like names, and coprocesses. Their
+diagnostic names the unresolved context. Ordinary variable-named commands,
+including `"$@" > file`, retain their existing behavior. Statically resolved
+non-exec quoted names remain ordinary calls.
+
+The [guard plan](plans/todo/2026-10-28-guard-error-output.md#accepted-tracking-limits) records the tracking model's two accepted limits.
+The rare-form check now rejects both unannotated examples at exec rather than
+claiming to derive persistent descriptor state; a reason can exempt the site.
+
 ## Plugin layout
 
 A typical skill plugin looks like:
@@ -376,6 +412,12 @@ Hook plugins are the ninth category. They carry `"category": "workflow"` and are
 If a plugin needs a `## Recommended Permissions` section, use a copy-pasteable JSON block (`{"permissions": {"allow": [...]}}`), not prose bullets, and make sure every command the skill actually runs appears in it.
 
 Every plugin with a hard external dependency must say so. Two forms are in use, both fine: a `**Requires:**` line in the header block next to `**Type:**` and `**Trigger:**` for one or two tools, or a `## Requirements` section before `## Usage` when the entry needs install instructions or caveats. Do not use both in one README.
+
+## Claude Code schema validation
+
+`make validate` runs the repository's JSON and convention checks, then `bin/validate-claude-plugins` runs `claude plugin validate` against the marketplace and each canonical plugin. Claude Code must already be on PATH at the version in `.claude-code-version` or newer; the target reports a missing or older CLI without installing it. Validation needs no authentication.
+
+CI installs the exact npm version in `.claude-code-version` before running the same target. Update that pin deliberately. Check the marketplace and every plugin with the new version before committing it. CLI advice and warnings retain Claude Code's exit status.
 
 ## Versioning
 
