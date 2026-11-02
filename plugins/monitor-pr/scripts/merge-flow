@@ -135,7 +135,7 @@ function usage_error() {
 function capture() {
   local status=0
   CAPTURED_ERR=""
-  CAPTURED_OUT="$("$@" 2> "${ERR_FILE}")" || status=$?
+  CAPTURED_OUT="$("$@" 2> "${ERR_FILE}")" || status=$? # error-output-allow: standalone plugin capture preserves stderr in CAPTURED_ERR for structured reports
   if ((status != 0)); then
     CAPTURED_ERR="$(tr '\n' ' ' < "${ERR_FILE}" | sed 's/[[:space:]]*$//')"
   fi
@@ -152,7 +152,7 @@ function cmd_policy() {
   elif ! settings="$(jq -c '
     {merge: .allow_merge_commit, squash: .allow_squash_merge, rebase: .allow_rebase_merge}
     | if all(.[]; . == null) then null else to_entries | map(select(.value == true).key) end' \
-    <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+    <<< "${CAPTURED_OUT}" 2> /dev/null)"; then # error-output-allow: parse failure becomes settingsNote in the JSON report
     settings="null"
     settings_note="the repository settings response could not be parsed"
   elif [[ "${settings}" == "null" ]]; then
@@ -173,7 +173,7 @@ function cmd_policy() {
                 + [$all[] | select(.type == "required_linear_history") | ["squash", "rebase"]]),
         approvals: ([$prs[] | .required_approving_review_count // 0] | max // 0),
         queue: any($all[]; .type == "merge_queue")
-      }' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+      }' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then # error-output-allow: parse failure becomes rulesNote in the JSON report
     rules_json="null"
     rules_note="the base branch rules response could not be parsed"
   fi
@@ -211,7 +211,7 @@ function read_pr() {
   if ! line="$(jq -rs --arg sep "${FIELD_SEPARATOR}" '
     if length == 1 then .[0] else error("one PR response required") end
     | [(.state // ""), (if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end),
-     (.headRefOid // ""), (.mergeCommit.oid // "")] | join($sep)' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+     (.headRefOid // ""), (.mergeCommit.oid // "")] | join($sep)' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then # error-output-allow: parse failure becomes an unreadable PR report
     CAPTURED_ERR="gh pr view returned output that is not JSON"
     return 1
   fi
@@ -247,7 +247,7 @@ function read_copilot_status() {
     | if type != "array" or any(.[]; (.headSha | type) != "string" or (.status | type) != "string")
     then error("invalid workflow metadata") else
     {status: (first(.[] | select(.headSha == $head) | .status) // "")} end
-  ' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+  ' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then # error-output-allow: parse failure becomes an unreadable checks report
     CAPTURED_ERR="gh run list returned invalid workflow metadata"
     return 1
   fi
@@ -274,7 +274,7 @@ function failed_poll() {
 
 function poll_changes() {
   local checks review review_metadata mergeability_field baseline_mergeability current_mergeability
-  if ! checks="$(completed_checks <<< "${current_snapshot}" 2> /dev/null)"; then
+  if ! checks="$(completed_checks <<< "${current_snapshot}" 2> /dev/null)"; then # error-output-allow: parse failure becomes an unreadable checks report
     CAPTURED_ERR="gh pr view returned invalid check metadata"
     return 1
   fi
@@ -289,7 +289,7 @@ function poll_changes() {
     | last | if . == null then null else
       if (.id | type) != "number" or (.commit_id | type) != "string"
       then error("invalid review metadata") else {id, commit_id} end end
-    | {latest: .}' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then
+    | {latest: .}' <<< "${CAPTURED_OUT}" 2> /dev/null)"; then # error-output-allow: parse failure becomes an unreadable latest-checks report
     CAPTURED_ERR="gh api returned invalid review metadata"
     return 1
   fi
@@ -578,7 +578,7 @@ function cmd_sync() {
   local owner="${1}" repo="${2}" base="${3}" merge_sha="${4}"
   local remote="" worktree="" before tracking
 
-  git rev-parse --git-dir > /dev/null 2>&1 || die "not inside a git repository"
+  git rev-parse --git-dir > /dev/null 2>&1 || die "not inside a git repository" # error-output-allow: repository predicate has a specific not-inside-repository diagnostic
 
   if ! remote="$(find_remote "${owner}" "${repo}")"; then
     sync_result false "no remote points at ${owner}/${repo}"
@@ -591,7 +591,7 @@ function cmd_sync() {
     sync_result false "fetching ${base} from ${remote} failed: ${CAPTURED_ERR}"
     return 0
   fi
-  if ! git merge-base --is-ancestor "${merge_sha}" "${tracking}" 2> /dev/null; then
+  if ! git merge-base --is-ancestor "${merge_sha}" "${tracking}" 2> /dev/null; then # error-output-allow: ancestry predicate has an explicit cannot-confirm failure report
     sync_result false "${remote}/${base} does not contain ${merge_sha}"
     return 0
   fi
@@ -617,7 +617,7 @@ function cmd_sync() {
     return 0
   fi
 
-  if git merge-base --is-ancestor "${merge_sha}" "refs/heads/${base}" 2> /dev/null; then
+  if git merge-base --is-ancestor "${merge_sha}" "refs/heads/${base}" 2> /dev/null; then # error-output-allow: ancestry predicate selects safe fast-forward behavior
     sync_result true
   else
     sync_result false "${base} does not contain ${merge_sha} after the update"
@@ -626,8 +626,8 @@ function cmd_sync() {
 
 function cmd_panes() {
   [[ $# -eq 0 ]] || usage_error "panes takes no arguments"
-  git rev-parse --git-dir > /dev/null 2>&1 || die "not inside a git repository"
-  command -v tmux > /dev/null 2>&1 || die "tmux is not available"
+  git rev-parse --git-dir > /dev/null 2>&1 || die "not inside a git repository" # error-output-allow: repository predicate has a specific not-inside-repository diagnostic
+  command -v tmux > /dev/null 2>&1 || die "tmux is not available"               # error-output-allow: missing tmux has a specific prerequisite diagnostic
 
   read_worktrees || die "listing the worktrees failed"
   if ! capture tmux list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}'; then
