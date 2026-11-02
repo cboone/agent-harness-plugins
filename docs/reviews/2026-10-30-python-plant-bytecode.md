@@ -29,3 +29,9 @@ TOOLING relayed the tl27 drain go-ahead and limited tests to owned/conflicted do
 The new checker initially rejected the Python regression as non-Bash source without a named exclusion. Added that exact filename to `bin/lib/error-output-policy.json`, with the reason that it is Python, keeps subprocess stderr live and propagates unsuccessful exits. No diagnostics rule changed. The initial environment-isolation run failed on that missing entry; both requested documents were rerun after the fix.
 
 Final checks passed: `check-fixture-environments`, its `--review-paths` mode, the manual Python regression, error-output guard (102 cases) and environment isolation (51 cases), with zero failures or skipped cases. `check-versions` confirmed main's 1.0.4 to branch's 1.0.5 remains forward, generated manifest agrees, and marketplace coverage/version ownership match. No additional bump was needed. No full suite or other merge-changed documents were run for this synchronization, per the go-ahead and thermal limit. Original review round counts and end state remain unchanged.
+
+### Further main merge
+
+Under the same tl27 drain go-ahead, signed merge `b8ee2d68` incorporated main `3538f681281e3b206a9bfde840d8a8d2ea871669`. The only conflict was concurrent additions to `non_bash`; both the Python fixture and main's Perl probe exclusions were retained, with their reasons unchanged. Main still held `plant-defects` 1.0.4, so the branch and generated manifest stayed at 1.0.5.
+
+Repeated checks passed: version/marketplace audit, fixture environment and review-path checks, manual Python regression, error-output guard (102 cases) and environment isolation (51 cases). Both documents exited zero with no failures or skips, running at most two concurrently. No branch-owned or conflicted Scrut documents required additional runs; other merge-changed documents and the full suite stayed excluded by the thermal instruction. Pushed history and review counts were preserved.
