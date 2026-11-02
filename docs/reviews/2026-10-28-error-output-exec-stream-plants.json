@@ -1,0 +1,86 @@
+[
+  {
+    "phase": "fixed-before",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "exec-stdout-capture",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: use capture_child for retained diagnostics\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "builtin-exec-stdout-capture",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: use capture_child for retained diagnostics\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-before",
+    "sample": "command-exec-stdout-capture",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: use capture_child for retained diagnostics\n",
+    "stderr": ""
+  },
+  {
+    "phase": "previous-AST",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "previous-AST",
+    "sample": "exec-stdout-capture",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "previous-AST",
+    "sample": "builtin-exec-stdout-capture",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "previous-AST",
+    "sample": "command-exec-stdout-capture",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "exec-stdout-capture",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: use capture_child for retained diagnostics\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "builtin-exec-stdout-capture",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: use capture_child for retained diagnostics\n",
+    "stderr": ""
+  },
+  {
+    "phase": "fixed-restored",
+    "sample": "command-exec-stdout-capture",
+    "status": 1,
+    "stdout": "tests/scrut/output-sample.md#block-2: use capture_child for retained diagnostics\n",
+    "stderr": ""
+  }
+]

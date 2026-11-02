@@ -65,7 +65,7 @@ $ broken="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${broken}" \
 >       [[ "${code}" == 128 ]] && test ! -s out || exit 1; \
 >       printf '%s exit=%s\n' "${mode}" "${code}"; cat err; \
 >     done; \
->   done
+>   done # error-output-allow: testcase asserts retained diagnostics: A real missing base object is an error for both callers
 inferred exit=128
 fatal: git show-ref: bad ref refs/remotes/origin/HEAD (*) (glob)
 review-scope: could not resolve base (exit 128)
@@ -96,7 +96,7 @@ $ cd "${work}" \
 >          code=0; "${helper}" > out 2> err || code=$?; \
 >          [[ "${code}" == 73 ]] && test ! -s out || exit 1; \
 >          printf 'exit=%s\n' "${code}"; cat err; \
->        done )
+>        done ) # error-output-allow: testcase asserts retained diagnostics: An unexpected existence-query failure preserves its status and message
 exit=73
 sample ref lookup failure
 review-scope: could not resolve base (exit 73)
@@ -113,7 +113,7 @@ $ cd "${work}" && blob="$(printf 'sample blob\n' | git hash-object -w --stdin)" 
 >   && for helper in "${REVIEW_SCOPE_BIN}" "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}"; do \
 >     code=0; "${helper}" > out 2> err || code=$?; \
 >     [[ "${code}" == 128 ]] && test ! -s out || exit 1; cat err; \
->   done
+>   done # error-output-allow: testcase asserts retained diagnostics: A ref to a non-commit object preserves the commit check's diagnostic
 error: * expected commit type, but the object dereferences to blob type (glob)
 fatal: Needed a single revision
 review-scope: could not resolve base (exit 128)
@@ -136,7 +136,7 @@ $ cd "${work}" && git update-ref refs/remotes/origin/integration HEAD \
 >        for helper in "${REVIEW_SCOPE_BIN}" "${REVIEW_PR_WITH_CODEX_REVIEW_SCOPE_BIN}"; do \
 >          code=0; "${helper}" > out 2> err || code=$?; \
 >          [[ "${code}" == 73 ]] && test ! -s out || exit 1; cat err; \
->        done )
+>        done ) # error-output-allow: testcase asserts retained diagnostics: The closing check uses the same error contract
 sample closing lookup failure
 review-scope: could not recheck base (exit 73)
 sample closing lookup failure
