@@ -1,6 +1,10 @@
 {
   "non_bash": [
     {
+      "name": "tests/fixtures/plant-defects-bytecode.py",
+      "reason": "Python bytecode regression, not Bash source; subprocess stderr stays live and check_output propagates nonzero exits."
+    },
+    {
       "name": "tests/fixtures/scrut-group-probe/ScrutGroupProbe.pm",
       "reason": "Perl POSIX test module, not Bash source; setup failures and probe diagnostics remain visible to the runner tests."
     },
