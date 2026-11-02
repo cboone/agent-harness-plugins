@@ -1,0 +1,20 @@
+{
+  "base": "a2e56c535ed6326cc8d531d945fbb6c627a9b335",
+  "head": "220698b8a153e4f0ab559d1e3c67ce19258abea5",
+  "tree": "f0007e5ab047490f625239f250bd82809511564f",
+  "snapshot": "a4a9e5a5269cc1d037e7fa04837922a04cefad71",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "context_window": 872000,
+  "sandbox": "read-only",
+  "approval_policy": "never",
+  "web_search": "disabled",
+  "helper_version": "2.2.0",
+  "process_exit": 0,
+  "json_single_value": true,
+  "aspect_validation": "ok",
+  "scope_changed": false,
+  "original_merge_state_changed": false,
+  "round": "structural Nit, unchanged count",
+  "disposition": "Report-only; no proposals applied. Merge-conflict stop remains."
+}

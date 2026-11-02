@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Make `set -e` apply inside command substitutions, where Bash supports it.
-shopt -s inherit_errexit 2> /dev/null || true
+shopt -s inherit_errexit 2> /dev/null || true # error-output-allow: Bash 3.2 lacks inherit_errexit; later commands check status explicitly
 
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
@@ -58,7 +58,7 @@ readonly STOP_POLL_LIMIT
 function group_active() {
   local group="${1}" pgid state
   if ! ps -axo pgid=,stat= > "${TMP_DIR}/groups" 2> "${TMP_DIR}/groups.err" \
-    || [[ -s "${TMP_DIR}/groups.err" || ! -s "${TMP_DIR}/groups" ]]; then
+    || [[ -s "${TMP_DIR}/groups.err" || ! -s "${TMP_DIR}/groups" ]]; then # error-output-allow: inspection failure is treated as active and retains diagnostic artifacts
     return 0
   fi
   while read -r pgid state; do
@@ -76,7 +76,7 @@ function stop_running_codex() {
     if ((attempt >= STOP_POLL_LIMIT / 2)); then signal=KILL; fi
     for group in ${RUNNING_GROUPS[@]+"${RUNNING_GROUPS[@]}"}; do
       # Repeat delivery so descendants created by a TERM handler are covered.
-      kill -"${signal}" -- "-${group}" 2> /dev/null || true
+      kill -"${signal}" -- "-${group}" 2> /dev/null || true # error-output-allow: cancellation tolerates an already stopped process group
       if group_active "${group}"; then active="true"; fi
     done
     if [[ "${active}" == "false" ]]; then break; fi
@@ -87,7 +87,7 @@ function stop_running_codex() {
     return 1
   fi
   for pid in ${RUNNING_PIDS[@]+"${RUNNING_PIDS[@]}"}; do
-    wait "${pid}" 2> /dev/null || true
+    wait "${pid}" 2> /dev/null || true # error-output-allow: cancellation reaps children without replacing the selected cancellation status
   done
   RUNNING_PIDS=()
   RUNNING_GROUPS=()
@@ -259,6 +259,7 @@ function require_scope_file() {
       and (.base == null or (.base | type == "string" and length > 0))
       and (.snapshot | type == "string" and length > 0)
       and (.tree | type == "string" and length > 0)
+      and ((has("raw_tree") | not) or (.raw_tree | type == "string" and length > 0))
       and (.index | type == "string" and length > 0)
       and review_membership_valid
       and ((.committed | length) == 0 or .base != null)
@@ -268,7 +269,7 @@ function require_scope_file() {
     [inputs] as $values
     | ($values | length) == 1 and ($values[0] | valid_scope)
   ' "${scope}" > /dev/null 2>&1 \
-    || die "scope file '${scope}' is not review-scope output"
+    || die "scope file '${scope}' is not review-scope output" # error-output-allow: invalid scope receives a specific schema diagnostic
 }
 
 # The output contract. Every property is required and no extra ones are
@@ -406,7 +407,7 @@ function aspect_status() {
         elif $values[0].aspect != $aspect then "the output names a different aspect"
         elif $values[0].reviewed != $snapshot then "the output reviewed a different snapshot"
         else "" end
-    ' "${output}" 2> /dev/null)" || reason="the output is not JSON"
+    ' "${output}" 2> /dev/null)" || reason="the output is not JSON" # error-output-allow: invalid JSON becomes the explicit output-is-not-JSON failure
   fi
 
   jq -n \
@@ -832,10 +833,10 @@ function cmd_gate() {
   jq -e -n "${VALIDATE_DEFS}"'
     [inputs] as $v | ($v | length) == 1 and ($v[0] | type == "array" and length > 0
       and all(valid_output and (.aspect | IN("code", "errors", "tests", "comments", "types"))))
-  ' "${results}" > /dev/null 2>&1 || die "review results are incomplete or invalid"
+  ' "${results}" > /dev/null 2>&1 || die "review results are incomplete or invalid" # error-output-allow: invalid results receive the explicit incomplete-results diagnostic
   jq -e -n '[inputs] as $v | ($v | length) == 1 and ($v[0] | type == "array"
     and all(type == "object" and (.aspect | type == "string") and (.status | IN("ok", "failed"))))' \
-    "${statuses}" > /dev/null 2>&1 || die "aspect statuses are invalid"
+    "${statuses}" > /dev/null 2>&1 || die "aspect statuses are invalid" # error-output-allow: invalid statuses receive the explicit invalid-statuses diagnostic
   jq -n --slurpfile before "${scope}" --slurpfile after "${after}" --slurpfile results "${results}" \
     --slurpfile before_members "${before_members}" --slurpfile after_members "${after_members}" \
     --slurpfile statuses "${statuses}" --argjson expected "${expected}" '
@@ -913,7 +914,7 @@ function cmd_prompt() {
 
   local top_level snapshot
   top_level="$(git rev-parse --show-toplevel 2> /dev/null)" \
-    || die "not inside a git work tree"
+    || die "not inside a git work tree" # error-output-allow: missing checkout produces the explicit repository diagnostic
   top_level="$(physical_dir "${top_level}")"
   require_trusted_aspects "${top_level}"
   snapshot="$(jq -r '.snapshot' "${scope}")"
@@ -1072,7 +1073,7 @@ function cmd_run() {
 
   local top_level out_physical
   top_level="$(git rev-parse --show-toplevel 2> /dev/null)" \
-    || die "not inside a git work tree"
+    || die "not inside a git work tree" # error-output-allow: missing checkout produces the explicit repository diagnostic
   top_level="$(physical_dir "${top_level}")"
   require_trusted_aspects "${top_level}"
   out_physical="$(physical_dir "${out_dir}")"
@@ -1158,7 +1159,7 @@ function cmd_run() {
       --output-last-message "${out_physical}/${aspect}.json" \
       ${extra_args[@]+"${extra_args[@]}"} \
       "${prompts[${index}]}" \
-      < /dev/null > "${out_physical}/${aspect}.log" 2>&1 &
+      < /dev/null > "${out_physical}/${aspect}.log" 2>&1 & # error-output-allow: standalone runner checks status and reply after wait and retains logs
     RUNNING_PIDS+=("$!")
     RUNNING_GROUPS+=("$!")
     set +m
@@ -1191,12 +1192,22 @@ function cmd_run() {
 # there and prefix their changed paths back into the superproject scope.
 function compare_scope_trees() {
   local repo="${1}" before="${2}" after="${3}" prefix="${4}" output="${5}"
-  local before_tree after_tree path child_before child_after raw changed
+  local before_tree after_tree before_raw after_raw path child_before child_after raw changed
   before_tree="$(jq -r '.tree' "${before}")" || die "could not read prior tree"
   after_tree="$(jq -r '.tree' "${after}")" || die "could not read current tree"
   raw="$(mktemp "${TMP_DIR}/tree-changes.XXXXXX")" || die "could not create tree comparison"
   review_git -C "${repo}" diff-tree "${REVIEW_DIFF_OPTIONS[@]}" -r -z --name-only "${before_tree}" "${after_tree}" > "${raw}" \
     || die "could not compare tree ${before_tree} with ${after_tree}"
+  # Older captures retain normalized-only comparisons. With both raw trees,
+  # include raw-only edits as well as changes to normalized filter output.
+  if jq -e -s 'all(has("raw_tree"))' "${before}" "${after}" > /dev/null; then
+    before_raw="$(jq -r '.raw_tree' "${before}")" || die "could not read prior raw tree"
+    after_raw="$(jq -r '.raw_tree' "${after}")" || die "could not read current raw tree"
+    if [[ "${before_raw}" != "${before_tree}" || "${after_raw}" != "${after_tree}" ]]; then
+      review_git -C "${repo}" diff-tree "${REVIEW_DIFF_OPTIONS[@]}" -r -z --name-only "${before_raw}" "${after_raw}" >> "${raw}" \
+        || die "could not compare raw tree ${before_raw} with ${after_raw}"
+    fi
+  fi
   while IFS= read -r -d '' changed; do
     printf '%s\0' "${prefix}${changed}" >> "${output}" \
       || die "could not record changed path ${prefix}${changed} in ${output}"
@@ -1248,7 +1259,7 @@ function cmd_changes() {
   require_scope_file "${after}"
 
   git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
-    || die "not inside a git work tree"
+    || die "not inside a git work tree" # error-output-allow: repository predicate has a specific not-inside-repository diagnostic
 
   local before_tree after_tree raw members after_members
   members="$(mktemp "${TMP_DIR}/changes-members.XXXXXX")" || die "could not create change membership"
@@ -1258,8 +1269,7 @@ function cmd_changes() {
   before_tree="$(jq -r '.tree' "${before}")"
   after_tree="$(jq -r '.tree' "${after}")"
 
-  # review-scope's trees digest the whole working tree, so diffing them lists
-  # every path whose content, as Git would store it, changed in any bucket.
+  # Raw trees list disk edits even when Git normalizes their bytes away.
   # Plumbing `git diff-tree` ignores the user's diff.* settings: diff.renames
   # would hide a renamed file's old path, and diff.relative every change
   # outside the current directory. Output goes to a file so git's exit status

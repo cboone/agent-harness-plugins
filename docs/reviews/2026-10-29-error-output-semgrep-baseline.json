@@ -1,0 +1,308 @@
+{
+  "semgrep_version": "1.180.0",
+  "metadata": {
+    "base": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71",
+    "head": "14a64005bdef79ab0b967255afe048b39e819038",
+    "clone": "/var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T/672-semgrep-baseline.oggriqaz/repo",
+    "command": ["semgrep", "scan", "--config", "auto", "--baseline-commit", "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71", "--json"],
+    "metrics": "default; no metrics-off override",
+    "repository": "cboone/agent-harness-plugins"
+  },
+  "exit_status": 0,
+  "findings": 0,
+  "rules_run": 138,
+  "targets_scanned": 117,
+  "coverage": {
+    "parsed_lines_approx_percent": 87.7,
+    "bash_targets": 33,
+    "json_targets": 78,
+    "yaml_targets": 1,
+    "files_skipped_by_ignore_patterns": 157
+  },
+  "baseline_note": "Native baseline-aware mode limited targets to changes since the pinned base. Semgrep skipped its second baseline pass because the current pass had no findings.",
+  "parser_errors": [
+    {
+      "file": "plugins/push-notification/scripts/push-notification",
+      "language": "Bash",
+      "type": "Syntax error",
+      "diagnostic": "Syntax error at line plugins/push-notification/scripts/push-notification:1:",
+      "spans": [],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "plugins/publish-report-board/scripts/report-board",
+      "language": "Bash",
+      "type": "Syntax error",
+      "diagnostic": "Syntax error at line plugins/publish-report-board/scripts/report-board:1:",
+      "spans": [],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "bin/run-scrut-documents",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line bin/run-scrut-documents:87:",
+      "spans": [
+        {
+          "file": "bin/run-scrut-documents",
+          "start": {
+            "line": 87,
+            "col": 14,
+            "offset": 0
+          },
+          "end": {
+            "line": 87,
+            "col": 16,
+            "offset": 2
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "bin/validate-plugins",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line bin/validate-plugins:749:",
+      "spans": [
+        {
+          "file": "bin/validate-plugins",
+          "start": {
+            "line": 749,
+            "col": 3,
+            "offset": 0
+          },
+          "end": {
+            "line": 749,
+            "col": 84,
+            "offset": 81
+          }
+        },
+        {
+          "file": "bin/validate-plugins",
+          "start": {
+            "line": 762,
+            "col": 3,
+            "offset": 0
+          },
+          "end": {
+            "line": 763,
+            "col": 4,
+            "offset": 81
+          }
+        },
+        {
+          "file": "bin/validate-plugins",
+          "start": {
+            "line": 782,
+            "col": 38,
+            "offset": 0
+          },
+          "end": {
+            "line": 782,
+            "col": 39,
+            "offset": 1
+          }
+        },
+        {
+          "file": "bin/validate-plugins",
+          "start": {
+            "line": 782,
+            "col": 79,
+            "offset": 0
+          },
+          "end": {
+            "line": 782,
+            "col": 102,
+            "offset": 23
+          }
+        },
+        {
+          "file": "bin/validate-plugins",
+          "start": {
+            "line": 782,
+            "col": 103,
+            "offset": 0
+          },
+          "end": {
+            "line": 782,
+            "col": 104,
+            "offset": 1
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "plugins/attention-log/scripts/attention-log",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line plugins/attention-log/scripts/attention-log:10:",
+      "spans": [
+        {
+          "file": "plugins/attention-log/scripts/attention-log",
+          "start": {
+            "line": 10,
+            "col": 1,
+            "offset": 0
+          },
+          "end": {
+            "line": 809,
+            "col": 11,
+            "offset": 30236
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "plugins/notify/scripts/notify",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line plugins/notify/scripts/notify:32:",
+      "spans": [
+        {
+          "file": "plugins/notify/scripts/notify",
+          "start": {
+            "line": 32,
+            "col": 37,
+            "offset": 0
+          },
+          "end": {
+            "line": 32,
+            "col": 46,
+            "offset": 9
+          }
+        },
+        {
+          "file": "plugins/notify/scripts/notify",
+          "start": {
+            "line": 877,
+            "col": 21,
+            "offset": 0
+          },
+          "end": {
+            "line": 877,
+            "col": 37,
+            "offset": 16
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "plugins/publish-report-board/scripts/backlog-gather",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line plugins/publish-report-board/scripts/backlog-gather:379:",
+      "spans": [
+        {
+          "file": "plugins/publish-report-board/scripts/backlog-gather",
+          "start": {
+            "line": 379,
+            "col": 6,
+            "offset": 0
+          },
+          "end": {
+            "line": 379,
+            "col": 87,
+            "offset": 81
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "plugins/publish-report-board/scripts/bugs-gather",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line plugins/publish-report-board/scripts/bugs-gather:961:",
+      "spans": [
+        {
+          "file": "plugins/publish-report-board/scripts/bugs-gather",
+          "start": {
+            "line": 961,
+            "col": 6,
+            "offset": 0
+          },
+          "end": {
+            "line": 961,
+            "col": 87,
+            "offset": 81
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line plugins/review-pr-with-codex/scripts/codex-aspects:3:",
+      "spans": [
+        {
+          "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+          "start": {
+            "line": 3,
+            "col": 1,
+            "offset": 0
+          },
+          "end": {
+            "line": 1332,
+            "col": 11,
+            "offset": 58572
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "plugins/workmux/scripts/compose-issue-prompt",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line plugins/workmux/scripts/compose-issue-prompt:3:",
+      "spans": [
+        {
+          "file": "plugins/workmux/scripts/compose-issue-prompt",
+          "start": {
+            "line": 3,
+            "col": 1,
+            "offset": 0
+          },
+          "end": {
+            "line": 160,
+            "col": 11,
+            "offset": 4589
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    },
+    {
+      "file": "plugins/workmux/scripts/launch-workmux",
+      "language": "Bash",
+      "type": "PartialParsing",
+      "diagnostic": "Syntax error at line plugins/workmux/scripts/launch-workmux:3:",
+      "spans": [
+        {
+          "file": "plugins/workmux/scripts/launch-workmux",
+          "start": {
+            "line": 3,
+            "col": 1,
+            "offset": 0
+          },
+          "end": {
+            "line": 872,
+            "col": 11,
+            "offset": 28457
+          }
+        }
+      ],
+      "shellcheck": "passed"
+    }
+  ],
+  "other_language_parser_errors": 0,
+  "shellcheck_version": "ShellCheck - shell script analysis tool\nversion: 0.11.0\nlicense: GNU General Public License, version 3\nwebsite: https://www.shellcheck.net",
+  "shellcheck_exit_status": 0,
+  "policy": "The standing 2026-10-28 9:39 PM ET rule accepts shell-only parser coverage limits when coverage and unparsed files are recorded and ShellCheck passes on them. No such exception is used for any other language."
+}

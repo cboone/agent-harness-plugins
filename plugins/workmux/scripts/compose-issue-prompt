@@ -41,11 +41,11 @@ function read_issue_json() {
 function validate_json() {
   local issue_json="${1}"
 
-  if ! jq empty > /dev/null 2>&1 <<< "${issue_json}"; then
+  if ! jq empty > /dev/null 2>&1 <<< "${issue_json}"; then # error-output-allow: invalid issue JSON receives a specific validation diagnostic
     die "invalid issue JSON"
   fi
 
-  if ! jq -e 'type == "object"' > /dev/null 2>&1 <<< "${issue_json}"; then
+  if ! jq -e 'type == "object"' > /dev/null 2>&1 <<< "${issue_json}"; then # error-output-allow: non-object issue JSON receives a specific validation diagnostic
     die "invalid issue JSON: expected object"
   fi
 }

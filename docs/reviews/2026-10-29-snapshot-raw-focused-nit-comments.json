@@ -1,0 +1,26 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "The new function comment explains the metadata policy but omits its arguments and side effects. The second argument names an index that the function empties and repopulates, so its requirement to be a private temporary path is an important maintenance precondition.",
+      "file": "plugins/review-pr-with-codex/scripts/review-scope",
+      "fix": "Expand the comment in both canonical copies: \"Build a raw Git tree from the normalized inventory index ($1), using a private temporary index ($2) that is emptied and repopulated. Write the tree OID to stdout and unreferenced objects to Git's object database; fail on unreadable or unsupported disk state. Present type and owner-execute bits come from lstat independently of Git's mode settings.\"",
+      "line": 285,
+      "severity": "suggestion",
+      "title": "write-bash-scripts: Function comments should document the private-index precondition."
+    },
+    {
+      "confidence": 98,
+      "detail": "The test description says the instance was fixed \"before this branch\", which loses its reference after merging and records development history instead of explaining why the regression matters.",
+      "file": "tests/scrut/review-scope-raw.md",
+      "fix": "Replace the paragraph with: \"Staged blobs are independent reviewer inputs even when working-file content and bucket membership stay unchanged.\"",
+      "line": 20,
+      "severity": "suggestion",
+      "title": "write-scrut-tests: Explained tests should describe the invariant rather than branch history."
+    }
+  ],
+  "reviewed": "00da2c4cc09abb4892f56b99da733d15ba7968b1",
+  "strengths": ["The documentation accurately distinguishes normalized content, raw bytes, disk types and owner-execute bits.", "Sparse availability, recursive comparisons and legacy-capture limitations are explained consistently.", "The symlink comment explains why the sentinel preserves trailing newlines."],
+  "summary": "Reviewed comments and documentation across all 33 fixed-base membership paths against the implementation and fixtures. Found two minor documentation improvements and no Important or Critical comment defects; no tests, builds or writes were performed."
+}

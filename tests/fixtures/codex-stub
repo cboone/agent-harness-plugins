@@ -188,13 +188,13 @@ function main() {
       local pid_dir="${CODEX_STUB_PID_DIR:?CODEX_STUB_PID_DIR is required for hang-family mode}"
       # The intermediate shell exits before readiness, removing the ancestry.
       (
-        sleep 300 > /dev/null 2>&1 &
+        sleep 300 > /dev/null 2>&1 & # error-output-allow: fixture child is a silent cancellation target
         echo "$!" > "${pid_dir}/${aspect}.orphan.pid"
       )
       # The late child inherits ignored TERM, requiring cleanup escalation.
       trap '
         trap "" TERM
-        sleep 300 > /dev/null 2>&1 &
+        sleep 300 > /dev/null 2>&1 & # error-output-allow: fixture child is a silent cancellation target
         echo "$!" > "${pid_dir}/${aspect}.late.pid"
         exit 0
       ' TERM
