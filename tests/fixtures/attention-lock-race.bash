@@ -85,7 +85,7 @@ function main() {
     touch -t 200001010000 "${owner}"
   fi
   # Open the observed inode so replacement cannot reuse its identity.
-  exec 7< "${owner}"
+  exec 7< "${owner}" # error-output-allow: descriptor 7 pins the stale inode; stdout and stderr remain live
   trap ': > "${ATTENTION_RACE_DIR}/resume"; : > "${ATTENTION_RACE_DIR}/release-successor"; [[ -z "${RACE_OBSERVER_PID}" ]] || wait "${RACE_OBSERVER_PID}" || :; [[ -z "${RACE_SUCCESSOR_PID}" ]] || capture_child - --wait-log "${ATTENTION_RACE_DIR}/../successor.log" "${RACE_SUCCESSOR_PID}" || :' EXIT
   local event=PostToolUse
   [[ "${kind}" != rotation ]] || event=PermissionDenied

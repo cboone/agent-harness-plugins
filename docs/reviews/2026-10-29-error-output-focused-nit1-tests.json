@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 95,
+      "detail": "Rating 7/10. The stream-context tests cover pipelines, functions, substitutions and exec, but omit `coproc { some-command 2>&1; }` in a default Scrut block. The evaluator lets CoprocClause inherit live stdout, so this stderr capture is accepted even though Bash connects coprocess stdout to a separate pipe. A negative test would expose this additional context-propagation defect, distinct from the two accepted exec limits.",
+      "file": "tests/scrut/error-output-guard.md",
+      "fix": "Add a static coprocess sample asserting the capture diagnostic and exit status 1, plus a reasoned positive control. Classify coprocess stdout as captured or reject that unsupported context.",
+      "line": 574,
+      "severity": "important",
+      "title": "write-scrut-tests: Relevant error output: Coprocess captures lack negative coverage."
+    }
+  ],
+  "reviewed": "994c765674a84c3bbad6f97ed104225c92edb0fb",
+  "strengths": ["Rejection cases assert specific diagnostics and nonzero exit statuses.", "Static samples cover redirect spellings, closures, moves, inherited descriptors, parser failures and exception boundaries.", "Existing integration tests cover shared diagnostic capture, and recorded plants demonstrate sensitivity to earlier guard regressions."],
+  "summary": "Reviewed the scoped changes, tests, existing integrations and recorded plant evidence by inspection. One additional Important coverage gap remains; the two accepted exec limits remain separate. No repository code or checks were run."
+}

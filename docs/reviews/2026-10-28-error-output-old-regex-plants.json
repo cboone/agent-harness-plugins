@@ -1,0 +1,86 @@
+[
+  {
+    "phase": "AST-before",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "AST-before",
+    "sample": "quoted-hash-token-split",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "AST-before",
+    "sample": "stderr-output-close",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "AST-before",
+    "sample": "stderr-input-close",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "old-regex",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "old-regex",
+    "sample": "quoted-hash-token-split",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "old-regex",
+    "sample": "stderr-output-close",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "old-regex",
+    "sample": "stderr-input-close",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "AST-restored",
+    "sample": "allowed-probe",
+    "status": 0,
+    "stdout": "All Git consumers reset their fixture environment.\n",
+    "stderr": ""
+  },
+  {
+    "phase": "AST-restored",
+    "sample": "quoted-hash-token-split",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "AST-restored",
+    "sample": "stderr-output-close",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  },
+  {
+    "phase": "AST-restored",
+    "sample": "stderr-input-close",
+    "status": 1,
+    "stdout": "tests/fixtures/output-sample: retain child errors or add # error-output-allow: reason\n",
+    "stderr": ""
+  }
+]

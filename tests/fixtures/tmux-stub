@@ -194,7 +194,7 @@ function main() {
         command_name="${1}"
         shift
         if [[ "${command_name}" != "list-panes" ]]; then
-          "${command_name//-/_}" "${socket}" "${@}"
+          "${command_name//-/_}" "${socket}" "$@"
           return
         fi
         ;;

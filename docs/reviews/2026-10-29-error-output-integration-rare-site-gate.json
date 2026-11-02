@@ -1,0 +1,203 @@
+{
+  "incoming_main": "5205fada80635f7d9dd4a1967c94a256e60a99cb",
+  "status": "in-progress merge held at explicit additional-rare-site gate",
+  "canonical_new_sites": 4,
+  "physical_new_sites": 4,
+  "generated_duplicates": 0,
+  "rare_sites": [
+    {
+      "kind": "stream-context",
+      "construct": "exec redirection",
+      "line": 65,
+      "end_line": 65,
+      "column": 3,
+      "end_column": 44,
+      "operator": "exec redirection",
+      "descriptor": "context",
+      "allowed_lines": [65],
+      "name": "tests/fixtures/check-codex-failures"
+    },
+    {
+      "kind": "stream-context",
+      "construct": "exec redirection",
+      "line": 66,
+      "end_line": 66,
+      "column": 3,
+      "end_column": 42,
+      "operator": "exec redirection",
+      "descriptor": "context",
+      "allowed_lines": [66],
+      "name": "tests/fixtures/check-codex-failures"
+    },
+    {
+      "kind": "stream-context",
+      "construct": "exec redirection",
+      "line": 67,
+      "end_line": 67,
+      "column": 3,
+      "end_column": 42,
+      "operator": "exec redirection",
+      "descriptor": "context",
+      "allowed_lines": [67],
+      "name": "tests/fixtures/check-codex-failures"
+    },
+    {
+      "kind": "stream-context",
+      "construct": "exec redirection",
+      "line": 89,
+      "end_line": 89,
+      "column": 3,
+      "end_column": 22,
+      "operator": "exec redirection",
+      "descriptor": "context",
+      "allowed_lines": [89],
+      "name": "tests/fixtures/check-codex-failures"
+    }
+  ],
+  "ordinary_errors": [
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 293,
+      "end_line": 293,
+      "column": 62,
+      "end_column": 90,
+      "operator": ">",
+      "descriptor": "2",
+      "allowed_lines": [293],
+      "name": "plugins/review-pr-with-codex/scripts/review-scope"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 293,
+      "end_line": 293,
+      "column": 62,
+      "end_column": 90,
+      "operator": ">",
+      "descriptor": "2",
+      "allowed_lines": [293],
+      "name": "plugins/review-until-clean/scripts/review-scope"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 49,
+      "end_line": 49,
+      "column": 43,
+      "end_column": 47,
+      "operator": ">&",
+      "descriptor": "2",
+      "allowed_lines": [49],
+      "name": "tests/scrut/bash-empty-lists.md#block-6"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 56,
+      "end_line": 56,
+      "column": 52,
+      "end_column": 56,
+      "operator": ">&",
+      "descriptor": "2",
+      "allowed_lines": [56],
+      "name": "tests/scrut/bash-empty-lists.md#block-7"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 61,
+      "end_line": 61,
+      "column": 50,
+      "end_column": 54,
+      "operator": ">&",
+      "descriptor": "2",
+      "allowed_lines": [61],
+      "name": "tests/scrut/bash-empty-lists.md#block-8"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 66,
+      "end_line": 66,
+      "column": 51,
+      "end_column": 55,
+      "operator": ">&",
+      "descriptor": "2",
+      "allowed_lines": [66],
+      "name": "tests/scrut/bash-empty-lists.md#block-9"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 71,
+      "end_line": 71,
+      "column": 51,
+      "end_column": 55,
+      "operator": ">&",
+      "descriptor": "2",
+      "allowed_lines": [71],
+      "name": "tests/scrut/bash-empty-lists.md#block-10"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 76,
+      "end_line": 76,
+      "column": 51,
+      "end_column": 55,
+      "operator": ">&",
+      "descriptor": "2",
+      "allowed_lines": [76],
+      "name": "tests/scrut/bash-empty-lists.md#block-11"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 97,
+      "end_line": 97,
+      "column": 47,
+      "end_column": 51,
+      "operator": ">&",
+      "descriptor": "2",
+      "allowed_lines": [97],
+      "name": "tests/scrut/bash-empty-lists.md#block-14"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 146,
+      "end_line": 146,
+      "column": 69,
+      "end_column": 88,
+      "operator": ">",
+      "descriptor": "2",
+      "allowed_lines": [146],
+      "name": "tests/scrut/review-scope-raw.md#block-12"
+    },
+    {
+      "kind": "capture",
+      "construct": null,
+      "line": 127,
+      "end_line": 127,
+      "column": 69,
+      "end_column": 88,
+      "operator": ">",
+      "descriptor": "2",
+      "allowed_lines": [127],
+      "name": "tests/scrut/review-scope-sparse.md#block-10"
+    }
+  ],
+  "counts": {
+    "capture": 11,
+    "stream-context": 4
+  },
+  "new_reasons_added_to_rare_sites": false,
+  "merge_committed": false,
+  "proposed_reasons": {
+    "65": "Owned readiness FIFO on descriptor 4; standard streams remain live.",
+    "66": "Owned release FIFO for reader one on descriptor 5; standard streams remain live.",
+    "67": "Owned release FIFO for reader two on descriptor 6; standard streams remain live.",
+    "89": "Close only owned barrier descriptors 4, 5 and 6 after both children are reaped."
+  }
+}

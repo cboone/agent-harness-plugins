@@ -307,3 +307,26 @@ an exact-tree comparison before push. The resulting head, comparison result
 and PR URL are reported to TOOLING. Merge stays with TOOLING and waits for
 Chris (he/him)'s hook review because the plugin version bump republishes hooks.
 No hook file, user configuration, software installation or activation changed.
+
+## Main synchronization, 2026-11-02
+
+TOOLING relayed the drain-ready-PRs go-ahead for merging current main, resolving
+conflicts, checking versions and focused tests, and pushing. This uses a signed
+merge commit, preserving published history. The pre-merge head is `66b6d285`;
+main is `97346bc7`. Main's attention-log version is 1.0.3, so this branch advances
+both manifests and regenerated mirrors to 1.0.4.
+
+Conflicts affected the attention-log script, its generated copy and the rotation
+case in attention-log's Scrut document. Resolution preserves stale-owner
+retention, fail-closed openings and explaining diagnostics while incorporating
+main's error-output guard and retained-diagnostic annotations. Comments on age
+and PID probes describe reporting rather than the removed reclaim path.
+The generated script was rebuilt, never edited directly. The race fixture's
+retained inode descriptor has a reason annotation; stdout and stderr stay live.
+The merged-tree error-output guard passes. No hook file or live setting changed.
+
+TOOLING selected attention-log.md, environment-isolation.md and
+error-output-guard.md, plus the guard on the merged tree. Imported main changes
+to other Scrut documents are left to CI. No full suite is run without its lock.
+The earlier full-suite result remains evidence for the earlier published head,
+not a claim about this merged tree. Focused results are recorded below.

@@ -1,0 +1,51 @@
+{
+  "complete": true,
+  "excluded": ["dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json", "dist/codex/plugins/review-pr-with-codex/scripts/codex-aspects", "dist/codex/plugins/review-pr-with-codex/scripts/review-scope", "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md", "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json", "dist/codex/plugins/review-until-clean/scripts/review-scope", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/reviewers.md", "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md"],
+  "findings": [
+    {
+      "detail": "A sparse checkout intentionally leaves tracked paths absent while retaining their skip-worktree entries in the index. The normalized collector preserves those entries, but the raw collector enumerates them and requires every regular-file operand to exist. A checkout containing src/ but excluding a tracked docs/file therefore aborts with 'raw working-tree file changed type or disappeared: docs/file', preventing either review workflow from collecting scope. Distinguish intentionally absent skip-worktree entries from files that disappeared during collection.",
+      "evidence": "working_tree_digest copies the index and runs git add without --sparse. raw_tree_digest then uses ls-files --stage without filtering skip-worktree entries and fails at the existence check. The installed git-sparse-checkout manual explicitly states that an absent skip-worktree file has its absence ignored; git-add documents that entries outside the sparse cone are not updated normally. Both canonical review-scope copies contain this path.",
+      "file": "plugins/review-pr-with-codex/scripts/review-scope",
+      "line": 300,
+      "severity": "important",
+      "title": "Sibling input forms: intentionally absent sparse-checkout files abort raw collection"
+    },
+    {
+      "detail": "The limitations list still says that line-ending changes and edits removed by clean filters cannot be detected. That directly contradicts the new raw-tree comparison and the preceding paragraph. Remove this obsolete limitation so readers receive a consistent account of the new guarantee.",
+      "evidence": "invocation.md:86 says such edits are invisible because the digest uses stored content rather than disk bytes. review-scope now hashes raw_tree into snapshot, and codex-aspects:1203-1207 compares raw trees. scope-and-snapshot.md:45 and the new EOL and clean-filter tests describe these edits as detectable.",
+      "file": "plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+      "line": 86,
+      "severity": "nit",
+      "title": "Docs drift: the limitations list still excludes normalized-away edits"
+    },
+    {
+      "detail": "The generic loop instructions now prescribe only raw-tree comparisons when both captures have raw_tree, whereas the implemented contract unions normalized and raw comparisons. If a clean filter's output changes while its input bytes stay fixed, following these instructions omits the affected file from the ledger even though codex-aspects changes reports it. Prescribe the same union recursively in both workflows.",
+      "evidence": "reviewers.md:137 specifies a raw-only diff-tree command. codex-aspects:1196-1207 always compares normalized trees and additionally compares raw trees. scope-and-snapshot.md:53 explicitly documents that union. invocation.md:80 also describes only raw comparisons and should be aligned.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 137,
+      "severity": "nit",
+      "title": "Parallel paths: generic edit measurement omits normalized-tree changes"
+    },
+    {
+      "detail": "The simplification reporting step still obtains content diffs from before_tree and after_tree, which remain normalized identifiers. After a raw-only edit such as LF-to-CRLF conversion, changes now lists the file but this prescribed diff is empty. Specify raw-tree diffs for raw edits, including corresponding child trees, while retaining normalized comparisons where needed.",
+      "evidence": "codex-aspects:1267-1290 populates before_tree and after_tree from .tree. SKILL.md:159 instructs reporting content with review_diff <before_tree> <after_tree>. The new EOL regression deliberately keeps .tree equal while changes reports f.txt, so that command cannot display the measured edit.",
+      "file": "plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md",
+      "line": 159,
+      "severity": "nit",
+      "title": "Parallel paths: simplification content reporting still uses normalized trees"
+    },
+    {
+      "detail": "The legacy-format test removes raw_tree from two captures whose normalized trees are already equal, then expects an empty changed list. It therefore passes if legacy comparison is replaced with an unconditional empty result. Add a normalized content difference and assert its changed and outside_scope paths; also cover a mixed old/new pair.",
+      "evidence": "The clean-filter case at lines 71-74 establishes equal .tree values for the before/after captures. Lines 110-114 reuse those captures, delete raw_tree, and assert only []. Skipping comparison whenever either capture lacks raw_tree produces exactly the same expected output. Defect planting was not run.",
+      "file": "tests/scrut/review-scope-raw.md",
+      "line": 110,
+      "severity": "nit",
+      "title": "Tests that cannot fail: legacy coverage cannot detect a missing fallback comparison"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Scope: 7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71..HEAD, ending at 0440c404134e049402e220a7efee7f62a645ff86. Read all 13 non-generated changed files, including full production and test files. Eight dist/codex generated mirrors were excluded as listed. Working-tree changes: none. No PR exists according to the parent's verification; no PR body was missing. No gh call or moving-default-branch lookup ran.\n\nResult: 1 Important finding and 4 Nits. Complete structural review; this is not a clean result or a runtime-validation pass. Staging invalidation was treated as intentional. Historical child guidance remained outside this task.\n\nExecution: this session, as expressly requested. --no-codex ruled out another Codex process; the user also prohibited delegation. Session could write: no, enforced by the read-only sandbox. --run-checks: off. No repository code, tests or builds were executed. No files were edited and no mailbox messages were sent. Nothing was left behind.\n\nGroups: code, agent prose and docs. Walked all thirteen anti-pattern items: Sibling input forms; Boundary arithmetic; Stale writes; Validator gaps; Absent or partial data; Untrusted data in commands; Tests that cannot fail; Crashes instead of reports; Unrun platform configuration; Unenforced trust boundary; Parallel paths; Agent-prose control flow; Docs drift. Applied the repository Bash, Markdown and Scrut style checklists, including their CI exclusions.\n\nMechanical checks: bash -n passed separately for both review-scope copies, codex-aspects and review-submodule-fixture. jq empty passed for both changed manifests. cmp confirmed the canonical review-scope copies are byte-identical. Git documentation confirmed --no-filters and sparse-checkout semantics without executing repository code. Behavioral suites, mutation sensitivity and repository lint/validation remain unverified.\n\nSiblings examined: for sparse collection, both canonical collectors, normalized-index construction, inventory generation and recursive submodules; for the obsolete limitation, invocation guidance, scope guarantees and EOL/filter regressions; for comparison parity, generic reviewer instructions, codex-aspects and recursive comparison guidance; for content reporting, simplify instructions and the normalized before_tree/after_tree output fields; for legacy coverage, the equal-tree filter captures and existing aspect comparison/error tests.",
+  "reviewed": "7a6997e7414d590b61f14ee8b9e9fc06cb7f5f71..HEAD",
+  "status": "success",
+  "unverified": ["Behavioral suites: make test-scrut. Not run because repository code and tests were expressly prohibited.", "Mutation sensitivity: invoke $plant-defects for raw hashing, index binding, mutation paths, stability and legacy fallback, then run make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope-raw.md. Planting edits files and was prohibited.", "Repository lint: make lint. Not run because this was a structural review without repository-command execution.", "Repository validators: make validate. Not run because repository-code execution was prohibited."]
+}

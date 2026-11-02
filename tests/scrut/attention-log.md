@@ -57,7 +57,7 @@ Usage: attention-log <command> [options]
 ## No command is a usage error
 
 ```scrut
-$ al 2>&1 | sed -n 1p
+$ al 2>&1 | sed -n 1p # error-output-allow: snapshot asserts the usage-error diagnostic
 Usage: attention-log <command> [options]
 [2]
 ```
@@ -272,7 +272,7 @@ $ fresh
 > wait "${stopped}"
 > mkdir -p "${ATTENTION_LOG_DIR}/sessions/s1.lock"
 > printf '%s\n' "${stopped}" > "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid"
-> hook PostToolUse '{"tool_name": "Bash", "tool_input": {}, "tool_response": {}, "tool_use_id": "t1"}' 2> "${work}/stale-error"
+> hook PostToolUse '{"tool_name": "Bash", "tool_input": {}, "tool_response": {}, "tool_use_id": "t1"}' 2> "${work}/stale-error" # error-output-allow: fixture asserts retained stale-owner diagnostics
 > events .event | tail -n 1
 > test "$(cat "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid")" = "${stopped}" && grep -q 'stop all attention-log writers before manual recovery' "${work}/stale-error" && echo 'stale owner retained and reported'
 "permission_request"
@@ -315,7 +315,7 @@ $ (exit 0) & stopped=$!; wait "${stopped}"
 >       error) event=StopFailure; extra='{"error":"overloaded"}' ;;
 >       refusal) event=StopFailure; extra="$(jq -nc --arg t "${work}/blocked-refusal.jsonl" '{error:"invalid_request",transcript_path:$t}')" ;;
 >     esac
->     hook "${event}" "${extra}" 2> "${work}/blocked-opening-error" || exit 1
+>     hook "${event}" "${extra}" 2> "${work}/blocked-opening-error" || exit 1 # error-output-allow: fixture asserts diagnostics for skipped state-opening events
 >     test -f "${owner}" && test ! -e "${events_file}" && test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && grep -q 'observed stale session owner' "${work}/blocked-opening-error" || exit 1
 >     rm -- "${owner}"
 >     hook PermissionRequest '{"tool_name":"Bash"}' && hook PostToolUse '{"tool_name":"Bash"}' || exit 1
@@ -340,7 +340,7 @@ $ for event in PermissionRequest Notification StopFailure; do
 >   fresh
 >   mkdir -p "${ATTENTION_LOG_DIR}/sessions"
 >   chmod 500 "${ATTENTION_LOG_DIR}/sessions"
->   hook "${event}" '{"notification_type":"permission_prompt","error":"overloaded"}' 2> "${work}/prepare-error" && hook_status=0 || hook_status=$?
+>   hook "${event}" '{"notification_type":"permission_prompt","error":"overloaded"}' 2> "${work}/prepare-error" && hook_status=0 || hook_status=$? # error-output-allow: fixture asserts retained lock-directory preparation errors
 >   chmod 700 "${ATTENTION_LOG_DIR}/sessions"
 >   test "${hook_status}" = 0 && test ! -e "${events_file}" && grep -q 'cannot prepare session lock directory.*s1.lock:.*Permission denied' "${work}/prepare-error" && grep -q 'session update skipped; check directory permissions and available storage' "${work}/prepare-error" || exit 1
 >   hook "${event}" '{"notification_type":"permission_prompt","error":"overloaded"}' || exit 1
@@ -375,7 +375,7 @@ $ mkdir -p "${work}/failure-bin"
 >     stale-owner) mkdir -p "${lock}"; printf '%s\n' "${stopped}" > "${lock}/pid"; explanation='observed stale session owner' ;;
 >     exhaustion) mkdir -p "${lock}"; printf '%s\n' "$$" > "${lock}/pid"; explanation="session lock retries exhausted.*after 101 attempts; observed owner $$" ;;
 >   esac
->   PATH="${work}/failure-bin:${PATH}" BASH_ENV="${failure_env}" LOCK_TEST_MODE=write hook PermissionRequest 2> "${work}/failure-error" && hook_status=0 || hook_status=$?
+>   PATH="${work}/failure-bin:${PATH}" BASH_ENV="${failure_env}" LOCK_TEST_MODE=write hook PermissionRequest 2> "${work}/failure-error" && hook_status=0 || hook_status=$? # error-output-allow: fixture asserts each session-lock failure explanation
 >   chmod 700 "${ATTENTION_LOG_DIR}/sessions"
 >   test ! -d "${lock}" || chmod 700 "${lock}"
 >   test "${hook_status}" = 0 && test ! -e "${events_file}" && test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" || exit 1
@@ -456,7 +456,7 @@ rotation owner preserved
 ```scrut
 $ fresh
 > hook PermissionRequest '{"tool_name":"Bash"}'
-> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_MODE=write /bin/bash "${ATTENTION_LOG_BIN}" hook PostToolUse 2> "${work}/pid-write-error"
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_MODE=write /bin/bash "${ATTENTION_LOG_BIN}" hook PostToolUse 2> "${work}/pid-write-error" # error-output-allow: fixture asserts retained owner-write diagnostics and subsequent lock recovery
 > test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.lock/pid" && test -f "${ATTENTION_LOG_DIR}/sessions/s1.open" && grep -q 'injected owner write failure' "${work}/pid-write-error" || exit 1
 > hook PostToolUse '{"tool_name":"Bash"}'
 > test ! -e "${ATTENTION_LOG_DIR}/sessions/s1.open" && echo 'reservation released; next hook cleared the state'
@@ -472,7 +472,7 @@ $ fresh
 > cp "${DIRECTORY_LOCK_STUB_BIN}" "${work}/release-bin/rm"
 > test "$(export PATH="${work}/release-bin:${PATH}"; command -v rm)" = "${work}/release-bin/rm" || exit 1
 > head -c 5242880 /dev/zero > "${events_file}"
-> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/release-bin:${PATH}" LOCK_TEST_REAL_RM="$(command -v rm)" LOCK_TEST_MODE=cleanup LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REPORT_ORDER=true BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/release-error"
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE PATH="${work}/release-bin:${PATH}" LOCK_TEST_REAL_RM="$(command -v rm)" LOCK_TEST_MODE=cleanup LOCK_TEST_DIRECTORY="${lock}" LOCK_TEST_REPORT_ORDER=true BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/release-error" # error-output-allow: fixture asserts retained unlink diagnostics and pending-event ordering
 > test -f "${lock}/owner" && test ! -e "${lock}/reported-before-append" && grep -q 'owner-lock: cannot release.*injected owner unlink failure' "${work}/release-error" || exit 1
 > jq -r '.event' "${events_file}"
 auto_denied
@@ -484,7 +484,7 @@ auto_denied
 $ fresh
 > mkdir -p "${ATTENTION_LOG_DIR}"
 > head -c 5242880 /dev/zero > "${events_file}"
-> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_MODE=write /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/rotation-pid-error"
+> payload '{"tool_name":"Bash"}' | env -u TMUX -u TMUX_PANE BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_MODE=write /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionDenied 2> "${work}/rotation-pid-error" # error-output-allow: fixture asserts retained rotation-owner write diagnostics
 > test ! -e "${ATTENTION_LOG_DIR}/rotate.lock/owner" && grep -q 'injected owner write failure' "${work}/rotation-pid-error" || exit 1
 > tr -d '\000' < "${events_file}" | jq -r '.event'
 auto_denied
@@ -496,7 +496,7 @@ auto_denied
 $ fresh
 > hook PermissionRequest '{"tool_name":"Bash"}'
 > chmod 500 "${ATTENTION_LOG_DIR}/sessions/s1.lock"
-> hook PostToolUse '{"tool_name":"Bash"}' 2> "${work}/session-reserve-error"
+> hook PostToolUse '{"tool_name":"Bash"}' 2> "${work}/session-reserve-error" # error-output-allow: fixture asserts retained reservation permission diagnostics and recovery
 > grep -q 'owner-lock: cannot create.*s1.lock/pid:.*Permission denied' "${work}/session-reserve-error" && test -e "${ATTENTION_LOG_DIR}/sessions/s1.open" || exit 1
 > chmod 700 "${ATTENTION_LOG_DIR}/sessions/s1.lock"
 > hook PostToolUse '{"tool_name":"Bash"}'
@@ -511,7 +511,7 @@ $ fresh
 > mkdir -p "${ATTENTION_LOG_DIR}/rotate.lock"
 > chmod 500 "${ATTENTION_LOG_DIR}/rotate.lock"
 > head -c 5242880 /dev/zero > "${events_file}"
-> BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_REPORT_ORDER=true LOCK_TEST_DIRECTORY="${ATTENTION_LOG_DIR}/rotate.lock" LOCK_TEST_ORDER_MARKER="${ATTENTION_LOG_DIR}/early-report" hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/rotation-reserve-error"
+> BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_REPORT_ORDER=true LOCK_TEST_DIRECTORY="${ATTENTION_LOG_DIR}/rotate.lock" LOCK_TEST_ORDER_MARKER="${ATTENTION_LOG_DIR}/early-report" hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/rotation-reserve-error" # error-output-allow: fixture asserts retained rotation permission diagnostics and append ordering
 > grep -q 'owner-lock: cannot create.*rotate.lock/owner:.*Permission denied' "${work}/rotation-reserve-error" || exit 1
 > test ! -e "${ATTENTION_LOG_DIR}/early-report" || exit 1
 > chmod 700 "${ATTENTION_LOG_DIR}/rotate.lock"
@@ -787,7 +787,7 @@ $ fresh
 > touch "${ATTENTION_LOG_DIR}/rotate.lock/owner"
 > touch -t 202001010000 "${ATTENTION_LOG_DIR}/rotate.lock/owner"
 > head -c 5242880 /dev/zero > "${events_file}"
-> BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_REPORT_ORDER=true LOCK_TEST_DIRECTORY="${ATTENTION_LOG_DIR}/rotate.lock" hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/aged-rotation-error"
+> BASH_ENV="${OWNER_WRITE_FAILURE_ENV}" LOCK_TEST_REPORT_ORDER=true LOCK_TEST_DIRECTORY="${ATTENTION_LOG_DIR}/rotate.lock" hook PermissionDenied '{"tool_name":"Bash"}' 2> "${work}/aged-rotation-error" # error-output-allow: fixture asserts aged-owner diagnostics after saving the pending event
 > test ! -e "${events_file}.1" && test -f "${ATTENTION_LOG_DIR}/rotate.lock/owner" && test ! -e "${ATTENTION_LOG_DIR}/rotate.lock/reported-before-append" && grep -q 'observed aged rotation owner' "${work}/aged-rotation-error" || exit 1
 > tr -d '\000' < "${events_file}" | jq -r '.event'
 auto_denied
@@ -802,13 +802,13 @@ $ fresh
 > hook PermissionDenied '{"tool_name": "Bash", "tool_input": {"command": "x"}, "reason": "r"}'
 > al wait --events refusal_stop,api_error_stop > "${work}/waited" &
 > waiter=$!
-> (trap 'kill "${nap}" 2> /dev/null; exit 0' TERM; sleep 15 & nap=$!; wait "${nap}"; kill "${waiter}") > /dev/null 2>&1 &
+> (trap 'kill "${nap}" 2> /dev/null; exit 0' TERM; sleep 15 & nap=$!; wait "${nap}"; kill "${waiter}") > /dev/null &
 > guard=$!
 > sleep 1.5
 > hook PermissionRequest '{"tool_name": "Bash", "tool_input": {"command": "a"}}'
 > hook StopFailure '{"error": "overloaded", "last_assistant_message": "API Error: overloaded"}'
 > wait "${waiter}"
-> kill "${guard}" 2> /dev/null
+> kill "${guard}"
 > head -n 1 "${work}/waited" | jq -c .event
 > inode="$(ls -di "${events_file}" | awk '{print $1}')"
 > [[ "$(tail -n 1 "${work}/waited")" == "${inode}:$(wc -c < "${events_file}" | tr -d ' ')" ]] && echo "position is the end of the matching line"
@@ -902,7 +902,7 @@ position is the end of the current file's first line
 ## Wait rejects unknown events
 
 ```scrut
-$ al wait --events permission_requested 2>&1 | sed -n 1p
+$ al wait --events permission_requested 2>&1 | sed -n 1p # error-output-allow: testcase asserts retained diagnostics: Wait rejects unknown events
 attention-log: unknown event 'permission_requested'
 [2]
 ```
@@ -959,7 +959,7 @@ s3 (api_error_stop overloaded, AGE)
 ## Readers reject numbers too large to hold
 
 ```scrut
-$ al pending --older-than 1234567890123456 2>&1 | sed -n 1p
+$ al pending --older-than 1234567890123456 2>&1 | sed -n 1p # error-output-allow: testcase asserts retained diagnostics: Readers reject numbers too large to hold
 attention-log: --older-than needs a number of seconds
 [2]
 ```
@@ -970,7 +970,7 @@ attention-log: --older-than needs a number of seconds
 $ fresh
 > mkdir -p "${ATTENTION_LOG_DIR}"
 > chmod 000 "${ATTENTION_LOG_DIR}"
-> al pending 2>&1 | sed "s|${ATTENTION_LOG_DIR}|STATE|"; status=$?
+> al pending 2>&1 | sed "s|${ATTENTION_LOG_DIR}|STATE|"; status=$? # error-output-allow: testcase asserts retained diagnostics: Readers report a state directory they cannot read
 > chmod 700 "${ATTENTION_LOG_DIR}"
 > exit "${status}"
 attention-log: cannot read STATE
@@ -985,7 +985,7 @@ It still prints nothing on stdout and exits 0.
 $ fresh
 > mkdir -p "${work}/no-jq"
 > for tool in cat mkdir; do ln -sf "$(command -v "${tool}")" "${work}/no-jq/${tool}"; done
-> output="$(payload '{"tool_name": "Read", "tool_input": {"file_path": "/work/a"}}' | env -u TMUX -u TMUX_PANE PATH="${work}/no-jq" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionRequest 2> "${work}/no-jq.err")"; echo "exit $? stdout ${#output}"
+> output="$(payload '{"tool_name": "Read", "tool_input": {"file_path": "/work/a"}}' | env -u TMUX -u TMUX_PANE PATH="${work}/no-jq" /bin/bash "${ATTENTION_LOG_BIN}" hook PermissionRequest 2> "${work}/no-jq.err")"; echo "exit $? stdout ${#output}" # error-output-allow: testcase asserts retained diagnostics: A hook without jq says so on stderr
 > cat "${work}/no-jq.err"
 exit 0 stdout 0
 attention-log: jq is required and is not on PATH; no event was recorded
