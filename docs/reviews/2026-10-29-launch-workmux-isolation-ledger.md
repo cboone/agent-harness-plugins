@@ -222,3 +222,39 @@ Semgrep's inclusive baseline completed without findings or errors. Version audit
 requires no bump. Signed exact-tree tidy and ready-PR handoff follow these checks;
 TOOLING owns merging. The runner summary's hidden skip reason remains a follow-up,
 as directed, rather than a change in this branch.
+
+## Main integration, 2026-11-02
+
+TOOLING authorized merging `origin/main` with a signed merge commit, preserving
+published history and running only conflict/dependency tests plus environment
+isolation. Local history first fast-forwarded to the already-pushed PR head
+`65f148d1`. Signed merge `5a07c967` joins that head with main `97346bc7`.
+
+Conflicts were limited to the socket fixture and original launcher document.
+Kept the replacement fixture's creation/connection probes and native restriction
+skips, removed the superseded helper from the original document, and retained
+main's other launcher diagnostic annotations. Main's stderr policy now also
+applies to the moved cleanup commands. Six Ruby/Perl contract blocks use main's
+shared `capture_child` helper, preserving their diagnostic, exit-status,
+empty-stdout and socket-cleanup assertions. Startup diagnostics remain visible;
+the retained server's detached streams are unchanged.
+
+TOOLING clarified that unrelated Scrut documents inherited from main belong to
+CI. No full suite ran for this integration. The approved checks all passed:
+
+| Document                           | Cases passed |
+| ---------------------------------- | ------------ |
+| launch-workmux                     | 64           |
+| launch-workmux-sockets             | 7            |
+| unix-socket-fixture                | 5            |
+| unix-socket-fixture-perl           | 6            |
+| unix-socket-fixture-perl-lifecycle | 2            |
+| unix-socket-fixture-ruby-lifecycle | 2            |
+| environment-isolation              | 51           |
+
+Total: 7 documents, 137 cases, zero failures or skips. Fixture-environment policy,
+Bash syntax, ShellCheck, shfmt, scoped Markdown and Prettier checks passed.
+Version checks against main `97346bc7` passed for all 60 registered plugins:
+no branch-specific plugin content changes, version bumps or version collisions.
+Existing review counts and decisions remain unchanged; this follow-up adds no
+fresh review round and does not rewrite or tidy published history.
