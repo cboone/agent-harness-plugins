@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# client-policy-case -- Exercise shipped client gates with isolated Git and gh
+# Author: Christopher Boone
+# Date: 2026-11-02
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+CASE_DIR=""
+
+function rewrite_raw() {
+  jq "$@" "${CASE_DIR}/raw" > "${CASE_DIR}/next"
+  mv "${CASE_DIR}/next" "${CASE_DIR}/raw"
+}
+
+function main() {
+  local mode="${1:?case required}" fixture_dir tree head unrelated code=0 reason=ADDRESSED context_filter="."
+  local helper="${REPO_ROOT}/plugins/monitor-pr/scripts/resolve-copilot-threads"
+  local flow="${REPO_ROOT}/plugins/monitor-pr/scripts/merge-flow"
+  fixture_dir="$(cd "$(dirname "$0")" && pwd)"
+  CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/client-policy.XXXXXX")"
+  trap 'rm -r "${CASE_DIR}"' EXIT
+  mkdir "${CASE_DIR}/bin" "${CASE_DIR}/data"
+  cp "${fixture_dir}/client-policy-gh-stub" "${CASE_DIR}/bin/gh"
+  cp "${fixture_dir}/copilot-gh-stub" "${CASE_DIR}/bin/read-stub"
+  cp -R "${REPO_ROOT}/tests/data/copilot-gh/api" "${CASE_DIR}/data/api"
+  mkdir "${CASE_DIR}/data/graphql"
+  cp "${REPO_ROOT}/tests/data/copilot-gh/graphql/o_r_7.json" "${CASE_DIR}/data/graphql/swing-left_r_7.json"
+  export PATH="${CASE_DIR}/bin:${PATH}"
+  export STUB_COPILOT_GH_DIR="${CASE_DIR}/data"
+  [[ "$(command -v gh)" == "${CASE_DIR}/bin/gh" ]] || exit 1
+  git init -q "${CASE_DIR}/repo"
+  cd "${CASE_DIR}/repo"
+  tree="$(git mktree < /dev/null)"
+  head="$(printf head | git -c user.name=Sample -c user.email=sample@example.invalid commit-tree "${tree}")"
+  unrelated="$(printf unrelated | git -c user.name=Sample -c user.email=sample@example.invalid commit-tree "${tree}")"
+  jq -n --arg head "${head}" '{data:{node:{__typename:"PullRequestReviewThread",id:"THREAD",isResolved:false,pullRequest:{number:7,headRefOid:$head,state:"OPEN",repository:{nameWithOwner:"swing-left/r"}},comments:{nodes:[{author:{login:"copilot-pull-request-reviewer"},body:"Finding.",pullRequestReview:{reviewId:"10"}}]}}}}' > "${CASE_DIR}/bin/context"
+  : > "${CASE_DIR}/bin/calls"
+  jq -n --arg head "${head}" '{snapshot:{state:"OPEN",number:7,headRefOid:$head},restrictions:{repository:"swing-left/r",noFix:false,copilotPaused:false}}' > "${CASE_DIR}/raw"
+  case "${mode}" in
+    intake) ;;
+    paused)
+      rewrite_raw '.restrictions.repository="cboone/r"'
+      ;;
+    unapproved) ;;
+    *)
+      # shellcheck disable=SC2016 # jq variables are literal filter expressions.
+      rewrite_raw --arg head "${head}" '.restrictions.clientRound={repository:"swing-left/r",authority:"sample round go-ahead",prNumber:7,head:$head,reviewIds:[10]} | .reviewId=10 | .fixedThreads.THREAD=$head'
+      ;;
+  esac
+  if [[ "${mode}" == missing-record || "${mode}" == reply-unfixed ]]; then
+    rewrite_raw 'del(.fixedThreads)'
+  elif [[ "${mode}" == wrong-reason ]]; then
+    reason=WONT_FIX
+  elif [[ "${mode}" == no-fix || "${mode}" == explicit-pause ]]; then
+    # shellcheck disable=SC2016 # jq variables are literal filter expressions.
+    rewrite_raw --arg mode "${mode}" '.restrictions.noFix=($mode=="no-fix") | .restrictions.copilotPaused=($mode=="explicit-pause")'
+  elif [[ "${mode}" == wrong-review ]]; then
+    rewrite_raw '.reviewId=11'
+  elif [[ "${mode}" == unfixed ]]; then
+    # shellcheck disable=SC2016 # jq variables are literal filter expressions.
+    rewrite_raw --arg fix "${unrelated}" '.fixedThreads.THREAD=$fix'
+  elif [[ "${mode}" == wrong-repository ]]; then
+    rewrite_raw '.restrictions.repository="swing-left/other"'
+  elif [[ "${mode}" == wrong-pr ]]; then
+    rewrite_raw '.snapshot.number=8'
+  elif [[ "${mode}" == missing-authority ]]; then
+    rewrite_raw 'del(.restrictions.clientRound.authority)'
+  elif [[ "${mode}" == empty-authority ]]; then
+    rewrite_raw '.restrictions.clientRound.authority=""'
+  elif [[ "${mode}" == blank-authority ]]; then
+    rewrite_raw '.restrictions.clientRound.authority=" "'
+  fi
+  if [[ "${mode}" == thread-read-failure ]]; then
+    touch "${CASE_DIR}/bin/fail-context"
+  fi
+  # shellcheck disable=SC2016 # jq variables are literal filter expressions.
+  case "${mode}" in
+    moved | moved-reply) context_filter='.data.node.pullRequest.headRefOid=$head' ;;
+    closed-*) context_filter='.data.node.pullRequest.state="CLOSED"' ;;
+    other-id) context_filter='.data.node.id="OTHER"' ;;
+    other-type) context_filter='.data.node.__typename="Issue"' ;;
+    numeric-review) context_filter='.data.node.comments.nodes[0].pullRequestReview.reviewId=10' ;;
+    actions-thread) context_filter='.data.node.comments.nodes[0].author.login="github-actions[bot]" | .data.node.comments.nodes[0].body="[important] Finding."' ;;
+    other-review) context_filter='.data.node.comments.nodes[0].pullRequestReview.reviewId="11"' ;;
+    other-pr) context_filter='.data.node.pullRequest.number=8' ;;
+    other-repo) context_filter='.data.node.pullRequest.repository.nameWithOwner="swing-left/other"' ;;
+    human-thread) context_filter='.data.node.comments.nodes[0].author.login="sample-human"' ;;
+    resolved-thread) context_filter='.data.node.isResolved=true' ;;
+    missing-thread) context_filter='.data.node=null' ;;
+    thread-errors) context_filter='.errors=[{message:"sample read error"}]' ;;
+    moved-between)
+      jq --arg head "${unrelated}" '.data.node.pullRequest.headRefOid=$head' "${CASE_DIR}/bin/context" > "${CASE_DIR}/bin/after-reply"
+      ;;
+    *) ;;
+  esac
+  jq --arg head "${unrelated}" "${context_filter}" "${CASE_DIR}/bin/context" > "${CASE_DIR}/bin/next"
+  mv "${CASE_DIR}/bin/next" "${CASE_DIR}/bin/context"
+  if "${flow}" prepare < "${CASE_DIR}/raw" > "${CASE_DIR}/state"; then
+    :
+  else
+    code=$?
+    printf 'policy exit=%s; gh calls=%s\n' "${code}" "$(wc -l < "${CASE_DIR}/bin/calls" | tr -d ' ')"
+    return "${code}"
+  fi
+  if [[ "${mode}" == intake || "${mode}" == paused ]]; then
+    bash "${helper}" --watch-state "${CASE_DIR}/state" fetch-reviews swing-left r 7 > "${CASE_DIR}/reviews" || code=$?
+    if [[ "${code}" == 0 ]]; then
+      jq -c '{reviews:length,ids:map(.id)}' "${CASE_DIR}/reviews"
+      bash "${helper}" --watch-state "${CASE_DIR}/state" fetch swing-left r 7 | jq -c '{threads:length}'
+      bash "${helper}" --watch-state "${CASE_DIR}/state" audit swing-left r 7 | jq -c '{surfaces,uncovered:(.uncovered|length)}'
+    fi
+  else
+    if [[ "${mode}" == reply-unfixed ]]; then
+      printf '%s\n' 'Left unchanged: outside the agreed scope.' > "${CASE_DIR}/reply"
+    else
+      printf '%s\n' 'Fixed in the published commit.' > "${CASE_DIR}/reply"
+    fi
+    case "${mode}" in
+      reply | reply-unfixed | moved-reply | closed-reply)
+        bash "${helper}" --watch-state "${CASE_DIR}/state" reply THREAD --body-file "${CASE_DIR}/reply" || code=$?
+        ;;
+      resolve | closed-resolve)
+        bash "${helper}" --watch-state "${CASE_DIR}/state" resolve THREAD --reason "${reason}" || code=$?
+        ;;
+      *)
+        bash "${helper}" --watch-state "${CASE_DIR}/state" reply-and-resolve THREAD --reason "${reason}" --body-file "${CASE_DIR}/reply" || code=$?
+        ;;
+    esac
+  fi
+  printf 'exit=%s; replies=%s; resolutions=%s\n' "${code}" \
+    "$(grep -c addPullRequestReviewThreadReply "${CASE_DIR}/bin/calls" || :)" \
+    "$(grep -c 'resolveReviewThread(input' "${CASE_DIR}/bin/calls" || :)"
+}
+
+main "$@"

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# client-policy-gh-stub -- Copilot reads and writes in isolated policy cases
+# Author: Christopher Boone
+# Date: 2026-11-02
+set -euo pipefail
+
+function main() {
+  local fixture_dir query="" argument
+  fixture_dir="$(cd "$(dirname "$0")" && pwd)"
+  printf '%s\n' "$*" >> "${fixture_dir}/calls"
+  if [[ "$*" == 'auth status' ]]; then return; fi
+  [[ "${1:-}" == api ]] || exit 99
+  for argument in "$@"; do
+    case "${argument}" in
+      query=*) query="${argument#query=}" ;;
+      *) ;;
+    esac
+  done
+  # shellcheck disable=SC2016 # GraphQL variables are literal query text.
+  case "${query}" in
+    *'node(id: $threadId)'*)
+      if [[ -f "${fixture_dir}/fail-context" ]]; then
+        printf '%s\n' 'sample thread read failure' >&2
+        return 7
+      fi
+      cat "${fixture_dir}/context"
+      ;;
+    *addPullRequestReviewThreadReply*)
+      printf '%s\n' '{"data":{"addPullRequestReviewThreadReply":{"comment":{"id":"reply1"}}}}'
+      if [[ -f "${fixture_dir}/after-reply" ]]; then
+        mv "${fixture_dir}/after-reply" "${fixture_dir}/context"
+      fi
+      ;;
+    *resolveReviewThread*)
+      printf '%s\n' '{"data":{"resolveReviewThread":{"thread":{"isResolved":true}}}}'
+      ;;
+    *) exec bash "${fixture_dir}/read-stub" "$@" ;;
+  esac
+}
+
+main "$@"
