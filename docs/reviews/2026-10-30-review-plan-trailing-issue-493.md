@@ -86,3 +86,5 @@ TOOLING relayed the tl27 drain go-ahead for a signed merge, bounded checks and p
 - `environment-isolation.md`: 51 of 51 cases passed; the earlier fixture baseline failure is resolved by the merged main changes.
 
 Only these four documents ran. On receipt of the thermal limit, the first three had finished and only environment isolation remained running; no further concurrent test work started. The other documents imported from main and the full suite were not run, as directed. Existing review counts and end states carry forward; the conflict resolution changes no matching behavior. TOOLING retains CI and merge ownership.
+
+Before pushing, the PR's remote head was found at GitHub's earlier main merge `a14cccef`, absent from the local history. Its main parent `97346bc7` is already an ancestor of the tested `7817cab6`. Signed merge `0a0191d6` preserves that remote commit; its tree exactly matches tested head `07ecbed0`. Only this record changes afterward. No force push, rebase or repeat test run is needed.
