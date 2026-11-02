@@ -38,10 +38,10 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME -u XDG_STATE_HOME \
 	-u PUSH_NOTIFICATION_BACKEND -u PUSH_NOTIFICATION_CONFIG -u NTFY_SERVER -u NTFY_TOPIC -u NTFY_TOKEN
 
-# Every scrut test resolves the script or fixture it exercises through one of
-# these variables. Defining them once keeps the test and update targets from
-# drifting apart. CI invokes these targets and uses this same environment.
+# Share script and fixture paths between the test and update targets.
 SCRUT_ENV := \
+	RUST_AUDIT_CASE_BIN="$(CURDIR)/tests/fixtures/rust-audit-case" \
+	RUST_AUDIT_TEMPLATE="$(CURDIR)/plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template" \
 	VERSION_AUDIT_BIN="$(CURDIR)/bin/version-audit" \
 	VERSION_AUDIT_STUB_BIN="$(CURDIR)/tests/fixtures/version-audit-stub" \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
