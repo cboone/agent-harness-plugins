@@ -118,3 +118,13 @@ The original-range plant changed the real canonical skill and edit reference tem
 Local implementation, reviews, source generation, focused regressions, live evaluations, plants, baseline scan and the locked full-suite attempt are complete. The brief's known baseline failures remain outside this change. Structural review ended **clean at Critical**; general review **ended: fixes changed no behavior** after taking its test and dependency-documentation findings. No reviewer Important or Critical label was downgraded.
 
 Publication follows the project's signed logical-commit tidy and ready-PR procedure. The final tree comparison, commit IDs and PR URL are reported to TOOLING by mailbox. The local pre-tidy branch preserves the original review history; no pushed history is rewritten. TOOLING owns merging.
+
+## Main synchronization, 2026-11-02
+
+TOOLING relayed the recorded tl27 drain go-ahead to merge main, satisfy its new error-output guard, run named checks and push. Signed merge `9dd47711` incorporates `origin/main` at `7817cab6`. The evaluation README conflict retains both independent sections. The only guard finding in this branch was the retained Git-failure log in the edit-worktree Scrut document; its new reasoned annotation identifies the following diagnostic snapshot. No implementation behavior changed.
+
+Remote synchronization `ce95b7b5` was already published but absent locally. Signed merge `7990825f` retains that history with no tree change. No rebase or force push was used. The version audit confirms `review-anti-patterns` 1.1.4 on main to 1.2.0 here, a forward minor capability bump. All 61 plugins have catalog coverage, manifest-only version ownership and matching present Codex manifest versions. JSON and plugin validation, both fixture-environment checks, and formatting/Markdown lint on the resolved README and annotated test pass.
+
+TOOLING narrowed validation during the run because of the host's urgent thermal level: only the edit-worktree, error-output-guard and environment-isolation documents remain required, sequentially. The broader runner was stopped; attention-log and backlog-gather completed successfully before the stop. Other merge-changed documents are left to CI. No full suite was run.
+
+Final targeted results: edit-worktree 33/33, error-output-guard 102/102 and environment-isolation all cases passed. No skipped cases or failing documents remain in this narrowed run. Logs are retained at `/tmp/624-merge-checks-20261102`. The earlier broad runner is stopped; no full-suite lease was taken. TOOLING owns CI follow-up and merging.
