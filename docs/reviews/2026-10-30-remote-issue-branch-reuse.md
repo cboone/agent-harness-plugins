@@ -1,7 +1,27 @@
 # Remote issue branch reuse review
 
-Base: `origin/main` at `5205fada80635f7d9dd4a1967c94a256e60a99cb`.
+Original review base: `origin/main` at `5205fada80635f7d9dd4a1967c94a256e60a99cb`.
 Scope: issue 415, cached origin lookup, local preference, tracking creation and regression coverage.
+
+## Main integration, 2026-11-02
+
+Merged current main `7817cab6` into the published PR history with signed merge commit `2cbadf24`, after first fast-forwarding to its published head `aafe98cc`. Existing commits remain intact. The launcher-test conflict keeps main's isolated `TMPDIR` cleanup check and the remote-aware ambiguity message. The Git fixture includes main's portable real-Git lookup from the operand-path fix. Workmux is `1.1.7`, above main's `1.1.6`; mirrors rebuilt and check-versions passed for all 61 catalog entries and optional Codex manifests.
+
+The new error-output AST guard and fixture-environment check pass on the merged tree, as does the review-path operand check. ShellCheck and shfmt pass for the launcher and both owned stubs. No branch-specific runtime changes or new guard exceptions were needed.
+
+Targeted Scrut results, at most two documents concurrently:
+
+| Document                    | Passed | Failed | Skipped |
+| --------------------------- | ------ | ------ | ------- |
+| `launch-workmux.md`         | 64     | 0      | 0       |
+| `launch-workmux-remote.md`  | 13     | 0      | 0       |
+| `launch-workmux-sockets.md` | 7      | 0      | 0       |
+| `launch-workmux-options.md` | 16     | 0      | 0       |
+| `git-worktree-stub.md`      | 5      | 0      | 0       |
+| `error-output-guard.md`     | 102    | 0      | 0       |
+| `environment-isolation.md`  | 51     | 0      | 0       |
+
+All 258 cases passed. The original baseline environment-isolation failure below is historical; that document now passes after main's fix. The full suite was not rerun, as the drain brief required. Original review round counts remain unchanged; this merge reconciles tests and metadata without new remote-reuse logic. Validation logs are retained under `/tmp/issue415-nov02-tests.pebQSq/`; the default checker log is `/tmp/issue415-nov02-fixtures.log`.
 
 ## Review rounds
 
