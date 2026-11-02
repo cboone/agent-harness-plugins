@@ -129,9 +129,9 @@ function main() {
   fi
   if [[ "${scenario}" == raw-nested ]]; then
     printf 'file text eol=lf\n' > module/nested/.gitattributes
-    git -C module/nested config core.safecrlf false
-    git -C module/nested add .gitattributes
-    git -C module/nested commit -qm attributes
+    git -C "$(fixture_path module/nested)" config core.safecrlf false
+    git -C "$(fixture_path module/nested)" add -- .gitattributes
+    git -C "$(fixture_path module/nested)" commit -qm attributes
   fi
   "${scope}" --base "${base}" > "${fixture}/before"
   case "${scenario}" in
@@ -251,7 +251,7 @@ function main() {
         for captured in before after; do
           jq 'walk(if type == "object" then del(.raw_tree) else . end)' \
             "${fixture}/${captured}" > "${fixture}/legacy"
-          mv "${fixture}/legacy" "${fixture}/${captured}"
+          mv -- "${fixture}/legacy" "${fixture}/${captured}"
         done
       fi
       function printf() {
