@@ -468,7 +468,7 @@ After the PR is created, report:
 1. A brief summary of what was committed and pushed.
 1. Connected issues (if any) and the closing keywords used.
 1. Follow-up issues listed in the PR body (if any).
-1. The body trim: trimmed, nothing to trim, failed or unavailable with the returned `Reason`, discarded with the check that failed, or skipped because `trim-text` is not installed. Relay any `Flagged` and `Cut material` lines it returned.
+1. The body trim: trimmed, nothing to trim, failed or unavailable with the returned `Reason`, discarded with the check that failed, or skipped because `trim-text` is not installed. Relay any `Declined`, `Flagged` and `Cut material` lines it returned.
 
 ## Plan-Aware Commits
 

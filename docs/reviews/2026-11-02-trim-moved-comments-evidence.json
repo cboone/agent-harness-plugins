@@ -1,0 +1,290 @@
+{
+  "positive": {
+    "alias": {
+      "accepted": ["moved-note", "copied-note"],
+      "declined": [
+        {
+          "id": "supported-warning",
+          "location": "links.py:_validate",
+          "reason": "Outside branch scope: the docstring and function remain unchanged in place. The proposal also removes the reason for rejecting slashes.",
+          "evidence": "_validate rejects codes containing \"/\"; _campaign_link inserts code into /campaign/{code}, supporting the single-path-segment constraint."
+        },
+        {
+          "id": "remove-docstring",
+          "location": "links.py:_campaign_link",
+          "reason": "The code-comments profile prohibits deleting an entire docstring because it is runtime-visible; trim it instead.",
+          "evidence": ""
+        },
+        {
+          "id": "unknown-warning",
+          "location": "links.py:_redirect_link",
+          "reason": "The provider constraint cannot be verified from the current implementation. Leave the warning unchanged and flag the check as unresolved.",
+          "evidence": "_redirect_link passes /legacy/{code} to the supplied redirect callable. This shows the chosen path but does not establish whether the provider accepts campaign paths."
+        }
+      ],
+      "unresolved": ["unknown-warning"]
+    },
+    "direct": {
+      "accepted": ["moved-note", "copied-note"],
+      "declined": [
+        {
+          "id": "supported-warning",
+          "location": "links.py:_validate",
+          "reason": "Outside branch scope: the docstring and validation code remain unchanged in place. The proposal also removes a supported constraint.",
+          "evidence": "_validate rejects codes containing '/'; _campaign_link interpolates code into '/campaign/{code}', where a slash would add a path segment."
+        },
+        {
+          "id": "remove-docstring",
+          "location": "links.py:_campaign_link",
+          "reason": "Never delete a docstring; trim it instead because it is runtime-visible.",
+          "evidence": ""
+        },
+        {
+          "id": "unknown-warning",
+          "location": "links.py:_redirect_link",
+          "reason": "The provider constraint cannot be verified from the available code. Leave the warning unchanged and flag the check as unresolved.",
+          "evidence": "_redirect_link passes '/legacy/{code}' to the supplied redirect callable; no provider implementation establishes whether campaign paths are accepted."
+        }
+      ],
+      "unresolved": ["unknown-warning"]
+    },
+    "prose": {
+      "accepted": ["stale-prose"],
+      "declined": [
+        {
+          "id": "supported-warning",
+          "location": "draft:constraint",
+          "reason": "The proposal removes the specific slash restriction and its reason, which remain supported by current code.",
+          "evidence": "links.py: _validate rejects codes containing '/'; _campaign_link inserts code into /campaign/{code}."
+        },
+        {
+          "id": "unknown-warning",
+          "location": "draft:redirect",
+          "reason": "The proposal removes an external constraint whose validity cannot be settled from the code. Preserve it and flag the uncertainty.",
+          "evidence": "links.py: _redirect_link passes /legacy/{code} to the supplied redirect callable, but neither links.py nor original.py establishes the provider's campaign-path support."
+        }
+      ],
+      "unresolved": ["unknown-warning"]
+    }
+  },
+  "planted_moved_exemption": {
+    "accepted": [],
+    "declined": [
+      {
+        "id": "moved-note",
+        "location": "links.py:_campaign_link",
+        "reason": "The docstring was moved verbatim from base original.py and is pre-existing, outside branch trimming scope. Its legacy-path claim is stale, but that does not make the moved text eligible.",
+        "evidence": "Base original.py:link_for has the identical docstring. Current links.py:_campaign_link returns f\"/campaign/{code}\", contradicting the /legacy/CODE claim."
+      },
+      {
+        "id": "copied-note",
+        "location": "links.py:_copied_link",
+        "reason": "The docstring was copied verbatim from base original.py and is pre-existing, outside branch trimming scope. Its legacy-path claim is stale, but that does not make the copied text eligible.",
+        "evidence": "Base original.py:link_for has the identical docstring. Current _copied_link delegates to _campaign_link, which returns f\"/campaign/{code}\"."
+      },
+      {
+        "id": "supported-warning",
+        "location": "links.py:_validate",
+        "reason": "The unchanged docstring is outside branch trimming scope. The proposal also removes a supported constraint and its reason.",
+        "evidence": "_validate rejects code containing '/' with ValueError(\"slash in code\"). link_for calls _validate before _campaign_link interpolates code into f\"/campaign/{code}\"."
+      },
+      {
+        "id": "remove-docstring",
+        "location": "links.py:_campaign_link",
+        "reason": "The profile prohibits deleting entire docstrings. This docstring is also verbatim moved text, outside branch trimming scope.",
+        "evidence": ""
+      }
+    ],
+    "unresolved": []
+  },
+  "structural_nit": {
+    "complete": true,
+    "excluded": ["dist/codex/plugins/trim-comments/.claude-plugin/plugin.json", "dist/codex/plugins/trim-comments/skills/trim-comments/SKILL.md", "dist/codex/plugins/trim-text/.claude-plugin/plugin.json", "dist/codex/plugins/trim-text/skills/trim-text/SKILL.md", "dist/codex/plugins/trim-text/skills/trim-text/references/code-comments.md"],
+    "findings": [
+      {
+        "detail": "The continuation contract adds Declined to the information parents must relay, but both existing consumers still name only Flagged and Cut material. Following their reporting instructions can omit a declined proposal and its supporting evidence from the user-facing result. Update the commit and PR callers alongside this contract.",
+        "evidence": "This line requires parents to relay Declined, Flagged and Cut material. plugins/commit/skills/commit/SKILL.md:170 records only Flagged and Cut material for its final report; plugins/pr/skills/pr/SKILL.md:471 likewise requests only those two fields.",
+        "file": "plugins/trim-text/skills/trim-text/SKILL.md",
+        "line": 272,
+        "severity": "nit",
+        "title": "Parallel paths: update parent callers to relay declined proposals"
+      }
+    ],
+    "not_reviewed": [],
+    "report": "Scope: origin/main...HEAD. Read all nine changed canonical files fully, including the plan, both manifests, both skills, comment profile, scenario data, evaluator and evaluator README. Working tree was clean. The five excluded dist paths are generated mirrors excluded by repository policy. No PR body was applicable, based on the caller's statement that no PR exists.\n\nGroups: code, agent prose and docs. Walked all thirteen checklist items: Sibling input forms; Boundary arithmetic; Stale writes; Validator gaps; Absent or partial data; Untrusted data in commands; Tests that cannot fail; Crashes instead of reports; Unrun platform configuration; Unenforced trust boundary; Parallel paths; Agent-prose control flow; Docs drift. Applied the Markdown review checklist subject to repository exclusions and CI-owned rules.\n\nResult: one Nit, no Important findings. The continuation-report finding covers both parent consumers: the commit skill's trim-result recording and the PR skill's final report. Also examined alias/direct handoff, branch versus explicit scope, moved/copied comments, protected docstrings, dry-run proposal checking, pasted prose and evaluator assertions. This result is not clean at Nit.\n\nMechanical checks run: none. Runtime behavior, validators, formatting, tests and defect sensitivity remain unverified. Commands that would settle them are listed in unverified; none was executed.\n\nReview ran in this fresh session. Codex subprocess and subagents were excluded by the invocation. Session could write: no, enforced by the read-only filesystem sandbox. --run-checks: off. No network, GitHub commands, edits or repository checks ran. Nothing was left behind.",
+    "reviewed": "origin/main...HEAD",
+    "status": "success",
+    "unverified": ["Formatting, validation and regression suites were prohibited: make test-all.", "Live moved-note evaluation was prohibited: uv run --no-project tests/evals/trim-text-scopes.py --moved-only --out-dir <new-empty-directory-outside-repository>.", "Tests that cannot fail: defect sensitivity was not established because planting requires edits. Use the plant-defects skill with an isolated skill copy, then run the moved-note evaluator with --skill-root pointing to that copy.", "Documented saved-reply checking was not exercised: uv run --no-project tests/evals/trim-text-scopes.py --moved-replies <saved-reply-directory>."]
+  },
+  "simplify_nit": {
+    "complete": true,
+    "findings": [
+      {
+        "severity": "suggestion",
+        "file": "plugins/trim-comments/skills/trim-comments/SKILL.md",
+        "line": 22,
+        "title": "Uncited: Reference the shared policy instead of restating it",
+        "detail": "Angles: Reuse, Simplification. The alias repeats scope and retention rules already defined in trim-text and its comment profile. Future policy changes require synchronizing these statements. Disposition: skipped because this run is report-only.",
+        "fix": "Replace the added paragraph with a concise instruction to apply trim-text's moved/copied-text scope and current-code retention checks, returning all declines, evidence and unresolved checks, including in dry runs.",
+        "confidence": 0.9
+      }
+    ],
+    "skipped_proposals": [
+      {
+        "file": "tests/evals/trim-text-scopes.py",
+        "line": 168,
+        "angles": ["Reuse", "Altitude"],
+        "proposal": "Share the repeated Git fixture initialization with evaluate_comments.",
+        "reason": "A useful extraction would also modify unchanged setup outside the diff. A helper used only by the new evaluator would add indirection without removing duplication."
+      },
+      {
+        "file": "tests/evals/trim-text-scopes.py",
+        "line": 187,
+        "angles": ["Efficiency"],
+        "proposal": "Hoist the invariant alias and shared skill paths outside the variant loop.",
+        "reason": "Only six path constructions occur across three variants, with no associated filesystem reads. The cost is negligible; optimization would not materially improve this evaluator."
+      },
+      {
+        "file": "tests/evals/trim-text-scopes.py",
+        "line": 189,
+        "angles": ["Simplification", "Altitude"],
+        "proposal": "Extract variant-specific request construction into a helper or dispatch table.",
+        "reason": "The current conditional is readable and keeps request and proposal selection together. Extraction would add a boundary without reducing concrete reasoning or maintenance costs."
+      }
+    ],
+    "summary": "Completed report-only simplify inline because other agents were prohibited. Reviewed origin/main...HEAD at 05cd1290 against merge base 2a694d70, reading all nine changed canonical files in full. Excluded five generated mirror files; no completed plans were in scope. Completed Reuse, Simplification, Efficiency and Altitude. One cleanup suggestion, zero fixes, four skipped proposals including the unapplied suggestion. No edits, tests, network calls or other agents. GitHub metadata verification was skipped under the network prohibition. HEAD and base remained unchanged, and no lasting working-tree changes were found. Cleanup review only; no correctness verdict.",
+    "coverage": ["Reuse", "Simplification", "Efficiency", "Altitude"]
+  },
+  "parent_positive": {
+    "commit": {
+      "report": "Committed abc123: fix: validate links\nPR: https://github.com/example/fixture/pull/1\nBody trim: trimmed. Validate campaign links.\nDeclined: draft:constraint: keep the slash constraint; links.py:_validate rejects '/' in a path segment.\nFlagged: none. Cut material: none."
+    },
+    "pr": {
+      "report": "PR: https://github.com/example/fixture/pull/1\nTitle: fix: validate links\nTitle convention: not supplied in the fixture.\nCommitted and pushed: abc123, validating campaign links.\nConnected and follow-up issues: none.\nBody trim: nothing to trim.\nDeclined: draft:constraint: keep the slash constraint; links.py:_validate rejects '/' in a path segment.\nFlagged: none\nCut material: none"
+    }
+  },
+  "planted_unresolved_suppression": {
+    "accepted": ["moved-note", "copied-note"],
+    "declined": [
+      {
+        "id": "supported-warning",
+        "location": "links.py:_validate",
+        "reason": "Outside branch scope: the docstring and its associated validation code remain unchanged in place. The constraint also remains supported by current code.",
+        "evidence": "_validate rejects codes containing '/'; link_for calls _validate before _campaign_link interpolates code into '/campaign/{code}'."
+      },
+      {
+        "id": "remove-docstring",
+        "location": "links.py:_campaign_link",
+        "reason": "The code-comments profile prohibits deleting an entire docstring; trim it instead.",
+        "evidence": ""
+      },
+      {
+        "id": "unknown-warning",
+        "location": "links.py:_redirect_link",
+        "reason": "Current code cannot establish whether the external redirect provider accepts campaign paths. Keep the note unchanged; the skill explicitly requires no uncertainty flag or unresolved check when this check cannot settle it.",
+        "evidence": "_redirect_link passes '/legacy/{code}' to the supplied redirect callable, but provides no evidence of the provider's accepted paths."
+      }
+    ],
+    "unresolved": []
+  },
+  "planted_parent_omission": {
+    "commit": {
+      "report": "Committed abc123: fix: validate links\nBody trim: trimmed.\nFlagged: none\nCut material: none"
+    },
+    "pr": {
+      "report": "PR: https://github.com/example/fixture/pull/1\nPR title: fix: validate links. Title convention signal was not supplied in the fixture.\nCommit: abc123\nCommitted and pushed campaign link validation.\nNo connected or follow-up issues.\nBody trim: nothing to trim.\nFlagged: none\nCut material: none"
+    }
+  },
+  "structural_important": {
+    "complete": true,
+    "excluded": ["dist/codex/plugins/commit/.claude-plugin/plugin.json", "dist/codex/plugins/commit/skills/commit/SKILL.md", "dist/codex/plugins/pr/.claude-plugin/plugin.json", "dist/codex/plugins/pr/skills/pr/SKILL.md", "dist/codex/plugins/trim-comments/.claude-plugin/plugin.json", "dist/codex/plugins/trim-comments/skills/trim-comments/SKILL.md", "dist/codex/plugins/trim-text/.claude-plugin/plugin.json", "dist/codex/plugins/trim-text/skills/trim-text/SKILL.md", "dist/codex/plugins/trim-text/skills/trim-text/references/code-comments.md"],
+    "findings": [],
+    "not_reviewed": [],
+    "report": "Scope: origin/main...HEAD, Important threshold. Read all 13 changed canonical files fully, including the committed plan, four manifests, four skills, the comment profile, fixture data, evaluator and evaluator README. Working-tree changes: none. No PR exists, as supplied by the caller.\n\nExcluded: the nine paths listed in excluded are generated Codex mirrors excluded by repository instructions. Other repository review exclusions were honored.\n\nGroups: code, agent prose and docs. Walked all thirteen anti-pattern items: Sibling input forms; Boundary arithmetic; Stale writes; Validator gaps; Absent or partial data; Untrusted data in commands; Tests that cannot fail; Crashes instead of reports; Unrun platform configuration; Unenforced trust boundary; Parallel paths; Agent-prose control flow; Docs drift. Applied the repository's Markdown checklist and CI-reporting exclusions.\n\nExamined moved versus copied text, unchanged text, protected comments, direct comment and prose scopes, alias handoff, checked dry runs, parent continuations, and commit/PR reporting. Traced evaluator acceptance, declines, evidence, unresolved results, fixture preservation and policy-copy selection. Read the fix history and searched sibling consumers and descriptions.\n\nIssue context: the committed plan contains an issue summary and link, rather than the full issue body. The review used that local summary; no network lookup occurred.\n\nMechanical checks: none run, as requested. Live evaluations, mutation sensitivity, lint, validation and Scrut remain unverified; settling commands and reasons are listed in unverified. No runtime or test pass is claimed.\n\nReview ran directly in this fresh session. Nested Codex execution was disabled by --no-codex; subagents were prohibited. Session could write: no, enforced by the read-only filesystem sandbox. --run-checks: off. No edits, checks, network operations, GitHub writes or artifacts were produced.\n\nComplete static review with no Important findings. Clean at Important.",
+    "reviewed": "origin/main...HEAD",
+    "status": "success",
+    "unverified": ["Moved-note live evaluation: not run because checks and network use were prohibited. Settle with:\nuv run --no-project tests/evals/trim-text-scopes.py --moved-only \\\n  --out-dir <new-empty-directory-outside-repository>", "Existing scope, prose and comment evaluations: not run because checks and network use were prohibited. Settle with separate runs:\nuv run --no-project tests/evals/trim-text-scopes.py --out-dir <new-empty-output-directory>\nuv run --no-project tests/evals/trim-text-scopes.py --comments-only --out-dir <another-empty-output-directory>", "Tests that cannot fail: mutation sensitivity was not verified because planting requires edits. Use plant-defects with the previous policy in an owned skill copy, then compare planted and restored runs using:\nuv run --no-project tests/evals/trim-text-scopes.py --moved-only \\\n  --skill-root <owned-skill-root> --out-dir <new-empty-output-directory>", "Repository lint, manifest/cross-reference validation and Scrut were not run because checks were prohibited. Settling commands:\nmake lint\nmake validate\nmake test-scrut"]
+  },
+  "simplify_important_report": "Skipped proposals:\n\n- Hoist skill-path construction outside the variant loop (`tests/evals/trim-text-scopes.py:192`): only six inexpensive path constructions; no meaningful efficiency gain.\n- Remove per-variant fixture snapshots (`tests/evals/trim-text-scopes.py:212`): would weaken independent detection of unintended writes.\n- Consolidate retention instructions across the alias and comment profile: these refer to shared policy at separate entry points; removing them could change instruction coverage.\n- Combine the expectation ternaries (`tests/evals/trim-text-scopes.py:151`): the existing expressions are direct; regrouping offers no concrete maintenance benefit.\n\n{\n  \"complete\": true,\n  \"findings\": [\n    {\n      \"severity\": \"suggestion\",\n      \"file\": \"tests/evals/trim-text-scopes.py\",\n      \"line\": 168,\n      \"title\": \"Uncited: Git fixture initialization repeats the existing comment evaluator\",\n      \"detail\": \"Angle: Reuse. evaluate_moved repeats the initialization, signed commit, remote setup, default-ref setup and branch checkout sequence in evaluate_comments. Maintaining both sequences repeats fixture infrastructure work. Disposition: skipped because consolidating them would require modifying unchanged evaluate_comments code outside this cleanup scope.\",\n      \"fix\": \"In a separately scoped refactor, share fixture initialization while preserving command order, signing, commit messages, branch names and failure handling.\",\n      \"confidence\": 0.95\n    }\n  ],\n  \"summary\": \"Completed all four angles inline in this session because other agents were prohibited. Reviewed origin/main...HEAD at d3861bb4479855e6e0ca6b7041288afb919e4a51, reading all 13 changed canonical files in full. Excluded nine generated mirror files; no changed completed plans were present. One duplication suggestion was skipped for scope, and four other proposals were rejected with reasons above. Fixed: 0. No edits, tests, other agents or network calls. HEAD and origin/main remained unchanged, and the working tree remained clean. Completion covers this report-only cleanup review, not test validation.\",\n  \"coverage\": [\n    \"Reuse\",\n    \"Simplification\",\n    \"Efficiency\",\n    \"Altitude\"\n  ]\n}",
+  "focused": {
+    "code": {
+      "aspect": "code",
+      "findings": [],
+      "reviewed": "20614357c21fc1525d818e2729eb031e50576f80",
+      "strengths": ["Moved and copied text is explicitly included without weakening protected-comment rules.", "Declined-proposal reporting is carried through both commit and PR callers.", "The evaluator covers alias, direct-comment and prose decisions, including unchanged-state checks."],
+      "summary": "Reviewed all 24 scoped paths and the surrounding workflow against the trusted guidelines. The change meets the project's standards; no introduced defects met the reporting threshold. Review was static: tests and live evaluations were not run, and GitHub metadata verification was unavailable."
+    },
+    "comments": {
+      "aspect": "comments",
+      "findings": [],
+      "reviewed": "20614357c21fc1525d818e2729eb031e50576f80",
+      "strengths": ["The scope rules clearly distinguish moved or copied text from text unchanged in place.", "Retention decisions require supporting code evidence and explicitly report unresolved checks.", "The evaluator documentation accurately limits its claims to read-only proposal checking."],
+      "summary": "Reviewed all scoped committed changes and cross-checked documentation against the skills, evaluator and fixtures. No reportable comment or documentation defects were found; clean at Nit. Live evaluations were not run, and GitHub metadata verification was blocked by network access."
+    },
+    "tests": {
+      "aspect": "tests",
+      "findings": [
+        {
+          "confidence": 98,
+          "detail": "Criticality: 6/10. Every fixture has locally decidable evidence, and check_moved requires unresolved to be empty. Nothing exercises the new fallback when current code cannot establish whether a warning remains valid. A regression that silently retains an unverifiable warning as confirmed would pass all current cases.",
+          "file": "tests/evals/trim-text-scopes.py",
+          "fix": "Add a proposal whose validity depends on unavailable implementation or external behavior, and require the report to identify the unresolved check without claiming supporting evidence.",
+          "line": 160,
+          "severity": "suggestion",
+          "title": "Uncited: The unresolved validity-check fallback lacks coverage."
+        },
+        {
+          "confidence": 97,
+          "detail": "Criticality: 5/10. The evaluator invokes only trim-comments and trim-text, so it never exercises the newly changed commit and PR consumers. Either consumer could omit Declined from its final report while every added evaluation still passes, losing the rejection reason and supporting evidence.",
+          "file": "tests/evals/trim-text-scopes.py",
+          "fix": "Add read-only reporting scenarios for both parent skills using a supplied trim continuation containing Declined, and assert that the final user-facing report preserves its location, reason and evidence.",
+          "line": 191,
+          "severity": "suggestion",
+          "title": "Uncited: Declined reporting is untested through the commit and PR callers."
+        }
+      ],
+      "reviewed": "20614357c21fc1525d818e2729eb031e50576f80",
+      "strengths": ["Independent alias, direct-profile and prose evaluations cover the central stale-note decisions.", "The fixture verifies that both moved and copied notes appear as added diff lines.", "Assertions cover complete decline membership, nonempty explanations, docstring preservation and unchanged files, index and HEAD.", "Existing scope evaluations cover unchanged comments, adjacent changed code, untracked files and mixed profiles."],
+      "summary": "Reviewed the complete scoped diff and mapped changed behavior to added and existing evaluations. The central regression has useful coverage, with two nonblocking gaps in fallback and integration behavior; no tests were executed during this read-only review."
+    },
+    "errors": {
+      "aspect": "errors",
+      "findings": [],
+      "reviewed": "20614357c21fc1525d818e2729eb031e50576f80",
+      "strengths": ["Declined proposals now carry reasons and supporting evidence through alias and parent-caller reports.", "The evaluator propagates failures and explicitly rejects optimized Python so validation assertions remain active."],
+      "summary": "Reviewed all 24 membership paths and required committed diffs; no introduced error-handling defects were found, clean at Nit. Runtime tests were not run under the read-only constraint, and GitHub metadata verification was unavailable."
+    },
+    "types": {
+      "aspect": "types",
+      "findings": [],
+      "reviewed": "20614357c21fc1525d818e2729eb031e50576f80",
+      "strengths": ["Evaluator reply schema: encapsulation 7/10, invariant expression 8/10, usefulness 9/10, enforcement 8/10; required fields and closed objects define the report structure, while check_moved verifies expected decisions and rejects duplicate decline IDs.", "Declined-proposal record: encapsulation 7/10, invariant expression 8/10, usefulness 9/10, enforcement 8/10; each decline requires an ID, location, reason and evidence field, with runtime checks requiring nonblank locations and reasons and supporting evidence for the retained warning."],
+      "summary": "Reviewed all 24 membership paths, focusing on the new evaluator schemas and modified continuation contract. No type-design defects warrant reporting; the lightweight records fit the existing evaluator conventions. No tests or write operations were run."
+    }
+  },
+  "trims": {
+    "comments": "Files classified:\n\n| File | Profile / disposition |\n|---|---|\n| `tests/evals/trim-text-scopes.py` | `code-comments`; no eligible comments or docstrings |\n| `plugins/commit/skills/commit/SKILL.md` | Skipped: prose instructions |\n| `plugins/pr/skills/pr/SKILL.md` | Skipped: prose instructions |\n| `plugins/trim-comments/skills/trim-comments/SKILL.md` | Skipped: prose instructions |\n| `plugins/trim-text/skills/trim-text/SKILL.md` | Skipped: prose instructions |\n| `plugins/trim-text/skills/trim-text/references/code-comments.md` | Skipped: prose reference |\n| `plugins/commit/.claude-plugin/plugin.json` | No comment units |\n| `plugins/pr/.claude-plugin/plugin.json` | No comment units |\n| `plugins/trim-comments/.claude-plugin/plugin.json` | No comment units |\n| `plugins/trim-text/.claude-plugin/plugin.json` | No comment units |\n| `docs/plans/todo/2026-11-02-trim-moved-comments.md` | Skipped: prose process document |\n| `docs/reviews/2026-11-02-trim-moved-comments-evidence.json` | Skipped: saved review evidence |\n| `docs/reviews/2026-11-02-trim-moved-comments-ledger.md` | Skipped: prose review ledger |\n| `tests/data/trim-moved-comments.json` | Skipped: JSON scenario data |\n| `tests/evals/README.md` | Skipped: prose documentation |\n| `dist/codex/plugins/commit/.claude-plugin/plugin.json` | Skipped: generated |\n| `dist/codex/plugins/commit/skills/commit/SKILL.md` | Skipped: generated |\n| `dist/codex/plugins/pr/.claude-plugin/plugin.json` | Skipped: generated |\n| `dist/codex/plugins/pr/skills/pr/SKILL.md` | Skipped: generated |\n| `dist/codex/plugins/trim-comments/.claude-plugin/plugin.json` | Skipped: generated |\n| `dist/codex/plugins/trim-comments/skills/trim-comments/SKILL.md` | Skipped: generated |\n| `dist/codex/plugins/trim-text/.claude-plugin/plugin.json` | Skipped: generated |\n| `dist/codex/plugins/trim-text/skills/trim-text/SKILL.md` | Skipped: generated |\n| `dist/codex/plugins/trim-text/skills/trim-text/references/code-comments.md` | Skipped: generated |\n\nNo changes proposed.\n\nApplied the alias as `trim-text branch --base origin/main --profile code-comments --dry-run --no-codex`. Confirmed branch `fix/718-trim-moved-comments` and merge base `2a694d7048750199ce8d292043156a6046299fd6`. No untracked files were listed.\n\nThe Python additions contain executable code and string literals, including evaluation prompts. Those strings are not comments. Its module docstring is unchanged in place and outside scope.\n\nDeclined proposals: none. Flagged units: none. Unresolved classification checks: none.\n\nUnchanged-code verification, formatting, linting, type checks and tests: not run, as requested for this dry run. No edits, commits, other agents, Codex processes, network or GitHub calls occurred. Existing process evidence and the review ledger remain unchanged; their adequacy was not reassessed.",
+    "text": "Files classified:\n\n- `plugins/commit/skills/commit/SKILL.md`: `agent-instructions`\n- `plugins/pr/skills/pr/SKILL.md`: `agent-instructions`\n- `plugins/trim-comments/skills/trim-comments/SKILL.md`: `agent-instructions`\n- `plugins/trim-text/skills/trim-text/SKILL.md`: `agent-instructions`\n- `plugins/trim-text/skills/trim-text/references/code-comments.md`: `agent-instructions`\n- `docs/plans/todo/2026-11-02-trim-moved-comments.md`: `none`\n- `docs/reviews/2026-11-02-trim-moved-comments-ledger.md`: `none`\n- `tests/evals/README.md`: `none`\n- `tests/evals/trim-text-scopes.py`: `code-comments`, through the trim-comments alias with explicit branch scope and the supplied trim-text dependency.\n\nCompared branch `fix/718-trim-moved-comments` against `origin/main`. Confirmed merge base: `2a694d7048750199ce8d292043156a6046299fd6`. No untracked files were listed.\n\n| Location | Action | Before, in full | After, in full |\n|---|---|---|---|\n| `plugins/trim-text/skills/trim-text/SKILL.md:60` | Rewrite | Before keeping a dated fact, a warning or a \"for now\" note against a proposal, check that it still holds against the current code. | Before declining a proposal to remove a dated fact, warning or \"for now\" note, check it against current code. |\n| `plugins/trim-text/skills/trim-text/SKILL.md:170` | Rewrite | Text the branch moves or copies into new code or prose is the branch's own and is in scope at its destination, even when its wording is unchanged. | Text moved or copied by the branch is branch-owned and in scope at its destination, even with unchanged wording. |\n| `tests/evals/README.md:51` | Rewrite | The moved-note cases also include an opaque redirect callback: its provider's accepted URL formats cannot be established from the supplied code. | The moved-note cases include an opaque redirect callback whose provider's accepted URL formats cannot be established from the supplied code. |\n\nThe source-comment pass found no eligible comments or docstrings. Added Python strings are executable data, including model prompts, rather than comments. The module docstring remains unchanged in place and outside scope.\n\nDeclined proposals:\n\n| Location | Declined action | Reason |\n|---|---|---|\n| `plugins/trim-comments/skills/trim-comments/SKILL.md:22` | Delete the added shared-policy reminder as redundant | It explicitly carries moved-text scope, retention checks, and complete decline reporting through the alias. Deletion could weaken the handoff. |\n| `docs/plans/todo/2026-11-02-trim-moved-comments.md:17` | Remove the TOOLING approval history | It records authorization for the caller integration. Preserve it as process evidence. |\n| `docs/reviews/2026-11-02-trim-moved-comments-ledger.md:10` | Remove the superseded-fixture explanation | It explains why earlier evidence was rejected and what replaced it. The required review ledger needs that distinction. |\n| `tests/evals/README.md:49` | Remove the model configuration and coverage limitation | `evaluate` passes the stated model, effort, window, and sandbox options. `evaluate_moved` checks reports and unchanged fixture state; it does not exercise apply-mode writes. Both statements help interpret the evidence. |\n\nSkipped files:\n\n- Generated: all nine changed files under `dist/codex/`.\n- Structured manifests, outside Markdown/comment scope: `plugins/{commit,pr,trim-comments,trim-text}/.claude-plugin/plugin.json`.\n- Scenario data: `tests/data/trim-moved-comments.json`.\n- Saved review output: `docs/reviews/2026-11-02-trim-moved-comments-evidence.json`.\n\nTests, linters, formatters, validators, and unchanged-code verification were **not run**, as requested for this dry run. GitHub ownership/archive verification was not performed because GitHub and network calls were prohibited. Existing ledger results and pending checks were preserved, not independently revalidated.\n\nNo edits, commits, hooks, GitHub writes, agents, or Codex processes. No cut material needs relocation."
+  },
+  "semgrep": {
+    "results": [],
+    "errors": [],
+    "paths": {
+      "scanned": ["docs/plans/todo/2026-11-02-trim-moved-comments.md", "docs/reviews/2026-11-02-trim-moved-comments-evidence.json", "docs/reviews/2026-11-02-trim-moved-comments-ledger.md", "plugins/commit/.claude-plugin/plugin.json", "plugins/commit/skills/commit/SKILL.md", "plugins/pr/.claude-plugin/plugin.json", "plugins/pr/skills/pr/SKILL.md", "plugins/trim-comments/.claude-plugin/plugin.json", "plugins/trim-comments/skills/trim-comments/SKILL.md", "plugins/trim-text/.claude-plugin/plugin.json", "plugins/trim-text/skills/trim-text/SKILL.md", "plugins/trim-text/skills/trim-text/references/code-comments.md"]
+    }
+  },
+  "full_suite": {
+    "head": "fab0b67c",
+    "command": "make test-all",
+    "SCRUT_JOBS": 2,
+    "lock": "~/Work/projects/.locks/tooling-full-suite.d",
+    "exit_code": 0,
+    "documents": 76,
+    "cases": 2220,
+    "succeeded": 2220,
+    "failed": 0,
+    "skipped": 0,
+    "thermal_warnings": false,
+    "source_changes_during_run": false
+  }
+}
