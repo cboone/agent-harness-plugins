@@ -36,3 +36,25 @@ uv run --no-project --python 3.13 tests/evals/trim-text-scopes.py --comments-onl
 ```
 
 `--comment-replies PATH` checks saved `comments-alias-reply.json`, `comments-equivalent-reply.json` and `comments-mixed-reply.json` without model calls. It checks reported scope and classification only; unchanged Git state is checked during live evaluation.
+
+## Moved notes and declined proposals
+
+`--moved-only` extends the same runner with [a moved-docstring fixture](../data/trim-moved-comments.json). A branch moves and copies a stale dated link-format note. The evaluator checks the alias, direct comment profile and pasted prose independently, using supplied dry-run proposals. Stale-note rewrites must be accepted; a supported warning must have current-code evidence; each declined proposal must have a location and reason. Live runs also verify unchanged files, index and HEAD.
+
+```bash
+uv run --no-project tests/evals/trim-text-scopes.py --moved-only \
+  --out-dir "$(mktemp -d "${TMPDIR:-/tmp}/trim-moved-eval.XXXXXX")"
+```
+
+`--moved-replies PATH` checks saved `moved-alias-reply.json`, `moved-direct-reply.json` and `moved-prose-reply.json` without model calls. `--skill-root PATH` selects an isolated copy of the canonical skill tree for policy plants. Live evaluations use `gpt-6.1-sol`, low effort, window `872000`, and a read-only sandbox. The response schema describes report fields without supplying expected decisions. This opt-in check measures proposal checking and reporting on these cases; it does not prove all future model runs will comply or execute apply-mode writes.
+
+The moved-note cases include an opaque redirect callback whose provider's accepted URL formats cannot be established from the supplied code. The report must flag that check as unresolved instead of treating the warning as confirmed.
+
+`--parents-only` supplies hypothetical successful trim results to the commit and PR skills' final reporting steps. Both reports must relay a decline's location, reason and supporting evidence. It does not execute commits, pushes or GitHub writes.
+
+```bash
+uv run --no-project tests/evals/trim-text-scopes.py --parents-only \
+  --out-dir "$(mktemp -d "${TMPDIR:-/tmp}/trim-parent-eval.XXXXXX")"
+```
+
+`--parent-replies PATH` checks saved `parent-commit-reply.json` and `parent-pr-reply.json` without model calls. The same `--skill-root` option supports isolated caller-policy plants.

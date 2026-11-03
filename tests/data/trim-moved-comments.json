@@ -1,0 +1,59 @@
+{
+  "base": "def _validate(code):\n    \"\"\"Reject slashes for now: code occupies one path segment.\"\"\"\n    if \"/\" in code:\n        raise ValueError(\"slash in code\")\n",
+  "working": "def link_for(code):\n    _validate(code)\n    return _campaign_link(code)\n\n\ndef _validate(code):\n    \"\"\"Reject slashes for now: code occupies one path segment.\"\"\"\n    if \"/\" in code:\n        raise ValueError(\"slash in code\")\n\n\ndef _campaign_link(code):\n    \"\"\"Build the campaign link.\n\n    As of 2020-03-25, links must use /legacy/CODE for older clients.\n    \"\"\"\n    return f\"/campaign/{code}\"\n\n\n\ndef _copied_link(code):\n    \"\"\"Build the campaign link.\n\n    As of 2020-03-25, links must use /legacy/CODE for older clients.\n    \"\"\"\n    return _campaign_link(code)\n\n\ndef _redirect_link(code, redirect):\n    \"\"\"Keep legacy paths for now: the redirect provider cannot accept campaign paths.\"\"\"\n    return redirect(f\"/legacy/{code}\")\n",
+  "proposals": [
+    {
+      "id": "moved-note",
+      "location": "links.py:_campaign_link",
+      "before": "Build the campaign link. As of 2020-03-25, links must use /legacy/CODE for older clients.",
+      "after": "Build the campaign link."
+    },
+    {
+      "id": "copied-note",
+      "location": "links.py:_copied_link",
+      "before": "Build the campaign link. As of 2020-03-25, links must use /legacy/CODE for older clients.",
+      "after": "Build the campaign link."
+    },
+    {
+      "id": "supported-warning",
+      "location": "links.py:_validate",
+      "before": "Reject slashes for now: code occupies one path segment.",
+      "after": "Validate the code."
+    },
+    {
+      "id": "remove-docstring",
+      "location": "links.py:_campaign_link",
+      "before": "Build the campaign link.",
+      "after": "Delete the entire docstring."
+    },
+    {
+      "id": "unknown-warning",
+      "location": "links.py:_redirect_link",
+      "before": "Keep legacy paths for now: the redirect provider cannot accept campaign paths.",
+      "after": "Build the redirect link."
+    }
+  ],
+  "prose": "The helper builds campaign links. As of 2020-03-25, links must use /legacy/CODE for older clients.\nKeep legacy paths for now: the redirect provider cannot accept campaign paths.",
+  "prose_proposals": [
+    {
+      "id": "stale-prose",
+      "location": "draft:description",
+      "before": "The helper builds campaign links. As of 2020-03-25, links must use /legacy/CODE for older clients.",
+      "after": "The helper builds campaign links."
+    },
+    {
+      "id": "supported-warning",
+      "location": "draft:constraint",
+      "before": "Reject slashes for now: code occupies one path segment.",
+      "after": "Validate the code."
+    },
+    {
+      "id": "unknown-warning",
+      "location": "draft:redirect",
+      "before": "Keep legacy paths for now: the redirect provider cannot accept campaign paths.",
+      "after": "Build the redirect link."
+    }
+  ],
+  "original_base": "def link_for(code):\n    \"\"\"Build the campaign link.\n\n    As of 2020-03-25, links must use /legacy/CODE for older clients.\n    \"\"\"\n    return f\"/campaign/{code}\"\n",
+  "original_working": "from links import link_for\n"
+}
