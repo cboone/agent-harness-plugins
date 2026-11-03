@@ -57,23 +57,99 @@ CANCEL_STATUS=0
 STOP_POLL_LIMIT=50
 readonly STOP_POLL_LIMIT
 
-# Set the group in the child only, avoiding Bash job-control setpgid races.
+# Set the group in the child only. After acquiring its lock, the anchor lives
+# until signal_group ends it; setup failures never end it in the wrapper.
 function run_in_group() {
-  exec perl -MPOSIX -e '
+  exec perl -MPOSIX -MFcntl=:flock -e '
     $SIG{INT} = $SIG{QUIT} = "DEFAULT";
     defined POSIX::setpgid(0, 0)
       or die "codex-aspects: setpgid: $!\n";
+    my $directory = shift @ARGV;
+    my $path = "$directory/anchor.$$";
+    $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = $SIG{HUP} = "IGNORE";
+    open my $anchor, "+>", $path or die "codex-aspects: anchor: $!\n";
+    pipe(my $reader, my $writer) or die "codex-aspects: anchor pipe: $!\n";
+    $SIG{CHLD} = "DEFAULT";
+    my $child = fork();
+    defined $child or die "codex-aspects: anchor fork: $!\n";
+    if (!$child) {
+      open my $diagnostic, ">&", \*STDERR or die "codex-aspects: anchor diagnostic: $!\n";
+      flock($anchor, LOCK_EX) or die "codex-aspects: anchor lock: $!\n";
+      $SIG{PIPE} = "IGNORE";
+      my $setup = eval {
+        close $reader or die "anchor reader: $!\n";
+        my $record = "$$\n";
+        my $written = syswrite($anchor, $record);
+        defined($written) && $written == length($record)
+          or die "anchor pid: $!\n";
+        open STDIN, "<", "/dev/null" or die "anchor stdin: $!\n";
+        open STDOUT, ">", "/dev/null" or die "anchor stdout: $!\n";
+        open STDERR, ">", "/dev/null" or die "anchor stderr: $!\n";
+        my $sent = syswrite($writer, "1");
+        defined($sent) && $sent == 1 or die "anchor readiness: $!\n";
+        1;
+      };
+      print {$diagnostic} "codex-aspects: $@" if !$setup;
+      close $diagnostic;
+      close $writer;
+      while (1) { select undef, undef, undef, 60; }
+    }
+    my $ready = eval {
+      close $anchor or die "anchor close: $!\n";
+      close $writer or die "anchor writer: $!\n";
+      local $SIG{ALRM} = sub { die "anchor readiness timed out\n"; };
+      alarm 5;
+      my $byte;
+      my $count = sysread($reader, $byte, 1);
+      defined($count) && $count == 1 && $byte eq "1"
+        or die "anchor readiness failed\n";
+      close $reader or die "anchor reader: $!\n";
+      alarm 0;
+      1;
+    };
+    my $error = $@;
+    alarm 0;
+    die "codex-aspects: $error" if !$ready;
+    $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = $SIG{HUP} = "DEFAULT";
     exec @ARGV;
     die "codex-aspects: exec $ARGV[0]: $!\n";
-  ' -- "$@"
+  ' -- "${TMP_DIR}" "$@"
+}
+
+# Only the anchor acquires this lock, and only signal_group ends the anchor.
+# A held lock proves continuity even before PID publication (reported as 0).
+# Return 1 if released, 2 on an inspection error.
+function read_anchor() {
+  perl -MFcntl=:flock -e '
+    my $path = shift;
+    exit 1 unless -e $path;
+    open my $anchor, "+<", $path or do {
+      warn "codex-aspects: open anchor $path: $!\n";
+      exit 2;
+    };
+    if (flock($anchor, LOCK_EX | LOCK_NB)) { exit 1; }
+    $!{EWOULDBLOCK} || $!{EAGAIN} or do {
+      warn "codex-aspects: inspect anchor lock $path: $!\n";
+      exit 2;
+    };
+    my $pid = <$anchor>;
+    print defined($pid) && $pid =~ /^[1-9][0-9]*\n$/ ? $pid : "0\n";
+  ' -- "${TMP_DIR}/anchor.${1}"
 }
 
 # Return 0 for an active owned target, 1 for a completed/reused target, 2 if
-# inspection fails. A live leader must still be this shell's child. Recorded
-# leaderless groups are targeted by ID; reuse between inspections is not excluded.
+# inspection fails or members remain without an anchor. Only the anchor lock
+# authorizes group signals; parent ownership still covers pre-anchor leaders.
+# The wrapper never ends a locked anchor, so continuity lasts through signalling.
 function signal_group() {
-  local signal="${1}" group="${2}" pid parent pgid state target
-  local leader_parent="" leader_pgid="" leader_state="" members=false
+  local signal="${1}" group="${2}" pid parent pgid state target anchor="" result=0
+  local leader_parent="" leader_state="" members=false others=false
+  if [[ -e "${TMP_DIR}/anchor.${group}.retired" ]]; then
+    result=1
+  else
+    anchor="$(read_anchor "${group}")" || result=$?
+    if ((result == 2)); then return 2; fi
+  fi
   if ! ps -axo pid=,ppid=,pgid=,stat= > "${TMP_DIR}/groups" 2> "${TMP_DIR}/groups.err" \
     || [[ -s "${TMP_DIR}/groups.err" || ! -s "${TMP_DIR}/groups" ]]; then # error-output-allow: failed inspection retains diagnostics and reports incomplete cancellation
     return 2
@@ -81,27 +157,33 @@ function signal_group() {
   while read -r pid parent pgid state; do
     if [[ "${pid}" == "${group}" ]]; then
       leader_parent="${parent}"
-      leader_pgid="${pgid}"
       leader_state="${state}"
     fi
-    if [[ "${pgid}" == "${group}" && "${state}" != *Z* ]]; then members=true; fi
+    if [[ "${pgid}" == "${group}" && "${state}" != *Z* ]]; then
+      members=true
+      if [[ "${pid}" != "${anchor}" ]]; then others=true; fi
+    fi
   done < "${TMP_DIR}/groups"
 
-  if [[ -n "${leader_parent}" ]]; then
-    [[ "${leader_parent}" == "$$" ]] || return 1
-    if [[ "${leader_pgid}" == "${group}" && "${members}" == true ]]; then
-      target="-${group}"
-    elif [[ "${leader_state}" != *Z* ]]; then
-      target="${group}"
-    elif [[ "${members}" == true ]]; then
-      target="-${group}"
-    else
-      return 1
-    fi
-  elif [[ "${members}" == true ]]; then
+  if [[ -n "${leader_parent}" && "${leader_parent}" != "$$" ]]; then return 1; fi
+  # Once KILL can end the anchor, only observe this ID thereafter.
+  if [[ -e "${TMP_DIR}/anchor.${group}.retired" ]]; then
+    if [[ "${members}" == true || (-n "${leader_parent}" && "${leader_state}" != *Z*) ]]; then return 2; fi
+    return 1
+  fi
+  if ((result == 0)); then
+    if [[ "${members}" == false ]]; then return 2; fi
+    if [[ "${others}" == false ]]; then signal=KILL; fi
     target="-${group}"
+  elif [[ -n "${leader_parent}" && "${leader_state}" != *Z* ]]; then
+    target="${group}"
+  elif [[ "${members}" == true ]]; then
+    return 2
   else
     return 1
+  fi
+  if [[ "${signal}" == KILL && "${target}" == "-${group}" ]]; then
+    : > "${TMP_DIR}/anchor.${group}.retired" || return 2
   fi
   kill -"${signal}" -- "${target}" 2> /dev/null || true # error-output-allow: an owned target can finish between inspection and signalling
   return 0
