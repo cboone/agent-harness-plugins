@@ -442,18 +442,54 @@ leader stopped before exec
 A sourced fixture runs the actual cleanup functions with ps and kill replaced by
 shell functions that refuse unexpected queries and record every signal. A
 simulated stopped pre-group child ignores TERM until KILL, independently of
-platform signal behavior. No real PID is signalled by this fixture.
+platform signal behavior. The group, orphan and normal cases create a real
+wrapper anchor and check its actual group before exercising synthetic members.
+The recycled case releases that anchor before presenting unrelated leaderless
+members, and requires no signal and incomplete cancellation. Normal completion
+must end its anchor through the same helper. Synthetic kill commands only log.
+Teardown ends real owned anchors with one actual helper call, then only inspects.
 
 ```scrut
-$ for mode in reused pregroup group orphan; do
+$ for mode in reused pregroup group orphan normal recycled release-race kill-race inspect; do
 >   BASH_ENV="${REPO_ROOT}/tests/fixtures/codex-signal-probe.bash" \
 >     SIGNAL_PROBE_CASE="${mode}" SIGNAL_PROBE_LOG="${FIXTURE}/signal-${mode}.log" \
 >     "${CODEX_ASPECTS_BIN}" schema || break
 > done
 reused: no signal
 pregroup: PID TERM and KILL
-group: process group TERM
-orphan: process group TERM
+group: process group TERM, anchor KILL
+orphan: process group TERM, anchor KILL
+normal: anchor ended through helper
+recycled: no signal without anchor continuity
+release-race: retired group never signalled
+kill-race: retired group never signalled
+inspect: anchor open error retained
+```
+
+## Anchor setup failures and a stopped wrapper stay bounded
+
+The committed Perl probe fails PID publication or readiness, stops the wrapper
+before child-side publication, or withholds readiness until timeout. Each case
+must prevent exec and leave no active anchor. The stopped wrapper must still
+have a readable anchor record, allowing normal bounded group cleanup. The broken
+pipe case resumes the actual readiness write after the wrapper exits, requires
+an EPIPE return and its diagnostic, and checks that the anchor still holds its
+lock until helper cleanup.
+
+```scrut
+$ for mode in anchor-publish anchor-ready anchor-stopped anchor-timeout anchor-brokenpipe; do
+>   BASH_ENV="${REPO_ROOT}/tests/fixtures/codex-anchor-probe.bash" \
+>     PERL5LIB="${SCRUT_GROUP_PROBE_DIR}" PERL5OPT=-MScrutGroupProbe \
+>     SCRUT_GROUP_PROBE_MODE="${mode}" \
+>     SCRUT_GROUP_PROBE_LOG="${FIXTURE}/${mode}.probe" \
+>     SCRUT_GROUP_PROBE_PID="${FIXTURE}/${mode}.pid" \
+>     "${CODEX_ASPECTS_BIN}" schema || break
+> done
+anchor-publish: setup failed, no exec, anchor stopped
+anchor-ready: setup failed, no exec, anchor stopped
+anchor-stopped: published while wrapper stopped, bounded cleanup
+anchor-timeout: setup failed, no exec, anchor stopped
+anchor-brokenpipe: setup failed, no exec, anchor stopped
 ```
 
 ## Child-side group setup failure remains visible
