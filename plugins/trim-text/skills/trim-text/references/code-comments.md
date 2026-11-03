@@ -89,6 +89,8 @@ Name the output: "`*` returns `null`, meaning unrestricted. Unset or empty retur
 
 Resolve and filter paths with the owning skill before reading files. With explicit paths collect every comment; with a single named comment classify only that comment. In branch scope, use `git --no-pager diff --no-ext-diff --no-textconv --no-relative -U0 <merge-base> -- ":(top,literal)<file>"` to collect comments within changed hunks or directly above changed code. An untracked file is entirely changed. Do not widen branch scope when passing resolved filenames to Codex.
 
+Moved or copied comments and docstrings are in scope at their new location, even when copied verbatim. Only comments left unchanged in place are pre-existing text. Before keeping a dated fact, warning or "for now" note against a proposal, use the shared current-code check and report the evidence with the decline.
+
 Identify comments using the language's syntax: line and block comments, Python docstrings, shell comments outside quoted strings and heredoc data, CSS comments, and markup comments. A string containing comment markers is code, not a comment. In mixed markup or component files, restrict edits to actual comment regions; embedded code and visible prose stay unchanged. When syntax is uncertain, flag rather than edit.
 
 Touch only comments: no code, whitespace or formatting changes beyond what removing a comment line requires. Never delete a docstring; trim it instead. It is runtime-visible, and removing the only statement in a Python function or class would break syntax. A redundant public API doc comment may be trimmed like other comments, subject to this docstring rule. Leave unclear meaning unchanged and flag it.

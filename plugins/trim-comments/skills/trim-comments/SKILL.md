@@ -19,6 +19,8 @@ Invoke the `trim-text` skill with `--profile code-comments` and the original pat
 
 The target resolves scope, classifies comments, edits, verifies, commits when allowed, and reports. It skips prose documents and symlinks, keeps code and protected comments unchanged, flags ticketless TODOs, and never pushes. Report-only proposals keep the target's read-only Codex sandbox and completion checks. Return its checked report directly; do not run another trim pass.
 
+Apply the target's moved/copied-text scope and current-code retention checks. Return all declined proposals with their reasons, supporting evidence and unresolved checks, including in dry runs.
+
 ## Skill dependencies
 
 - **Required:** `trim-text`
