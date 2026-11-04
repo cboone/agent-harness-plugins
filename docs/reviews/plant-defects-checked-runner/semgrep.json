@@ -1,0 +1,25 @@
+{
+  "head": "2fbe1170",
+  "baseline": "e0ad16d5095e9c445be45bde5ef622ad8f5f45cb",
+  "version": "1.180.0",
+  "repository": "cboone/agent-harness-plugins",
+  "disposable_clone": "/tmp/checked-plant-review.xCSjYz/semgrep-clone",
+  "config": "p/default",
+  "config_sha256": "3faab57c5cad4312fadc9fe3dcca923a5dfb06b3808193c39dae758247617b70",
+  "jobs": 2,
+  "baseline_scan": {
+    "exit_code": 0,
+    "rules_run": 85,
+    "findings": 0,
+    "errors": [],
+    "scanned": [".github/workflows/ci.yml", "Makefile", "bin/lib/error-output-policy.json", "docs/plans/todo/2026-11-03-plant-defects-checked-runner.md", "docs/reviews/plant-defects-checked-runner/aspect-critical-code.json", "docs/reviews/plant-defects-checked-runner/aspect-critical-comments.json", "docs/reviews/plant-defects-checked-runner/aspect-critical-errors.json", "docs/reviews/plant-defects-checked-runner/aspect-critical-tests.json", "docs/reviews/plant-defects-checked-runner/aspect-critical-types.json", "docs/reviews/plant-defects-checked-runner/aspect-critical2-code.json", "docs/reviews/plant-defects-checked-runner/aspect-critical2-comments.json", "docs/reviews/plant-defects-checked-runner/aspect-critical2-errors.json", "docs/reviews/plant-defects-checked-runner/aspect-critical2-tests.json", "docs/reviews/plant-defects-checked-runner/aspect-critical2-types.json", "docs/reviews/plant-defects-checked-runner/aspect-critical3-code.json", "docs/reviews/plant-defects-checked-runner/aspect-critical3-comments.json", "docs/reviews/plant-defects-checked-runner/aspect-critical3-errors.json", "docs/reviews/plant-defects-checked-runner/aspect-critical3-tests.json", "docs/reviews/plant-defects-checked-runner/aspect-critical3-types.json", "docs/reviews/plant-defects-checked-runner/aspect-important-code.json", "docs/reviews/plant-defects-checked-runner/aspect-important-comments.json", "docs/reviews/plant-defects-checked-runner/aspect-important-errors.json", "docs/reviews/plant-defects-checked-runner/aspect-important-tests.json", "docs/reviews/plant-defects-checked-runner/aspect-important-types.json", "docs/reviews/plant-defects-checked-runner/aspect-important2-code.json", "docs/reviews/plant-defects-checked-runner/aspect-important2-comments.json", "docs/reviews/plant-defects-checked-runner/aspect-important2-errors.json", "docs/reviews/plant-defects-checked-runner/aspect-important2-tests.json", "docs/reviews/plant-defects-checked-runner/aspect-important2-types.json", "docs/reviews/plant-defects-checked-runner/aspect-nit-code.json", "docs/reviews/plant-defects-checked-runner/aspect-nit-comments.json", "docs/reviews/plant-defects-checked-runner/aspect-nit-errors.json", "docs/reviews/plant-defects-checked-runner/aspect-nit-tests.json", "docs/reviews/plant-defects-checked-runner/aspect-nit-types.json", "docs/reviews/plant-defects-checked-runner/ledger.md", "docs/reviews/plant-defects-checked-runner/structural-critical-anti.json", "docs/reviews/plant-defects-checked-runner/structural-critical-simplify.json", "docs/reviews/plant-defects-checked-runner/structural-important-anti.json", "docs/reviews/plant-defects-checked-runner/structural-important-simplify.json", "docs/reviews/plant-defects-checked-runner/structural-important2-anti.json", "docs/reviews/plant-defects-checked-runner/structural-important2-simplify.json", "docs/reviews/plant-defects-checked-runner/structural-nit-anti.json", "docs/reviews/plant-defects-checked-runner/structural-nit-simplify.json", "docs/reviews/plant-defects-checked-runner/trim-comments.txt", "docs/reviews/plant-defects-checked-runner/trim-text.txt", "plugins/plant-defects/.claude-plugin/plugin.json", "plugins/plant-defects/README.md", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/skills/plant-defects/SKILL.md", "plugins/plant-defects/skills/plant-defects/references/checked-runner.md"]
+  },
+  "explicit_python_baseline": {
+    "exit_code": 0,
+    "rules_run": 242,
+    "findings": 0,
+    "errors": [],
+    "scanned": ["plugins/plant-defects/scripts/checked-plant"],
+    "scan_unknown_extensions": true
+  }
+}

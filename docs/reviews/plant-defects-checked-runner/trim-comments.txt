@@ -1,0 +1,16 @@
+Files classified:
+
+- `.github/workflows/ci.yml`: `code-comments`
+- `Makefile`: `code-comments`
+- `plugins/plant-defects/scripts/checked-plant`: `code-comments`
+- `tests/checked_plant_test.py`: `code-comments`
+- `tests/fixtures/checked-plant-detached.py`: `code-comments`
+- `tests/fixtures/checked-plant-tests`: `code-comments`
+
+No changes proposed.
+
+Eligible comments and docstrings are concise and explain purpose, ownership boundaries, or deliberate cleanup ordering. Shebangs, PEP723 metadata, directives, version annotations and exact test data remain protected.
+
+Declined proposals: none. Flagged units: none. Generated mirrors, prose documents, JSON data and raw review evidence were excluded.
+
+Checks, edits, commits, messages and network operations: not run, as requested.

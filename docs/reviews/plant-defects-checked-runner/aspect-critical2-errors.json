@@ -1,0 +1,17 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "live_group() captures ps output and raises on failure, but this handler stores only str(failure). For CalledProcessError, that omits captured stderr. If process inspection fails because procfs is unavailable or access is denied, results.json records the command and exit code while losing the diagnostic explaining why cleanup verification failed. Publication fails safely, but debugging requires reproducing the failure.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Include captured stderr and relevant stdout when recording CalledProcessError or TimeoutExpired, together with the process-group ID. Preserve the existing publication refusal.",
+      "line": 203,
+      "severity": "suggestion",
+      "title": "Uncited: Cleanup inspection failures discard captured diagnostics."
+    }
+  ],
+  "reviewed": "cdc79fdc75a4d37e2757a848d5277cee5dc718ee",
+  "strengths": ["Incomplete command execution and cleanup failures block publication.", "Restoration failures preserve the preceding failure cause.", "Unreadable-input diagnostics retain affected paths and filesystem causes."],
+  "summary": "Reviewed all 47 membership paths across committed, unstaged and untracked changes. Review remained static and read-only; tests were not run, and GitHub metadata verification was unavailable. One diagnostic suggestion remains, with no Important or Critical findings: clean at Important."
+}

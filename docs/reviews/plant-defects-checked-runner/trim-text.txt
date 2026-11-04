@@ -1,0 +1,18 @@
+Files classified:
+- `plugins/plant-defects/README.md`: `none`
+- `plugins/plant-defects/skills/plant-defects/SKILL.md`: `agent-instructions`
+- `plugins/plant-defects/skills/plant-defects/references/checked-runner.md`: `agent-instructions`
+- `docs/plans/todo/2026-11-03-plant-defects-checked-runner.md`: `none`
+- `docs/reviews/plant-defects-checked-runner/ledger.md`: `none`
+- `tests/scrut/checked-plant.md`: `none`
+- `tests/scrut/checked-plant-guards-2.md`: `none`
+- `tests/scrut/checked-plant-guards-3.md`: `none`
+- `tests/scrut/checked-plant-guards-4.md`: `none`
+
+| Location | Action | Before | After |
+| --- | --- | --- | --- |
+| `plugins/plant-defects/skills/plant-defects/references/checked-runner.md:16` | Rewrite | Inputs are verified as regular files before reading; FIFOs and other unsupported kinds fail with null fingerprints and a preserved cause. | The runner verifies inputs are regular files before reading; FIFOs and other unsupported kinds fail with null fingerprints and a preserved cause. |
+| `plugins/plant-defects/skills/plant-defects/references/checked-runner.md:70` | Rewrite | Private copies and restored copies preserve those modes so supporting executables run. | Private and restored copies preserve those modes so supporting executables run. |
+| `plugins/plant-defects/skills/plant-defects/references/checked-runner.md:125` | Rewrite | Both outputs are opened without truncation, checked by filesystem identity, and written through those checked handles. | The renderer opens both outputs without truncation, checks their filesystem identities, and writes through those checked handles. |
+| `plugins/plant-defects/skills/plant-defects/references/checked-runner.md:128` | Rewrite | The one JSON result includes schema version, absolute manifest path, completion and success flags, SHA-256 fingerprints of the manifest, runner and all declared inputs, and one result row per declared assertion variant or green control. | The JSON result includes schema version, absolute manifest path, completion and success flags, SHA-256 fingerprints of the manifest, runner and all declared inputs, and one row per declared assertion variant or green control. |
+| `plugins/plant-defects/skills/plant-defects/references/checked-runner.md:143` | Rewrite | Also verify a declared green control stays green and that a control that goes red blocks publication. | Also verify a declared green control stays green. Verify a control that goes red blocks publication. |

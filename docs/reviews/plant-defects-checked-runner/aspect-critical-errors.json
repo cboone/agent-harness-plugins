@@ -1,0 +1,17 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "If the manifest disappears, becomes unreadable or encounters an I/O error between parsing and snapshotting, snapshot() records a null fingerprint and the underlying diagnostic. This comparison raises first, replacing that diagnostic with \"manifest changed after parsing\". The run fails safely, but results.json loses the affected path and filesystem cause.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Move the null-fingerprint validation immediately before the parsed-manifest comparison, so unreadable-input diagnostics propagate before checking whether readable manifest bytes changed.",
+      "line": 336,
+      "severity": "suggestion",
+      "title": "Uncited: The manifest consistency check discards filesystem failure diagnostics."
+    }
+  ],
+  "reviewed": "44c97a98ed11f0a0784120da699f1ffdc02d8cfe",
+  "strengths": ["Command failures retain output and explicit timeout, truncation, capture-error and reaping state.", "Restoration failures preserve the preceding failure cause.", "Rendering independently rejects failed, incomplete or stale evidence."],
+  "summary": "Reviewed all 42 membership paths across committed, unstaged and untracked changes. Found one diagnostic suggestion and no Important or Critical error-handling defects, clean at Important. Review remained read-only; tests were not run, and GitHub metadata verification was unavailable."
+}

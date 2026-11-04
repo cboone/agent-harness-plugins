@@ -1,0 +1,17 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "If an input disappears, becomes unreadable or encounters an I/O error during the final fingerprint read, snapshot() catches the OSError and returns its diagnostic in contents. This caller discards contents and reports only \"inputs changed during run\"; verified() similarly reports \"stale input fingerprints\". Publication fails safely, but neither message identifies the affected file or preserves the underlying filesystem failure.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Retain both snapshot return values in run() and verified(), and surface any null-fingerprint diagnostics before comparing fingerprints. Preserve the affected path and original OSError in the failed JSON or render refusal.",
+      "line": 260,
+      "severity": "suggestion",
+      "title": "Uncited: Fingerprint rechecks discard filesystem failure diagnostics."
+    }
+  ],
+  "reviewed": "0a3c5b19b371b326270697519514bc6c861d5607",
+  "strengths": ["Timeouts retain captured diagnostics, and timed-out, unreaped or truncated steps cannot count as success.", "Restoration failures preserve the preceding failure cause.", "Rendering independently verifies step evidence before publishing records."],
+  "summary": "Reviewed all 24 membership paths and their committed changes for error handling. Found one diagnostic gap; no Important or Critical defects were identified. Review was static, with tests unrun under the read-only constraint."
+}

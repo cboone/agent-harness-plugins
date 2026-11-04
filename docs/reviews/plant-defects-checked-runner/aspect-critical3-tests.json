@@ -1,0 +1,26 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "Criticality 7/10. Invalid-manifest tests cover empty declarations, zero red exits and missing assertion markers, but never absolute or parent-traversing input paths. Removing the normalization guard would leave existing tests green while permitting materialization outside the private subject directory, violating the input-isolation contract.",
+      "file": "tests/checked_plant_test.py",
+      "fix": "Add negative cases for an absolute existing input and an existing parent-traversing input. Require the normalization diagnostic, failed JSON, no materialization, unchanged source files and publication refusal. Plant a weakening of the normalization guard.",
+      "line": 660,
+      "severity": "important",
+      "title": "Uncited: Input path containment lacks negative regression coverage."
+    },
+    {
+      "confidence": 94,
+      "detail": "Criticality 7/10. The background-child and timeout fixtures stop on SIGTERM, so none exercises stop_group's SIGKILL escalation. Removing escalation could leave a TERM-ignoring process running after command completion while every existing process regression still passes. The current cleanup plant bypasses cleanup entirely and does not independently challenge escalation.",
+      "file": "tests/checked_plant_test.py",
+      "fix": "Add an owned same-group child that installs SIGTERM ignore before recording readiness and redirects both streams. Assert bounded command completion, no remaining live child, successful reaping and cleanup evidence. Retain recorded-PID cleanup and plant removal of SIGKILL escalation.",
+      "line": 357,
+      "severity": "important",
+      "title": "Uncited: Process cleanup tests do not exercise TERM-to-KILL escalation."
+    }
+  ],
+  "reviewed": "5f158b4d50348e30ae49452872f5f56efd59073e",
+  "strengths": ["Tests exercise real assertion plants, separate green controls, restoration failures and publication refusal.", "Rendering tests independently challenge step evidence, forbidden output, stale fingerprints and ledger preservation.", "Process regressions cover retained diagnostics, detached descriptors, closed-stream timeouts and bounded output storage.", "Four Scrut documents register the behavior suite and 28 guard plants for CI."],
+  "summary": "Reviewed all 55 membership paths and mapped changed behavior to test coverage. Coverage is substantial, with two important negative-case gaps; this review remained static and read-only, and tests were not run."
+}

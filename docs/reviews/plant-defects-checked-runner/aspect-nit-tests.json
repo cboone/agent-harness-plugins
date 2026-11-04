@@ -1,0 +1,26 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "Criticality 7/10. Missing-manifest and missing-input tests do not exercise invalid manifest acceptance. No test rejects empty declarations, red.exit_code=0, or empty assertion predicates. Weakening those guards could publish success without running any variants, count a passing check as red, or accept an unrelated failure without named assertion evidence.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Add negative cases for those three manifests, asserting failed JSON, a nonzero run result, and rendering refusal without changing either record.",
+      "line": 93,
+      "severity": "important",
+      "title": "Uncited: Core manifest rejection rules lack negative regression tests."
+    },
+    {
+      "confidence": 97,
+      "detail": "Criticality 7/10. Timeout and truncation tests render reports already marked unsuccessful, so rendering refuses before independently validating step metadata. No test preserves successful aggregate flags while corrupting timed_out, reaped, or output_truncated. Removing valid_step from matches would leave this coverage intact while allowing incomplete step evidence to generate verification records.",
+      "file": "tests/checked_plant_test.py",
+      "fix": "Extend the rendering rejection test with successful reports whose individual check and setup steps have invalid completion flags or setup exits. Assert refusal and unchanged ledger/status contents.",
+      "line": 183,
+      "severity": "important",
+      "title": "Uncited: Rendering tests do not independently challenge step completion evidence."
+    }
+  ],
+  "reviewed": "0a3c5b19b371b326270697519514bc6c861d5607",
+  "strengths": ["Tests cover real assertion plants, separate green controls, restoration, and publication refusal.", "Detached-descendant and output-overflow regressions exercise meaningful process failures.", "Ten guard plants verify that selected regression tests detect weakened runner behavior.", "The Scrut document registers the Python suite through the shared environment-reset wrapper."],
+  "summary": "Reviewed all 24 scoped paths and mapped the new runner behavior to its tests and existing integration checks. Coverage is substantial, with two important gaps in manifest rejection and independent evidence validation. Tests remained unrun under the read-only restriction; GitHub metadata lookup was unavailable."
+}

@@ -1,0 +1,17 @@
+{
+  "aspect": "code",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "snapshot() accepts in-root symlinks by following them, but materialize() recreates every input as a regular file. For example, declare subject.txt and alias.txt, where alias.txt links to subject.txt, and have the check read alias.txt. A patch changing subject.txt no longer reaches that check in the private copy. An assertion plant incorrectly fails, or a declared control incorrectly publishes control-green despite behavior that would differ in the original tree.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Preserve and fingerprint symlink relationships, requiring their targets among declared inputs, and add a regression that patches a target read through its symlink. Alternatively, explicitly reject symlinked inputs before execution.",
+      "line": 138,
+      "severity": "important",
+      "title": "Uncited: Materialization silently breaks accepted symlink relationships."
+    }
+  ],
+  "reviewed": "bf9cac73eb97428c85dc6e16939344822286b6a2",
+  "strengths": ["Rendering independently validates step evidence and current input fingerprints.", "Regression coverage challenges assertion, restoration, timeout and publication guards."],
+  "summary": "Reviewed all 32 membership paths and the committed changes against the supplied historical guidelines. One Important defect remains in private-copy semantics. Review was static and read-only; tests were not run, and GitHub metadata verification was unavailable."
+}

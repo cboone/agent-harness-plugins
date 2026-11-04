@@ -1,0 +1,17 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "run_variant() discards the results returned by checked() for successful git apply commands. Their stdout, stderr and exits are absent from results.json, so a maintainer investigating a successful apply warning cannot retrieve the promised evidence. The runner reference similarly overstates coverage with “all step evidence.”",
+      "file": "bin/lib/error-output-policy.json",
+      "fix": "Rewrite the reason as: “Python runner retains setup/check stdout, stderr and exits in JSON; patch-command failures are retained in the failure cause.” In plugins/plant-defects/skills/plant-defects/references/checked-runner.md, qualify “exact step exits” and “all step evidence” as setup/check evidence, then regenerate the mirror.",
+      "line": 9,
+      "severity": "suggestion",
+      "title": "Uncited: The diagnostic-retention claim includes subprocess results that are discarded."
+    }
+  ],
+  "reviewed": "0a3c5b19b371b326270697519514bc6c861d5607",
+  "strengths": ["The reference clearly explains script trust requirements and private-copy isolation.", "The unittest example distinguishes assertion failures from skips and framework errors.", "The regular-file capture comment explains the process-handling rationale."],
+  "summary": "Reviewed all 24 membership paths and cross-checked changed comments and documentation against the implementation and tests. One documentation suggestion remains; no Important or Critical comment defects were found. Review was static and read-only; tests were not run."
+}

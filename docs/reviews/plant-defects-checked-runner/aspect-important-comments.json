@@ -1,0 +1,17 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "The opening status says the next structural round is Critical-only and cites 23 tests and ten guard plants. Later sections record that structural round as completed, report 28 tests, and identify focused Important review as next. A maintainer resuming from the synopsis receives obsolete review instructions.",
+      "file": "docs/reviews/plant-defects-checked-runner/ledger.md",
+      "fix": "Replace the outdated synopsis with: “Structural review ended clean at Critical. Focused Nit fixes and input-kind preflight are implemented. The latest recorded focused Scrut run passed 28 unittest checks. Next is focused Important review; full-suite and publication gates remain pending.” Preserve the historical sections below.",
+      "line": 7,
+      "severity": "suggestion",
+      "title": "Uncited: The ledger’s opening status contradicts its latest recorded state."
+    }
+  ],
+  "reviewed": "bf9cac73eb97428c85dc6e16939344822286b6a2",
+  "strengths": ["The reference clearly distinguishes private-copy isolation from sandboxing and states script trust requirements.", "The unittest example uses precise success markers and explicit skip/error exclusions.", "The capture documentation accurately explains output limits, deadlines and escaped-descendant responsibilities."],
+  "summary": "Reviewed all 32 membership paths and cross-checked changed comments and documentation against the implementation. Found one stale status synopsis and no Important or Critical comment defects: clean at Important. Review remained read-only; tests were unrun and GitHub metadata verification was unavailable."
+}
