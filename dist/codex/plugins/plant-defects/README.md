@@ -19,6 +19,17 @@ It is adjacent to mutation testing and differs in four ways: it is targeted rath
 
 Every measurement quoted in the references is real, drawn from an eleven-issue verification program in one project and the verification plan of another. Among them: a blank readback that passed the decay checks outright because a not-a-number value compares false against every bound, and a watcher whose real polling function was not merely untested but not compiled, so 297 of 297 tests reported green and the smoke harness reported `ok` with the defect in place.
 
+## Checked runner
+
+Run plants with the bundled `scripts/checked-plant` helper through `uv run --script`.
+A manifest declares every input and variant. The runner checks baseline green,
+named assertion red, restoration and green in private copies, then writes one
+JSON result. Its renderer generates ledger and status text only from complete,
+successful evidence with current fingerprints. Separate green negative controls
+use the same gate and are never counted as red plants. Setup failures and unrun variants
+fail the run. See the [runner reference](skills/plant-defects/references/checked-runner.md)
+for the manifest and commands.
+
 ## Usage
 
 ```text

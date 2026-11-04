@@ -1,6 +1,14 @@
 {
   "non_bash": [
     {
+      "name": "tests/fixtures/checked-plant-detached.py",
+      "reason": "Python timeout fixture records owned parent/descendant PIDs; its test retains diagnostics and stops only those recorded processes."
+    },
+    {
+      "name": "plugins/plant-defects/scripts/checked-plant",
+      "reason": "Python runner retains setup/check stdout, stderr and exits in JSON; patch-command failures are retained in the failure cause."
+    },
+    {
       "name": "tests/fixtures/plant-defects-bytecode.py",
       "reason": "Python bytecode regression, not Bash source; subprocess stderr stays live and check_output propagates nonzero exits."
     },
