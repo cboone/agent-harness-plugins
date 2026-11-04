@@ -90,6 +90,11 @@ helper path. Resolve `../../scripts/checked-plant` from the real directory
 containing the selected `SKILL.md`. Do not choose another installation by a
 version-blind glob.
 
+The runner requires Python 3.13 or newer for POSIX `waitid` and `WNOWAIT`
+on macOS. Its inline metadata lets `uv run --script` select a compatible
+interpreter even in a repository whose `.python-version` pins 3.11 or 3.12.
+Unsupported runtimes still fail closed before spawning commands.
+
 Run through `uv run --script`, with a new output directory for every attempt:
 
 ```bash

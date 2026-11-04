@@ -80,7 +80,14 @@ captured stage fails the pipeline. The first stage receives an empty stdin.
 
 Resolve the helper from the loaded plugin, just as for `checked-plant`. Claude
 can use `${CLAUDE_PLUGIN_ROOT}/scripts/checked-gate`; Codex uses the script
-beside the loaded skill's plugin `scripts/` directory. Invoke it through uv:
+beside the loaded skill's plugin `scripts/` directory.
+
+Python 3.13 or newer is required for POSIX `waitid` and `WNOWAIT` on macOS.
+Inline metadata lets `uv run --script` select a compatible interpreter even
+when the checkout's `.python-version` pins 3.11 or 3.12. Unsupported runtimes
+still fail closed before spawning commands.
+
+Invoke it through uv:
 
 ```bash
 uv run --script /absolute/plugin/scripts/checked-gate run \
