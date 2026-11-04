@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Exercise public entry points with private tools and no real suite lock.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT required}/bin/lib/git-environment.bash"
+
+: "${SUITE_LOCK_STUB_BIN:?}" "${SCRUT_STUB_BIN:?}"
+: "${RUN_SCRUT_DOCUMENTS_BIN:?}" "${RUN_HEAVY_SUITE_BIN:?}"
+
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+
+CASE_DIR=''
+
+function main() {
+  local scenario="$1" dir status=0
+  dir="$(mktemp -d "${TMPDIR:-/tmp}/heavy-suite.XXXXXX")"
+  CASE_DIR="${dir}"
+  trap 'rm -r -- "${CASE_DIR}"' EXIT
+  export HOME="${dir}/home"
+  mkdir -p "${HOME}/Work/sl-vf/bin" "${dir}/tools" "${dir}/tests/scrut"
+  export STUB_SUITE_LOCK_PATH="${HOME}/Work/sl-vf/bin/suite-lock"
+  export STUB_SUITE_LOCK_LOG="${dir}/lock.log"
+  cp "${SUITE_LOCK_STUB_BIN}" "${STUB_SUITE_LOCK_PATH}"
+  cp "${SCRUT_STUB_BIN}" "${dir}/tools/scrut"
+  export PATH="${HOME}/Work/sl-vf/bin:${dir}/tools:${PATH}"
+  [[ "$(command -v suite-lock)" == "${STUB_SUITE_LOCK_PATH}" ]] || exit 93
+  [[ "$(command -v scrut)" == "${dir}/tools/scrut" ]] || exit 94
+  export HEAVY_SUITE_LOCK_BIN="${STUB_SUITE_LOCK_PATH}"
+  : > "${STUB_SUITE_LOCK_LOG}"
+  touch "${dir}/tests/scrut/a.md"
+  cd "${dir}"
+  case "${scenario}" in
+    full) "${RUN_SCRUT_DOCUMENTS_BIN}" ;;
+    empty) "${RUN_SCRUT_DOCUMENTS_BIN}" '' ;;
+    directory) "${RUN_SCRUT_DOCUMENTS_BIN}" "${dir}/tests/scrut/../scrut" ;;
+    named) "${RUN_SCRUT_DOCUMENTS_BIN}" tests/scrut/a.md ;;
+    list) "${RUN_SCRUT_DOCUMENTS_BIN}" --list ;;
+    help) "${RUN_SCRUT_DOCUMENTS_BIN}" --help ;;
+    missing)
+      export HEAVY_SUITE_LOCK_BIN="${dir}/absent"
+      "${RUN_SCRUT_DOCUMENTS_BIN}"
+      ;;
+    default)
+      unset HEAVY_SUITE_LOCK_BIN
+      "${RUN_SCRUT_DOCUMENTS_BIN}"
+      ;;
+    missing-default)
+      unset HEAVY_SUITE_LOCK_BIN
+      export HOME="${dir}/absent-home"
+      "${RUN_SCRUT_DOCUMENTS_BIN}"
+      ;;
+    passthrough | fallback-output)
+      if [[ "${scenario}" == fallback-output ]]; then
+        export HEAVY_SUITE_LOCK_BIN="${dir}/absent"
+      fi
+      export HEAVY_PROBE_VALUE='inherited value'
+      # shellcheck disable=SC2016 # The child reads the inherited environment.
+      "${RUN_HEAVY_SUITE_BIN}" bash -c 'printf "stdout: %s, %s\n" "$1" "${HEAVY_PROBE_VALUE}"; printf "stderr\n" >&2; exit 7' probe 'argument with spaces' || status=$?
+      ;;
+    streams)
+      local diagnostics=''
+      capture_child diagnostics --stdout "${dir}/stdout" -- "${RUN_HEAVY_SUITE_BIN}" \
+        bash -c 'printf "out\n"; printf "err\n" >&2'
+      printf 'stdout: '
+      cat "${dir}/stdout"
+      printf 'stderr: %s\n' "${diagnostics}"
+      ;;
+    nested)
+      "${RUN_HEAVY_SUITE_BIN}" "${RUN_SCRUT_DOCUMENTS_BIN}"
+      ;;
+    make)
+      cd "${REPO_ROOT}"
+      make --no-print-directory -f "${REPO_ROOT}/Makefile" test-all MAKE=echo
+      ;;
+    update-full | update-named)
+      local selection="${dir}/tests/scrut" report=''
+      if [[ "${scenario}" == update-named ]]; then
+        selection="${selection}/a.md"
+      fi
+      cd "${REPO_ROOT}"
+      capture_child report -- make --no-print-directory test-scrut-update \
+        "SCRUT_TEST_DIR=${selection}" SCRUT_UNSET=
+      [[ "${report}" == *'Result: 1 document(s) with 1 testcase(s): 1 succeeded, 0 failed and 0 skipped'* ]]
+      printf 'update and verification ran\n'
+      ;;
+    *)
+      printf 'unknown scenario: %s\n' "${scenario}" >&2
+      exit 2
+      ;;
+  esac
+  printf 'lock calls: %s\n' "$(wc -l < "${STUB_SUITE_LOCK_LOG}" | tr -d ' ')"
+  return "${status}"
+}
+
+main "$@"

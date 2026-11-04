@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Use the machine-wide lock where installed; other machines run directly.
+set -euo pipefail
+
+function main() {
+  local suite_lock="${HEAVY_SUITE_LOCK_BIN:-${HOME}/Work/sl-vf/bin/suite-lock}"
+  if [[ -x "${suite_lock}" ]]; then
+    exec "${suite_lock}" run heavy -- "$@"
+  fi
+  exec "$@"
+}
+
+main "$@"

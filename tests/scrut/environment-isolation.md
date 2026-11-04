@@ -103,7 +103,7 @@ false
 
 ```scrut
 $ "${ENVIRONMENT_ISOLATION_BIN}" guard-scrut-runner
-bin/run-scrut-documents: run Scrut through bin/run-scrut
+bin/lib/run-scrut-documents: run Scrut through bin/run-scrut
 [1]
 ```
 
