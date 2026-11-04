@@ -1,0 +1,263 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+"""Run ordered checks and one action against unchanged Git inputs."""
+
+import argparse
+import math
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+import time
+
+# Keep module bytecode out of the shipped plugin.
+sys.dont_write_bytecode = True
+from checked_core import (command, pipeline_command, digest, failure_cause, read_regular, relative,
+                          require, passed, parse_json, encode_json, FactJournal, journal_context, fold_receipt, validate_fold, valid_step, row_complete, row_for, record_result, record_error, validate_row, write_receipt, boundaries_match)
+
+SCHEMA = 1
+HEX = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
+
+
+def argv(value):
+    require(isinstance(value, list) and value and
+            all(isinstance(s, str) and '\0' not in s for s in value) and value[0], "argv needs a nonempty executable and string arguments")
+    return value
+
+
+def timeout(value):
+    require(type(value) in (int, float) and 0 < value <= 3600 and math.isfinite(value),
+            "timeout must be in (0, 3600]")
+    return value
+
+
+def validate(manifest):
+    require(isinstance(manifest, dict), "manifest must be an object")
+    checks = manifest.get("checks")
+    require(isinstance(checks, list) and checks, "declare at least one check")
+    for check in checks:
+        require(isinstance(check, dict), "check must be an object")
+        require(("argv" in check) != ("pipeline" in check), "check declares either argv or pipeline")
+        if "pipeline" in check:
+            require(isinstance(check["pipeline"], list) and len(check["pipeline"]) >= 2, "pipeline needs at least two stages")
+            for stage in check["pipeline"]:
+                argv(stage)
+            require(check.get("expected_exit", 0) == 0, "pipeline expected exit must be zero")
+        else:
+            argv(check.get("argv"))
+        expected = check.get("expected_exit", 0)
+        require(type(expected) is int, "invalid expected exit")
+        timeout(check.get("timeout", 60))
+        inputs = check.get("inputs")
+        require(isinstance(inputs, list) and inputs and all(isinstance(p, str) for p in inputs),
+                "each check must declare inputs")
+        require(len(set(inputs)) == len(inputs), "duplicate input")
+        for name in inputs:
+            if name not in ("HEAD", "tree", "index"):
+                relative(name)
+    argv(manifest.get("action"))
+    timeout(manifest.get("action_timeout", 60))
+    return manifest
+
+
+def git(root, *args, env=None):
+    result = command(["git", *args], root, 60,
+                     env_overrides={"GIT_INDEX_FILE": env} if env is not None else None)
+    require(valid_step(result) and result["exit_code"] == 0, f"Git fingerprint failed: {args}: {result}")
+    return result["stdout"].strip()
+
+
+def fingerprint(root, manifest):
+    head = git(root, "rev-parse", "--verify", "HEAD")
+    require(HEX.fullmatch(head), "invalid HEAD")
+    with tempfile.TemporaryDirectory(prefix="checked-gate-index-") as work:
+        index = str(Path(work) / "index")
+        git(root, "read-tree", "HEAD", env=index)
+        git(root, "add", "--all", "--", ".", env=index)
+        tree = git(root, "write-tree", env=index)
+    names = sorted({name for c in manifest["checks"] for name in c["inputs"]})
+    files = {}
+    for name in names:
+        if name not in ("HEAD", "tree", "index"):
+            data, mode = read_regular(root / relative(name), root=root)
+            files[name] = dict(sha256=digest(data), mode=mode)
+    index_state = None
+    if "index" in names:
+        index_state = dict(tree=git(root, "write-tree"),
+                           entries_sha256=digest(git(root, "ls-files", "--stage", "-v", "-z").encode()))
+    return dict(head=head, head_tree=git(root, "rev-parse", "HEAD^{tree}"), tree=tree, index=index_state, files=files)
+
+
+def execute(row, root, limit, *, journal, target):
+    try:
+        if row["pipeline"] is not None:
+            pipeline_command(row["pipeline"], root, limit, journal=journal, target=target)
+        else:
+            command(row["argv"], root, limit, journal=journal, target=target)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        journal.append("error", target, cause=failure_cause(error))
+
+
+
+def record_boundary(journal, target, root, check, phase):
+    state, cause = None, None
+    try:
+        state = fingerprint(root, dict(checks=[check]))
+    except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
+        cause = failure_cause(error)
+    journal.append("fingerprint", target, phase=phase, value=state, cause=cause)
+
+
+def run(path, out, root):
+    root, out = root.resolve(), out.resolve()
+    out.mkdir(parents=True, exist_ok=False)
+    journal = FactJournal(out / "facts.jsonl", create=True)
+    journal.append("begin", manifest=str(path))
+    write_receipt(out / "receipt.json", journal.receipt())
+    success = False
+    with journal_context(journal):
+        try:
+            raw, _ = read_regular(path)
+            manifest = parse_json(raw)
+            journal.append("manifest", value=manifest, sha256=digest(raw))
+            validate(manifest)
+            require(not out.is_relative_to(root), "output directory must be outside the checkout")
+            require(Path(git(root, "rev-parse", "--show-toplevel")).resolve() == root, "root must be the Git checkout root")
+            journal.append("fingerprint", phase="before", value=fingerprint(root, manifest))
+            for index, check in enumerate(manifest["checks"]):
+                record_boundary(journal, f"check/{index}", root, check, "start")
+                receipt = journal.receipt()
+                execute(receipt["checks"][index], root, check.get("timeout", 60), journal=journal, target=f"check/{index}")
+                record_boundary(journal, f"check/{index}", root, check, "end")
+            journal.append("fingerprint", phase="after_checks", value=fingerprint(root, manifest))
+            receipt = journal.receipt()
+            require(not receipt["journal_errors"], "journal contains unavailable evidence")
+            require(receipt["before"] == receipt["after_checks"], "inputs changed between checks and action")
+            require(boundaries_match(receipt), "check input boundary changed or unavailable")
+            require(read_regular(path)[0] == raw, "manifest changed during checks")
+            require(all(passed(r, c.get("expected_exit", 0)) for r, c in
+                        zip(receipt["checks"], manifest["checks"], strict=True)), "check failed, incomplete or unrun")
+            journal.append("allow-action")
+            execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action")
+            journal.append("fingerprint", phase="after_action", value=fingerprint(root, manifest))
+            receipt = journal.receipt()
+            require(passed(receipt["action"], 0), "action failed or incomplete")
+            require(not receipt["journal_errors"], "journal contains unavailable evidence")
+            success = True
+        except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
+            journal.append("refused", cause=failure_cause(error))
+        finally:
+            journal.append("finished", success=success)
+            receipt = journal.receipt()
+            write_receipt(out / "receipt.json", receipt)
+    print(str(out / "receipt.json"))
+    return 0 if receipt["success"] else 1
+
+
+def load(path):
+    value = parse_json(read_regular(path)[0])
+    require(isinstance(value, dict) and type(value.get("schema")) is int and value["schema"] == SCHEMA
+            and value.get("kind") == "checked-gate", "unknown receipt schema")
+    require(isinstance(value["checks"], list), "invalid check records")
+    value = validate_fold(value)
+    require(type(value["action_refused"]) is bool and type(value["complete"]) is bool
+            and type(value["success"]) is bool and (value["cause"] is None or isinstance(value["cause"], str)),
+            "invalid receipt outcome")
+    return value
+
+
+def validate_receipt(value):
+    require(isinstance(value, dict) and type(value.get("schema")) is int and value["schema"] == SCHEMA
+            and value.get("kind") == "checked-gate", "unknown receipt schema")
+    manifest = validate(value["manifest"])
+    require(isinstance(value["checks"], list) and len(value["checks"]) == len(manifest["checks"]),
+            "missing check evidence")
+    for row, check in zip(value["checks"], manifest["checks"], strict=True):
+        require(row["argv"] == check.get("argv") and row["pipeline"] == check.get("pipeline"), "check argv differs")
+        if row["pipeline"] is not None and row["state"] == "exited":
+            require([r["argv"] for r in row["result"]["stages"]] == row["pipeline"], "missing or reordered pipeline stages")
+    require(value["action"]["argv"] == manifest["action"], "action argv differs")
+    validate_row(value["action"])
+    return value
+
+
+def validate_state(state, manifest):
+    require(isinstance(state, dict), "missing Git fingerprints")
+    for key in ("head", "head_tree", "tree"):
+        require(isinstance(state[key], str) and HEX.fullmatch(state[key]), "invalid Git fingerprint")
+    names = {name for c in manifest["checks"] for name in c["inputs"]}
+    require(set(state["files"]) == names - {"HEAD", "tree", "index"}, "missing file fingerprints")
+    for item in state["files"].values():
+        require(isinstance(item["sha256"], str) and re.fullmatch(r"[0-9a-f]{64}", item["sha256"])
+                and type(item["mode"]) is int and 0 <= item["mode"] <= 0o7777, "invalid file fingerprint")
+    if "index" in names:
+        require(isinstance(state["index"], dict) and HEX.fullmatch(state["index"]["tree"])
+                and re.fullmatch(r"[0-9a-f]{64}", state["index"]["entries_sha256"]), "missing index fingerprint")
+    else:
+        require(state["index"] is None, "unexpected index fingerprint")
+
+
+def verify(value, head=None, tree=None):
+    manifest = validate_receipt(value)["manifest"]
+    require(value["complete"] is True and value["success"] is True and value["action_refused"] is False
+            and value["cause"] is None, "incomplete or failed receipt")
+    require(value["before"] == value["after_checks"], "changed check inputs")
+    require(boundaries_match(value), "check input boundary changed or unavailable")
+    for state in (value["before"], value["after_action"]):
+        validate_state(state, manifest)
+    require(all(passed(r, c.get("expected_exit", 0)) for r, c in
+                zip(value["checks"], manifest["checks"], strict=True)), "failed or unrun check")
+    require(passed(value["action"], 0), "failed or unrun action")
+    head_matches = any(state["head"] == head and state["head_tree"] == value["before"]["tree"]
+                       for state in (value["before"], value["after_action"]))
+    require(head is None or HEX.fullmatch(head) and head_matches, "receipt HEAD mismatch or unchecked commit tree")
+    require(tree is None or HEX.fullmatch(tree) and value["before"]["tree"] == tree, "receipt tree mismatch")
+
+
+def render(value):
+    for index, row in enumerate(value["checks"], 1):
+        print(f"Check {index}: exit {row['exit_code']}; {row['state']}; argv {encode_json(row['pipeline'] if row['pipeline'] is not None else row['argv'])}; cause {encode_json(row['cause'])}.")
+        if row["pipeline"] is not None and row["result"] is not None:
+            for number, stage in enumerate(row["result"]["stages"], 1):
+                print(f"Check {index} stage {number}: exit {stage['exit_code']}; {stage['state']}; argv {encode_json(stage['argv'])}; cause {encode_json(stage['cause'])}.")
+    row = value["action"]
+    print(f"Action: exit {row['exit_code']}; {row['state']}; refused {value['action_refused']}; "
+          f"cause {encode_json(value['cause'])}; argv {encode_json(row['argv'])}; command cause {encode_json(row['cause'])}.")
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    execute_parser = sub.add_parser("run")
+    execute_parser.add_argument("manifest", type=Path)
+    execute_parser.add_argument("out", type=Path)
+    execute_parser.add_argument("--root", type=Path, default=Path.cwd())
+    verify_parser = sub.add_parser("verify")
+    verify_parser.add_argument("receipt", type=Path)
+    expected = verify_parser.add_mutually_exclusive_group(required=True)
+    expected.add_argument("--head")
+    expected.add_argument("--tree")
+    render_parser = sub.add_parser("render")
+    render_parser.add_argument("receipt", type=Path)
+    args = parser.parse_args()
+    try:
+        if args.command == "run":
+            return run(args.manifest.absolute(), args.out.resolve(), args.root.resolve())
+        value = load(args.receipt)
+        if args.command == "verify":
+            verify(value, args.head, args.tree)
+            return 0
+        return render(value)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        print("Refused: " + failure_cause(error), file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

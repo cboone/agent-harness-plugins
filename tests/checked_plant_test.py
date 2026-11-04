@@ -23,6 +23,10 @@ from unittest import mock
 sys.dont_write_bytecode = True
 RUNNER = Path(os.environ["CHECKED_PLANT_BIN"])
 DETACHED = Path(os.environ["CHECKED_PLANT_DETACHED_BIN"])
+sys.path.insert(0, str(RUNNER.parent))
+import checked_core as core
+CORE = Path(core.__file__)
+GATE = RUNNER.with_name("checked-gate")
 loader = importlib.machinery.SourceFileLoader("checked_plant", str(RUNNER))
 spec = importlib.util.spec_from_loader(loader.name, loader)
 runner = importlib.util.module_from_spec(spec)
@@ -253,31 +257,40 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("FileNotFoundError", value["reason"])
 
     def test_external_read_paths_are_centralized(self):
-        tree = ast.parse(RUNNER.read_text())
         allowed = {
             "os.read(key.fd, 65536)": 1,
+            "os.read(transport.fileno(), 65536)": 1,
             "(Path(cache) / 'stdout').open('w+b')": 1,
             "(Path(cache) / 'stderr').open('w+b')": 1,
             "stream.read(OUTPUT_LIMIT + 1)": 1,
         }
         observed = {}
-        parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
-        functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            name = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", "")
-            if name not in {"open", "fdopen", "read", "read_text", "read_bytes", "readline", "readlines", "pread"}:
-                continue
-            function = parents.get(node)
-            while function is not None and not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                function = parents.get(function)
-            if function is functions["regular_file"]:
-                continue
-            call = ast.unparse(node)
-            self.assertIs(function, functions["command"], "external reader bypass: " + call)
-            self.assertIn(call, allowed, "external reader bypass: " + call)
-            observed[call] = observed.get(call, 0) + 1
+        for path in (RUNNER, CORE, GATE):
+            tree = ast.parse(path.read_text())
+            parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+            functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                name = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", "")
+                if name not in {"open", "fdopen", "read", "read_text", "read_bytes", "readline", "readlines", "pread"}:
+                    continue
+                function = parents.get(node)
+                while function is not None and not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    function = parents.get(function)
+                if path == CORE and function is not None and function is functions.get("regular_file"):
+                    continue
+                call = ast.unparse(node)
+                if call == "os.read(transport.fileno(), 65536)":
+                    self.assertEqual(path, CORE)
+                    self.assertEqual(function.name, "pump")
+                elif call == "stream.read(OUTPUT_LIMIT + 1)":
+                    self.assertEqual(path, CORE)
+                    self.assertIs(function, functions.get("read_spool"), "owned spool reader bypass: " + call)
+                else:
+                    self.assertIs(function, functions.get("command"), "external reader bypass: " + call)
+                self.assertIn(call, allowed, "external reader bypass: " + call)
+                observed[call] = observed.get(call, 0) + 1
         self.assertEqual(observed, allowed)
 
     def test_unsupported_manifests_write_failed_json(self):
@@ -345,7 +358,7 @@ class RunnerTests(unittest.TestCase):
     def test_bytecode_isolation_each_phase(self):
         prefixes = []
         for _ in range(3):
-            result = runner.command([sys.executable, "-c",
+            result = core.command([sys.executable, "-c",
                                      "import os; print(os.environ['PYTHONPYCACHEPREFIX']); "
                                      "print(os.environ['PYTHONDONTWRITEBYTECODE'])"], self.root, 5)
             self.assertEqual(result["exit_code"], 0, result["stderr"])
@@ -356,7 +369,7 @@ class RunnerTests(unittest.TestCase):
 
     def test_normally_exiting_step_stops_its_group(self):
         child_file = self.root / "child.pid"
-        result = runner.command(["bash", "-c", 'sleep 60 >/dev/null 2>&1 & echo $! > child.pid; echo marker'],
+        result = core.command(["bash", "-c", 'sleep 60 >/dev/null 2>&1 & echo $! > child.pid; echo marker'],
                                 self.root, 3)
         child = int(child_file.read_text())
         listing = subprocess.run(["ps", "-o", "stat=", "-p", str(child)], capture_output=True, text=True, timeout=2)
@@ -374,7 +387,7 @@ class RunnerTests(unittest.TestCase):
     def test_term_ignoring_group_is_stopped(self):
         script = ('bash -c \'trap "" TERM; echo $$ > child.pid; exec sleep 60\' >/dev/null 2>&1 &\n'
                   'while [[ ! -s child.pid ]]; do sleep 0.01; done\necho marker\n')
-        result = runner.command(["bash", "-c", script], self.root, 3)
+        result = core.command(["bash", "-c", script], self.root, 3)
         child = int((self.root / "child.pid").read_text())
         listing = subprocess.run(["ps", "-o", "stat=", "-p", str(child)], capture_output=True, text=True, timeout=2)
         alive = listing.returncode == 0 and not listing.stdout.strip().startswith("Z")
@@ -411,41 +424,42 @@ class RunnerTests(unittest.TestCase):
                 self.refused()
 
     def test_unsupported_runtime_refuses_before_spawn(self):
-        with mock.patch.object(runner.os, "waitid", None), mock.patch.object(
-                runner.subprocess, "Popen", side_effect=AssertionError("unsupported runtime reached spawn")) as spawn:
+        with mock.patch.object(core.os, "waitid", None), mock.patch.object(
+                core.subprocess, "Popen", side_effect=AssertionError("unsupported runtime reached spawn")) as spawn:
             with self.assertRaisesRegex(ValueError, "waitid and WNOWAIT"):
-                runner.command(["bash", "-c", "echo marker"], self.root, 1)
+                core.command(["bash", "-c", "echo marker"], self.root, 1)
             spawn.assert_not_called()
 
     def test_failure_recording_is_centralized(self):
-        tree = ast.parse(RUNNER.read_text())
-        parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
-        for handler in ast.walk(tree):
-            if not isinstance(handler, ast.ExceptHandler) or not handler.name:
-                continue
-            for node in ast.walk(handler):
-                if not isinstance(node, ast.Name) or node.id != handler.name or not isinstance(node.ctx, ast.Load):
+        for path in (RUNNER, CORE, GATE):
+            tree = ast.parse(path.read_text())
+            parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+            for handler in ast.walk(tree):
+                if not isinstance(handler, ast.ExceptHandler) or not handler.name:
                     continue
-                parent = parents[node]
-                if isinstance(parent, ast.Raise) and parent.cause is node:
-                    continue
-                self.assertIsInstance(parent, ast.Call, "cause recording bypasses shared formatter")
-                self.assertIsInstance(parent.func, ast.Name)
-                self.assertIn(parent.func.id, ("failure_cause", "isinstance"))
+                for node in ast.walk(handler):
+                    if not isinstance(node, ast.Name) or node.id != handler.name or not isinstance(node.ctx, ast.Load):
+                        continue
+                    parent = parents[node]
+                    if isinstance(parent, ast.Raise) and parent.cause is node:
+                        continue
+                    self.assertIsInstance(parent, ast.Call, "cause recording bypasses shared formatter")
+                    self.assertIsInstance(parent.func, ast.Name)
+                    self.assertIn(parent.func.id, ("failure_cause", "isinstance"))
 
     def test_inspection_failure_retains_subprocess_diagnostics(self):
         for failure in (subprocess.CalledProcessError(2, ["ps"], output="inspection stdout", stderr="inspection denied"),
                         subprocess.TimeoutExpired(["ps"], 0.25, output=b"inspection stdout", stderr=b"inspection timed out")):
             with self.subTest(failure=type(failure).__name__):
-                with mock.patch.object(runner, "live_group", side_effect=failure), mock.patch.object(runner, "terminate_group"):
-                    remaining, cause = runner.stop_group(123)
+                with mock.patch.object(core, "live_group", side_effect=failure), mock.patch.object(core, "terminate_group"):
+                    remaining, cause = core.stop_group(123)
                 self.assertIsNone(remaining)
                 self.assertIn(type(failure).__name__, cause)
                 self.assertIn("inspection stdout", cause)
                 self.assertIn("inspection denied" if isinstance(failure, subprocess.CalledProcessError)
                               else "inspection timed out", cause)
-        huge = runner.failure_cause(subprocess.CalledProcessError(2, ["ps"], stderr="x" * (runner.OUTPUT_LIMIT + 1)))
-        self.assertNotIn("x" * (runner.OUTPUT_LIMIT + 1), huge)
+        huge = core.failure_cause(subprocess.CalledProcessError(2, ["ps"], stderr="x" * (core.OUTPUT_LIMIT + 1)))
+        self.assertNotIn("x" * (core.OUTPUT_LIMIT + 1), huge)
 
     def test_closed_stdio_parent_timeout_writes_failure(self):
         parents = self.root / "parents"
@@ -693,7 +707,7 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(self.code, 1)
         step = result["results"][0]["baseline_setup"]
         self.assertTrue(step["output_truncated"])
-        self.assertLessEqual(len(step["stdout"]), runner.OUTPUT_LIMIT)
+        self.assertLessEqual(len(step["stdout"]), core.OUTPUT_LIMIT)
         self.refused()
 
     def test_invalid_manifests_refuse_records(self):
@@ -774,8 +788,8 @@ class RunnerTests(unittest.TestCase):
             result = self.execute()
         self.assertEqual(self.code, 1)
         self.assertTrue(stored)
-        self.assertLessEqual(max(stored), runner.OUTPUT_LIMIT)
-        self.assertEqual(max(stored), runner.OUTPUT_LIMIT)
+        self.assertLessEqual(max(stored), core.OUTPUT_LIMIT)
+        self.assertEqual(max(stored), core.OUTPUT_LIMIT)
         self.assertTrue(result["results"][0]["baseline_setup"]["output_truncated"])
         self.refused()
 
@@ -848,9 +862,12 @@ class RunnerTests(unittest.TestCase):
                     self.refused(bad)
 
     def test_runner_guards_detect_their_own_plants(self):
-        source = RUNNER.read_text()
+        sources = {"candidate": RUNNER.read_text(), "checked_core.py": CORE.read_text(), "checked-gate": GATE.read_text()}
+        source = sources["candidate"]
         candidate = self.root / "candidate"
         candidate.write_text(source)
+        for name in ("checked_core.py", "checked-gate"):
+            (self.root / name).write_text(sources[name])
         (self.root / "regressions.py").write_bytes(Path(__file__).read_bytes())
         (self.root / "detached.py").write_bytes(DETACHED.read_bytes())
         (self.root / "contracts.sh").write_text(
@@ -925,11 +942,11 @@ class RunnerTests(unittest.TestCase):
              "FAIL: test_forbidden_output_blocks_records"),
             ("parallel-reader", "def load_manifest(path):", "def unchecked(path):\n    return path.read_text()\n\n\ndef load_manifest(path):",
              "FAIL: test_external_read_paths_are_centralized"),
-            ("manifest-reader", "data, mode = read_regular(path)\n    manifest = json.loads(data)",
-             'data, mode = path.read_bytes(), stat.S_IMODE(path.stat().st_mode)\n    manifest = json.loads(data)',
+            ("manifest-reader", "data, mode = read_regular(path)\n    manifest = parse_json(data)",
+             'data, mode = path.read_bytes(), __import__("stat").S_IMODE(path.stat().st_mode)\n    manifest = parse_json(data)',
              "FAIL: test_unsupported_manifests_write_failed_json"),
-            ("render-manifest-reader", "data, mode = read_regular(path)\n    manifest = json.loads(data)",
-             'data, mode = path.read_bytes(), stat.S_IMODE(path.stat().st_mode)\n    manifest = json.loads(data)',
+            ("render-manifest-reader", "data, mode = read_regular(path)\n    manifest = parse_json(data)",
+             'data, mode = path.read_bytes(), __import__("stat").S_IMODE(path.stat().st_mode)\n    manifest = parse_json(data)',
              "FAIL: test_stale_render_fifo_refuses_without_records"),
             ("manifest-fingerprint", 'require(before["manifest"] == parsed,', 'require(True,',
              "FAIL: test_parsed_manifest_bytes_match_fingerprint"),
@@ -959,7 +976,10 @@ class RunnerTests(unittest.TestCase):
         probe.unlink()
         variants = []
         for name, old, new, marker in changes:
-            self.assertGreaterEqual(source.count(old), 1)
+            extra_core = None
+            target = next(name for name, text in sources.items() if old in text)
+            original = sources[target]
+            self.assertGreaterEqual(original.count(old), 1)
             patch = name + ".patch"
             methods = [marker.removeprefix("FAIL: ")]
             required = [marker, "FAILED (failures="]
@@ -981,28 +1001,28 @@ class RunnerTests(unittest.TestCase):
             red_script = ('env CHECKED_PLANT_BIN="${PWD}/candidate" '
                           'CHECKED_PLANT_DETACHED_BIN="${PWD}/detached.py" '
                           'uv run --no-project regressions.py ' + selected + ' -q\n')
-            mutated = source.replace(old, new)
+            mutated = original.replace(old, new)
             if name == "bounded-capture":
                 mutated = mutated.replace('if time.monotonic() >= deadline:\n                            timed_out = True',
                                           'if False:\n                            timed_out = True')
             if name == "recheck-cause":
-                mutated = mutated.replace('for name in ("stdout", "stderr"):', 'for name in ():')
+                extra_core = sources["checked_core.py"].replace('for name in ("stdout", "stderr"):', 'for name in ():')
                 mutated += '\ndef unchecked_cause():\n    try:\n        raise ValueError("sample")\n    except ValueError as failure:\n        return str(failure)\n'
             if name == "manifest-empty":
-                mutated = mutated.replace('require(not path.is_absolute() and all(p not in ("", ".", "..") for p in value.split("/")),',
-                                          'require(True,')
+                extra_core = sources["checked_core.py"].replace('require(not path.is_absolute() and all(p not in ("", ".", "..") for p in value.split("/")),', 'require(True,')
             if name == "private-git":
                 self.assertEqual(mutated.count("git_boundary=True"), 1)
                 mutated = mutated.replace("git_boundary=True", "git_boundary=False")
             (self.root / patch).write_text(
-                self.patch_for("candidate", source, mutated)
+                self.patch_for(target, original, mutated)
+                + (self.patch_for("checked_core.py", sources["checked_core.py"], extra_core) if extra_core is not None else "")
                 + self.patch_for("contracts.sh", (self.root / "contracts.sh").read_text(), red_script))
             required.append(f"Ran {len(methods)} test" + ("s" if len(methods) != 1 else ""))
             variants.append(dict(name=name, patch=patch,
                                  red=dict(exit_code=1, contains=required,
                                           excludes=["\nERROR:", ", skipped="])))
         self.manifest = dict(
-            inputs=["candidate", "regressions.py", "contracts.sh", "detached.py"] + [v["patch"] for v in variants],
+            inputs=["candidate", "checked_core.py", "checked-gate", "regressions.py", "contracts.sh", "detached.py"] + [v["patch"] for v in variants],
             check="contracts.sh", timeout=30,
             green=dict(exit_code=0, contains=["Ran 31 tests", "\nOK\n"], excludes=["skipped", "SKIP", "ERROR:"]), variants=variants,
         )
