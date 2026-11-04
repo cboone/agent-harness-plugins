@@ -91,6 +91,14 @@
     {
       "name": "tests/fixtures/report-board-execute.cjs",
       "reason": "Node.js VM and DOM fixture executed by node, not Bash; its Scrut caller keeps failure diagnostics live."
+    },
+    {
+      "name": "plugins/plant-defects/scripts/checked-gate",
+      "reason": "Python checked runner component; command captures and failure causes are retained in JSON evidence."
+    },
+    {
+      "name": "plugins/plant-defects/scripts/checked_core.py",
+      "reason": "Python checked runner component; command captures and failure causes are retained in JSON evidence."
     }
   ],
   "parse_exceptions": []

@@ -6,100 +6,29 @@
 """Run declared private plants; publish records only from verified JSON evidence."""
 
 import argparse
-from contextlib import contextmanager, ExitStack
-import hashlib
-import json
-import os
 from pathlib import Path
 import re
-import selectors
 import shutil
-import signal
-import stat
 import subprocess
 import sys
 import tempfile
-import time
 
+
+# Keep module bytecode out of the shipped plugin.
+sys.dont_write_bytecode = True
+from checked_core import (
+    require, parse_json, digest, failure_cause, write_json, relative, read_regular,
+    command, valid_step, reserve_outputs,
+)
 
 SCHEMA = 1
 BEGIN = "<!-- checked-plants:start -->"
 END = "<!-- checked-plants:end -->"
 
 
-def require(condition, message):
-    if not condition:
-        raise ValueError(message)
-
-
-def digest(data):
-    return hashlib.sha256(data).hexdigest()
-
-
-def failure_cause(error):
-    cause = f"{type(error).__name__}: {error}"
-    for name in ("stdout", "stderr"):
-        value = getattr(error, name, None)
-        if value is not None:
-            value = value[:OUTPUT_LIMIT]
-            if isinstance(value, bytes):
-                value = value.decode("utf-8", errors="replace")
-            cause += f"; {name}: {value!r}"
-    return cause
-
-
-def write_json(path, value):
-    temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(value, indent=2) + "\n")
-    temporary.replace(path)
-
-
-def relative(value):
-    require(isinstance(value, str) and value, "input path must be a string")
-    path = Path(value)
-    require(not path.is_absolute() and all(p not in ("", ".", "..") for p in value.split("/")),
-            "input paths must be normalized relative paths")
-    return path
-
-
-@contextmanager
-def regular_file(path, *, root=None, reserve=False):
-    current = path.parent.resolve() if root is None else root.resolve()
-    parts = (path.name,) if root is None else path.relative_to(root).parts
-    for part in parts:
-        current = current / part
-        require(not current.is_symlink(), "symlinked input paths are unsupported: " + str(path))
-    created = False
-    flags = os.O_RDWR if reserve else os.O_RDONLY
-    try:
-        if reserve:
-            try:
-                descriptor = os.open(current, flags | os.O_NONBLOCK | os.O_CREAT | os.O_EXCL, 0o666)
-                created = True
-            except FileExistsError:
-                descriptor = os.open(current, flags | os.O_NONBLOCK)
-        else:
-            descriptor = os.open(current, os.O_RDONLY | os.O_NONBLOCK)
-        try:
-            info = os.fstat(descriptor)
-            require(stat.S_ISREG(info.st_mode), "input must be a regular file")
-            with os.fdopen(descriptor, "r+b" if reserve else "rb", closefd=False) as stream:
-                data = stream.read()
-                yield stream, data, stat.S_IMODE(info.st_mode), created
-        finally:
-            os.close(descriptor)
-    except RuntimeError as error:
-        raise ValueError(failure_cause(error)) from error
-
-
-def read_regular(path, *, root=None):
-    with regular_file(path, root=root) as (_, data, mode, _):
-        return data, mode
-
-
 def load_manifest(path):
     data, mode = read_regular(path)
-    manifest = json.loads(data)
+    manifest = parse_json(data)
     require(isinstance(manifest, dict), "manifest must be an object")
     variants = manifest.get("variants", [])
     controls = manifest.get("controls", [])
@@ -160,6 +89,9 @@ def snapshot(path, manifest, fingerprints=None, retain=True):
         try:
             data, mode = read_regular(source, root=path.parent if name not in ("manifest", "runner") else None)
             fingerprints[name] = dict(sha256=digest(data), mode=mode)
+            if name == "runner":
+                module_data, module_mode = read_regular(Path(__file__).resolve().with_name("checked_core.py"))
+                fingerprints[name]["core"] = dict(sha256=digest(module_data), mode=module_mode)
             if retain:
                 contents[name] = (data, mode)
         except (OSError, ValueError) as error:
@@ -175,134 +107,6 @@ def materialize(root, manifest, contents):
         data, mode = contents[name]
         target.write_bytes(data)
         target.chmod(mode)
-
-
-def terminate_group(pid, requested_signal=signal.SIGKILL):
-    try:
-        os.killpg(pid, requested_signal)
-    except ProcessLookupError:
-        pass
-
-
-def live_group(pid):
-    listing = subprocess.run(["ps", "-axo", "pid=,pgid=,stat="], capture_output=True,
-                             text=True, check=True, timeout=0.25)
-    members = []
-    for line in listing.stdout.splitlines():
-        member, group, state = line.split()
-        if int(group) == pid and not state.startswith("Z"):
-            members.append(int(member))
-    return members
-
-
-def stop_group(pid):
-    remaining, error = None, None
-    try:
-        remaining = live_group(pid)
-        if not remaining:
-            return remaining, None
-        for requested_signal in (signal.SIGTERM, signal.SIGKILL):
-            terminate_group(pid, requested_signal)
-            deadline = time.monotonic() + 0.2
-            while True:
-                remaining = live_group(pid)
-                if not remaining:
-                    return remaining, None
-                if time.monotonic() >= deadline:
-                    break
-                time.sleep(0.01)
-    except (OSError, ValueError, subprocess.SubprocessError) as failure:
-        error = failure_cause(failure)
-        try:
-            if isinstance(failure, PermissionError) and not live_group(pid):
-                return [], None
-            terminate_group(pid)
-        except OSError as failure:
-            error += "; cleanup: " + failure_cause(failure)
-    return remaining, error
-
-
-OUTPUT_LIMIT = 1024 * 1024
-
-
-def command(argv, root, timeout, *, git_boundary=False):
-    require(callable(getattr(os, "waitid", None)) and hasattr(os, "WNOWAIT"),
-            "runtime requires waitid and WNOWAIT for safe group cleanup")
-    with tempfile.TemporaryDirectory(prefix="checked-plant-cache-") as cache:
-        env = dict(os.environ, PYTHONPYCACHEPREFIX=cache, PYTHONDONTWRITEBYTECODE="1")
-        if git_boundary:
-            env = {key: value for key, value in env.items() if not key.startswith("GIT_")}
-            env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull,
-                       GIT_CONFIG_NOSYSTEM="1", GIT_CEILING_DIRECTORIES=str(root.parent.resolve()),
-                       GIT_TERMINAL_PROMPT="0")
-        with (Path(cache) / "stdout").open("w+b") as stdout_file, (Path(cache) / "stderr").open("w+b") as stderr_file:
-            process = subprocess.Popen(argv, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                       start_new_session=True)
-            deadline = time.monotonic() + timeout
-            timed_out, output_truncated, reaped = False, False, False
-            termination_requested, capture_error = False, None
-            counts = {process.stdout: 0, process.stderr: 0}
-            try:
-                with selectors.DefaultSelector() as selector:
-                    for transport, destination in ((process.stdout, stdout_file), (process.stderr, stderr_file)):
-                        os.set_blocking(transport.fileno(), False)
-                        selector.register(transport, selectors.EVENT_READ, destination)
-                    while selector.get_map():
-                        remaining = deadline - time.monotonic()
-                        if remaining <= 0:
-                            timed_out = True
-                            break
-                        for key, _ in selector.select(remaining):
-                            try:
-                                chunk = os.read(key.fd, 65536)
-                            except BlockingIOError:
-                                continue
-                            if not chunk:
-                                selector.unregister(key.fileobj)
-                                continue
-                            room = OUTPUT_LIMIT - counts[key.fileobj]
-                            key.data.write(chunk[:room])
-                            counts[key.fileobj] += min(len(chunk), room)
-                            if len(chunk) > room:
-                                output_truncated = True
-                                break
-                        if output_truncated:
-                            break
-                if not (timed_out or output_truncated):
-                    while os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG) is None:
-                        if time.monotonic() >= deadline:
-                            timed_out = True
-                            break
-                        time.sleep(min(0.01, max(0, deadline - time.monotonic())))
-            except OSError as error:
-                capture_error = failure_cause(error)
-            finally:
-                process.stdout.close()
-                process.stderr.close()
-                # Keep the leader unreaped until its owned group is stopped and checked.
-                termination_requested = True
-                remaining_pids, cleanup_error = stop_group(process.pid)
-                if not reaped:
-                    try:
-                        process.wait(timeout=1)
-                        reaped = True
-                    except subprocess.TimeoutExpired:
-                        pass
-            output = []
-            for stream in (stdout_file, stderr_file):
-                stream.seek(0)
-                output.append(stream.read(OUTPUT_LIMIT + 1))
-            output_truncated = output_truncated or any(len(data) > OUTPUT_LIMIT for data in output)
-            stdout, stderr = [data[:OUTPUT_LIMIT].decode("utf-8", errors="replace") for data in output]
-    return dict(exit_code=process.returncode, stdout=stdout, stderr=stderr, timed_out=timed_out,
-                termination_requested=termination_requested, terminated=process.returncode is not None and process.returncode < 0,
-                reaped=reaped, output_truncated=output_truncated, capture_error=capture_error,
-                pgid=process.pid, remaining_pids=remaining_pids, cleanup_error=cleanup_error)
-
-
-def valid_step(result):
-    return (result["timed_out"] is False and result["reaped"] is True and result["output_truncated"] is False
-            and result["capture_error"] is None and result["remaining_pids"] == [] and result["cleanup_error"] is None)
 
 
 def checked(argv, root, timeout):
@@ -434,39 +238,10 @@ def verified(value):
     return manifest
 
 
-def identity(info):
-    return info.st_dev, info.st_ino
-
-
-@contextmanager
-def reserve_outputs(paths, protected):
-    streams, contents, created = [], [], []
-    published = False
-    with ExitStack() as stack:
-        try:
-            for path in paths:
-                stream, data, _, is_new = stack.enter_context(regular_file(path, reserve=True))
-                if is_new:
-                    created.append((path, identity(os.fstat(stream.fileno()))))
-                streams.append(stream)
-                contents.append(data)
-            identities = [identity(os.fstat(stream.fileno())) for stream in streams]
-            protected_ids = {identity(path.stat()) for path in protected}
-            require(len(set(identities)) == len(identities) and not (set(identities) & protected_ids),
-                    "record destination aliases evidence, input or another record")
-            yield streams, contents
-            published = True
-        finally:
-            if not published:
-                for path, reserved in created:
-                    if path.exists() and identity(path.stat()) == reserved:
-                        path.unlink()
-
-
 def render(result, ledger, status):
-    value = json.loads(read_regular(result)[0])
+    value = parse_json(read_regular(result)[0])
     manifest = verified(value)
-    protected = {result.resolve(), Path(__file__).resolve(), Path(value["manifest"]).resolve()}
+    protected = {result.resolve(), Path(__file__).resolve(), Path(value["manifest"]).resolve(), Path(__file__).resolve().with_name("checked_core.py").resolve()}
     protected.update((Path(value["manifest"]).parent / p).resolve() for p in manifest["inputs"])
     require(ledger.resolve() != status.resolve() and not ({ledger.resolve(), status.resolve()} & protected),
             "record destinations must differ and cannot overwrite evidence or inputs")

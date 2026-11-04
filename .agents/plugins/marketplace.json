@@ -234,7 +234,7 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
-      "description": "Deliberately break code to prove a test can see it: plant the defect an instrument claims to catch, confirm it goes red, and record it so it regresses.",
+      "description": "Prove tests catch defects with checked plants, and gate dependent actions on complete checks at an unchanged tree.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["defects", "instruments", "testing", "vacuous-passes", "verification"],
       "license": "MIT",

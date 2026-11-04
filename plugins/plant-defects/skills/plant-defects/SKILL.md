@@ -74,6 +74,8 @@ Four, not two. The third survives every coverage mode, because the code is not i
 
 **Start here:**
 
+- `./references/checked-gate.md`: ordered checks, one dependent action, tree-bound receipts, verification and rendering
+
 - `./references/checked-runner.md`: required runner, manifest, JSON evidence, generated records and restart checks
 
 - `./references/the-plant-table.md`: the artifact, its four columns, and the rules about rows that stay green, rows nothing covers, and acceptance criteria
