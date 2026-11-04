@@ -1,0 +1,26 @@
+{
+  "aspect": "code",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "When TMPDIR points inside a Git checkout, the private subject directory inherits that repository's discovery context. Git interprets patch paths relative to the ancestor repository and can skip every path while exiting zero. A green control then publishes control-green without its patch being applied. The skip behavior was confirmed using read-only git apply --check from a repository subdirectory.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Remove inherited Git repository-location overrides for patch commands and set GIT_CEILING_DIRECTORIES to the private root's parent. Add coverage with TMPDIR inside a repository that verifies the control's mutation actually occurs.",
+      "line": 214,
+      "severity": "important",
+      "title": "Uncited: Ancestor Git discovery can silently skip private patches."
+    },
+    {
+      "confidence": 97,
+      "detail": "Child output goes directly into temporary files while process.wait blocks. OUTPUT_LIMIT is enforced only when reading those files afterward, so a continuously printing setup or check can fill the temporary volume before its timeout. This can also prevent final results.json publication. The overflow regression checks retained JSON output size, but does not bound temporary disk consumption.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Enforce the capture limit while the child runs, retaining bounded diagnostics and marking overflow as failure. Add a regression that verifies temporary storage remains bounded during continuous output.",
+      "line": 148,
+      "severity": "important",
+      "title": "Uncited: Output capture permits unbounded temporary disk consumption."
+    }
+  ],
+  "reviewed": "0a3c5b19b371b326270697519514bc6c861d5607",
+  "strengths": ["Rendering independently validates every declared result and current input fingerprints.", "Regression coverage exercises assertion, restoration, control and publication guards."],
+  "summary": "Reviewed all 24 membership paths and the execution and publication flows. Two important defects remain in Git isolation and output capture. Tests were not run; GitHub metadata verification was blocked by network access."
+}

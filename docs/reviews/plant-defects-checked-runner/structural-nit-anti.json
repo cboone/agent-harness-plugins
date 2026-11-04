@@ -1,0 +1,43 @@
+{
+  "complete": true,
+  "excluded": ["dist/codex/plugins/plant-defects/.claude-plugin/plugin.json", "dist/codex/plugins/plant-defects/skills/plant-defects/SKILL.md", "dist/codex/plugins/plant-defects/scripts/checked-plant", "dist/codex/plugins/plant-defects/skills/plant-defects/references/checked-runner.md"],
+  "findings": [
+    {
+      "detail": "A ledger or status destination that is a hard link to a declared input passes the protection check. Writing the generated record then overwrites that live input. Likewise, two differently named hard links pass the distinct-destinations check, after which writing status destroys the ledger.",
+      "evidence": "render() compares resolved pathname strings at lines 240–243, then writes through existing files at lines 255 and 257. Path.resolve() resolves symbolic links but does not identify hard links sharing an inode. The destination tests cover identical paths only.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "line": 242,
+      "severity": "important",
+      "title": "Sibling input forms: hard-linked destinations bypass input protection"
+    },
+    {
+      "detail": "Declared executable inputs lose their executable permissions in the private copy. For example, a passing check.sh that invokes ./bin/check-subject encounters permission denied after materialization, so a valid plant campaign fails its baseline. The restored copy repeats the same problem.",
+      "evidence": "snapshot() retains only file bytes and their hashes. materialize() creates each file with write_bytes() at line 111 and never restores its mode. Both initial and restored trees use this function. The regression fixture invokes its non-executable shell inputs through Bash, so it does not exercise executable supporting files.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "line": 111,
+      "severity": "important",
+      "title": "Parallel paths: private copies discard executable input permissions"
+    },
+    {
+      "detail": "The skill now requires the runner for every variant, but the runner cannot represent the negative controls that the same skill requires to stay green. The documented formatter-ignore control must exit zero after planting; declaring that expected result is rejected, while declaring a nonzero result incorrectly fails the control. There is no supported branch for recording this required outcome.",
+      "evidence": "SKILL.md line 65 mandates the runner for every variant and line 68 mandates generated records. references/the-plant-table.md lines 44–50 explicitly require passing negative-control rows. checked-plant line 81 rejects a variant exit_code of zero, and its run and render gates require every row to have status red.",
+      "file": "plugins/plant-defects/skills/plant-defects/SKILL.md",
+      "line": 65,
+      "severity": "important",
+      "title": "Agent-prose control flow: mandatory runner cannot record required green controls"
+    },
+    {
+      "detail": "When a setup or check prints diagnostics and then times out, its captured stdout, stderr and final termination status disappear from results.json. Only the timeout exception's summary remains. This loses the failure evidence the checked runner promises to preserve.",
+      "evidence": "command() kills the process group, discards the final communicate() result and re-raises at lines 122–125. Consequently, check() never assigns that phase's result to the row. run_variant() records only the exception's string. The timeout regression asserts TimeoutExpired but does not assert retention of output or step status.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "line": 122,
+      "severity": "important",
+      "title": "Absent or partial data: timed-out steps lose captured evidence"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Scope: e0ad16d5095e9c445be45bde5ef622ad8f5f45cb..working-tree, using the local origin/main merge base. Covered committed, staged, unstaged and untracked changes. Read all nine canonical files in full: Makefile; bin/lib/error-output-policy.json; docs/plans/todo/2026-11-03-plant-defects-checked-runner.md; plugins/plant-defects/.claude-plugin/plugin.json; plugins/plant-defects/skills/plant-defects/SKILL.md; plugins/plant-defects/scripts/checked-plant; plugins/plant-defects/skills/plant-defects/references/checked-runner.md; tests/fixtures/checked-plant-tests.py; tests/scrut/checked-plant.md. The four excluded paths are generated Codex mirrors. Nothing in scope was left unread. No PR exists, per the caller.\n\nGroups: code, agent prose, docs. Walked all thirteen items: Sibling input forms; Boundary arithmetic; Stale writes; Validator gaps; Absent or partial data; Untrusted data in commands; Tests that cannot fail; Crashes instead of reports; Unrun platform configuration; Unenforced trust boundary; Parallel paths; Agent-prose control flow; Docs drift.\n\nResult: four Important findings, zero Nits. This is not a clean result. Findings are supported by static control-flow and filesystem-semantics evidence; no reproduction or test execution is claimed.\n\nSiblings examined: both record destinations and every protected evidence/input path; snapshot and both materialization phases; mandatory runner instructions alongside green-control and uncovered-row guidance; setup/check timeout paths and the timeout regression. Also inspected runner consumers, Scrut registration, publication-guard plants, fingerprint checks and prior plan history.\n\nMechanical checks run: none. Tests, defect plants, linters, validators and CLI examples remain unrun as listed in unverified. Session could write: no, filesystem sandbox was read-only. --run-checks: off. No edits, tests, commits, messages, network access or delegation occurred; nothing was left behind. Ownership/archive lookup was omitted under the explicit network prohibition. --no-codex and the instruction to review directly precluded a nested Codex run or subagent. Separate report-only simplify is outside this invocation; its parallel completion is not claimed.",
+  "reviewed": "e0ad16d5095e9c445be45bde5ef622ad8f5f45cb..working-tree",
+  "status": "success",
+  "unverified": ["Runner regressions and assertion/publication guard plants were not executed; settle with: make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant.md", "Error-output integration was not executed; settle with: make test-scrut SCRUT_TEST_DIR=tests/scrut/error-output-guard.md", "Environment isolation was not executed; settle with: make test-scrut SCRUT_TEST_DIR=tests/scrut/environment-isolation.md", "Lint checks were not run under the prohibition on executing checks; settle with: make lint", "Manifest, plugin and cross-reference validation was not run; settle with: make validate", "Documented CLI behavior was not executed; begin verification with: uv run --script plugins/plant-defects/scripts/checked-plant --help", "Remote ownership, fork and archive status was not queried because network access was prohibited; settle with: gh repo view cboone/agent-harness-plugins --json isArchived,isFork,parent"]
+}

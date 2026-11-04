@@ -1,0 +1,7 @@
+{
+  "aspect": "comments",
+  "findings": [],
+  "reviewed": "af56394cf9e4b85c34aa49edf2e511b6dcf000ea",
+  "strengths": ["The reference clearly distinguishes private-copy isolation from sandboxing.", "Assertion variants, green controls and publication requirements are documented accurately.", "Timeout, output-limit and descendant-cleanup documentation matches the implementation."],
+  "summary": "Reviewed all 37 membership paths and cross-checked changed comments and documentation against the implementation. Tests were not run, and GitHub metadata verification was unavailable. No reportable comment defects were found: clean at Nit."
+}

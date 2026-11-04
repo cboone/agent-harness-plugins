@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "Criticality 7/10. The rejection cases remove required markers while introducing forbidden output, so they do not independently exercise `excludes`. The skip-evidence guard plant also removes both predicates together. Ignoring exclusions alone could therefore go undetected, allowing the expected assertion marker and exit code alongside an unrelated ERROR or SKIP to generate successful verification records.",
+      "file": "tests/checked_plant_test.py",
+      "fix": "Add execution and rendering cases that preserve every required marker and the expected exit while adding forbidden output. Assert failure and unchanged records. Add a guard plant that disables only exclusion matching.",
+      "line": 215,
+      "severity": "important",
+      "title": "Uncited: Forbidden-output rejection lacks an independent regression test."
+    }
+  ],
+  "reviewed": "bf9cac73eb97428c85dc6e16939344822286b6a2",
+  "strengths": ["Tests cover real assertion plants, separate green controls, restoration and publication refusal.", "Successful aggregate reports are independently challenged with invalid step metadata.", "Process regressions cover retained timeout diagnostics, detached descendants and bounded output storage.", "Existing integration checks cover fixture environment isolation, while Scrut registers the new suite for CI."],
+  "summary": "Reviewed all 32 membership paths and mapped changed behavior to added and existing tests. Coverage is substantial, with one important gap in independent exclusion testing. Tests were not run under the read-only restriction; GitHub metadata verification was unavailable."
+}

@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "Criticality 7/10. Successful rendering tests assert generated text and a single marker, but never assert preservation of existing ledger content. Replacing `text = before + block + after` with `text = block` would satisfy these assertions while deleting all notes outside the generated section. No existing integration test covers this preservation contract.",
+      "file": "tests/checked_plant_test.py",
+      "fix": "Add successful append and replacement cases with sentinel text before and after the marked section. Assert that both sentinels remain unchanged, the old generated section is replaced, and repeated rendering preserves the complete result.",
+      "line": 105,
+      "severity": "important",
+      "title": "Uncited: Successful rendering lacks regression coverage for preserving ledger content."
+    }
+  ],
+  "reviewed": "44c97a98ed11f0a0784120da699f1ffdc02d8cfe",
+  "strengths": ["Tests cover real assertion plants, separate green controls, restoration failures and publication refusal.", "Rendering tests independently challenge completion metadata, forbidden output and stale fingerprints.", "Process tests cover timeouts, detached descendants and bounded output storage.", "Guard plants challenge meaningful regression boundaries, and Scrut wiring includes the suite in CI."],
+  "summary": "Reviewed all 42 membership paths across committed, unstaged and untracked changes. Coverage is substantial, with one important ledger-preservation gap. Review remained static and read-only; tests were not run, and GitHub metadata verification was unavailable."
+}

@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 95,
+      "detail": "Criticality 7/10. Existing timeout cases retain an output pipe until timeout, exercising the selector deadline. None closes both streams while the parent continues running, which exercises the new waitid deadline. Removing that deadline could therefore escape regression detection and prevent completed failure JSON from being published.",
+      "file": "tests/checked_plant_test.py",
+      "fix": "Add a supervised CLI regression whose setup closes stdout and stderr before waiting beyond its timeout. Assert bounded failure reporting, timed_out and reaped evidence, and publication refusal. Ensure fixture cleanup uses recorded process IDs, and plant removal of the waitid deadline.",
+      "line": 413,
+      "severity": "important",
+      "title": "Uncited: Timeout coverage omits running parents whose output streams have closed."
+    }
+  ],
+  "reviewed": "cdc79fdc75a4d37e2757a848d5277cee5dc718ee",
+  "strengths": ["Tests cover real assertion plants, green controls, restoration failures and publication refusal.", "Rendering independently challenges step metadata, forbidden output and stale fingerprints.", "Regressions cover unsupported file kinds, bounded output capture and descendant cleanup.", "Ledger preservation has sentinel and idempotence checks, and guard plants challenge meaningful boundaries."],
+  "summary": "Reviewed all 47 membership paths across committed, unstaged and untracked changes. Coverage is substantial, with one important gap in the new parent-wait timeout path. Review remained static and read-only; tests were unrun, and GitHub metadata verification was unavailable."
+}

@@ -1,0 +1,519 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+"""Run declared private plants; publish records only from verified JSON evidence."""
+
+import argparse
+from contextlib import contextmanager, ExitStack
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import selectors
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+
+
+SCHEMA = 1
+BEGIN = "<!-- checked-plants:start -->"
+END = "<!-- checked-plants:end -->"
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def failure_cause(error):
+    cause = f"{type(error).__name__}: {error}"
+    for name in ("stdout", "stderr"):
+        value = getattr(error, name, None)
+        if value is not None:
+            value = value[:OUTPUT_LIMIT]
+            if isinstance(value, bytes):
+                value = value.decode("utf-8", errors="replace")
+            cause += f"; {name}: {value!r}"
+    return cause
+
+
+def write_json(path, value):
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(value, indent=2) + "\n")
+    temporary.replace(path)
+
+
+def relative(value):
+    require(isinstance(value, str) and value, "input path must be a string")
+    path = Path(value)
+    require(not path.is_absolute() and all(p not in ("", ".", "..") for p in value.split("/")),
+            "input paths must be normalized relative paths")
+    return path
+
+
+@contextmanager
+def regular_file(path, *, root=None, reserve=False):
+    current = path.parent.resolve() if root is None else root.resolve()
+    parts = (path.name,) if root is None else path.relative_to(root).parts
+    for part in parts:
+        current = current / part
+        require(not current.is_symlink(), "symlinked input paths are unsupported: " + str(path))
+    created = False
+    flags = os.O_RDWR if reserve else os.O_RDONLY
+    try:
+        if reserve:
+            try:
+                descriptor = os.open(current, flags | os.O_NONBLOCK | os.O_CREAT | os.O_EXCL, 0o666)
+                created = True
+            except FileExistsError:
+                descriptor = os.open(current, flags | os.O_NONBLOCK)
+        else:
+            descriptor = os.open(current, os.O_RDONLY | os.O_NONBLOCK)
+        try:
+            info = os.fstat(descriptor)
+            require(stat.S_ISREG(info.st_mode), "input must be a regular file")
+            with os.fdopen(descriptor, "r+b" if reserve else "rb", closefd=False) as stream:
+                data = stream.read()
+                yield stream, data, stat.S_IMODE(info.st_mode), created
+        finally:
+            os.close(descriptor)
+    except RuntimeError as error:
+        raise ValueError(failure_cause(error)) from error
+
+
+def read_regular(path, *, root=None):
+    with regular_file(path, root=root) as (_, data, mode, _):
+        return data, mode
+
+
+def load_manifest(path):
+    data, mode = read_regular(path)
+    manifest = json.loads(data)
+    require(isinstance(manifest, dict), "manifest must be an object")
+    variants = manifest.get("variants", [])
+    controls = manifest.get("controls", [])
+    require(isinstance(variants, list) and isinstance(controls, list) and (variants or controls),
+            "declare at least one assertion variant or green control")
+    names = [v.get("name") if isinstance(v, dict) else None for v in variants + controls]
+    require(all(isinstance(n, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", n) for n in names),
+            "variant names must be simple lowercase labels")
+    require(len(set(names)) == len(names), "variant names must be unique")
+    return manifest, dict(sha256=digest(data), mode=mode)
+
+
+def declarations(manifest):
+    return [("plant", v) for v in manifest.get("variants", [])] + [("control", v) for v in manifest.get("controls", [])]
+
+
+def outcome(kind):
+    return "red" if kind == "plant" else "control-green"
+
+
+def validate_manifest(manifest):
+    inputs = manifest.get("inputs")
+    require(isinstance(inputs, list) and inputs, "declare every source, script, patch and fixture in inputs")
+    for name in inputs:
+        relative(name)
+    require(len(set(inputs)) == len(inputs), "duplicate input")
+    require(not ({"manifest", "runner"} & set(inputs)), "reserved input name")
+    require(manifest.get("check") in inputs, "check script must be an input")
+    require(manifest.get("setup") is None or manifest["setup"] in inputs, "setup script must be an input")
+    timeout = manifest.get("timeout", 60)
+    require(type(timeout) in (int, float) and 0 < timeout <= 3600, "timeout must be in (0, 3600]")
+    for kind, variant in declarations(manifest):
+        require(variant.get("patch") in inputs, "variant/control patch must be an input")
+        if kind == "plant":
+            expectation(variant.get("red"), red=True)
+        else:
+            require("red" not in variant, "a green control cannot declare a red expectation")
+    expectation(manifest.get("green"), red=False)
+
+
+def expectation(value, *, red):
+    require(isinstance(value, dict), "check expectation must be an object")
+    code = value.get("exit_code")
+    require(type(code) is int and (1 <= code <= 125 if red else code == 0), "invalid expected check exit")
+    for key in ("contains", "excludes"):
+        items = value.get(key, [])
+        require(isinstance(items, list) and all(isinstance(s, str) and s for s in items),
+                "output predicates must be lists of nonempty literal strings")
+    require(bool(value.get("contains")), "require named assertion/progress evidence")
+
+
+def snapshot(path, manifest, fingerprints=None, retain=True):
+    paths = {"manifest": path, "runner": Path(__file__).resolve()}
+    paths.update({name: path.parent / relative(name) for name in manifest["inputs"]})
+    fingerprints = {} if fingerprints is None else fingerprints
+    contents = {}
+    for name, source in paths.items():
+        try:
+            data, mode = read_regular(source, root=path.parent if name not in ("manifest", "runner") else None)
+            fingerprints[name] = dict(sha256=digest(data), mode=mode)
+            if retain:
+                contents[name] = (data, mode)
+        except (OSError, ValueError) as error:
+            fingerprints[name] = None
+            contents[name] = f"missing/unreadable input {name}: " + failure_cause(error)
+    return fingerprints, contents
+
+
+def materialize(root, manifest, contents):
+    for name in manifest["inputs"]:
+        target = root / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        data, mode = contents[name]
+        target.write_bytes(data)
+        target.chmod(mode)
+
+
+def terminate_group(pid, requested_signal=signal.SIGKILL):
+    try:
+        os.killpg(pid, requested_signal)
+    except ProcessLookupError:
+        pass
+
+
+def live_group(pid):
+    listing = subprocess.run(["ps", "-axo", "pid=,pgid=,stat="], capture_output=True,
+                             text=True, check=True, timeout=0.25)
+    members = []
+    for line in listing.stdout.splitlines():
+        member, group, state = line.split()
+        if int(group) == pid and not state.startswith("Z"):
+            members.append(int(member))
+    return members
+
+
+def stop_group(pid):
+    remaining, error = None, None
+    try:
+        remaining = live_group(pid)
+        if not remaining:
+            return remaining, None
+        for requested_signal in (signal.SIGTERM, signal.SIGKILL):
+            terminate_group(pid, requested_signal)
+            deadline = time.monotonic() + 0.2
+            while True:
+                remaining = live_group(pid)
+                if not remaining:
+                    return remaining, None
+                if time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+    except (OSError, ValueError, subprocess.SubprocessError) as failure:
+        error = failure_cause(failure)
+        try:
+            if isinstance(failure, PermissionError) and not live_group(pid):
+                return [], None
+            terminate_group(pid)
+        except OSError as failure:
+            error += "; cleanup: " + failure_cause(failure)
+    return remaining, error
+
+
+OUTPUT_LIMIT = 1024 * 1024
+
+
+def command(argv, root, timeout, *, git_boundary=False):
+    require(callable(getattr(os, "waitid", None)) and hasattr(os, "WNOWAIT"),
+            "runtime requires waitid and WNOWAIT for safe group cleanup")
+    with tempfile.TemporaryDirectory(prefix="checked-plant-cache-") as cache:
+        env = dict(os.environ, PYTHONPYCACHEPREFIX=cache, PYTHONDONTWRITEBYTECODE="1")
+        if git_boundary:
+            env = {key: value for key, value in env.items() if not key.startswith("GIT_")}
+            env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull,
+                       GIT_CONFIG_NOSYSTEM="1", GIT_CEILING_DIRECTORIES=str(root.parent.resolve()),
+                       GIT_TERMINAL_PROMPT="0")
+        with (Path(cache) / "stdout").open("w+b") as stdout_file, (Path(cache) / "stderr").open("w+b") as stderr_file:
+            process = subprocess.Popen(argv, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       start_new_session=True)
+            deadline = time.monotonic() + timeout
+            timed_out, output_truncated, reaped = False, False, False
+            termination_requested, capture_error = False, None
+            counts = {process.stdout: 0, process.stderr: 0}
+            try:
+                with selectors.DefaultSelector() as selector:
+                    for transport, destination in ((process.stdout, stdout_file), (process.stderr, stderr_file)):
+                        os.set_blocking(transport.fileno(), False)
+                        selector.register(transport, selectors.EVENT_READ, destination)
+                    while selector.get_map():
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            timed_out = True
+                            break
+                        for key, _ in selector.select(remaining):
+                            try:
+                                chunk = os.read(key.fd, 65536)
+                            except BlockingIOError:
+                                continue
+                            if not chunk:
+                                selector.unregister(key.fileobj)
+                                continue
+                            room = OUTPUT_LIMIT - counts[key.fileobj]
+                            key.data.write(chunk[:room])
+                            counts[key.fileobj] += min(len(chunk), room)
+                            if len(chunk) > room:
+                                output_truncated = True
+                                break
+                        if output_truncated:
+                            break
+                if not (timed_out or output_truncated):
+                    while os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG) is None:
+                        if time.monotonic() >= deadline:
+                            timed_out = True
+                            break
+                        time.sleep(min(0.01, max(0, deadline - time.monotonic())))
+            except OSError as error:
+                capture_error = failure_cause(error)
+            finally:
+                process.stdout.close()
+                process.stderr.close()
+                # Keep the leader unreaped until its owned group is stopped and checked.
+                termination_requested = True
+                remaining_pids, cleanup_error = stop_group(process.pid)
+                if not reaped:
+                    try:
+                        process.wait(timeout=1)
+                        reaped = True
+                    except subprocess.TimeoutExpired:
+                        pass
+            output = []
+            for stream in (stdout_file, stderr_file):
+                stream.seek(0)
+                output.append(stream.read(OUTPUT_LIMIT + 1))
+            output_truncated = output_truncated or any(len(data) > OUTPUT_LIMIT for data in output)
+            stdout, stderr = [data[:OUTPUT_LIMIT].decode("utf-8", errors="replace") for data in output]
+    return dict(exit_code=process.returncode, stdout=stdout, stderr=stderr, timed_out=timed_out,
+                termination_requested=termination_requested, terminated=process.returncode is not None and process.returncode < 0,
+                reaped=reaped, output_truncated=output_truncated, capture_error=capture_error,
+                pgid=process.pid, remaining_pids=remaining_pids, cleanup_error=cleanup_error)
+
+
+def valid_step(result):
+    return (result["timed_out"] is False and result["reaped"] is True and result["output_truncated"] is False
+            and result["capture_error"] is None and result["remaining_pids"] == [] and result["cleanup_error"] is None)
+
+
+def checked(argv, root, timeout):
+    result = command(argv, root, timeout, git_boundary=True)
+    require(valid_step(result) and result["exit_code"] == 0, f"step failed: {argv}: {result}")
+    return result
+
+
+def matches(result, wanted):
+    output = result["stdout"] + result["stderr"]
+    return (valid_step(result) and type(result["exit_code"]) is int and result["exit_code"] == wanted["exit_code"]
+            and all(s in output for s in wanted["contains"])
+            and not any(s in output for s in wanted.get("excludes", [])))
+
+
+def check(root, manifest, row, phase):
+    timeout = manifest.get("timeout", 60)
+    if manifest.get("setup"):
+        row[phase + "_setup"] = command(["bash", "-euo", "pipefail", "--", manifest["setup"]], root, timeout)
+        require(valid_step(row[phase + "_setup"]) and row[phase + "_setup"]["exit_code"] == 0,
+                f"{phase} setup failed: {row[phase + '_setup']}")
+    row[phase] = command(["bash", "-euo", "pipefail", "--", manifest["check"]], root, timeout)
+    require(valid_step(row[phase]), f"{phase} check incomplete, timed out or truncated: {row[phase]}")
+
+
+def run_variant(parent, manifest, contents, variant, row):
+    root = parent / "subject"
+    root.mkdir()
+    materialize(root, manifest, contents)
+    try:
+        check(root, manifest, row, "baseline")
+        require(matches(row["baseline"], manifest["green"]), "baseline control failed")
+        patch = parent / "variant.patch"
+        patch.write_bytes(contents[variant["patch"]][0])
+        git_context = parent / "patch.git"
+        checked(["git", "init", "--bare", "--quiet", "--template=", str(git_context)],
+                parent, manifest.get("timeout", 60))
+        for args in (["--check"], []):
+            checked(["git", "--git-dir=" + str(git_context.resolve()), "--work-tree=" + str(root.resolve()),
+                     "apply", *args, str(patch)], root, manifest.get("timeout", 60))
+        if row["kind"] == "plant":
+            check(root, manifest, row, "red")
+            require(matches(row["red"], variant["red"]), "plant did not satisfy its named assertion verdict")
+            row.update(status="red", reason="named assertion reached")
+        else:
+            check(root, manifest, row, "control")
+            require(matches(row["control"], manifest["green"]), "green control failed")
+            row.update(status="control-green", reason="green control verified")
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        row.update(status="setup-error", reason=failure_cause(error))
+    finally:
+        try:
+            # Discard only this runner-owned copy, including generated files.
+            shutil.rmtree(root)
+            root.mkdir()
+            materialize(root, manifest, contents)
+            row["restored"] = all(read_regular(root / name, root=root) == contents[name]
+                                  for name in manifest["inputs"])
+            require(row["restored"], "restored input differs")
+            check(root, manifest, row, "green")
+            row["green_passed"] = matches(row["green"], manifest["green"])
+            require(row["green_passed"], "restored control failed")
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            row["restore_error"] = failure_cause(error)
+            row.update(status="setup-error", reason=row["reason"] + "; restore: " + row["restore_error"])
+
+
+def run(path, out):
+    out.mkdir(parents=True, exist_ok=False)
+    report = dict(schema=SCHEMA, manifest=str(path), complete=False, success=False,
+                  inputs={}, inputs_unchanged=False, results=[], reason="run did not complete")
+    write_json(out / "results.json", report)
+    try:
+        manifest, parsed = load_manifest(path)
+        report["results"] = [dict(kind=kind, name=v["name"], status="unrun", reason="preceding variant/control did not complete",
+                                  restored=False, green_passed=False) for kind, v in declarations(manifest)]
+        validate_manifest(manifest)
+        before, contents = snapshot(path, manifest, report["inputs"])
+        require(all(v is not None for v in before.values()),
+                "; ".join(contents[k] for k, v in before.items() if v is None))
+        require(before["manifest"] == parsed, "manifest changed after parsing")
+        for row, (_, variant) in zip(report["results"], declarations(manifest), strict=True):
+            with tempfile.TemporaryDirectory(prefix="checked-plant-") as work:
+                run_variant(Path(work), manifest, contents, variant, row)
+            if row["status"] != outcome(row["kind"]) or not row["restored"] or not row["green_passed"]:
+                break
+        current, failures = snapshot(path, manifest, retain=False)
+        require(not failures, "; ".join(failures.values()))
+        report["inputs_unchanged"] = current == before
+        require(report["inputs_unchanged"], "inputs changed during run")
+        report["success"] = all(r["status"] == outcome(r["kind"]) and r["restored"] and r["green_passed"]
+                                for r in report["results"])
+        report["reason"] = "all variants verified" if report["success"] else "one or more variants failed or never ran"
+    except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
+        report["reason"] = failure_cause(error)
+        if report["results"] and all(r["status"] == "unrun" for r in report["results"]):
+            report["results"][0].update(status="setup-error", reason=report["reason"])
+    finally:
+        report["complete"] = True
+        write_json(out / "results.json", report)
+    print(str(out / "results.json"))
+    return 0 if report["success"] else 1
+
+
+def verified(value):
+    require(value["schema"] == SCHEMA and value["complete"] is True and value["success"] is True
+            and value["inputs_unchanged"] is True, "incomplete or failed result")
+    path = Path(value["manifest"])
+    manifest, parsed = load_manifest(path)
+    validate_manifest(manifest)
+    current, failures = snapshot(path, manifest, retain=False)
+    require(not failures, "; ".join(failures.values()))
+    require(current["manifest"] == parsed, "manifest changed after parsing")
+    require(value["inputs"] == current, "stale input fingerprints")
+    rows = value["results"]
+    require([(r["kind"], r["name"]) for r in rows] == [(kind, v["name"]) for kind, v in declarations(manifest)],
+            "missing or reordered variants/controls")
+    for row, (kind, variant) in zip(rows, declarations(manifest), strict=True):
+        require(row["status"] == outcome(kind) and row["restored"] is True and row["green_passed"] is True,
+                "variant/control failed or unrun")
+        phase = "red" if kind == "plant" else "control"
+        expected = variant["red"] if kind == "plant" else manifest["green"]
+        for phase, wanted in (("baseline", manifest["green"]), (phase, expected), ("green", manifest["green"])):
+            require(matches(row[phase], wanted), "missing check evidence: " + phase)
+            if manifest.get("setup"):
+                require(valid_step(row[phase + "_setup"])
+                        and type(row[phase + "_setup"]["exit_code"]) is int and row[phase + "_setup"]["exit_code"] == 0,
+                        "setup failed or unrun: " + phase)
+    return manifest
+
+
+def identity(info):
+    return info.st_dev, info.st_ino
+
+
+@contextmanager
+def reserve_outputs(paths, protected):
+    streams, contents, created = [], [], []
+    published = False
+    with ExitStack() as stack:
+        try:
+            for path in paths:
+                stream, data, _, is_new = stack.enter_context(regular_file(path, reserve=True))
+                if is_new:
+                    created.append((path, identity(os.fstat(stream.fileno()))))
+                streams.append(stream)
+                contents.append(data)
+            identities = [identity(os.fstat(stream.fileno())) for stream in streams]
+            protected_ids = {identity(path.stat()) for path in protected}
+            require(len(set(identities)) == len(identities) and not (set(identities) & protected_ids),
+                    "record destination aliases evidence, input or another record")
+            yield streams, contents
+            published = True
+        finally:
+            if not published:
+                for path, reserved in created:
+                    if path.exists() and identity(path.stat()) == reserved:
+                        path.unlink()
+
+
+def render(result, ledger, status):
+    value = json.loads(read_regular(result)[0])
+    manifest = verified(value)
+    protected = {result.resolve(), Path(__file__).resolve(), Path(value["manifest"]).resolve()}
+    protected.update((Path(value["manifest"]).parent / p).resolve() for p in manifest["inputs"])
+    require(ledger.resolve() != status.resolve() and not ({ledger.resolve(), status.resolve()} & protected),
+            "record destinations must differ and cannot overwrite evidence or inputs")
+    sentences = []
+    for row in value["results"]:
+        phase = "red" if row["kind"] == "plant" else "control"
+        sentences.append(f"{row['kind']} {row['name']}: {row['reason']}; {phase} exit {row[phase]['exit_code']}; "
+                         f"restored; green exit {row['green']['exit_code']}.")
+    block = BEGIN + "\n\n## Verified plants and controls\n\n" + "\n\n".join(sentences) + f"\n\nEvidence: `{result}`.\n\n" + END
+    with reserve_outputs([ledger, status], protected) as ((ledger_stream, status_stream), contents):
+        text = contents[0].decode("utf-8")
+        require(text.count(BEGIN) == text.count(END) and text.count(BEGIN) <= 1, "invalid ledger markers")
+        if BEGIN in text:
+            before, rest = text.split(BEGIN)
+            _, after = rest.split(END)
+            text = before + block + after
+        else:
+            text = text.rstrip() + "\n\n" + block + "\n"
+        line = "Verification from JSON: " + " ".join(sentences)
+        for stream, content in ((ledger_stream, text), (status_stream, line + f" Evidence: {result}.\n")):
+            stream.seek(0)
+            stream.write(content.encode("utf-8"))
+            stream.truncate()
+            stream.flush()
+    print(line)
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="action", required=True)
+    execute = sub.add_parser("run")
+    execute.add_argument("manifest", type=Path)
+    execute.add_argument("out", type=Path)
+    publish = sub.add_parser("render")
+    publish.add_argument("result", type=Path)
+    publish.add_argument("--ledger", required=True, type=Path)
+    publish.add_argument("--status", required=True, type=Path)
+    args = parser.parse_args()
+    try:
+        if args.action == "run":
+            return run(args.manifest.absolute(), args.out.resolve())
+        return render(args.result.absolute(), args.ledger.absolute(), args.status.absolute())
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        print("Refused: " + failure_cause(error), file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

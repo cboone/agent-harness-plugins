@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Run the checked plant regression suite with isolated Git settings.
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+
+exec uv run --no-project "${REPO_ROOT}/tests/checked_plant_test.py" "$@"

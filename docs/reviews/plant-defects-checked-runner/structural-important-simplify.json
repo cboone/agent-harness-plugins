@@ -1,0 +1,17 @@
+{
+  "aspect": "simplify",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "Angles: reuse, simplification and efficiency. run() rebuilds declarations(manifest) for execution after constructing result rows; verified() rebuilds it after checking declaration order. Each redundant call allocates three lists and one tuple per declaration. Neither function changes the declarations between calls. Disposition: skipped because this run prohibits edits.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Store declarations(manifest) in a local variable within each function and reuse it for that function's existing consumers. Preserve validation order, strict zip checks and independent render verification.",
+      "line": 233,
+      "severity": "suggestion",
+      "title": "Uncited: Reuse each function's ordered declaration list."
+    }
+  ],
+  "reviewed": "b4d2c90fe55b4e281b8c99b0d5a5ae5130811cb6",
+  "strengths": ["Execution, evidence verification and publication have useful separate boundaries.", "Fingerprint-only callers now avoid retaining unused input contents."],
+  "summary": "Read-only inline fallback completed reuse, simplification, efficiency and altitude across all 19 membership paths; independent reviewers were unavailable because delegation was forbidden, and no four-reviewer fan-out ran. Fixed 0, skipped 1 because edits were unauthorized; repository status remained unchanged and no tests ran. GitHub metadata verification failed because the API was unreachable."
+}

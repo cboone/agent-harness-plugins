@@ -62,9 +62,10 @@ Four, not two. The third survives every coverage mode, because the code is not i
 1. **Commit the check before planting against it**, so reverting the plant reverts the plant and not the check it was testing.
 1. **Confirm the unmodified tree passes, and stand up a positive control.** See `./references/ordered-assertions.md`. If nothing can be made to fail on purpose, fall back to a marker proving the instrument produced output, and record that the weaker form is what you have.
 1. **Isolate Python bytecode before planting.** Run Python plants with `PYTHONDONTWRITEBYTECODE=1` or a fresh, throwaway `PYTHONPYCACHEPREFIX`, inherited by every test subprocess. Disabling writes still reads existing `.pyc` files: first record and remove only the affected modules' cache files in an owned test copy, or use a fresh prefix for each source variant. Same-second, same-size edits and restores can leave timestamp-based bytecode valid for the wrong source.
-1. **Plant one defect at a time**, revert between plants, and prefer the real code over a replica. A control that models the defect is not the subject exhibiting it.
+1. **Use the checked runner for every variant.** Invoke `${CLAUDE_PLUGIN_ROOT}/scripts/checked-plant` through `uv run --script`, following `./references/checked-runner.md`. Declare every assertion variant, green negative control and input in its manifest. Assertion variants require red; separately declared controls require green and are reported as controls. Do not build a worker-owned plant harness. Setup errors, skipped or unrun variants, missing inputs and failed restores fail the run.
+1. **Plant one defect at a time**, restore between plants, and prefer the real code over a replica. A control that models the defect is not the subject exhibiting it.
 1. **Restore source and clear Python plant caches even on failure.** Remove recorded `.pyc` files and any `__pycache__` directories the plant created, leaving pre-existing directories and unrelated files alone; discard owned throwaway prefixes. Never delete caches by a broad search over a shared tree. Confirm restored behavior in a fresh interpreter with clean caches before running later checks. Restart long-lived Python test workers too: removing disk caches does not clear imported modules.
-1. **Record what happened**, and confirm the assertion you named is the one that fired rather than a neighbour catching it first.
+1. **Generate records from the result only.** Use the runner's `render` command to write the ledger section and status lines from `results.json`; it refuses incomplete, failed or stale evidence. Quote its generated status verbatim. Confirm the named assertion fired rather than a neighbour catching it first. Never hand-write a plant success claim.
 1. **Plant against the judge as well as the subject.** Weaken each assertion and confirm something still fails. This is the step that finds arms which look like tests of the thing they name and are tests of something weaker.
 1. **Convert every plant expressible as data into a test**, so it regresses. Leave the rest as manual obligations with a named home rather than as prose.
 1. **Write down the rows nothing covers.** Saying so is what stops the gap being rediscovered later as an argument for an instrument that would not close it.
@@ -72,6 +73,8 @@ Four, not two. The third survives every coverage mode, because the code is not i
 ## Reference Navigation
 
 **Start here:**
+
+- `./references/checked-runner.md`: required runner, manifest, JSON evidence, generated records and restart checks
 
 - `./references/the-plant-table.md`: the artifact, its four columns, and the rules about rows that stay green, rows nothing covers, and acceptance criteria
 - `./references/ordered-assertions.md`: positive control, then progress or parse, then absence, with two worked judging scripts

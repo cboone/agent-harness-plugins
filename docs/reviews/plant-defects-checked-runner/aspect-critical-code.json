@@ -1,0 +1,17 @@
+{
+  "aspect": "code",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "A check that starts `sleep 600 >/dev/null 2>&1 &`, prints its expected marker and exits leaves that child running in the owned process group. Once both output pipes close, process.wait() reaps the leader and sets returncode, so this guard skips group cleanup. The step can satisfy its verdict while background processes survive restoration and final cleanup, leaking resources and potentially modifying files during subsequent phases.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "fix": "Track and clean up owned process groups before reconstructing or discarding their subject tree, preserving process identity safely until cleanup. Add coverage for a child that redirects both streams and outlives its normally exiting parent.",
+      "line": 233,
+      "severity": "important",
+      "title": "Uncited: Normally exiting steps can leave background descendants running."
+    }
+  ],
+  "reviewed": "44c97a98ed11f0a0784120da699f1ffdc02d8cfe",
+  "strengths": ["Rendering independently validates declared outcomes, step evidence and current input fingerprints.", "Centralized regular-file reads reject unsupported input kinds without waiting on FIFOs.", "Regression coverage challenges assertion, restoration and publication guards."],
+  "summary": "Reviewed all membership paths and required committed, unstaged and untracked changes against the trusted guidelines. One Important process-cleanup defect remains. Review was static and read-only; tests were not run, and GitHub metadata verification was unavailable."
+}
