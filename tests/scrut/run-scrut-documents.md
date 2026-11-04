@@ -19,7 +19,8 @@ worker or stays running until signalled.
 ## Help
 
 ```scrut {fail_fast: true}
-$ source "${REPO_ROOT}/bin/lib/git-environment.bash"
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash" \
+>   && export HEAVY_SUITE_LOCK_BIN="${TESTDIR}/absent-suite-lock"
 ```
 
 ```scrut

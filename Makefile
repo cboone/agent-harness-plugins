@@ -29,6 +29,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 	-u CODEX_STUB_GROUP_DIR -u CODEX_STUB_MODES -u CODEX_STUB_SENTINEL -u CODEX_STUB_LOG_DIR \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_RESPONSE -u STUB_CURL_FAIL_BODY -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \
+	-u STUB_SUITE_LOCK_PATH -u STUB_SUITE_LOCK_LOG \
 	-u PERL5OPT -u PERL5LIB -u SCRUT_GROUP_PROBE_MODE -u SCRUT_GROUP_PROBE_LOG -u SCRUT_GROUP_PROBE_PID \
 	-u STUB_SHFMT_REAL_BIN -u STUB_SHFMT_MODE -u ERROR_OUTPUT_SHFMT_STUB_PATH \
 	-u CHAIN_CODEX_STUB_MODE \
@@ -134,6 +135,9 @@ SCRUT_ENV := \
 	RESULT_CHECK_JQ="$(CURDIR)/plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq" \
 	CHECK_EDIT_WORKTREE_BIN="$(CURDIR)/plugins/review-anti-patterns/scripts/check-edit-worktree" \
 	RUN_SCRUT_DOCUMENTS_BIN="$(CURDIR)/bin/run-scrut-documents" \
+	RUN_HEAVY_SUITE_BIN="$(CURDIR)/bin/run-heavy-suite" \
+	SUITE_LOCK_STUB_BIN="$(CURDIR)/tests/fixtures/suite-lock-stub" \
+	HEAVY_SUITE_CASE_BIN="$(CURDIR)/tests/fixtures/heavy-suite-case" \
 	RUN_SCRUT_BIN="$(CURDIR)/bin/run-scrut" \
 	SCRUT_STUB_BIN="$(CURDIR)/tests/fixtures/scrut-stub" \
 	SCRUT_GROUP_PROBE_DIR="$(CURDIR)/tests/fixtures/scrut-group-probe" \
@@ -217,7 +221,11 @@ test-scrut:
 # stream to review.
 test-scrut-update:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
-	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"
+	env $(SCRUT_UNSET) $(SCRUT_ENV) bash -c '\
+		lock=(); \
+		if [[ -d "$$1" ]]; then lock=(bin/run-heavy-suite); fi; \
+		$${lock[@]+"$${lock[@]}"} bin/run-scrut --shell bash update --replace --assume-yes "$$1"' \
+		run-scrut-update "$(SCRUT_TEST_DIR)"
 	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut-documents "$(SCRUT_TEST_DIR)"
 
 test-bash32:
@@ -225,4 +233,5 @@ test-bash32:
 		{ echo 'test-bash32 requires /bin/bash 3.2' >&2; exit 1; }
 	$(MAKE) test-scrut SCRUT_TEST_DIR=tests/scrut/bash-empty-lists.md
 
-test-all: lint validate test-scrut
+test-all:
+	bin/run-heavy-suite $(MAKE) lint validate test-scrut

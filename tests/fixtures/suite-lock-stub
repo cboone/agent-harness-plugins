@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Accept only the fixture-owned path and record the heavy command contract.
+set -euo pipefail
+
+function main() {
+  [[ "$0" == "${STUB_SUITE_LOCK_PATH:?fixture path required}" ]] || exit 90
+  [[ "$(command -v suite-lock)" == "$0" ]] || exit 91
+  [[ "$1 $2 $3" == 'run heavy --' ]] || exit 92
+  printf 'heavy\n' >> "${STUB_SUITE_LOCK_LOG:?fixture log required}"
+  shift 3
+  exec "$@"
+}
+
+main "$@"

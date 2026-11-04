@@ -30,8 +30,8 @@ function check_fixture_graph() {
         sub(/:.*/, "", goal)
       }
       if (goal == "test-scrut" && $0 ~ /^\tenv .*bin\/run-scrut-documents /) make_test = 1
-      if (goal == "test-scrut-update" && $0 ~ /^\tenv .*bin\/run-scrut --shell bash update /) make_update = 1
-      if ($0 ~ /^test-all:.*test-scrut/) make_all = 1
+      if (goal == "test-scrut-update" && $0 ~ /bin\/run-scrut --shell bash update /) make_update = 1
+      if (goal == "test-all" && $0 ~ /^\tbin\/run-heavy-suite \$\(MAKE\) lint validate test-scrut$/) make_all = 1
       if (raw_scrut($0)) invalid_scrut[FILENAME] = 1
       if ($0 ~ /^[\t ]*[A-Z_]+="\$\(CURDIR\)\//) {
         variable = $0

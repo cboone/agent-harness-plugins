@@ -236,7 +236,7 @@ function main() {
       elif [[ "${scenario}" == guard-wrapper-reset ]]; then
         perl -ni -e 'print unless /^source .*git-environment[.]bash/' "${root}/tree/bin/run-scrut"
       elif [[ "${scenario}" == guard-scrut-runner ]]; then
-        perl -pi -e 's/"\$\{RUN_SCRUT_WRAPPER\}"/scrut/g' "${root}/tree/bin/run-scrut-documents"
+        perl -pi -e 's/"\$\{RUN_SCRUT_WRAPPER\}"/scrut/g' "${root}/tree/bin/lib/run-scrut-documents"
       elif [[ "${scenario}" == guard-scrut-update ]]; then
         perl -pi -e 's/bin\/run-scrut --shell bash update/scrut --shell bash update/' "${root}/tree/Makefile"
       elif [[ "${scenario}" == guard-scrut-ci ]]; then
