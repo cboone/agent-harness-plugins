@@ -14,6 +14,8 @@ $ source "${REPO_ROOT}/bin/lib/git-environment.bash" \
 $ function tree() {
 >   local root
 >   root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   mkdir -p -- "${root}/plugins/review-pr-with-codex/skills/review-pr-with-codex/references"
+>   printf '%s\n' '# Review scope validity' > "${root}/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/scope-validity.md"
 >   mkdir -p -- "${root}/plugins/workmux/scripts"
 >   printf '%s\n' '# Owner lock library' > "${root}/plugins/workmux/scripts/owner-lock.bash"
 >   mkdir -p -- "${root}/plugins/publish-report-board/skills/publish-report-board/references"
@@ -34,7 +36,7 @@ $ function tree() {
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" && cmp "${source_file}" "${copy_file}" && echo identical
-Shared references: 7 copied (7 written).
+Shared references: 9 copied (9 written).
 identical
 ```
 
@@ -42,14 +44,14 @@ identical
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" > /dev/null && "${BUILD_SHARED_REFERENCES_BIN}"
-Shared references: 7 copied (0 written).
+Shared references: 9 copied (0 written).
 ```
 
 ## Rewrites a copy edited by hand
 
 ```scrut
 $ cd "$(tree)" && "${BUILD_SHARED_REFERENCES_BIN}" > /dev/null && printf '%s\n' 'edited' >> "${copy_file}" && "${BUILD_SHARED_REFERENCES_BIN}" && cmp "${source_file}" "${copy_file}" && echo identical
-Shared references: 7 copied (1 written).
+Shared references: 9 copied (1 written).
 identical
 ```
 
@@ -64,6 +66,8 @@ passed
 
 ```scrut
 $ cd "$(tree)" && { "${BUILD_SHARED_REFERENCES_BIN}" --check; echo "exit ${?}"; } && test ! -e "${copy_file}" && echo "not written"
+::error::Shared reference copy 'plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md' is missing; run make build
+::error::Shared reference copy 'plugins/review-anti-patterns/skills/review-anti-patterns/references/scope-validity.md' is missing; run make build
 ::error::Shared reference copy 'plugins/attention-log/scripts/owner-lock.bash' is missing; run make build
 ::error::Shared reference copy 'plugins/publish-report-board/scripts/owner-lock.bash' is missing; run make build
 ::error::Shared reference copy 'plugins/review-pr-with-codex/scripts/review-git.bash' is missing; run make build
@@ -71,7 +75,7 @@ $ cd "$(tree)" && { "${BUILD_SHARED_REFERENCES_BIN}" --check; echo "exit ${?}"; 
 ::error::Shared reference copy 'plugins/trim-comments/skills/trim-comments/references/codex-exec.md' is missing; run make build
 ::error::Shared reference copy 'plugins/trim-text/skills/trim-text/references/codex-exec.md' is missing; run make build
 ::error::Shared reference copy 'plugins/attention-log/scripts/claude-transcript.jq' is missing; run make build
-7 shared reference error(s) found.
+9 shared reference error(s) found.
 exit 1
 not written
 ```

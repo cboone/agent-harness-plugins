@@ -282,6 +282,6 @@ $ printf 'later\n' >> lib.sh \
 >        --cleanup-dir "${FIXTURE}/cleanup" --out-dir "${FIXTURE}/out" \
 >        --reviewed-scope "${FIXTURE}/scope.json" --results "${FIXTURE}/code-results.json" \
 >        --statuses "${FIXTURE}/code-statuses.json" --reviewed-aspect code 2>&1
-codex-aspects: the scope changed after --scope was captured; capture it again and rerun the gate
+codex-aspects: scope validity check failed; see scope-validity.md; capture again and rerun the gate
 [1]
 ```

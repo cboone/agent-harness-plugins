@@ -26,6 +26,8 @@ function main() {
   ln -s /bin/bash "${root}/path/bash"
   ln -s /usr/bin/env "${root}/path/env"
   cp "${REPO_ROOT}/tests/fixtures/claude-validation-stub" "${root}/path/claude"
+  cp "${REPO_ROOT}/tests/fixtures/claude-validation-uv-stub" "${root}/path/uv"
+  [[ "$(PATH="${root}/path" command -v uv)" == "${root}/path/uv" ]] || return 1
   IFS= read -r CLAUDE_VALIDATION_VERSION < "${root}/.claude-code-version"
   export CLAUDE_VALIDATION_VERSION
   case "${scenario}" in

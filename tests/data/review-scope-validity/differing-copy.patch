@@ -1,0 +1,8 @@
+--- a/plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md
++++ b/plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md
+@@ -28,3 +28,5 @@
+ inputs. Edits reverted between captures are undetectable. An unchanged result
+ means no lasting change to captured inputs was found, never that nothing was
+ written. Content addressing assumes Git object-hash collision resistance.
++
++Changed copy.

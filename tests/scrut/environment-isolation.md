@@ -322,6 +322,8 @@ bin/validate-json
 All JSON files are valid.
 bin/check-fixture-environments
 All Git consumers reset their fixture environment.
+uv run --script bin/check-review-validity.py
+Review validity policy passed.
 env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 * (glob)
 Codex skill inventory: * (glob)
@@ -337,6 +339,8 @@ bin/validate-json
 All JSON files are valid.
 bin/check-fixture-environments
 All Git consumers reset their fixture environment.
+uv run --script bin/check-review-validity.py
+Review validity policy passed.
 env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 * (glob)
 Codex skill inventory: * (glob)
@@ -352,6 +356,8 @@ bin/validate-json
 All JSON files are valid.
 bin/check-fixture-environments
 All Git consumers reset their fixture environment.
+uv run --script bin/check-review-validity.py
+Review validity policy passed.
 env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 * (glob)
 Codex skill inventory: * (glob)

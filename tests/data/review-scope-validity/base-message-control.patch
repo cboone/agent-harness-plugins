@@ -1,0 +1,33 @@
+--- a/tests/fixtures/review-scope-validity
++++ b/tests/fixtures/review-scope-validity
+@@ -45,10 +45,10 @@
+   "${scope}" --base "${base}" > "${scratch}/before.json"
+   case "${mode}" in
+     alias)
+-      git update-ref refs/remotes/origin/main "$(printf 'unrelated\n' | git commit-tree 'base^{tree}' -p base)"
++      git update-ref refs/remotes/origin/main "$(printf 'unrelated control\n' | git commit-tree 'base^{tree}' -p base)"
+       ;;
+     base)
+-      git update-ref refs/heads/base "$(printf 'unrelated\n' | git commit-tree 'base^{tree}' -p base)"
++      git update-ref refs/heads/base "$(printf 'unrelated control\n' | git commit-tree 'base^{tree}' -p base)"
+       ;;
+     base-collection | merge-base-collection)
+       export SCOPE_VALIDITY_MARKER="${scratch}/moved" SCOPE_VALIDITY_MODE="${mode}"
+@@ -57,7 +57,7 @@
+           touch "${SCOPE_VALIDITY_MARKER}" || return
+           local tip
+           if [[ "${SCOPE_VALIDITY_MODE}" == base-collection ]]; then
+-            tip="$(printf 'unrelated\n' | command git commit-tree 'base^{tree}' -p base)" || return
++            tip="$(printf 'unrelated control\n' | command git commit-tree 'base^{tree}' -p base)" || return
+           else
+             tip="$(command git rev-parse HEAD)" || return
+           fi
+@@ -74,7 +74,7 @@
+       git update-ref refs/heads/base HEAD
+       ;;
+     rebase)
+-      git update-ref refs/heads/base "$(printf 'unrelated\n' | git commit-tree 'base^{tree}' -p base)"
++      git update-ref refs/heads/base "$(printf 'unrelated control\n' | git commit-tree 'base^{tree}' -p base)"
+       git rebase --quiet --onto base 'feature^'
+       ;;
+     membership)

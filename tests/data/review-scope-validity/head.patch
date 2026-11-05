@@ -1,0 +1,11 @@
+--- a/plugins/review-until-clean/scripts/review-scope
++++ b/plugins/review-until-clean/scripts/review-scope
+@@ -648,7 +648,7 @@
+     --arg tree "${tree}" --arg raw_tree "${raw_tree}" --arg index "${index_before}" \
+     --slurpfile submodules "${TMP_DIR}/submodules.json" --slurpfile files "${TMP_DIR}/files.json" \
+     --slurpfile membership "${TMP_DIR}/membership.json" \
+-    '{head: $head, base: $base, tree: $tree, raw_tree: $raw_tree, index: $index,
++    '{base: $base, tree: $tree, raw_tree: $raw_tree, index: $index,
+       submodules: $submodules[0], files: $files[0], membership: $membership[0]}' \
+     | git hash-object -w --stdin)"
+ 

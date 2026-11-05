@@ -1,0 +1,13 @@
+--- a/bin/check-review-validity.py
++++ b/bin/check-review-validity.py
+@@ -115,8 +115,8 @@
+             continue
+         try:
+             prose = normalize(path.read_text(encoding="utf-8"))
+-        except UnicodeDecodeError as error:
+-            raise ValueError(f"{relative}: invalid UTF-8 policy source: {error}") from error
++        except UnicodeDecodeError:
++            continue
+         if any(phrase in prose for phrase in phrases):
+             errors.append(f"{relative}: validity key wording outside shared reference")
+     for plugin in ("review-until-clean", "review-pr-with-codex"):

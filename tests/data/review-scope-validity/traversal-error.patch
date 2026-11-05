@@ -1,0 +1,11 @@
+--- a/bin/check-review-validity.py
++++ b/bin/check-review-validity.py
+@@ -78,7 +78,7 @@
+ 
+ 
+ def raise_walk_error(error):
+-    raise error
++    return
+ 
+ 
+ def active_paths(root):

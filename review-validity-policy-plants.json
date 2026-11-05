@@ -1,0 +1,81 @@
+{
+  "inputs": ["bin/check-review-validity.py", "tests/fixtures/review-validity-policy-plant-check", "plugins/review-pr-with-codex/skills/review-pr-with-codex/references/scope-validity.md", "plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md", "plugins/review-anti-patterns/skills/review-anti-patterns/references/scope-validity.md", "plugins/review-until-clean/skills/review-until-clean/SKILL.md", "plugins/review-until-clean/scripts/review-scope", "plugins/review-pr-with-codex/scripts/review-scope", "tests/data/review-scope-validity/negated-policy-control.patch", "tests/data/review-scope-validity/differing-copy.patch", "tests/data/review-scope-validity/duplicate-wording.patch", "tests/data/review-scope-validity/helper-ref.patch", "plugins/review-until-clean/skills/review-until-clean/references/stop-rules.md", "tests/data/review-scope-validity/terminal-status.patch", "tests/data/review-scope-validity/helper-quoted-test.patch", "tests/fixtures/review-validity-unreadable", "bin/lib/git-environment.bash", "tests/data/review-scope-validity/traversal-error.patch", "tests/data/review-scope-validity/encoding-error.patch"],
+  "check": "tests/fixtures/review-validity-policy-plant-check",
+  "timeout": 60,
+  "green": {
+    "exit_code": 0,
+    "contains": ["Review validity policy passed.\n", "PASS: unreadable policy subtree rejected\n", "PASS: invalid UTF-8 policy input rejected\n"],
+    "excludes": ["Traceback", "SyntaxError"]
+  },
+  "variants": [
+    {
+      "name": "differing-copy",
+      "patch": "tests/data/review-scope-validity/differing-copy.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["review validity policy: plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md: validity copy differs from source\n"],
+        "excludes": ["Traceback", "SyntaxError", "command not found"]
+      }
+    },
+    {
+      "name": "duplicate-wording",
+      "patch": "tests/data/review-scope-validity/duplicate-wording.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["review validity policy: plugins/review-until-clean/skills/review-until-clean/SKILL.md: validity key wording outside shared reference\n"],
+        "excludes": ["Traceback", "SyntaxError", "command not found"]
+      }
+    },
+    {
+      "name": "helper-ref",
+      "patch": "tests/data/review-scope-validity/helper-ref.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["review validity policy: plugins/review-until-clean/scripts/review-scope: ref-based scope comparison\n"],
+        "excludes": ["Traceback", "SyntaxError", "command not found"]
+      }
+    },
+    {
+      "name": "terminal-status",
+      "patch": "tests/data/review-scope-validity/terminal-status.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["review validity policy: plugins/review-until-clean/skills/review-until-clean/references/stop-rules.md: validity key wording outside shared reference\n"],
+        "excludes": ["Traceback", "SyntaxError", "command not found"]
+      }
+    },
+    {
+      "name": "helper-quoted-test",
+      "patch": "tests/data/review-scope-validity/helper-quoted-test.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["review validity policy: plugins/review-until-clean/scripts/review-scope: ref-based scope comparison\n"],
+        "excludes": ["Traceback", "SyntaxError", "command not found"]
+      }
+    },
+    {
+      "name": "traversal-error",
+      "patch": "tests/data/review-scope-validity/traversal-error.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: unreadable policy subtree accepted\n"],
+        "excludes": ["Traceback", "SyntaxError", "requires a non-root", "remains readable"]
+      }
+    },
+    {
+      "name": "encoding-error",
+      "patch": "tests/data/review-scope-validity/encoding-error.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: invalid UTF-8 policy input accepted\n"],
+        "excludes": ["Traceback", "SyntaxError", "requires a non-root", "remains readable"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "negated-policy",
+      "patch": "tests/data/review-scope-validity/negated-policy-control.patch"
+    }
+  ]
+}

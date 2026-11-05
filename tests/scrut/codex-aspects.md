@@ -1143,7 +1143,7 @@ $ cp -R -- "${FIXTURE}/repo" "${FIXTURE}/index-only" && cd "${FIXTURE}/index-onl
 >   && "${CODEX_ASPECTS_BIN}" gate --scope "${FIXTURE}/scope.json" --after "${FIXTURE}/index-only.json" \
 >     --results "${FIXTURE}/gate-results.json" --statuses "${FIXTURE}/gate-statuses.json" --aspect code | jq -c '{eligible,reason}'
 {"scope_changed":true,"changed":[]}
-{"eligible":false,"reason":"the review scope changed"}
+{"eligible":false,"reason":"the review scope changed; see scope-validity.md"}
 ```
 
 ## Standalone review starts outside the repository
@@ -1293,7 +1293,7 @@ $ cd "${FIXTURE}/simplify" \
 >        --statuses "${FIXTURE}/simplify-statuses.json" --reviewed-aspect code 2>&1; echo "exit=$?"; }
 codex-aspects: simplify requires --reviewed-scope, --results, --statuses and --reviewed-aspect
 exit=1
-codex-aspects: the scope changed after --scope was captured; capture it again and rerun the gate
+codex-aspects: scope validity check failed; see scope-validity.md; capture again and rerun the gate
 exit=1
 ```
 
