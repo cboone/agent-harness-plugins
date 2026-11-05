@@ -36,9 +36,9 @@ Severity order is Critical > Important > Nit. The default fixes Critical and Imp
 Everything below exists to keep these true. A step that would break one is wrong, however reasonable it looks.
 
 1. **Every round reviews the whole scope.** Committed branch changes, staged, unstaged, and untracked, every round. Never only the latest patch. Whether the reviewer reached all of it is verified from its report, and a round that cannot show it did says so in its coverage.
-1. **The loop knows each round's mode.** A reviewer either reports findings or edits the code itself. The loop observes which from the snapshot, and decides whether the round is clean from that mode's signal. An edit round is never clean.
+1. **The loop records each round's mode.** Use [Review scope validity](./references/scope-validity.md) for classification before choosing the next loop step.
 1. **A run that does not finish is never clean.** A shell command counts as finished only when it exits 0 with stdout holding a non-whitespace character, and a skill or command only when its report says it completed. Silence, an error, or output that is cut off ends the run as `failed`.
-1. **A clean result is bound to a content snapshot.** Any edit after the review invalidates it.
+1. **Scope decisions follow [Review scope validity](./references/scope-validity.md).**
 
 ## The helper scripts
 
@@ -55,7 +55,7 @@ The steps below abbreviate that path to `review-scope`. Expand the abbreviation 
 - `${CLAUDE_PLUGIN_ROOT}/scripts/check-completion`: checks the raw reply and exit status before transcription.
 - `${CLAUDE_PLUGIN_ROOT}/scripts/save-ledger`: saves a run under a distinct, exclusively reserved filename.
 
-Do not recompute the snapshot by hand. It binds review to HEAD, the base tip and merge base, disk and index content, and bucket membership. Staging, unstaging and intent-to-add move it because reviewers read those diffs. `tree` identifies disk content only. See `./references/scope-and-snapshot.md`.
+Do not recompute the snapshot by hand. Follow [Review scope validity](./references/scope-validity.md); `tree` is the disk-content identifier used for measuring edits.
 
 ## Workflow
 
@@ -86,7 +86,7 @@ Do not choose a reviewer yourself, and do not fall back to one the user did not 
 
 When the scope has untracked files, ask once per run, when someone can answer, whether to make them visible with `git add -N`, which records an intent to add without staging content. Record only the paths this run adds, which were untracked when it added them, and never reset an index entry that was there before. Find any untracked symlinks first: a symlink is in scope as its link text only, never as a file to open. `./references/reviewers.md` covers both.
 
-The index is review input, so `git add -N` moves the snapshot. After preparing, run `review-scope` again and replace step 1's snapshot and buckets with its result before running the reviewer; otherwise step 5 would read the preparation as the reviewer's edit. Keep the preparation through step 8 and any confirming round, so the validity check compares like with like. Before a later round, prepare any newly untracked paths and capture a fresh snapshot the same way. Step 11 restores the entries, and so does a run that fails or is cancelled.
+Apply [Review scope validity](./references/scope-validity.md) after coverage preparation. After preparing, run `review-scope` again and replace step 1's snapshot and buckets with its result before running the reviewer; otherwise step 5 would read the preparation as the reviewer's edit. Keep the preparation through step 8 and any confirming round, so the validity check compares like with like. Before a later round, prepare any newly untracked paths and capture a fresh snapshot the same way. Step 11 restores the entries, and so does a run that fails or is cancelled.
 
 Excluding the untracked files is a valid choice and is not a failure, but it does change what a clean result is allowed to claim.
 
@@ -94,16 +94,11 @@ Excluding the untracked files is a valid choice and is not a failure, but it doe
 
 Run it over the repository as it is, exactly as step 2 recorded it, with nothing added: a skill or command in this session, a shell command from the repository root with stdin from `/dev/null` and its output captured outside the working tree. `./references/reviewers.md` has the exact rules for each kind.
 
-Never pass the reviewer an option that pushes, posts to a pull request, or rewrites history. Editing the working tree is allowed; step 5 detects it. Just before it runs, record every remote-tracking ref and tag, per `./references/reviewers.md`, so step 5 can catch the common pushes and fetches. Those checks are best effort: choosing a reviewer is trusting it not to push or rewrite history.
+Never pass the reviewer an option that pushes, posts to a pull request, or rewrites history. Editing the working tree is allowed; step 5 detects it. Follow `./references/reviewers.md` for prohibited reviewer actions and the ancestry check.
 
 ### 5. Check completion and mode
 
-Run `review-scope` again **as soon as the reviewer returns**, before reading its output, and compare the snapshot with the one the round started from, step 1's or the one captured after step 3's preparation:
-
-- **Unchanged**: a **report round**.
-- **Moved**: an **edit round**. Whatever changed the tree did so while the reviewer ran, so the change is this round's result. Record the changed paths.
-
-Also compare the remote-tracking refs and tags with step 4's record, and, when `HEAD` moved, check that the old `HEAD` is an ancestor of the new one. A moved ref or a rewritten history ends the run as `failed`, per `./references/reviewers.md`.
+Recapture immediately and classify the round under [Review scope validity](./references/scope-validity.md), using the snapshot from step 1 or the replacement after step 3's preparation. Record an edit round's changed paths. Apply the ancestry and observed-action checks in `./references/reviewers.md`.
 
 Before transcription, run the bundled `check-completion <exit-status> <raw-reply-file> <text|json>`. Pass the captured process status for a shell reviewer; for a skill, save its actual report verbatim and pass `0` only after it has returned. Use `json` only when the reviewer promises an exclusively JSON reply. Use `text` for prose or a mixed JSON-and-prose report, such as `review-anti-patterns` in-session output; separately validate its structured portion against the reviewer's contract, taken unchanged from the raw report, before transcribing findings. Malformed structured portions still fail the round. A non-zero helper exit prints the terminal `failed` status: record that failure and stop. Never replace a missing report with an empty findings object.
 
@@ -143,11 +138,11 @@ The round is **clean** when all of these hold:
 - no finding at or above `--severity` is left undeclined
 - `review-scope` still reports the snapshot the review ran against
 
-Check the snapshot again here rather than trusting step 5. Anything that touched the tree since, including another session, invalidates the result.
+Recheck the scope under [Review scope validity](./references/scope-validity.md) here rather than reusing step 5's verdict.
 
 **An edit round is never clean.** It changed the code it reviewed, so its verdict is about code that no longer exists. Record its changes as the round's result. Record any findings it also reported, but never queue them: they name paths and lines in the tree the reviewer read, which its own edits replaced, so handing them to the fixer would apply edits computed for one version of a file to another. Under `--report-only`, go to step 11 with `decisions-needed` now, listing the changed paths, and run no further round: another review could edit again or come back clean, and either would bury the decision about these edits. Otherwise go to step 10, so the next round reviews what the reviewer left; a finding that still holds comes back there with locations that match the code on disk.
 
-**A snapshot that moved after step 5 invalidates the findings, not only a clean result.** The findings name paths and lines in the tree the reviewer read, and that tree is gone. Handing them to the fixer would apply edits computed for one version of a file to a different one, which is how a review turns into damage. So when the snapshot has moved since step 5, discard the round's findings along with any clean verdict, record in the ledger that the round was invalidated and why, and start a new round from step 1 against the current snapshot if one is left in `--max-rounds`. If none is left, including when the invalidated round was the extra confirming round past the cap, go to step 11 with `stopped` and say the tree changed during the round; under `--confirm-clean`, report any clean round it was confirming as unconfirmed. Under `--report-only`, which has no round budget, report that clean round as unconfirmed instead of `stopped`; and when the invalidated round was a `--report-only` run's own first round, end it `decisions-needed`, saying the tree changed during the review and naming the snapshot it moved to, rather than starting another round. Do not go to step 9 with findings from a snapshot that no longer exists.
+**Recheck scope under [Review scope validity](./references/scope-validity.md) at the decision.** When that check invalidates a result, record the reason and start another round from step 1 only if one remains in `--max-rounds`; otherwise include the discarded result and end `stopped`. For an invalidated `--report-only` result, run no further round and never report `stopped`. If the first round is invalidated, end `decisions-needed` and name the changed snapshot. If a confirming round is invalidated, report the earlier clean round as unconfirmed and record `Confirmation: unconfirmed`.
 
 If the round is clean, go to step 11, unless `--confirm-clean` is set and this is the first clean round of a pair. Then record it in the ledger with its snapshot and start a confirming round at step 1, with the same reviewer and coverage preparation and no fix pass. When that step 1 reports a snapshot other than the recorded one, something changed the tree between the two rounds and the pair resets. If a round is left in the budget, the round is an ordinary round over the new snapshot, so a clean result from it is again only the first of two; if none is left, step 10's rule for the round past the cap applies instead, and `--report-only` has its own rule below. A confirming round that turns out to be an edit round resets the pair the same way. A reviewer's output varies between runs over identical code, so a round that found nothing is not proof that there is nothing to find. `./references/stop-rules.md` has the pair rules: when the pair completes, when it resets, and how the confirming round counts against `--max-rounds`.
 
@@ -269,8 +264,8 @@ Review-until-clean status: clean at critical, full scope
 - **Empty scope**: report that there is nothing to review and stop with `no-op`.
 - **Repository has no commits**: `review-scope` reports it; stop with `failed`.
 - **Reviewer exits non-zero, times out, or returns nothing**: a failed round, per step 5. Report and stop.
-- **Reviewer pushes, fetches, posts, or rewrites history**, as far as step 5's checks or its report show: stop with `failed` and report what was seen. A ref that moved for an unknown reason, such as an editor's background fetch, ends the same way, reported as unattributed.
-- **The snapshot moved after the reviewer returned**: discard that round's findings and any clean result, say so, and start another round if one remains; otherwise stop with `stopped`, per step 8.
+- **Reviewer pushes, fetches, posts, or rewrites history**, as far as step 5's checks or its report show: stop with `failed` and report what was seen. Use [Review scope validity](./references/scope-validity.md) when interpreting captured state.
+- **The decision-time scope check fails**: apply [Review scope validity](./references/scope-validity.md), then step 8's remaining-round rule.
 - **The round limit is reached with findings outstanding, or after an edit round**: stop with `stopped`, and list what is unresolved or unreviewed.
 - **The confirming round leaves an undeclined finding at or above `--severity`, or edits the tree**: the pair resets. Findings below the threshold and carried declines do not; the pair still completes, as `clean-with-declines` where declines carried. Continue if rounds remain, so the next clean round is again only the first of two; otherwise stop with `stopped`.
 - **`address-review` fixes nothing**: stop with `decisions-needed`, per step 10.

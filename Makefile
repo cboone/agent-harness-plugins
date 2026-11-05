@@ -41,6 +41,9 @@ SCRUT_UNSET := -u TMUX -u TMUX_PANE -u TMUX_TMPDIR -u ATTENTION_LOG_DIR -u WORKM
 
 # Share script and fixture paths between the test and update targets.
 SCRUT_ENV := \
+	REVIEW_VALIDITY_UNREADABLE_BIN="$(CURDIR)/tests/fixtures/review-validity-unreadable" \
+	REVIEW_VALIDITY_POLICY_BIN="$(CURDIR)/bin/check-review-validity.py" \
+	REVIEW_SCOPE_VALIDITY_BIN="$(CURDIR)/tests/fixtures/review-scope-validity" \
 	CHECKED_GATE_BIN="$(CURDIR)/plugins/plant-defects/scripts/checked-gate" \
 	CHECKED_PLANT_DETACHED_BIN="$(CURDIR)/tests/fixtures/checked-plant-detached.py" \
 	CHECKED_PLANT_BIN="$(CURDIR)/plugins/plant-defects/scripts/checked-plant" \
@@ -176,7 +179,7 @@ help:
 	@echo "  test-bash32        Empty-list regressions under macOS /bin/bash 3.2"
 	@echo ""
 	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut, Perl (core POSIX module)."
-	@echo "make validate also requires Claude Code >= $$(cat .claude-code-version) on PATH."
+	@echo "make validate also requires uv and Claude Code >= $$(cat .claude-code-version) on PATH."
 	@echo "validate-corpus additionally needs jq and mikefarah yq v4."
 
 lint: lint-markdown lint-shell
@@ -200,6 +203,7 @@ format:
 validate:
 	bin/validate-json
 	bin/check-fixture-environments
+	uv run --script bin/check-review-validity.py
 	env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \
 		-u CODEX_OTHER_SKILL_RESERVE_TOKENS -u CLAUDE_MARKETPLACE bin/validate-plugins
 	bin/validate-claude-plugins

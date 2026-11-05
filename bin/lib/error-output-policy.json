@@ -99,6 +99,10 @@
     {
       "name": "plugins/plant-defects/scripts/checked_core.py",
       "reason": "Python checked runner component; command captures and failure causes are retained in JSON evidence."
+    },
+    {
+      "name": "bin/check-review-validity.py",
+      "reason": "Python source policy guard reads plugin prose and scope helper text without executing it."
     }
   ],
   "parse_exceptions": []
