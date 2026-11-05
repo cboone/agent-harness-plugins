@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Validate documentation and helper source in the checked runner's private tree.
+set -euo pipefail
+# shellcheck source=bin/lib/git-environment.bash
+source bin/lib/git-environment.bash
+uv run --script bin/check-review-validity.py --root .
+bash tests/fixtures/review-validity-unreadable
+bash tests/fixtures/review-validity-unreadable encoding

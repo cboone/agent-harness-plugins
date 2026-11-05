@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Exercise round validity using real Git histories and captured review inputs.
+# shellcheck disable=SC2016 # jq expressions are passed literally to assert_scope.
+set -euo pipefail
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/../../bin/lib/git-environment.bash"
+
+SCRATCH=""
+trap 'if [[ -n "${SCRATCH}" ]]; then rm -r -- "${SCRATCH}"; fi' EXIT
+
+function assert_scope() {
+  local expression="${1}" label="${2}"
+  if ! jq -e -n --slurpfile a "${scratch}/before.json" --slurpfile b "${scratch}/after.json" \
+    "${expression}" > /dev/null; then
+    printf 'FAIL: %s\n' "${label}" >&2
+    exit 1
+  fi
+}
+
+function main() {
+  local mode="${1:?case required}" scratch root scope aspects base=base
+  root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+  scope="${REVIEW_SCOPE_BIN:-${root}/plugins/review-until-clean/scripts/review-scope}"
+  aspects="${CODEX_ASPECTS_BIN:-${root}/plugins/review-pr-with-codex/scripts/codex-aspects}"
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/scope-validity.XXXXXX")"
+  SCRATCH="${scratch}"
+  cd "${scratch}"
+  git init -q --template= repo
+  cd repo
+  git config user.name Test
+  git config user.email test@example.com
+  git config commit.gpgsign false
+  git checkout -qb base
+  printf 'base\n' > tracked.txt
+  git add -- tracked.txt
+  git commit -qm base
+  git checkout -qb feature
+  git commit -qm feature --allow-empty
+  if [[ "${mode}" == membership ]]; then printf 'changed\n' > tracked.txt; fi
+  if [[ "${mode}" == alias ]]; then
+    git update-ref refs/remotes/origin/main "$(git rev-parse base)"
+    git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+    base=origin/HEAD
+  fi
+  "${scope}" --base "${base}" > "${scratch}/before.json"
+  case "${mode}" in
+    alias)
+      git update-ref refs/remotes/origin/main "$(printf 'unrelated\n' | git commit-tree 'base^{tree}' -p base)"
+      ;;
+    base)
+      git update-ref refs/heads/base "$(printf 'unrelated\n' | git commit-tree 'base^{tree}' -p base)"
+      ;;
+    base-collection | merge-base-collection)
+      export SCOPE_VALIDITY_MARKER="${scratch}/moved" SCOPE_VALIDITY_MODE="${mode}"
+      function git() {
+        if [[ ! -e "${SCOPE_VALIDITY_MARKER}" && " $* " == *" diff "* && " $* " == *" HEAD "* ]]; then
+          touch "${SCOPE_VALIDITY_MARKER}" || return
+          local tip
+          if [[ "${SCOPE_VALIDITY_MODE}" == base-collection ]]; then
+            tip="$(printf 'unrelated\n' | command git commit-tree 'base^{tree}' -p base)" || return
+          else
+            tip="$(command git rev-parse HEAD)" || return
+          fi
+          command git update-ref refs/heads/base "${tip}" || return
+        fi
+        command git "$@"
+      }
+      export -f git
+      [[ "$(type -t git)" == function ]]
+      ;;
+    head) git commit -qm next --allow-empty ;;
+    merge-base)
+      # Empty commits keep trees and membership fixed, isolating the merge base.
+      git update-ref refs/heads/base HEAD
+      ;;
+    rebase)
+      git update-ref refs/heads/base "$(printf 'unrelated\n' | git commit-tree 'base^{tree}' -p base)"
+      git rebase --quiet --onto base 'feature^'
+      ;;
+    membership)
+      git add -- tracked.txt
+      ;;
+    *)
+      printf 'Unknown case: %s\n' "${mode}" >&2
+      exit 2
+      ;;
+  esac
+  if [[ "${mode}" == merge-base-collection ]]; then
+    local scope_status=0
+    "${scope}" --base "${base}" > "${scratch}/after.json" 2> "${scratch}/error" || scope_status=$? # error-output-allow: assert the retained collection diagnostic below
+    cat "${scratch}/error"
+    [[ "${scope_status}" -eq 1 && ! -s "${scratch}/after.json" ]]
+    printf 'PASS: %s round validity\n' "${mode}"
+    cd "${root}"
+    rm -r -- "${scratch}"
+    SCRATCH=""
+    return
+  fi
+  "${scope}" --base "${base}" > "${scratch}/after.json"
+  case "${mode}" in
+    base-collection)
+      [[ -e "${SCOPE_VALIDITY_MARKER}" ]]
+      [[ "$(git rev-parse base)" != "$(jq -r .base_tip "${scratch}/before.json")" ]]
+      assert_scope '$a[0].snapshot == $b[0].snapshot' 'unrelated base advance during collection preserves snapshot'
+      ;;
+    base | alias)
+      assert_scope '$a[0].base_tip != $b[0].base_tip and $a[0].base == $b[0].base and $a[0].head == $b[0].head and $a[0].tree == $b[0].tree and $a[0].membership == $b[0].membership' 'base advance preconditions'
+      assert_scope '$a[0].snapshot == $b[0].snapshot' 'unrelated base advance preserves snapshot'
+      ;;
+    head)
+      assert_scope '$a[0].head != $b[0].head and $a[0].tree == $b[0].tree and $a[0].base == $b[0].base' 'HEAD change preconditions'
+      assert_scope '$a[0].snapshot != $b[0].snapshot' 'HEAD invalidates snapshot'
+      ;;
+    merge-base)
+      assert_scope '$a[0].base != $b[0].base and $a[0].head == $b[0].head and $a[0].tree == $b[0].tree and $a[0].membership == $b[0].membership' 'merge-base change preconditions'
+      assert_scope '$a[0].snapshot != $b[0].snapshot' 'merge base invalidates snapshot'
+      ;;
+    rebase)
+      assert_scope '$a[0].base != $b[0].base and $a[0].head != $b[0].head and $a[0].tree == $b[0].tree' 'rebase preconditions'
+      assert_scope '$a[0].snapshot != $b[0].snapshot' 'rebase invalidates snapshot'
+      ;;
+    membership)
+      assert_scope '$a[0].membership != $b[0].membership and $a[0].head == $b[0].head and $a[0].base == $b[0].base and $a[0].tree == $b[0].tree' 'membership change preconditions'
+      assert_scope '$a[0].snapshot != $b[0].snapshot' 'membership invalidates snapshot'
+      ;;
+    *)
+      printf 'Unknown case: %s\n' "${mode}" >&2
+      exit 2
+      ;;
+  esac
+  "${aspects}" changes --before "${scratch}/before.json" --after "${scratch}/after.json" > "${scratch}/changes.json"
+  local expected=true
+  [[ "${mode}" != base && "${mode}" != alias && "${mode}" != base-collection ]] || expected=false
+  if ! jq -e --argjson expected "${expected}" '.scope_changed == $expected and .changed == []' "${scratch}/changes.json" > /dev/null; then
+    printf 'FAIL: %s round consumer\n' "${mode}" >&2
+    exit 1
+  fi
+  printf 'PASS: %s round validity\n' "${mode}"
+  cd "${root}"
+  rm -r -- "${scratch}"
+  SCRATCH=""
+}
+
+main "$@"

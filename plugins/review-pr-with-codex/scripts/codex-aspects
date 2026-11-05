@@ -975,7 +975,7 @@ function cmd_gate() {
      elif any($statuses[0][]; .membership_paths != ($before_members[0] | map(.path)))
        then "a selected aspect status used different review membership"
      elif ($results[0] | map(.aspect) | sort) != $expected then "review results do not match selected aspects"
-     elif $before[0].snapshot != $after[0].snapshot then "the review scope changed"
+     elif $before[0].snapshot != $after[0].snapshot then "the review scope changed; see scope-validity.md"
      elif $before_members[0] != $after_members[0] then "the review membership changed"
      elif any($results[0][]; .reviewed != $before[0].snapshot) then "a review names another snapshot"
      elif any($results[0][].findings[]; .severity == "critical") then "a review reported a Critical finding"
@@ -984,8 +984,8 @@ function cmd_gate() {
 }
 
 # A final review can complete with Critical findings. Validation failure still
-# leaves the overall result incomplete, and invalidated or partial reviews may
-# never supply the final actionable findings.
+# leaves the overall result incomplete. Scope eligibility follows the bundled
+# scope-validity.md reference; partial coverage is reported separately.
 function cmd_finish() {
   local validation="" args=() gate results=""
   while [[ $# -gt 0 ]]; do
@@ -1257,7 +1257,7 @@ function cmd_run() {
     current="$(cd "${top_level}" && "${SCRIPT_DIR}/review-scope" ${base_args[@]+"${base_args[@]}"})" \
       || die "could not recapture the scope before simplify"
     [[ "$(jq -r '.snapshot' <<< "${current}")" == "${snapshot}" ]] \
-      || die "the scope changed after --scope was captured; capture it again and rerun the gate"
+      || die "scope validity check failed; see scope-validity.md; capture again and rerun the gate"
   fi
 
   local sandbox extra_args=()

@@ -1,0 +1,63 @@
+{
+  "inputs": ["plugins/review-until-clean/scripts/review-scope", "plugins/review-until-clean/scripts/review-git.bash", "plugins/review-pr-with-codex/scripts/codex-aspects", "plugins/review-pr-with-codex/scripts/review-git.bash", "bin/lib/git-environment.bash", "tests/fixtures/review-scope-validity", "tests/fixtures/review-scope-plant-check", "tests/data/review-scope-validity/base-tip.patch", "tests/data/review-scope-validity/head.patch", "tests/data/review-scope-validity/merge-base.patch", "tests/data/review-scope-validity/membership.patch", "tests/data/review-scope-validity/head-judge.patch", "tests/data/review-scope-validity/base-message-control.patch"],
+  "check": "tests/fixtures/review-scope-plant-check",
+  "timeout": 180,
+  "green": {
+    "exit_code": 0,
+    "contains": ["PASS: base round validity\n", "PASS: head round validity\n", "PASS: merge-base round validity\n", "PASS: rebase round validity\n", "PASS: membership round validity\n", "PASS: base-collection round validity\n", "PASS: merge-base-collection round validity\n", "PASS: alias round validity\n"],
+    "excludes": ["FAIL:", "unbound variable", "command not found"]
+  },
+  "variants": [
+    {
+      "name": "base-tip",
+      "patch": "tests/data/review-scope-validity/base-tip.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: unrelated base advance preserves snapshot\n"],
+        "excludes": ["Unknown case:", "command not found", "unbound variable"]
+      }
+    },
+    {
+      "name": "head",
+      "patch": "tests/data/review-scope-validity/head.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: HEAD invalidates snapshot\n"],
+        "excludes": ["Unknown case:", "command not found", "unbound variable"]
+      }
+    },
+    {
+      "name": "merge-base",
+      "patch": "tests/data/review-scope-validity/merge-base.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: merge base invalidates snapshot\n"],
+        "excludes": ["Unknown case:", "command not found", "unbound variable"]
+      }
+    },
+    {
+      "name": "membership",
+      "patch": "tests/data/review-scope-validity/membership.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: membership invalidates snapshot\n"],
+        "excludes": ["Unknown case:", "command not found", "unbound variable"]
+      }
+    },
+    {
+      "name": "head-judge",
+      "patch": "tests/data/review-scope-validity/head-judge.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: head round consumer\n"],
+        "excludes": ["unbound variable", "command not found"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "base-message",
+      "patch": "tests/data/review-scope-validity/base-message-control.patch"
+    }
+  ]
+}

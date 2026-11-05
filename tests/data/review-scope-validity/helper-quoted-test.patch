@@ -1,0 +1,9 @@
+--- a/plugins/review-until-clean/scripts/review-scope
++++ b/plugins/review-until-clean/scripts/review-scope
+@@ -684,3 +684,6 @@
+ }
+ 
+ main "$@"
++
++# Validité
++"test" "${base_ref}" = "${after_ref}"

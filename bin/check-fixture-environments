@@ -56,6 +56,8 @@ function check_fixture_graph() {
       if (text ~ /^[\t ]*uses: .*run-scrut-tests[.]ya?ml/) invalid_scrut[FILENAME] = 1
       next
     }
+    # The policy reader names helper files as source data and executes only shfmt.
+    FILENAME == "bin/check-review-validity.py" { next }
     FNR == 1 {
       paths[FILENAME] = 1
       name[FILENAME] = FILENAME

@@ -86,7 +86,7 @@ The comparison detects lasting changes to that stored content between two scans,
 
 Raw trees detect edits removed by normalization. Intentionally absent skip-worktree ordinary files and symlinks contribute no raw entry; materialization changes raw availability. Present sparse files and symlinks contribute current bytes or link text. Their normalized tree and file inventory retain existing Git-index semantics.
 
-Index content, HEAD, base-tip and bucket changes are detected separately by `scope_changed`, even when `changed` is empty. A changed snapshot invalidates findings and blocks edits. So an empty disk-change result means no lasting content changes were found, not that nothing was written. On the `codex exec` path the read-only sandbox is what prevents writes, and the comparison is a second check. On the subagent path the comparison is the only check, with those blind spots.
+[Review scope validity](./scope-validity.md) defines how captured changes affect findings and edit eligibility. An empty disk-change result means no lasting content changes were found. On the `codex exec` path the read-only sandbox prevents writes, with comparison as a second check. On the subagent path comparison is the only check, with the blind spots above.
 
 ## Historical instruction discovery
 

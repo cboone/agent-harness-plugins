@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Run the committed validity cases in the checked runner's private subject copy.
+set -euo pipefail
+source bin/lib/git-environment.bash
+unset REVIEW_SCOPE_BIN CODEX_ASPECTS_BIN
+for mode in base alias head merge-base rebase membership base-collection merge-base-collection; do
+  bash tests/fixtures/review-scope-validity "${mode}"
+done

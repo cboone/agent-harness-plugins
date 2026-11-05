@@ -102,7 +102,7 @@ When this Codex session cannot spawn subagents after all, run each rendered task
 
 Run `review-scope` again into `<tmp>/scope-after.json` with the same `--base`, then `codex-aspects changes --before <tmp>/scope.json --after <tmp>/scope-after.json`.
 
-If `scope_changed` is true, treat every finding as unreliable. Report paths in `changed` and any index, HEAD or base movement. Do not run `simplify` or revert changes that may be the user's edits.
+Interpret `scope_changed` under [Review scope validity](./references/scope-validity.md). Report measured changes and preserve edits of uncertain origin.
 
 An empty `changed` measures disk content only, while `scope_changed` checks review validity. Even when both are unchanged, the check does not prove nothing was written: the comparison has blind spots, listed in [Checking the tree](./references/invocation.md#checking-the-tree). Report the check as "no lasting changes found", never as "nothing was written".
 
@@ -131,8 +131,7 @@ On the native path, render the four tasks with `prompt` and schedule independent
 Codex reviewers within available slots. Save exact replies as
 `<tmp>/cleanup/cleanup-<angle>.json`, validate each and save the four validation
 statuses as one array at `<tmp>/cleanup/statuses.json`. Wait until every reviewer
-has stopped. Check the scope again as in step 5; lasting changes invalidate
-cleanup findings and block editing. Never revert another session's changes.
+has stopped. Check the scope again as in step 5 and apply [Review scope validity](./references/scope-validity.md) before using cleanup findings or authorizing edits. Never revert another session's changes.
 
 If independent reviewers are unavailable, use the **inline fallback**: omit
 `--cleanup-dir`, complete all four checklists in one read-only pass before

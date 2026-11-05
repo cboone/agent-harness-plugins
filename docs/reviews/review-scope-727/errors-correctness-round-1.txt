@@ -1,0 +1,20 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 97,
+      "detail": "Python 3.13 suppresses OSError during Path.rglob traversal. For example, EACCES while listing the review-pr-with-codex references/aspects directory silently excludes its documents from this check. The outer OSError handler never receives the failure, so the validator can print \"Review validity policy passed\" without completing its scan or identifying the unreadable directory.",
+      "file": "bin/check-review-validity.py",
+      "fix": "Replace rglob with Path.walk using an on_error callback that raises the original OSError. Preserve deterministic ordering and symlink exclusions; the existing main handler can then report the directory failure and exit nonzero.",
+      "line": 92,
+      "severity": "important",
+      "title": "Uncited: Directory traversal failures can produce a successful policy check."
+    }
+  ],
+  "reviewed": "7fc1a489615add1951eccf0b46ddcfb2f209b323",
+  "strengths": [
+    "Merge-base rechecks distinguish unrelated history from fatal Git failures and preserve diagnostics.",
+    "File-reading, parser and JSON failures reaching the policy check's boundary produce stderr diagnostics and a nonzero exit."
+  ],
+  "summary": "Reviewed the required committed scope for hidden failures and actionable diagnostics. One Important issue lets incomplete policy scanning report success. Runtime suites were not run because they create files."
+}

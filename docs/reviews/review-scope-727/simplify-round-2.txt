@@ -1,0 +1,17 @@
+One concrete suggestion found.
+
+Reviewed `ae3d14ef6bb8d353bf50d02d3e252c548407bffb` through HEAD `de6a7eab9c9d3c04cc9f59e86cbc96345ef6d859`. Read all 24 changed canonical files fully; excluded `dist` and `.agents`.
+
+Completed **inline mode** passes for cleanup-reuse, cleanup-simplification, cleanup-efficiency and cleanup-altitude. Inline mode follows the explicit no-workers constraint.
+
+- **severity:** `suggestion`
+- **file:** [tests/fixtures/review-scope-validity](/Users/ctm/Work/projects/tooling/agent-harness-plugins/review-scope-727/tests/fixtures/review-scope-validity:70)
+- **line:** `70`
+- **title:** Uncited: Avoid the discarded baseline capture in the membership case.
+- **detail:** Angles: cleanup-efficiency and cleanup-simplification. The common capture at line 37 writes `before.json`, then the membership case overwrites it without reading it. Each membership invocation therefore performs three complete scope captures where two suffice, repeating tree hashing and Git subprocess work.
+- **fix:** Prepare the membership case’s disk change before the common baseline capture, then leave only staging in its mutation branch. Preserve the existing before/after assertions and output.
+- **confidence:** `0.98` that the proposed cleanup preserves intended behavior.
+- **disposition:** `skipped`, because this review is report-only.
+
+No additional findings from reuse or altitude. **Fixed: 0; skipped: 1.** No edits, workers, repository checks or network calls were run.
+

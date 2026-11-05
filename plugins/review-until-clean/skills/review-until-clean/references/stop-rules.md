@@ -1,15 +1,15 @@
 # Stop rules
 
-When the loop may report clean, when it must not, and how it ends otherwise.
+Use [Review scope validity](./scope-validity.md) for all captured-scope decisions. The rules below define completion, thresholds and the loop response.
 
 ## The clean rule
 
 A round is clean when **all four** hold. Any one of them missing is not clean.
 
 1. **The review finished.** A shell command exited zero with output, which `./reviewers.md` defines as stdout holding a non-whitespace character; a skill or command produced a report saying it completed. Structured output parsed, and, for a reviewer that echoes what it reviewed, the echoed value is this round's. `./reviewers.md` lists the signals for each kind.
-1. **It was a report round.** The snapshot taken as the reviewer returned is the one the round started from. An edit round changed the code it reviewed, so its verdict is about code that no longer exists.
+1. **It was a report round.** Classify it under [Review scope validity](./scope-validity.md).
 1. **Nothing is left undeclined at or above the threshold.** Findings below `--severity`, and findings carried as declined, do not block.
-1. **The snapshot still matches.** Recomputed at the moment of the decision, not taken from the start of the round.
+1. **The scope check passes.** Apply [Review scope validity](./scope-validity.md) at the decision.
 
 Include coverage in the result: `clean at <threshold>, partial scope` for `partial`, or `clean at <threshold>, coverage unverified` for `unverified`.
 
@@ -60,9 +60,7 @@ A run that reports clean against any of these has the bug this section is about,
 
 ## Snapshot invalidation
 
-A clean result is a statement about specific content. If the tree changes after the review and before the decision, the statement is about code that no longer exists.
-
-Recompute the snapshot at step 8 every time. A change while the reviewer ran makes the round an edit round, per step 5; a change after it returned invalidates the round. When it moved, discard the clean result, say so, and start another round if the limit allows. If it does not, the run ends `stopped`, saying the tree changed during the last round; any clean round that round was confirming is reported unconfirmed, and under `--report-only` that is the whole report. The usual cause is benign, such as a formatter on save or another session in the same worktree, and it is still a reason to review again rather than to assume the change was harmless.
+Apply [Review scope validity](./scope-validity.md) at step 8. When that check invalidates a result, discard its findings and clean verdict, record the reason, and start another round only if the budget permits. Otherwise report `stopped`; a pending confirmation remains unconfirmed. For an invalidated `--report-only` result, run no further round and never report `stopped`. If the first round is invalidated, end `decisions-needed` and name the changed snapshot. If a confirming round is invalidated, report the earlier clean round as unconfirmed and record `Confirmation: unconfirmed`.
 
 ## Confirming a clean result
 
@@ -70,7 +68,7 @@ A single clean round is the default finish. It is also the weakest point in the 
 
 1. **The first clean round does not end the run.** Record it in the ledger with its snapshot, then start a confirming round at step 1 with the same reviewer and the same coverage preparation. There is no fix pass between the two, because there is nothing to fix.
 1. **The pair completes when the confirming round is clean under every condition of the clean rule and its snapshot is the one the first round reviewed.** Report both rounds and the snapshot they share.
-1. **Any snapshot movement resets the pair**, whatever its source: a fix, a formatter, another session. Check it at the start of the confirming round, not only at its decision: compare the snapshot step 1 reports with the one the first round recorded. A tree changed between the two rounds would otherwise let a clean review of different content complete the pair. When they differ and a round is left in the budget, the round is an ordinary round over the new snapshot, so its clean result is again only the first of two. When none is left, the extra-round rule below applies, and `--report-only` follows the last paragraph of this section.
+1. **Apply the scope check before continuing a pair.** Use [Review scope validity](./scope-validity.md), then reset the pair when a fresh review is required. Check it at the start of the confirming round, not only at its decision: compare the snapshot step 1 reports with the one the first round recorded. A tree changed between the two rounds would otherwise let a clean review of different content complete the pair. When they differ and a round is left in the budget, the round is an ordinary round over the new snapshot, so its clean result is again only the first of two. When none is left, the extra-round rule below applies, and `--report-only` follows the last paragraph of this section.
 1. **A confirming round that leaves a blocking finding resets the pair too.** Blocking means what it means in the clean rule: undeclined and at or above `--severity`. Findings below the threshold and carried declines do not count against the confirmation, since they do not block a clean round either. Within the budget, blocking findings go through steps 7 and 9 like any other round's. The extra round past the cap, described below, never reaches step 9: its findings are recorded and the run stops.
 1. **A confirming round that edits the tree resets the pair too.** Its snapshot moved, so it cannot confirm a result about the one before it.
 1. **A failed confirming round is `failed`**, never a confirmation. Empty is not clean in the second round any more than in the first.
@@ -98,9 +96,9 @@ Three rules keep a run from spending every round on the same disagreement:
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `clean`               | A clean report round, with the coverage stated                                                                                                                                                |
 | `clean-with-declines` | A clean round that relies on carried declines at or above the threshold                                                                                                                       |
-| `decisions-needed`    | Findings remain that the loop cannot resolve on its own, or, under `--report-only`, the reviewer edited the tree and its changes await a decision                                             |
+| `decisions-needed`    | A workflow action remains unresolved. For scope-driven outcomes, apply [Snapshot invalidation](#snapshot-invalidation)                                                                        |
 | `stopped`             | The round limit was reached before a clean result: with findings outstanding, with fixes or reviewer edits not yet reviewed, or, under `--confirm-clean`, with a clean round left unconfirmed |
-| `failed`              | A round did not produce a usable review, or no review could start: no reviewer, no commits, a remote ref moved, or history was rewritten                                                      |
+| `failed`              | A usable review could not start or finish. Apply [Review scope validity](./scope-validity.md) and the completion gate                                                                         |
 | `no-op`               | The scope was empty, so there was nothing to review and no round ran                                                                                                                          |
 
 `failed` is not a softer `stopped`. `stopped` means the loop worked and ran out of rounds before it reached a clean result it could report, whether findings were left, the last fixes were never reviewed, or a clean round was never confirmed; `failed` means the loop learned nothing and its result carries no information about the code.

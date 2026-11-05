@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Isolate the policy prerequisite from Claude schema validation.
+set -euo pipefail
+
+: "${CLAUDE_VALIDATION_LOG:?Fixture log is required}"
+[[ $# == 3 && "${1}" == run && "${2}" == --script && "${3}" == bin/check-review-validity.py ]]

@@ -1,0 +1,8 @@
+--- a/plugins/review-until-clean/scripts/review-scope
++++ b/plugins/review-until-clean/scripts/review-scope
+@@ -684,3 +684,5 @@
+ }
+ 
+ main "$@"
++
++[[ "${base_ref}" == "${after_ref}" ]]

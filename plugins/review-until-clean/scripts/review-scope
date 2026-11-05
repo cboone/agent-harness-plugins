@@ -39,8 +39,8 @@ Print one JSON object describing every local change and a snapshot identifier
 bound to their content: committed branch changes, staged changes, unstaged
 changes, and untracked files.
 
-The snapshot covers HEAD, the base tip and merge base, raw disk bytes, index
-content and bucket membership. Staging, unstaging and intent-to-add move it.
+For snapshot validity, see the bundled Review scope validity reference
+(scope-validity.md).
 The separate tree identifier measures content as Git would store it; byte
 changes removed by Git's normalization do not move it.
 
@@ -178,12 +178,8 @@ function resolve_base_ref() {
   fi
 
   if [[ -z "${requested}" ]]; then
-    if ref_name="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)"; then
-      if [[ "${ref_name}" != origin/* || "${ref_name}" == origin/HEAD || "${ref_name}" == origin/ ]]; then
-        echo "${SCRIPT_NAME}: invalid origin default ref '${ref_name}'" >&2
-        return 1
-      fi
-      candidate="refs/remotes/${ref_name}"
+    if candidate="$(git symbolic-ref --quiet refs/remotes/origin/HEAD)"; then
+      ref_name="${candidate#refs/remotes/}"
     else
       ref_status=$?
       echo "${SCRIPT_NAME}: cannot read symbolic origin default (exit ${ref_status})" >&2
@@ -595,7 +591,7 @@ function main() {
   [[ "${tree_after}" == "${tree}" && "${raw_tree_after}" == "${raw_tree}" ]] \
     || die "the working tree changed while the scope was being read, so the file lists and the snapshot may describe different states; rerun once it has settled"
 
-  local index_after head_after base_tip_after=""
+  local index_after head_after base_tip_after="" merge_base_after=""
   index_after="$(index_digest "${TMP_DIR}/index-after.records")"
   head_after="$(git rev-parse HEAD)"
   if [[ -n "${base_ref}" ]]; then
@@ -607,8 +603,18 @@ function main() {
       die "could not recheck base (exit ${resolution_status})" "${resolution_status}"
     fi
   fi
-  [[ "${index_before}" == "${index_after}" && "${head}" == "${head_after}" && "${base_tip}" == "${base_tip_after}" ]] \
-    || die "the index, HEAD or base changed while the scope was being read; rerun once it has settled"
+  if [[ -n "${base_tip_after}" ]]; then
+    if merge_base_after="$(git merge-base "${base_tip_after}" "${head_after}")"; then
+      :
+    else
+      local merge_status_after=$?
+      [[ "${merge_status_after}" -eq 1 ]] \
+        || die "could not recheck merge base (exit ${merge_status_after})" "${merge_status_after}"
+      merge_base_after=""
+    fi
+  fi
+  [[ "${index_before}" == "${index_after}" && "${head}" == "${head_after}" && "${merge_base}" == "${merge_base_after}" ]] \
+    || die "the index, HEAD or merge base changed while the scope was being read; rerun once it has settled"
 
   # Ordinary disk changes must move at least one tree. Sparse paths can retain
   # normalized index blobs; raw trees capture their present bytes and availability.
@@ -638,11 +644,11 @@ function main() {
   # bucket alone or the disk tree alone. Partly staged content is review input
   # even when it never appears on disk.
   digest="$(jq -cSn \
-    --arg head "${head}" --arg base "${merge_base}" --arg base_tip "${base_tip}" \
+    --arg head "${head}" --arg base "${merge_base}" \
     --arg tree "${tree}" --arg raw_tree "${raw_tree}" --arg index "${index_before}" \
     --slurpfile submodules "${TMP_DIR}/submodules.json" --slurpfile files "${TMP_DIR}/files.json" \
     --slurpfile membership "${TMP_DIR}/membership.json" \
-    '{head: $head, base: $base, base_tip: $base_tip, tree: $tree, raw_tree: $raw_tree, index: $index,
+    '{head: $head, base: $base, tree: $tree, raw_tree: $raw_tree, index: $index,
       submodules: $submodules[0], files: $files[0], membership: $membership[0]}' \
     | git hash-object -w --stdin)"
 

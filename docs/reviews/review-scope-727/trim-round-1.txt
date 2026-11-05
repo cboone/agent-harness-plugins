@@ -1,0 +1,76 @@
+Files classified:
+
+| Canonical file | Profile |
+| --- | --- |
+| `.github/workflows/ci.yml` | `code-comments` |
+| `Makefile` | `code-comments` |
+| `bin/build-shared-references` | `code-comments` |
+| `bin/check-fixture-environments` | `code-comments` |
+| `bin/check-review-validity.py` | `code-comments` |
+| `bin/lib/error-output-policy.json` | `none` |
+| `docs/plans/todo/2026-11-04-review-scope-base.md` | `none` |
+| `docs/plugin-development.md` | `none` |
+| `docs/reviews/2026-11-04-review-scope-727.md` | `none` |
+| `plugins/review-anti-patterns/.claude-plugin/plugin.json` | `none` |
+| `plugins/review-anti-patterns/skills/review-anti-patterns/references/edit-mode.md` | `agent-instructions` |
+| `plugins/review-pr-with-codex/.claude-plugin/plugin.json` | `none` |
+| `plugins/review-pr-with-codex/README.md` | `none` |
+| `plugins/review-pr-with-codex/scripts/codex-aspects` | `code-comments` |
+| `plugins/review-pr-with-codex/scripts/review-scope` | `code-comments` |
+| `plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md` | `agent-instructions` |
+| `plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md` | `agent-instructions` |
+| `plugins/review-pr-with-codex/skills/review-pr-with-codex/references/scope-validity.md` | `none`, as requested |
+| `plugins/review-until-clean/.claude-plugin/plugin.json` | `none` |
+| `plugins/review-until-clean/README.md` | `none` |
+| `plugins/review-until-clean/scripts/review-scope` | `code-comments` |
+| `plugins/review-until-clean/skills/review-until-clean/SKILL.md` | `agent-instructions` |
+| `plugins/review-until-clean/skills/review-until-clean/references/reviewers.md` | `agent-instructions` |
+| `plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md` | `agent-instructions` |
+| `plugins/review-until-clean/skills/review-until-clean/references/stop-rules.md` | `agent-instructions` |
+| `review-scope-plants.json` | `none` |
+| `review-validity-policy-plants.json` | `none` |
+| `tests/data/review-scope-validity/base-message-control.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/base-tip.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/differing-copy.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/duplicate-wording.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/encoding-error.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/head-judge.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/head.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/helper-quoted-test.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/helper-ref.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/membership.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/merge-base.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/negated-policy-control.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/terminal-status.patch` | `none`, protected fixture data |
+| `tests/data/review-scope-validity/traversal-error.patch` | `none`, protected fixture data |
+| `tests/fixtures/review-scope-plant-check` | `code-comments` |
+| `tests/fixtures/review-scope-validity` | `code-comments` |
+| `tests/fixtures/review-validity-policy-plant-check` | `code-comments` |
+| `tests/fixtures/review-validity-unreadable` | `code-comments` |
+| `tests/scrut/build-shared-references.md` | `none` |
+| `tests/scrut/codex-aspects.md` | `none` |
+| `tests/scrut/codex-cleanup.md` | `none` |
+| `tests/scrut/environment-isolation.md` | `none` |
+| `tests/scrut/review-scope-validity.md` | `none` |
+| `tests/scrut/review-scope.md` | `none` |
+
+| Current location | Action | Full before | Full after |
+| --- | --- | --- | --- |
+| `plugins/review-until-clean/skills/review-until-clean/references/stop-rules.md:3` | Rewrite | When the loop may report clean, when it must not, and how it ends otherwise. All captured-scope decisions use [Review scope validity](./scope-validity.md); the rules below define completion, thresholds and the loop response. | Use [Review scope validity](./scope-validity.md) for all captured-scope decisions. The rules below define completion, thresholds and the loop response. |
+| `plugins/review-pr-with-codex/scripts/review-scope:643` | Rewrite comment | `# Hash a canonical record of every review input, not the path's current`<br>`# bucket alone or the disk tree alone. Partly staged content is review input`<br>`# even when it never appears on disk.` | `# Hash a canonical record of every review input, including bucket membership,`<br>`# disk content and partly staged content absent from disk.` |
+| `plugins/review-until-clean/scripts/review-scope:643` | Rewrite comment | `# Hash a canonical record of every review input, not the path's current`<br>`# bucket alone or the disk tree alone. Partly staged content is review input`<br>`# even when it never appears on disk.` | `# Hash a canonical record of every review input, including bucket membership,`<br>`# disk content and partly staged content absent from disk.` |
+
+Base: `ae3d14ef6bb8d353bf50d02d3e252c548407bffb`; local merge-base resolution matched. Tracked local changes were included. Untracked reviewer replies were excluded as raw evidence.
+
+**Declined proposals:** none.
+
+**Flagged units:**
+
+- `docs/reviews/2026-11-04-review-scope-727.md:3`: the opening status says Important correctness review is pending, while “Focused correctness loop complete” records it complete and clean at Important. Suggested correction: update the opening status from that recorded outcome, preserving historical entries.
+- `docs/plans/todo/2026-11-04-review-scope-base.md:18`: “Next: focused correctness loop” conflicts with the ledger’s completed correctness loop. Suggested correction: mark that portion complete while retaining the remaining work and gates.
+
+**Checks:** meaning and scope comparisons performed by reading. Runtime tests, unchanged-code verification, formatting, linting, type checks and validators were **not run**, as requested; these remain for the parent.
+
+Generated mirrors, shared-reference copies, sweep inventories and historical reviewer evidence were excluded. Machine-consumed wording, strings, directives, schemas, commands and canonical validity semantics were preserved.
+
+No files changed; no fixer, staging, commit, push, GitHub query, delegation or `codex exec`. Hook changes, external writes and cut material needing another destination: none.

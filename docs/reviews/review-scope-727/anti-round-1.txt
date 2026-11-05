@@ -1,0 +1,34 @@
+{
+  "complete": true,
+  "excluded": [
+    "dist/codex/plugins/review-anti-patterns/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-anti-patterns/skills/review-anti-patterns/references/edit-mode.md",
+    "dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-pr-with-codex/scripts/review-scope",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+    "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-until-clean/scripts/review-scope",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md"
+  ],
+  "findings": [
+    {
+      "detail": "An unrelated base-tip advance now preserves snapshot identity, but the Testable guarantee still says any resolved base-tip difference must change it. The same stale description remains in plugins/review-until-clean/skills/review-until-clean/SKILL.md:58 and references/reviewers.md:131. Update all three descriptions to agree with the new contract.",
+      "evidence": "Both review-scope helpers exclude base_tip from the hashed record at lines 651–658. scope-and-snapshot.md:24 explicitly declares it informational, while lines 36–41 require snapshot movement for a resolved base-tip difference. The new fixture's base case asserts unchanged snapshots after that exact transition.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md",
+      "line": 41,
+      "severity": "nit",
+      "title": "Docs drift: remaining snapshot descriptions still include the base tip"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "No blocking issues found by reading; one Nit remains. Validation is not clean: ShellCheck exited 1.\n\nScope: ae3d14ef6bb8d353bf50d02d3e252c548407bffb..HEAD, with HEAD at 806ae84e5a3627f893c43792fe5ab6415b76b522. Reviewed all 20 canonical changed files, including tests and mutation patches. The nine excluded paths are generated Codex mirrors. Working-tree changes: none. No PR body exists, as supplied by the caller; no gh command ran.\n\nGroups: code, agent prose, docs. Walked all thirteen items: Sibling input forms, Boundary arithmetic, Stale writes, Validator gaps, Absent or partial data, Untrusted data in commands, Tests that cannot fail, Crashes instead of reports, Unrun platform configuration, Unenforced trust boundary, Parallel paths, Agent-prose control flow, and Docs drift. Applied the project Bash, Scrut and Markdown checklists.\n\nSiblings examined: both shipped review-scope helpers; codex-aspects scope validation, changes and gate consumers; review-until-clean's skill and reviewer reference; review-pr-with-codex invocation guidance; anti-patterns edit guidance; existing scope tests; new validity cases and defect patches. The three stale base-tip descriptions are combined into one finding.\n\nStandalone checks: bash -n over all four changed scripts exited 0; jq empty over all four changed JSON files exited 0; shfmt -d over the four scripts exited 0; cmp of the helper copies exited 0. ShellCheck exited 1, reporting SC2249 and SC2016 in tests/fixtures/review-scope-validity. These CI-covered diagnostics are reported here rather than duplicated as findings.\n\nSession could write: no, enforced by the read-only sandbox. --run-checks: off. No repository code, subprocess reviewer or delegated agent ran. Nothing was written by checks. Runtime tests, defect plants and repository validation remain unverified as listed.",
+  "reviewed": "ae3d14ef6bb8d353bf50d02d3e252c548407bffb..HEAD",
+  "status": "success",
+  "unverified": [
+    "Validity regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope-validity.md. Not run because repository-code execution was prohibited.",
+    "Existing scope regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope.md. Not run because repository-code execution was prohibited.",
+    "Tests that cannot fail: invoke the plant-defects skill with review-scope-plants.json to verify the four mutation cases. Not run because planting requires writes and executes repository code.",
+    "Repository lint and plugin/cross-reference validation: make lint and make validate. Not run because these execute repository code; standalone shell checks are reported separately."
+  ]
+}

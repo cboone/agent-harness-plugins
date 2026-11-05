@@ -1,0 +1,8 @@
+--- a/plugins/review-until-clean/skills/review-until-clean/SKILL.md
++++ b/plugins/review-until-clean/skills/review-until-clean/SKILL.md
+@@ -269,3 +269,5 @@
+ - **The round limit is reached with findings outstanding, or after an edit round**: stop with `stopped`, and list what is unresolved or unreviewed.
+ - **The confirming round leaves an undeclined finding at or above `--severity`, or edits the tree**: the pair resets. Findings below the threshold and carried declines do not; the pair still completes, as `clean-with-declines` where declines carried. Continue if rounds remain, so the next clean round is again only the first of two; otherwise stop with `stopped`.
+ - **`address-review` fixes nothing**: stop with `decisions-needed`, per step 10.
++
++Never fail a round for a moved base ref.

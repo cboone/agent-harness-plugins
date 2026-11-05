@@ -1,0 +1,47 @@
+{
+  "complete": true,
+  "excluded": [
+    "dist/codex/plugins/review-anti-patterns/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-anti-patterns/skills/review-anti-patterns/references/edit-mode.md",
+    "dist/codex/plugins/review-anti-patterns/skills/review-anti-patterns/references/scope-validity.md",
+    "dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-pr-with-codex/scripts/review-scope",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/scope-validity.md",
+    "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-until-clean/scripts/review-scope",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md",
+    "plugins/review-anti-patterns/skills/review-anti-patterns/references/scope-validity.md",
+    "plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md"
+  ],
+  "findings": [
+    {
+      "detail": "The terminal-status table still defines a moved remote ref as a failed run. An unrelated advance of origin/main that preserves every captured input therefore remains grounds to report failed when following this reference, despite the new canonical rule preserving that round. The skill directs readers to stop-rules.md for clean and failed outcomes, and this reference neither removes the old condition nor delegates it to the canonical rule. The sentence predates the change but becomes contradictory under the new contract. This recurs in the stale validity-rule defect class that stopped the earlier rounds.",
+      "evidence": "stop-rules.md:103 includes 'a remote ref moved' in the meaning of failed. The new canonical scope-validity.md:10-14 says ref names and tip movement never decide validity and equal captured inputs preserve the round. The updated reviewers.md:108 also says ref inventories are not a validity check. The base and alias fixture cases assert unchanged snapshots after an unrelated advance.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/stop-rules.md",
+      "line": 103,
+      "severity": "important",
+      "title": "Agent-prose control flow: terminal statuses still reject unrelated remote-ref movement"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Structural round 3 at Important, the second Important round: 1 Important finding. stopped: recurring defect\n\nScope: ae3d14ef6bb8d353bf50d02d3e252c548407bffb..HEAD, ending at 36339a9318e7e6053a3836e23b3f9352655385ba. Read all 47 changed canonical files in full, including Python, fixtures, mutation patches, manifests and review records, and examined relevant unchanged consumers. Working-tree changes: none. Origin ownership and absence of a PR were supplied by the caller; no gh command ran.\n\nExcluded: the 14 listed dist/codex paths are generated mirrors. The other two listed scope-validity references are generated copies; their canonical review-pr-with-codex source was reviewed.\n\nGroups: code, agent prose and docs. Walked all thirteen items: Sibling input forms; Boundary arithmetic; Stale writes; Validator gaps; Absent or partial data; Untrusted data in commands; Tests that cannot fail; Crashes instead of reports; Unrun platform configuration; Unenforced trust boundary; Parallel paths; Agent-prose control flow; Docs drift. Applied the applicable Bash, Markdown and Scrut review checklists.\n\nStatic review covered the Python include check, defined key wording, byte comparisons, parsed shell comparisons, snapshot fields, CI dependency setup, refreshed controls, mutation cases and alias regression. Git metadata shows identical blobs for both scope helpers and identical blobs for the canonical validity reference and its generated copies. No runtime result is inferred from these observations or from historical review records.\n\nFinding siblings examined: the main loop's completion, decision and error branches; reviewers.md; stop-rules.md; scope-and-snapshot.md; the canonical validity rule; both helpers; codex-aspects changes and eligibility consumers; review-pr-with-codex invocation guidance; anti-patterns edit guidance; and the base/alias regressions. The terminal-status table retains the same consequential moved-ref failure class. This finding concerns surviving active guidance, not a requirement to restore semantic sentence matching in the new guard.\n\nMechanical checks: none run. All unverified commands are listed separately. Session could write: no, enforced by the read-only sandbox. --run-checks: off. No writes, repository checks, delegated agents or subprocess reviewers ran. Codex subprocess review was disabled by --no-codex and the caller; delegation was explicitly prohibited. Nothing was left behind by checks. No fixes or further review round were performed.",
+  "reviewed": "ae3d14ef6bb8d353bf50d02d3e252c548407bffb..HEAD",
+  "status": "success",
+  "unverified": [
+    "Policy guard execution: uv run --script bin/check-review-validity.py",
+    "Validity and alias regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope-validity.md",
+    "Existing scope regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope.md",
+    "Shared-reference regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/build-shared-references.md",
+    "Environment and validation integration: make test-scrut SCRUT_TEST_DIR=tests/scrut/environment-isolation.md",
+    "Snapshot plants and refreshed green control: uv run --script plugins/plant-defects/scripts/checked-plant run review-scope-plants.json <external-output-dir>",
+    "Include/code-guard plants and negated-policy control: uv run --script plugins/plant-defects/scripts/checked-plant run review-validity-policy-plants.json <external-output-dir>",
+    "Workflow validation: actionlint",
+    "Repository lint: make lint",
+    "Repository validation: make validate. All listed checks were unrun because the caller prohibited checks and writes."
+  ]
+}

@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Exercise directory traversal failure without changing the source checkout.
+set -euo pipefail
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/../../bin/lib/git-environment.bash"
+
+SCRATCH=""
+BLOCKED=""
+function cleanup() {
+  if [[ -n "${BLOCKED}" ]]; then chmod 700 "${BLOCKED}"; fi
+  if [[ -n "${SCRATCH}" ]]; then rm -r -- "${SCRATCH}"; fi
+}
+trap cleanup EXIT
+
+function main() {
+  local fixture_root file status=0 mode="${1:-permission}"
+  fixture_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+  [[ "$(id -u)" -ne 0 ]] || {
+    echo 'Permission fixture requires a non-root account' >&2
+    exit 2
+  }
+  SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/validity-unreadable.XXXXXX")"
+  for file in \
+    plugins/review-pr-with-codex/skills/review-pr-with-codex/references/scope-validity.md \
+    plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md \
+    plugins/review-anti-patterns/skills/review-anti-patterns/references/scope-validity.md \
+    plugins/review-pr-with-codex/scripts/review-scope \
+    plugins/review-until-clean/scripts/review-scope; do
+    mkdir -p -- "${SCRATCH}/$(dirname "${file}")"
+    cp -- "${fixture_root}/${file}" "${SCRATCH}/${file}"
+  done
+  BLOCKED="${SCRATCH}/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects"
+  mkdir -- "${BLOCKED}"
+  printf '# Policy fixture\n' > "${BLOCKED}/fixture.md"
+  case "${mode}" in
+    permission)
+      chmod 000 "${BLOCKED}"
+      [[ ! -r "${BLOCKED}" ]] || {
+        echo 'Permission fixture directory remains readable' >&2
+        exit 2
+      }
+      ;;
+    encoding) printf '\377' > "${BLOCKED}/fixture.md" ;;
+    *)
+      echo 'Unknown unreadable-input case' >&2
+      exit 2
+      ;;
+  esac
+  uv run --script "${fixture_root}/bin/check-review-validity.py" --root "${SCRATCH}" \
+    > "${SCRATCH}/out" 2> "${SCRATCH}/err" || status=$? # error-output-allow: assert retained permission diagnostic and expose it below
+  if [[ "${status}" -eq 0 ]]; then
+    if [[ "${mode}" == permission ]]; then
+      echo 'FAIL: unreadable policy subtree accepted' >&2
+    else
+      echo 'FAIL: invalid UTF-8 policy input accepted' >&2
+    fi
+    exit 1
+  fi
+  cat "${SCRATCH}/err"
+  [[ "${status}" -eq 1 && ! -s "${SCRATCH}/out" ]]
+  if [[ "${mode}" == permission ]]; then
+    grep -Fq 'Permission denied' "${SCRATCH}/err"
+    printf 'PASS: unreadable policy subtree rejected\n'
+  else
+    grep -Fq 'fixture.md: invalid UTF-8 policy source' "${SCRATCH}/err"
+    printf 'PASS: invalid UTF-8 policy input rejected\n'
+  fi
+}
+main "$@"
