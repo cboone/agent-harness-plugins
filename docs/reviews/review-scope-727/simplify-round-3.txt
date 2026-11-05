@@ -1,0 +1,16 @@
+One concrete suggestion.
+
+- **severity:** `suggestion`
+- **file:** [bin/check-review-validity.py](/Users/ctm/Work/projects/tooling/agent-harness-plugins/review-scope-727/bin/check-review-validity.py:67)
+- **line:** 67
+- **title:** Uncited: Read and normalize each policy document once.
+- **detail:** Angle: cleanup-efficiency. The generator rereads and normalizes a document for each of five phrases. Documents containing none incur five complete reads and normalization passes. Disposition: **skipped**, because this review is report-only.
+- **fix:** After the existing path exclusions, store `normalize(path.read_text())` once and reuse it in `any()`. Likewise, normalize the canonical source once before `all()` at line 55.
+- **confidence:** 0.99 that behavior is preserved for settled, readable inputs.
+
+Reviewed every changed canonical file from `ae3d14ef6bb8d353bf50d02d3e252c548407bffb` through HEAD `36339a9318e7e6053a3836e23b3f9352655385ba`. Generated mirrors and generated scope-validity copies were excluded; ledgers and raw replies were historical data.
+
+Completed cleanup-reuse, cleanup-simplification, cleanup-efficiency and cleanup-altitude **inline**, following the no-workers constraint. No additional suggestions. **Fixed: 0; skipped: 1.** No edits, workers, repository checks or network calls ran.
+
+Simplify-only result for carried structural round 2: **clean at Important**.
+

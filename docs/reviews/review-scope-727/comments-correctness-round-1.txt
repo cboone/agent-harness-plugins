@@ -1,0 +1,20 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 93,
+      "detail": "If another session changes captured inputs after step 5 during a --report-only run, this paragraph directs the caller toward another round or `stopped`. Its report-only sentence specifies neither a terminal status nor where to continue, while line 151 explicitly prohibits `stopped` and additional ordinary rounds. references/stop-rules.md:63 repeats the omission. The previous text explicitly handled first-round invalidation and unconfirmed confirmation, so this rewrite leaves a supported execution path without a consistent outcome.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+      "fix": "Replace the final sentence with: \"Under `--report-only`, run no further round and never report `stopped`. If the first round is invalidated, end `decisions-needed` and name the changed snapshot. If a confirming round is invalidated, report the earlier clean round as unconfirmed and record `Confirmation: unconfirmed`.\" Apply the same clarification in references/stop-rules.md.",
+      "line": 145,
+      "severity": "important",
+      "title": "Uncited: Report-only invalidation no longer has a defined terminal outcome."
+    }
+  ],
+  "reviewed": "7fc1a489615add1951eccf0b46ddcfb2f209b323",
+  "strengths": [
+    "The shared reference accurately distinguishes captured review inputs from informational ref names and base tips.",
+    "The documentation clearly explains that unchanged captures cannot prove nothing was written."
+  ],
+  "summary": "Reviewed the scoped comment and documentation changes against the implementation, including shared references, generated counterparts and review records. One important workflow-documentation gap remains in report-only invalidation handling."
+}

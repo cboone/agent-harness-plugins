@@ -364,6 +364,8 @@ A reference that skills in two plugins read lives in one plugin and is copied in
 
 The shared references and policy libraries are:
 
+- Review scope validity: `plugins/review-pr-with-codex/skills/review-pr-with-codex/references/scope-validity.md`, copied to the reference directories of `review-until-clean` and `review-anti-patterns`. This canonical rule owns validity; consumers link to their bundled copy.
+
 - Review Git policy: `plugins/review-until-clean/scripts/review-git.bash`, copied into `review-pr-with-codex/scripts/`. Scope collectors and consumers source this library for call-local Git policy, exact recursive membership construction, validated membership reads and rooted link discovery. Generated policy copies cannot be edited independently.
 
 - The owner-file mutex helper: `plugins/workmux/scripts/owner-lock.bash`, copied into `plugins/attention-log/scripts/` and `plugins/publish-report-board/scripts/`. Acquire captures open-file identity before PID recording; every converted cleanup calls the same checked release helper. Edit only the workmux source and regenerate the other copies.
@@ -414,6 +416,8 @@ If a plugin needs a `## Recommended Permissions` section, use a copy-pasteable J
 Every plugin with a hard external dependency must say so. Two forms are in use, both fine: a `**Requires:**` line in the header block next to `**Type:**` and `**Trigger:**` for one or two tools, or a `## Requirements` section before `## Usage` when the entry needs install instructions or caveats. Do not use both in one README.
 
 ## Claude Code schema validation
+
+`make validate` requires `uv` on PATH to run the review-validity policy check with Python 3.13 or newer.
 
 `make validate` runs the repository's JSON and convention checks, then `bin/validate-claude-plugins` runs `claude plugin validate` against the marketplace and each canonical plugin. Claude Code must already be on PATH at the version in `.claude-code-version` or newer; the target reports a missing or older CLI without installing it. Validation needs no authentication.
 

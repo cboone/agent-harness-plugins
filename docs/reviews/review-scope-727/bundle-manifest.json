@@ -1,0 +1,222 @@
+{
+  "review-pr-with-codex/.claude-plugin/plugin.json": {
+    "sha256": "61174cc2b29bc60a8d899e3111863dab403d71f696b43de174e78e8438593f68",
+    "mode": 420
+  },
+  "review-pr-with-codex/LICENSE-APACHE": {
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "mode": 420
+  },
+  "review-pr-with-codex/NOTICE": {
+    "sha256": "77173819354abab269a629afffb716eebd9b3277abb0d477b3d04c0da9deccf2",
+    "mode": 420
+  },
+  "review-pr-with-codex/README.md": {
+    "sha256": "22340c9c0c4b4d0db270b00defee2ffeedb0debd395e326bd06cff80e850867d",
+    "mode": 420
+  },
+  "review-pr-with-codex/scripts/codex-aspects": {
+    "sha256": "c09575a5f023634e84790f38d9eb513e1e99bb153d752b48ff9b61f2988e3391",
+    "mode": 493
+  },
+  "review-pr-with-codex/scripts/review-git.bash": {
+    "sha256": "0afdd622b3dc65f311a4f23ff47809e84abebfa872558926f73f09a10b263ffc",
+    "mode": 420
+  },
+  "review-pr-with-codex/scripts/review-scope": {
+    "sha256": "6a8e13bdd6e2d7ae8656035ea664ea622bd7b7b2675ba989db8d8d7e7b1ff871",
+    "mode": 493
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/SKILL.md": {
+    "sha256": "8414cb5caba2d03c81e2185472337fc0cacd58833df360702fe4cba3a4e300cf",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/cleanup-altitude.md": {
+    "sha256": "3deb67d71d5ca64be73881cf6b20c8199b1b2a304c1ebbe1b2151726a9ce78bb",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/cleanup-efficiency.md": {
+    "sha256": "6fae336a52d37e33ce30c9fef39778b0db530b7c930a067a73f65d45ee790473",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/cleanup-reuse.md": {
+    "sha256": "193cfa9968be7980b8affd54c390a5c6faa7ca0befa239781053d196f8cab476",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/cleanup-simplification.md": {
+    "sha256": "6a6cc1b5bde10232c9c44d62f790e9c40495a0f852412b769ab452adfd6404c6",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/code.md": {
+    "sha256": "d78cfe35b7fae032696fd451a947ee20893086ea35ab7862d6724f7d3027a094",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/comments.md": {
+    "sha256": "bffa40718457fc84766943dabd46d9020118756a79d3d6a19ec0d0bf7e53099b",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/errors.md": {
+    "sha256": "cec9d2220551989f276f66612634c728e79bda91d35702b784ad1c19825c72ba",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/simplify.md": {
+    "sha256": "083605788742b3c1ddfe505d0eddaa5eaf9bd2b8ea020facc82562368615fb00",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/tests.md": {
+    "sha256": "a6031e599615194d04d651c3a485ffd3547b78264b265ac05db7e25b828e709f",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects/types.md": {
+    "sha256": "c8af23fdf8d24768266b4822cf7de714d86fb871a9d24d0429719673aff863c7",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/aspects.md": {
+    "sha256": "5a1b1df17dbdef6ce367d9e2e63c2ef06e153e2712046eb1ea54184ed4cd0b78",
+    "mode": 420
+  },
+  "review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md": {
+    "sha256": "d0d16a3beedae8c3e97228bc366261c8ff25470847078e5b9e7530f4860b29fa",
+    "mode": 420
+  },
+  "review-anti-patterns/.claude-plugin/plugin.json": {
+    "sha256": "9261eb4b0422089d714c90ee918916a7d9fec75ea3b0aeac94889816b51db385",
+    "mode": 420
+  },
+  "review-anti-patterns/README.md": {
+    "sha256": "15274aa8c03a7b99cb585b080f6f9fca77e3218bdb06d4191f1343f7b64fa403",
+    "mode": 420
+  },
+  "review-anti-patterns/scripts/check-edit-worktree": {
+    "sha256": "69a1fd03321bc330b63eded492bbd6eaafb18d85ca58fbccea0178df8e880e17",
+    "mode": 493
+  },
+  "review-anti-patterns/skills/review-anti-patterns/SKILL.md": {
+    "sha256": "843943b83529ef004e87ed136e75c5caca9bf8c59d378b0f0369a540d6a09b80",
+    "mode": 420
+  },
+  "review-anti-patterns/skills/review-anti-patterns/references/checklist.md": {
+    "sha256": "9d75939d4265165da5a77476e2ffde230bd34fd33451006643e072eef5d38f1e",
+    "mode": 420
+  },
+  "review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md": {
+    "sha256": "63be132614d63b25d30b4bac6b93c110b89ff5942ac1b24efe014899ee7a3860",
+    "mode": 420
+  },
+  "review-anti-patterns/skills/review-anti-patterns/references/edit-mode.md": {
+    "sha256": "b30e8c66cf8cdb1c9d2f996f59fe3a10344c09ba59fd9c4ed7c28a43341671be",
+    "mode": 420
+  },
+  "review-anti-patterns/skills/review-anti-patterns/references/mechanical-checks.md": {
+    "sha256": "2d65e86b3b11eba90ba8c782dd6144868374bfc87ac676c8380432d106e40b6f",
+    "mode": 420
+  },
+  "review-anti-patterns/skills/review-anti-patterns/references/result-check.jq": {
+    "sha256": "3f474b143a89976afd48e4c98e39b581159c70f660afa01272c4e3558adb166a",
+    "mode": 420
+  },
+  "review-anti-patterns/skills/review-anti-patterns/references/result-schema.json": {
+    "sha256": "93b0d97b9b60a7e8a10b06857c6dcd0783021a5b88376e69aedde4c05be2b593",
+    "mode": 420
+  },
+  "trim-comments/.claude-plugin/plugin.json": {
+    "sha256": "7bd3a71f9e62a88408e82edbbc6c89cbb0e63d3b832312ca5dacd65be46d86bf",
+    "mode": 420
+  },
+  "trim-comments/README.md": {
+    "sha256": "ca690ffe63e4eae9afbdf3dbfe570c5c0f31fa739e1ad310a7d0895029fb676f",
+    "mode": 420
+  },
+  "trim-comments/skills/trim-comments/SKILL.md": {
+    "sha256": "d0b4f451c2ddf94a45824bc42b85fe2ab68ac23a4c8f5731b058265da6c4feb8",
+    "mode": 420
+  },
+  "trim-comments/skills/trim-comments/references/codex-exec.md": {
+    "sha256": "63be132614d63b25d30b4bac6b93c110b89ff5942ac1b24efe014899ee7a3860",
+    "mode": 420
+  },
+  "trim-text/.claude-plugin/plugin.json": {
+    "sha256": "481ff6d252044b1dc3eb57ce792a0392b1b253dd9822f5f34725d714b8368fd2",
+    "mode": 420
+  },
+  "trim-text/README.md": {
+    "sha256": "0a0ad8569a19843694c51783d1c544bf0f725f25d6805d74f24a72f9c74ad68b",
+    "mode": 420
+  },
+  "trim-text/skills/trim-text/SKILL.md": {
+    "sha256": "f3b42d4951b0adff9349aebf4705ec233279b5774dfb55e95dbe2fdcde843783",
+    "mode": 420
+  },
+  "trim-text/skills/trim-text/references/agent-instructions.md": {
+    "sha256": "b70833b8487c6554c7eaeadcff285f1257503373e9a10c101bffbeb427768fc4",
+    "mode": 420
+  },
+  "trim-text/skills/trim-text/references/code-comments.md": {
+    "sha256": "b6d42edfd15ce2224a246a5b54c57bca586c24880c5c6ff20f1b5511dc435ecb",
+    "mode": 420
+  },
+  "trim-text/skills/trim-text/references/codex-exec.md": {
+    "sha256": "63be132614d63b25d30b4bac6b93c110b89ff5942ac1b24efe014899ee7a3860",
+    "mode": 420
+  },
+  "trim-text/skills/trim-text/references/pr-and-issue-bodies.md": {
+    "sha256": "7084a9afda20dbf4b269ea9ae052965ebae8463586766b134bacbfc6d33993d8",
+    "mode": 420
+  },
+  "plant-defects/.claude-plugin/plugin.json": {
+    "sha256": "29677d8b44cb1735188b69ff302858f7defc0a7da80f1616bad0819ec3aaa486",
+    "mode": 420
+  },
+  "plant-defects/README.md": {
+    "sha256": "25f518cc44a6bfe322d07563f21af2e72c5493fa5e0608297563b5526116cf8e",
+    "mode": 420
+  },
+  "plant-defects/scripts/checked-gate": {
+    "sha256": "33dedf2237731d7632dbf26eebf1f3189846b59eaed7d1ff79d62021f8ce2744",
+    "mode": 493
+  },
+  "plant-defects/scripts/checked-plant": {
+    "sha256": "462ecd96d3b494afbfab2406b3eaedeeec74a411880a193e6dfaecb3c209dda2",
+    "mode": 493
+  },
+  "plant-defects/scripts/checked_core.py": {
+    "sha256": "de17ab8ffb8716a2a40869ee17a40956addf0f35d81b61318b953b5be212638b",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/SKILL.md": {
+    "sha256": "b4999d146e7b8901de988c80adfc2e0c759c556e6d5352f20f2136dbe39ac9d4",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/references/checked-gate.md": {
+    "sha256": "59df1a106c9ed64f9299c08decfe39dcc620fe5b570de94e9eea5b335f26a8ab",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/references/checked-runner.md": {
+    "sha256": "9fd24314a4be96f87da5176edb7d97c8657430e2aeb4976ae83620897c1c2d38",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/references/instrument-blindness.md": {
+    "sha256": "e3d4bd7c33e16ebed047d22abd7342f0c5496bef67651e9426fa22d0b52fd3a3",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/references/ordered-assertions.md": {
+    "sha256": "84aaca96e919f4c4b26fdaea82205b745763d91c0b6f1f22a2b79f00099188da",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/references/source-canaries.md": {
+    "sha256": "043ceb3e890be63f1285b1f0a82d9f76c69bfac0046fbdd7fd9f04a41b58879b",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/references/structural-uncoverability.md": {
+    "sha256": "9c11fc1a18fddd17a2e0dc5609e48517e54d2a5c50b9c11e7845f76940dc83c5",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/references/the-plant-table.md": {
+    "sha256": "eac4dac5943bc2d777707314b48775479f7878d3a4583626493cf8fda281f46d",
+    "mode": 420
+  },
+  "plant-defects/skills/plant-defects/references/vacuous-passes.md": {
+    "sha256": "01440072c53085eda19890b5295773b8165bc3159f34d1b2ee1d4f21cff27071",
+    "mode": 420
+  }
+}

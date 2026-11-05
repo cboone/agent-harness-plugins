@@ -1,0 +1,45 @@
+{
+  "complete": true,
+  "excluded": [
+    "dist/codex/plugins/review-anti-patterns/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-anti-patterns/skills/review-anti-patterns/references/edit-mode.md",
+    "dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-pr-with-codex/scripts/review-scope",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+    "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-until-clean/scripts/review-scope",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md"
+  ],
+  "findings": [
+    {
+      "detail": "When a background base advance leaves the complete snapshot unchanged, step 5 still instructs the agent to end the run as failed for any moved ref. That contradicts the newly added exception in Error Handling and reviewers.md, leaving a path that reports the wrong status for the case this fix should preserve. The helper summary at line 58 also still includes the base tip in snapshot identity. This recurs in the prior stale snapshot documentation and movement-policy defect class.",
+      "evidence": "SKILL.md:106 says 'A moved ref or a rewritten history ends the run as failed'; line 272 now exempts captured-base movement with an unchanged snapshot. Line 58 still says the snapshot binds 'the base tip and merge base', whereas review-scope:650-658 excludes base_tip from the digest.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+      "line": 106,
+      "severity": "important",
+      "title": "Agent-prose control flow: step 5 retains the unconditional moved-ref failure"
+    },
+    {
+      "detail": "The new exception covers only the captured base_ref, but the prescribed ref inventory also includes symbolic aliases. With the normal origin/HEAD -> origin/main setup, an unrelated advance of origin/main changes both recorded object IDs. Exempting origin/main still leaves origin/HEAD classified as another moved ref, causing a failed round despite an unchanged snapshot. The policy needs to account for symbolic aliases of the captured base while retaining failures for observed prohibited actions.",
+      "evidence": "reviewers.md:113 inventories all refs/remotes using refname and objectname; line 120 exempts only base_ref. A read-only for-each-ref inspection confirms this checkout emits both refs/remotes/origin/HEAD and refs/remotes/origin/main with the same object ID, with the former symbolically targeting the latter. Default scope resolution records base_ref as origin/main.",
+      "file": "plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+      "line": 120,
+      "severity": "important",
+      "title": "Sibling input forms: the base-movement exception misses symbolic aliases"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Scope: ae3d14ef6bb8d353bf50d02d3e252c548407bffb..HEAD, with HEAD de6a7eab9c9d3c04cc9f59e86cbc96345ef6d859. Read all 24 non-generated changed files in full. The 11 excluded paths are generated Codex mirrors. Working-tree changes: none. No PR body exists, per caller; gh was not run.\n\nReviewed in this session. No delegation or Codex subprocess was used, as requested. Session could write: no, enforced by the read-only sandbox. --run-checks: off. No repository code executed; checks left nothing behind.\n\nGroups: code, agent prose, docs. All thirteen anti-pattern items were walked: Sibling input forms; Boundary arithmetic; Stale writes; Validator gaps; Absent or partial data; Untrusted data in commands; Tests that cannot fail; Crashes instead of reports; Unrun platform configuration; Unenforced trust boundary; Parallel paths; Agent-prose control flow; Docs drift. Applicable Bash, Scrut and Markdown project checklists were also read and applied.\n\nStandalone checks: bash -n, shellcheck and shfmt -d each exited 0 over all four changed shell scripts; jq empty exited 0 over all four changed JSON files. Runtime tests, defect plants, project validation and Markdown checks remain unverified, with commands listed in unverified.\n\nFinding 1 siblings examined: the main loop's helper summary, numbered step 5 and Error Handling; reviewers.md; scope-and-snapshot.md; both review-scope implementations; the review-pr-with-codex and anti-pattern edit-mode guidance. The prior documentation defect class recurs in the main numbered workflow.\n\nFinding 2 siblings examined: default and explicit base resolution, the complete remote-ref inventory, origin/HEAD and origin/main, and both locations defining the base-ref exception. The new validity tests exercise a local base branch and snapshot consumers, but do not cover the symbolic remote-ref inventory policy.\n\nStructural loop round 2 at Important: 2 Important findings. No fixes or further review rounds performed. stopped: recurring defect",
+  "reviewed": "ae3d14ef6bb8d353bf50d02d3e252c548407bffb..HEAD",
+  "status": "success",
+  "unverified": [
+    "Runtime validity regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope-validity.md. Not run because repository-code execution was prohibited.",
+    "Existing scope regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope.md. Not run because repository-code execution was prohibited.",
+    "Defect sensitivity and green control: use plant-defects with `uv run --script plugins/plant-defects/scripts/checked-plant run review-scope-plants.json <external-output-dir>`. Not run because it executes repository code and applies private mutations.",
+    "Plugin and cross-reference validation: make validate. Not run because repository-code execution was prohibited.",
+    "Markdown lint and formatting validation: make lint-markdown. Not run because repository-code execution was prohibited."
+  ]
+}

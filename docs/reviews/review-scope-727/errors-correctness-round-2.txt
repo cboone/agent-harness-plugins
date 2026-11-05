@@ -1,0 +1,11 @@
+{
+  "aspect": "errors",
+  "findings": [],
+  "reviewed": "11468bb07bc9342ce8130ac4f16da27847b560cf",
+  "strengths": [
+    "Policy traversal and UTF-8 decoding failures produce stderr diagnostics and nonzero exits.",
+    "Merge-base rechecks distinguish unrelated history from fatal Git failures while preserving diagnostics.",
+    "Report-only invalidation now has explicit terminal outcomes."
+  ],
+  "summary": "Reviewed the complete committed scope for suppressed failures, unjustified fallbacks and actionable diagnostics; clean at Important. Bash syntax checks exited 0. Runtime suites were not run because they create files."
+}

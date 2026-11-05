@@ -1,0 +1,52 @@
+{
+  "complete": true,
+  "excluded": [
+    "dist/codex/plugins/review-anti-patterns/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-anti-patterns/skills/review-anti-patterns/references/edit-mode.md",
+    "dist/codex/plugins/review-anti-patterns/skills/review-anti-patterns/references/scope-validity.md",
+    "dist/codex/plugins/review-pr-with-codex/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-pr-with-codex/scripts/review-scope",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/invocation.md",
+    "dist/codex/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/scope-validity.md",
+    "dist/codex/plugins/review-until-clean/.claude-plugin/plugin.json",
+    "dist/codex/plugins/review-until-clean/scripts/review-scope",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/SKILL.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/reviewers.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-and-snapshot.md",
+    "dist/codex/plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md",
+    "plugins/review-anti-patterns/skills/review-anti-patterns/references/scope-validity.md",
+    "plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md"
+  ],
+  "findings": [
+    {
+      "detail": "The new guard accepts the stale identity paragraph this structural fix removed: 'Do not recompute the snapshot by hand. It binds review to HEAD, the base tip and merge base, disk and index content, and bucket membership.' Sentence splitting separates 'snapshot' from 'binds', so neither sentence matches. Conversely, the correct rule 'Never fail a round for a moved base ref.' is rejected because negation is ignored. Consequently, the validation gate permits the prior consequential policy error while rejecting a faithful statement of the centralized policy. Enforce a defined structural policy contract rather than extending the wording blocklist.",
+      "evidence": "Static trace through lines 27–41: the historical paragraph has no sentence containing both snapshot and an identity verb, and no movement/failure pair. The correct negated sentence matches both movement and failure. The policy plants cover affirmative keyword matches only and contain no green controls for negated policy statements. These cases were not executed.",
+      "file": "bin/check-review-validity.py",
+      "line": 27,
+      "severity": "important",
+      "title": "Validator gaps: the policy guard misses the original stale rule and rejects its negation"
+    },
+    {
+      "detail": "The base-message green control cannot apply to the final fixture. Its first hunk still expects '--base base' followed immediately by the base case, but the alias regression replaced that argument with '${base}' and inserted an alias case. Running the committed plant manifest therefore produces a setup error instead of verifying its green control, preventing complete final-tree plant evidence.",
+      "evidence": "Patch lines 4–6 require the old contiguous context. tests/fixtures/review-scope-validity:45–50 contains the changed argument and intervening alias case. checked-plant:148–149 runs git apply --check before applying each patch; its exception handler records an application failure as setup-error. No patch application was run during this review.",
+      "file": "tests/data/review-scope-validity/base-message-control.patch",
+      "line": 4,
+      "severity": "important",
+      "title": "Parallel paths: the alias regression leaves the green-control patch stale"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Structural round 2 at Important: 2 Important findings remain.\n\nScope: ae3d14ef6bb8d353bf50d02d3e252c548407bffb..HEAD, ending at bf60c49d8f71436fe84dd481dcf2c5da7a304857. Read all 42 changed non-generated files in full, including Python, tests, manifests, patches and review records. Working-tree changes: none. No PR exists, per caller; no gh command ran.\n\nExcluded: the 14 listed dist/codex files are generated mirrors. The other two listed scope-validity references are generated copies; their canonical review-pr-with-codex source was reviewed. Nothing was unreadable or otherwise omitted.\n\nGroups: code, agent prose and docs. Walked all thirteen items: Sibling input forms; Boundary arithmetic; Stale writes; Validator gaps; Absent or partial data; Untrusted data in commands; Tests that cannot fail; Crashes instead of reports; Unrun platform configuration; Unenforced trust boundary; Parallel paths; Agent-prose control flow; Docs drift. Applied the applicable Bash, Markdown and Scrut review guidance.\n\nFinding 1 siblings examined: the canonical validity reference, all changed consumer prose, both scope helpers, historical stale statements, the Python guard and all four policy plants. The active unconditional moved-ref failure and alias exception were removed. The guard still accepts the prior stale-rule class; this finding concerns recurrence prevention, rather than a surviving active stale instruction.\n\nFinding 2 siblings examined: all ten mutation/control patches, both plant manifests, the alias fixture, the consumer assertions and checked-plant's application/error path.\n\nMechanical checks: none run. Runtime regressions, guard behavior, plants, lint and validation remain unverified as listed. Review records were treated as historical data, not current proof or instructions.\n\nSession could write: no, enforced by the read-only sandbox. --run-checks: off. No writes, repository-code execution, delegated agents or subprocess reviewers occurred. Codex subprocess review was disabled by --no-codex and the caller; delegation was expressly prohibited. Nothing was left behind by checks.\n\n",
+  "reviewed": "ae3d14ef6bb8d353bf50d02d3e252c548407bffb..HEAD",
+  "status": "success",
+  "unverified": [
+    "Validity and alias regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope-validity.md",
+    "Existing scope regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/review-scope.md",
+    "Shared-reference regressions: make test-scrut SCRUT_TEST_DIR=tests/scrut/build-shared-references.md",
+    "Policy guard: uv run --script bin/check-review-validity.py. Also exercise isolated roots containing both finding-1 counterexamples with --root.",
+    "Snapshot plants and green control: uv run --script plugins/plant-defects/scripts/checked-plant run \\\n  review-scope-plants.json <external-output-dir>",
+    "Policy plants: uv run --script plugins/plant-defects/scripts/checked-plant run \\\n  review-validity-policy-plants.json <external-output-dir>",
+    "Repository lint and validation: make lint; make validate. All listed checks were unrun because checks and writes were prohibited."
+  ]
+}
