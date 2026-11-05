@@ -59,10 +59,10 @@ function main() {
   cat "${SCRATCH}/err"
   [[ "${status}" -eq 1 && ! -s "${SCRATCH}/out" ]]
   if [[ "${mode}" == permission ]]; then
-    rg -q 'Permission denied' "${SCRATCH}/err"
+    grep -Fq 'Permission denied' "${SCRATCH}/err"
     printf 'PASS: unreadable policy subtree rejected\n'
   else
-    rg -q 'fixture.md: invalid UTF-8 policy source' "${SCRATCH}/err"
+    grep -Fq 'fixture.md: invalid UTF-8 policy source' "${SCRATCH}/err"
     printf 'PASS: invalid UTF-8 policy input rejected\n'
   fi
 }
