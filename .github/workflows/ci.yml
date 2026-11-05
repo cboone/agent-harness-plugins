@@ -51,7 +51,7 @@ jobs:
           npm install --global --prefix "$HOME/.local" "@anthropic-ai/claude-code@$(cat .claude-code-version)"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Set up uv for validity checks
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.16"
           enable-cache: false
@@ -120,7 +120,7 @@ jobs:
         uses: cboone/gh-actions/actions/set-up-shfmt@3c9adb5a8b166444d3c0e3fe606d55f0dc7ac726 # v5.0.0
       - name: Set up uv for checked plant tests
         if: startsWith(matrix.document, 'tests/scrut/checked-') || contains(fromJSON('["tests/scrut/review-scope-validity.md","tests/scrut/environment-isolation.md"]'), matrix.document)
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.16"
           enable-cache: false
