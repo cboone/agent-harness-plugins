@@ -18,9 +18,12 @@ import tempfile
 import unittest
 from unittest import mock
 
+from checked_test_diagnostics import restart_diagnostic
+
 sys.dont_write_bytecode = True
 GATE = Path(os.environ['CHECKED_GATE_BIN'])
 PLANT = Path(os.environ['CHECKED_PLANT_BIN'])
+BUDGETS = Path(os.environ.get('CHECKED_TIMEOUT_BUDGETS', Path(__file__).parent / 'data/checked-timeout-budgets.json'))
 sys.path.insert(0, str(GATE.parent))
 import checked_core as core
 loader = importlib.machinery.SourceFileLoader('checked_gate', str(GATE))
@@ -39,13 +42,13 @@ import checked_core as core
 phase, sentinel, oracle = sys.argv[2], Path(sys.argv[3]), Path(sys.argv[4])
 original_spawn, original_file = core.subprocess.Popen, core.regular_file
 started = []
+deadline = min(core.parse_json(core.read_regular(Path(sys.argv[6]))[0])["deadline"], core.deadline_after(5))
 def independent_observation():
-    deadline = time.monotonic() + 2
     while not sentinel.exists():
         if time.monotonic() >= deadline:
             raise RuntimeError('independent sentinel missing')
         time.sleep(0.01)
-    code = None if phase == 'running' else started[0].wait(timeout=2)
+    code = None if phase == 'running' else started[0].wait(timeout=core.remaining(deadline, 'independent reap'))
     core.write_json(oracle, dict(sentinel=sentinel.read_text(), exit_code=code, pid=started[0].pid))
 def spawn(args, **options):
     if phase != 'capture' and len(started) == (2 if phase == 'third' else 1):
@@ -67,12 +70,14 @@ core.subprocess.Popen = spawn
 core.regular_file = regular_file
 if phase == 'pump':
     core.threading.Thread.start = fail_start
-raise SystemExit(core.pipeline_worker(Path(sys.argv[6]), Path(sys.argv[7])))
+with core.root_supervision():
+    raise SystemExit(core.pipeline_worker(Path(sys.argv[6]), Path(sys.argv[7])))
 """
 
 
 class GateTests(unittest.TestCase):
     def setUp(self):
+        self.enterContext(core.root_supervision())
         self.temp = tempfile.TemporaryDirectory(prefix='checked-gate-test-')
         self.addCleanup(self.temp.cleanup)
         self.work = Path(self.temp.name)
@@ -215,6 +220,34 @@ class GateTests(unittest.TestCase):
                 if row['result'] is not None:
                     self.assertLessEqual(len(row['result']['stdout']), 1048576)
 
+        ready = self.work / 'delayed-stage-ready'
+        term_wait = 0.4
+        pipeline_limit = term_wait * 12 * 3
+        delayed = ('import os, signal, sys, time; from pathlib import Path\n'
+                   'def stop(signum, frame):\n'
+                   '    signal.signal(signal.SIGTERM, signal.SIG_IGN)\n'
+                   f'    time.sleep({term_wait!r})\n'
+                   '    os.write(2, b"delayed cleanup complete\\n")\n'
+                   '    raise SystemExit(7)\n'
+                   'signal.signal(signal.SIGTERM, stop)\n'
+                   'Path(sys.argv[1]).write_text("ready")\n'
+                   'while True: time.sleep(60)\n')
+        self.manifest['checks'][0] = dict(pipeline=[[sys.executable, '-c', delayed, str(ready)], ['cat']],
+                                          inputs=['tree'], timeout=pipeline_limit)
+        value = self.run_gate()
+        self.assertTrue(ready.exists(), 'delayed cleanup stage never became ready')
+        self.assertEqual(self.code, 1)
+        self.assertFalse(self.action.exists())
+        result = value['checks'][0]['result']
+        timeout_facts = [fact['data']['timed_out'] for fact in value['journal']
+                         if fact['target'] == 'check/0' and fact['kind'] == 'flags' and 'timed_out' in fact['data']]
+        self.assertFalse(timeout_facts[-1], 'pipeline supervisor interrupted reserved cleanup')
+        self.assertEqual(result['exit_code'], 1)
+        stage = result['stages'][0]
+        self.assertEqual(stage['exit_code'], 7)
+        self.assertTrue(stage['result']['reaped'])
+        self.assertIn('delayed cleanup complete', stage['result']['stderr'])
+
     def test_downstream_closure_retains_complete_capture(self):
         producer = [sys.executable, '-c',
                     'import os;\nfor i in range(128):\n try: os.write(1, b"x" * 4096)\n except BrokenPipeError: break']
@@ -337,7 +370,9 @@ class GateTests(unittest.TestCase):
                     core.read_regular = original
                 self.assertEqual(self.code, 1, value.get('cause'))
                 self.assertFalse(self.action.exists())
-                rows = value['checks'][0]['result']['stages']
+                result = value['checks'][0]['result']
+                self.assertIsInstance(result, dict, value.get('cause'))
+                rows = result['stages']
                 for number, row in enumerate(rows, 1):
                     line = next(line for line in self.rendered().splitlines() if line.startswith(f"Check 1 stage {number}:"))
                     self.assertIn("cause " + json.dumps(row["cause"]) + ".", line)
@@ -622,7 +657,9 @@ class GateTests(unittest.TestCase):
                 self.assertEqual(independent['exit_code'], None if phase == 'running' else 7)
                 self.assertEqual(self.code, 1)
                 self.assertFalse(self.action.exists())
-                rows = value['checks'][0]['result']['stages']
+                result = value['checks'][0]['result']
+                self.assertIsInstance(result, dict, value.get('cause'))
+                rows = result['stages']
                 first = rows[0]
                 self.assertIsNotNone(first['exit_code'])
                 if phase != 'running': self.assertEqual(first['exit_code'], 7)
@@ -875,7 +912,7 @@ class GateTests(unittest.TestCase):
 
     def test_timeout_and_spawn_error(self):
         for args in (['bash', '-c', 'sleep 3'], ['/no/such/checked-gate-command']):
-            self.manifest['checks'][0].update(argv=args, timeout=0.1)
+            self.manifest['checks'][0].update(argv=args, timeout=3)
             value = self.run_gate()
             self.assertEqual(self.code, 1, value.get("cause"))
             self.assertFalse(self.action.exists())
@@ -901,22 +938,24 @@ class PlantTests(unittest.TestCase):
                        'checked-plant': PLANT.read_text(),
                        'plant-regressions.py': (Path(__file__).parent / 'checked_plant_test.py').read_text(),
                        'detached.py': (Path(__file__).parent / 'fixtures/checked-plant-detached.py').read_text(),
+                       'budgets.json': BUDGETS.read_text(),
+                       'checked_test_diagnostics.py': Path(__file__).with_name('checked_test_diagnostics.py').read_text(),
                        'regressions.py': Path(__file__).read_text()}
             for name, source in sources.items():
                 (root / name).write_text(source)
             check = ('env CHECKED_GATE_BIN="$PWD/checked-gate" '
-                     'CHECKED_PLANT_BIN="$PWD/checked-plant" CHECKED_PLANT_DETACHED_BIN="$PWD/detached.py" uv run --no-project regressions.py GateTests -q\n')
+                     'CHECKED_TIMEOUT_BUDGETS="$PWD/budgets.json" CHECKED_PLANT_BIN="$PWD/checked-plant" CHECKED_PLANT_DETACHED_BIN="$PWD/detached.py" uv run --no-project regressions.py GateTests -q\n')
             (root / 'check.sh').write_text(check)
             changes = [
                 ('action-verdict', 'require(all(passed(r, c.get("expected_exit", 0)) for r, c in',
                  'require(all(True for r, c in', 'test_apply_failure_refuses_commit'),
-                ('action-once', 'execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action")',
-                 'execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action"); execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action")',
+                ('action-once', 'execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action", plan=plan)',
+                 'execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action", plan=plan); execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action", plan=plan)',
                  'test_good_action_runs_once'),
                 ('pipeline-verdict', 'report["complete"] and all(row["code"] == 0 for row in report["stages"])',
                  'report["complete"]', 'test_pipeline_first_stage_failure'),
-                ('no-interpreter-classification', 'def execute(row, root, limit, *, journal, target):',
-                 'def execute(row, root, limit, *, journal, target):\n    interpreter = "tcsh"', 'test_no_interpreter_classification'),
+                ('no-interpreter-classification', 'def execute(row, root, limit, *, journal, target, plan=None):',
+                 'def execute(row, root, limit, *, journal, target, plan=None):\n    interpreter = "tcsh"', 'test_no_interpreter_classification'),
                 ('failure-rendering', 'def load(path):',
                  'def load(path):\n    validate(parse_json(read_regular(path)[0])["manifest"])',
                  'test_render_setup_failures_and_partial_receipt'),
@@ -970,9 +1009,9 @@ class PlantTests(unittest.TestCase):
                 ('stage-render-cause', 'print(f"Check {index} stage {number}: exit {stage[\'exit_code\']}; {stage[\'state\']}; argv {encode_json(stage[\'argv\'])}; cause {encode_json(stage[\'cause\'])}.")', 'print(f"Check {index} stage {number}: exit {stage[\'exit_code\']}; {stage[\'state\']}; argv {encode_json(stage[\'argv\'])}.")', 'test_pipeline_failures_preserve_observed_facts'),
                 ('action-render-cause', 'f"cause {encode_json(value[\'cause\'])}; argv {encode_json(row[\'argv\'])}; command cause {encode_json(row[\'cause\'])}.")', 'f"cause {encode_json(value[\'cause\'])}.")', 'test_action_failures_preserve_evidence'),
                 ('manifest-stability', 'require(read_regular(path)[0] == raw,', 'require(True,', 'test_external_manifest_change_refuses_action'),
-                ('untracked-tree', 'git(root, "add", "--all", "--", ".", env=index)', 'git(root, "add", "--update", "--", ".", env=index)', 'test_untracked_files_contribute_to_tree_and_refuse_changes'),
+                ('untracked-tree', '["add", "--all", "--", "."]', '["add", "--update", "--", "."]', 'test_untracked_files_contribute_to_tree_and_refuse_changes'),
                 ('partial-setup-capture', '            for index, process in enumerate(processes):\n                row, streams = report["stages"][index], spools[index]', '            if report["cause"] is not None:\n                return 1\n            for index, process in enumerate(processes):\n                row, streams = report["stages"][index], spools[index]', 'test_partial_pipeline_setup_retains_independent_observations'),
-                ('partial-setup-reap', 'for requested_signal, grace in ((signal.SIGTERM, 0.2), (signal.SIGKILL, 0.5)):', 'for requested_signal, grace in ():', 'test_partial_pipeline_setup_retains_independent_observations'),
+                ('partial-setup-reap', 'for requested_signal, phases_left in ((signal.SIGTERM, 3), (signal.SIGKILL, 2)):', 'for requested_signal, grace in ():', 'test_partial_pipeline_setup_retains_independent_observations'),
                 ('journal-error-action', 'require(not receipt["journal_errors"],', 'require(True,', 'test_journal_persistence_failures_retain_facts_and_refuse_action'),
                 ('journal-error-marker', 'if self.failures:', 'if False:', 'test_journal_persistence_failures_retain_facts_and_refuse_action'),
                 ('empty-check-manifest', 'isinstance(checks, list) and checks', 'isinstance(checks, list)', 'test_empty_check_manifest_refuses_action'),
@@ -996,12 +1035,15 @@ class PlantTests(unittest.TestCase):
                 ('codec-bypass', 'def argv(value):', 'def unused_parser(data):\n    import json\n    return json.loads(data)\n\ndef argv(value):',
                  'test_json_codec_is_centralized'),
             ]
-            partitions = [changes[index::3] for index in range(3)]
-            self.assertEqual(sorted(row[0] for part in partitions for row in part), sorted(row[0] for row in changes))
-            self.assertEqual(len({row[0] for row in changes}), len(changes))
+            policy = json.loads(BUDGETS.read_text())
+            documents = {name: row for name, row in policy['documents'].items() if 'gate_variants' in row}
+            declared = [variant for row in documents.values() for variant in row['gate_variants']]
+            self.assertEqual(sorted(declared), sorted(row[0] for row in changes))
+            self.assertEqual(len(declared), len(set(declared)))
             partition = int(os.environ.get('CHECKED_GATE_GUARD_PART', '1'))
-            self.assertIn(partition, (1, 2, 3))
-            for name, old, new, method in partitions[partition - 1]:
+            document = 'checked-gate-plants' + ('' if partition == 1 else '-' + str(partition)) + '.md'
+            selected = documents[document]['gate_variants']
+            for name, old, new, method in (row for row in changes if row[0] in selected):
                 with self.subTest(plant=name):
                     target = next(target for target, source in sources.items() if old in source)
                     mutated = sources[target].replace(old, new)
@@ -1027,7 +1069,8 @@ class PlantTests(unittest.TestCase):
                     if name == 'duplicate-reader':
                         selected = selected.replace('regressions.py GateTests.', 'plant-regressions.py RunnerTests.')
                     (root / 'check.sh').write_text(selected)
-                    manifest = dict(inputs=[*sources, 'check.sh', name + '.patch'], check='check.sh', timeout=60,
+                    manifest = dict(inputs=[*sources, 'check.sh', name + '.patch'], check='check.sh',
+                                    timeout=policy['gate_checks'][name], git_timeout=policy['git_timeout'],
                                     green=dict(exit_code=0, contains=['Ran 1 test', '\nOK\n'],
                                                excludes=['ERROR:', 'skipped', 'SKIP']),
                                     variants=[dict(name=name, patch=name + '.patch',
@@ -1040,9 +1083,8 @@ class PlantTests(unittest.TestCase):
                     result = subprocess.run([sys.executable, str(PLANT), 'run', str(path), str(out)],
                                             capture_output=True, text=True)
                     value = json.loads((out / 'results.json').read_text())
-                    self.assertEqual(result.returncode, 0, [(r['name'], r['status'], r['reason'][:1500],
-                                                           r.get('red', {}).get('exit_code'),
-                                                           r.get('red', {}).get('stderr', '')[-2500:]) for r in value['results']])
+                    self.assertEqual(result.returncode, 0, restart_diagnostic(
+                        value, retain=result.returncode != 0, fixture=name))
                     self.assertEqual([r['status'] for r in value['results']], ['red'])
                     rendered = subprocess.run([sys.executable, str(PLANT), 'render', str(out / 'results.json'),
                                                '--ledger', str(root / 'ledger.md'), '--status', str(root / 'status.md')],

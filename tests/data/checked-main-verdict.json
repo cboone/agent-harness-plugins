@@ -1,0 +1,7 @@
+{
+  "main_head": "66f1654283364f2ce43c73e173f1b9ff02f721a6",
+  "functions": {
+    "matches": "def matches(result, wanted):\n    output = result[\"stdout\"] + result[\"stderr\"]\n    return (valid_step(result) and type(result[\"exit_code\"]) is int and result[\"exit_code\"] == wanted[\"exit_code\"]\n            and all(s in output for s in wanted[\"contains\"])\n            and not any(s in output for s in wanted.get(\"excludes\", [])))",
+    "expectation": "def expectation(value, *, red):\n    require(isinstance(value, dict), \"check expectation must be an object\")\n    code = value.get(\"exit_code\")\n    require(type(code) is int and (1 <= code <= 125 if red else code == 0), \"invalid expected check exit\")\n    for key in (\"contains\", \"excludes\"):\n        items = value.get(key, [])\n        require(isinstance(items, list) and all(isinstance(s, str) and s for s in items),\n                \"output predicates must be lists of nonempty literal strings\")\n    require(bool(value.get(\"contains\")), \"require named assertion/progress evidence\")"
+  }
+}

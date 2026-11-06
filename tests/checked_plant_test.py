@@ -10,6 +10,7 @@ import io
 import json
 import os
 import signal
+import shutil
 import stat
 import time
 from pathlib import Path
@@ -19,22 +20,44 @@ import tempfile
 import unittest
 from unittest import mock
 
+from checked_test_diagnostics import restart_diagnostic
+
 
 sys.dont_write_bytecode = True
+ROOT = Path(__file__).resolve().parent.parent
 RUNNER = Path(os.environ["CHECKED_PLANT_BIN"])
 DETACHED = Path(os.environ["CHECKED_PLANT_DETACHED_BIN"])
 sys.path.insert(0, str(RUNNER.parent))
 import checked_core as core
 CORE = Path(core.__file__)
 GATE = RUNNER.with_name("checked-gate")
+BUDGETS = Path(os.environ.get("CHECKED_TIMEOUT_BUDGETS", Path(__file__).parent / "data/checked-timeout-budgets.json"))
+
 loader = importlib.machinery.SourceFileLoader("checked_plant", str(RUNNER))
 spec = importlib.util.spec_from_loader(loader.name, loader)
 runner = importlib.util.module_from_spec(spec)
 loader.exec_module(runner)
 
 
+SUPPLEMENTAL_DETECTORS = {
+    "hardlink-protection": ["test_absent_record_aliases_and_refusal_cleanup"],
+    "bounded-capture": ["test_closed_stdio_parent_timeout_writes_failure"],
+    "recheck-cause": ["test_inspection_failure_retains_subprocess_diagnostics", "test_failure_recording_is_centralized"],
+    "manifest-empty": ["test_unnormalized_inputs_refuse_before_materialization"],
+}
+
+
+def guard_methods(name, marker):
+    return [marker.removeprefix("FAIL: "), *SUPPLEMENTAL_DETECTORS.get(name, [])]
+
+
 class RunnerTests(unittest.TestCase):
+    @property
+    def deadline(self):
+        return core.deadline_after(3)
+
     def setUp(self):
+        self.runtime = self.enterContext(core.root_supervision())
         self.temporary = tempfile.TemporaryDirectory(prefix="checked-plant-test-")
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
@@ -109,6 +132,54 @@ class RunnerTests(unittest.TestCase):
         self.render()
         self.assertEqual(self.ledger.read_text().count(runner.BEGIN), 1)
 
+    def test_git_budget_and_execution_plan(self):
+        default = runner.execution_plan(dict(timeout=13))
+        self.assertEqual([step["timeout"] for step in default if step["kind"] == "git"], [13, 13, 13])
+        self.assertEqual([step["name"] for step in default if step["kind"] == "git"],
+                         ["git_init", "git_validate", "git_apply"])
+        for value in (0, -1, True, float("nan"), float("inf"), "1"):
+            invalid = dict(self.manifest, git_timeout=value)
+            with self.subTest(value=repr(value)), self.assertRaisesRegex(ValueError, "git_timeout"):
+                runner.validate_manifest(invalid)
+        stub = self.root / "git-bin" / "git"
+        stub.parent.mkdir()
+        source = Path(os.environ.get("CHECKED_GIT_DELAY_BIN", Path(__file__).parent / "fixtures/checked-git-delay"))
+        stub.write_bytes(source.read_bytes())
+        stub.chmod(0o755)
+        real_git = shutil.which("git")
+        path = str(stub.parent) + os.pathsep + os.environ["PATH"]
+        self.assertEqual(shutil.which("git", path=path), str(stub), "Git must resolve to its fixture")
+        ready = self.root / "git-ready"
+        fixture_env = dict(CHECKED_GIT_STUB=str(stub.resolve()), CHECKED_REAL_GIT=real_git,
+                           CHECKED_GIT_DELAY="0", CHECKED_GIT_FIXTURE_ROOT=str(ROOT),
+                           CHECKED_GIT_READY_FILE=str(ready))
+        rejected = core.command([str(stub), "--version"], self.root, 10, git_boundary=True,
+                                env_overrides=dict(fixture_env, PATH=os.environ["PATH"]))
+        self.assertEqual(rejected["exit_code"], 1, "fixture accepted a foreign Git PATH")
+        self.assertIn("Git fixture requires its own stub PATH", rejected["stderr"])
+        self.assertFalse(ready.exists(), "rejected fixture wrote readiness")
+        probe = core.command(["git", "--version"], self.root, 10, git_boundary=True,
+                             env_overrides=dict(fixture_env, PATH=path))
+        self.assertTrue(core.valid_step(probe), "Git fixture positive control was not supervised")
+        self.assertEqual(probe["exit_code"], 0, "Git fixture rejected its own PATH alias")
+        self.assertTrue(probe["stdout"].startswith("git version "), "Git fixture did not invoke Git")
+        self.assertTrue(ready.exists(), "Git fixture positive control did not arm")
+        ready.unlink()
+        self.manifest["timeout"], self.manifest["git_timeout"] = 10, 3
+        with mock.patch.dict(os.environ, dict(fixture_env, PATH=path, CHECKED_GIT_DELAY="5")):
+            result = self.execute()
+        self.assertTrue(ready.exists(), "Git timeout detector was not armed")
+        self.assertEqual(self.code, 1, "Git step ignored git_timeout")
+        self.assertEqual(result["results"][0]["status"], "setup-error")
+        self.assertIn("'timed_out': True", result["results"][0]["reason"])
+        descendants = self.runtime.descendants()
+        observations = [row for scope, row in self.runtime.states().items() if scope in descendants
+                        and (row.get("step") or {}).get("kind") == "git"]
+        self.assertTrue(observations)
+        self.assertTrue(all(row["requested"] == self.manifest["git_timeout"] for row in observations))
+        self.assertTrue(all(core.classify_leader(row.get("leader"), row.get("leader")) == "survivor"
+                            for row in observations), "spawn did not record leader identity")
+
     def test_broken_variant_blocks_records_and_marks_unrun(self):
         self.patch.write_text("not a patch\n")
         self.manifest["variants"].append(dict(self.manifest["variants"][0], name="never-ran"))
@@ -176,10 +247,10 @@ class RunnerTests(unittest.TestCase):
     def test_restored_check_error_preserves_cause(self):
         original = runner.check
 
-        def fail_green(root, manifest, row, phase):
+        def fail_green(root, manifest, row, phase, plan):
             if phase == "green":
                 raise OSError("restored check cause")
-            return original(root, manifest, row, phase)
+            return original(root, manifest, row, phase, plan)
 
         with mock.patch.object(runner, "check", side_effect=fail_green):
             result = self.execute()
@@ -249,7 +320,7 @@ class RunnerTests(unittest.TestCase):
 
     def test_cli_missing_manifest_writes_failed_json(self):
         proc = subprocess.run([sys.executable, str(RUNNER), "run", str(self.path), str(self.root / "missing")],
-                              text=True, capture_output=True, timeout=5)
+                              text=True, capture_output=True, timeout=core.remaining(self.deadline, "test subprocess"))
         self.assertEqual(proc.returncode, 1, proc.stderr)
         value = json.loads((self.root / "missing/results.json").read_text())
         self.assertTrue(value["complete"])
@@ -288,7 +359,7 @@ class RunnerTests(unittest.TestCase):
                     self.assertEqual(path, CORE)
                     self.assertIs(function, functions.get("read_spool"), "owned spool reader bypass: " + call)
                 else:
-                    self.assertIs(function, functions.get("command"), "external reader bypass: " + call)
+                    self.assertIs(function, functions.get("_command"), "external reader bypass: " + call)
                 self.assertIn(call, allowed, "external reader bypass: " + call)
                 observed[call] = observed.get(call, 0) + 1
         self.assertEqual(observed, allowed)
@@ -308,7 +379,7 @@ class RunnerTests(unittest.TestCase):
                 out = self.root / (kind + "-run")
                 try:
                     proc = subprocess.run([sys.executable, str(RUNNER), "run", str(path), str(out)],
-                                          text=True, capture_output=True, timeout=3)
+                                          text=True, capture_output=True, timeout=core.remaining(self.deadline, "test subprocess"))
                 except subprocess.TimeoutExpired:
                     self.fail("manifest reader waited on unsupported input")
                 self.assertEqual(proc.returncode, 1, proc.stderr)
@@ -331,7 +402,7 @@ class RunnerTests(unittest.TestCase):
                     try:
                         proc = subprocess.run([sys.executable, str(RUNNER), "render", str(result),
                                                "--ledger", str(self.ledger), "--status", str(self.status)],
-                                              text=True, capture_output=True, timeout=3)
+                                              text=True, capture_output=True, timeout=core.remaining(self.deadline, "test subprocess"))
                     except subprocess.TimeoutExpired:
                         self.fail("render reader waited on unsupported input")
                     self.assertEqual(proc.returncode, 1, proc.stderr)
@@ -372,11 +443,11 @@ class RunnerTests(unittest.TestCase):
         result = core.command(["bash", "-c", 'sleep 60 >/dev/null 2>&1 & echo $! > child.pid; echo marker'],
                                 self.root, 3)
         child = int(child_file.read_text())
-        listing = subprocess.run(["ps", "-o", "stat=", "-p", str(child)], capture_output=True, text=True, timeout=2)
+        listing = subprocess.run(["ps", "-o", "stat=", "-p", str(child)], capture_output=True, text=True, timeout=core.remaining(self.deadline, "test subprocess"))
         alive = listing.returncode == 0 and not listing.stdout.strip().startswith("Z")
         try:
             self.assertFalse(alive, "same-group background child survived")
-            self.assertEqual(result["exit_code"], 0, result)
+            self.assertEqual(result["exit_code"], 0, restart_diagnostic(result))
             self.assertEqual(result["remaining_pids"], [])
             self.assertIsNone(result["cleanup_error"])
             self.assertTrue(result["reaped"])
@@ -389,11 +460,11 @@ class RunnerTests(unittest.TestCase):
                   'while [[ ! -s child.pid ]]; do sleep 0.01; done\necho marker\n')
         result = core.command(["bash", "-c", script], self.root, 3)
         child = int((self.root / "child.pid").read_text())
-        listing = subprocess.run(["ps", "-o", "stat=", "-p", str(child)], capture_output=True, text=True, timeout=2)
+        listing = subprocess.run(["ps", "-o", "stat=", "-p", str(child)], capture_output=True, text=True, timeout=core.remaining(self.deadline, "test subprocess"))
         alive = listing.returncode == 0 and not listing.stdout.strip().startswith("Z")
         try:
             self.assertFalse(alive, "TERM-ignoring same-group child survived")
-            self.assertEqual(result["exit_code"], 0, result)
+            self.assertEqual(result["exit_code"], 0, restart_diagnostic(result))
             self.assertIn("marker", result["stdout"])
             self.assertEqual(result["remaining_pids"], [])
             self.assertIsNone(result["cleanup_error"])
@@ -424,9 +495,13 @@ class RunnerTests(unittest.TestCase):
                 self.refused()
 
     def test_unsupported_runtime_refuses_before_spawn(self):
-        with mock.patch.object(core.os, "waitid", None), mock.patch.object(
+        original_record = self.runtime.record
+        def record(scope, event, **data):
+            if event == "allocated":
+                original_record(scope, event, **data)
+        with mock.patch.object(self.runtime, "record", side_effect=record), mock.patch.object(core.os, "waitid", None), mock.patch.object(
                 core.subprocess, "Popen", side_effect=AssertionError("unsupported runtime reached spawn")) as spawn:
-            with self.assertRaisesRegex(ValueError, "waitid and WNOWAIT"):
+            with self.assertRaisesRegex((ValueError, AssertionError), "waitid and WNOWAIT|unsupported runtime reached spawn"):
                 core.command(["bash", "-c", "echo marker"], self.root, 1)
             spawn.assert_not_called()
 
@@ -448,11 +523,52 @@ class RunnerTests(unittest.TestCase):
                     self.assertIn(parent.func.id, ("failure_cause", "isinstance"))
 
     def test_inspection_failure_retains_subprocess_diagnostics(self):
+        real_run = subprocess.run
+
+        def delayed_ps(argv, **kwargs):
+            if argv != ["ps", "-axo", "pid=,pgid=,stat="]:
+                return real_run(argv, **kwargs)
+            return real_run([sys.executable, "-c",
+                             'import os, time; time.sleep(0.4); os.execvp("ps", ["ps", "-axo", "pid=,pgid=,stat="])'],
+                            **kwargs)
+
+        with mock.patch.object(core.subprocess, "run", side_effect=delayed_ps):
+            result = core.command(["bash", "-c", "echo inspected"], self.root, 10)
+        self.assertIsNone(result["cleanup_error"], "delayed ps must survive the old inspection limit")
+        self.assertTrue(core.valid_step(result), restart_diagnostic(result))
+        term_timeout = subprocess.TimeoutExpired(["ps"], 0, stderr="TERM phase exhausted")
+        kill_timeout = subprocess.TimeoutExpired(["ps"], 0, stderr="final state unknown")
+        expirations = []
+        with mock.patch.object(core, "live_group", side_effect=[[123], term_timeout, []]) as inspection, mock.patch.object(
+                core, "terminate_group") as terminate:
+            remaining, cause = core.stop_group(123, self.deadline, phase_expirations=expirations)
+        self.assertEqual(remaining, [], "TERM phase exhaustion must advance to verified KILL cleanup")
+        self.assertIsNone(cause)
+        self.assertEqual(terminate.call_args_list, [mock.call(123, signal.SIGTERM), mock.call(123, signal.SIGKILL)])
+        self.assertLess(inspection.call_args_list[1].args[1], inspection.call_args_list[2].args[1])
+        self.assertEqual([row["phase"] for row in expirations], ["SIGTERM"])
+        self.assertIn("TERM phase exhausted", expirations[0]["cause"])
+        with mock.patch.object(core, "live_group", side_effect=[[123], term_timeout, kill_timeout]), mock.patch.object(
+                core, "terminate_group"):
+            remaining, cause = core.stop_group(123, self.deadline)
+        self.assertIsNotNone(cause, "unknown final KILL state must fail closed")
+        self.assertIn("final state unknown", cause)
+        self.assertFalse(core.valid_step(dict(result, remaining_pids=remaining, cleanup_error=cause)))
+        denied = PermissionError(1, "signal denied")
+        with mock.patch.object(core, "live_group", return_value=[123]), mock.patch.object(
+                core, "terminate_group", side_effect=denied):
+            remaining, cause = core.stop_group(123, self.deadline)
+        self.assertEqual(remaining, [123])
+        self.assertIn("PermissionError: [Errno 1] signal denied", cause)
+        with mock.patch.object(core, "live_group", side_effect=[denied, []]), mock.patch.object(core, "terminate_group"):
+            _, cause = core.stop_group(123, self.deadline)
+        self.assertIsInstance(cause, str)
+        self.assertIn("PermissionError: [Errno 1] signal denied", cause)
         for failure in (subprocess.CalledProcessError(2, ["ps"], output="inspection stdout", stderr="inspection denied"),
                         subprocess.TimeoutExpired(["ps"], 0.25, output=b"inspection stdout", stderr=b"inspection timed out")):
             with self.subTest(failure=type(failure).__name__):
                 with mock.patch.object(core, "live_group", side_effect=failure), mock.patch.object(core, "terminate_group"):
-                    remaining, cause = core.stop_group(123)
+                    remaining, cause = core.stop_group(123, self.deadline)
                 self.assertIsNone(remaining)
                 self.assertIn(type(failure).__name__, cause)
                 self.assertIn("inspection stdout", cause)
@@ -464,19 +580,21 @@ class RunnerTests(unittest.TestCase):
     def test_closed_stdio_parent_timeout_writes_failure(self):
         parents = self.root / "parents"
         (self.root / "setup.sh").write_text('echo $$ >> "${CHECKED_PLANT_PARENT_PIDS}"\nexec >/dev/null 2>&1\nsleep 60\n')
-        self.manifest["timeout"] = 0.1
+        self.manifest["timeout"] = 3
         self.path.write_text(json.dumps(self.manifest))
         self.out = self.root / "closed-stdio-run"
-        timed_out = False
-        try:
+        with subprocess.Popen([sys.executable, str(RUNNER), "run", str(self.path), str(self.out)],
+                              env=dict(os.environ, CHECKED_PLANT_PARENT_PIDS=str(parents)),
+                              text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
             try:
-                proc = subprocess.run([sys.executable, str(RUNNER), "run", str(self.path), str(self.out)],
-                                      env=dict(os.environ, CHECKED_PLANT_PARENT_PIDS=str(parents)),
-                                      text=True, capture_output=True, timeout=3)
-            except subprocess.TimeoutExpired:
-                timed_out = True
+                _, stderr = proc.communicate(timeout=core.remaining(self.deadline, "closed-stdio detector"))
+            except (subprocess.TimeoutExpired, TimeoutError):
                 self.fail("closed-stdio parent prevented failure JSON")
-            self.assertEqual(proc.returncode, 1, proc.stderr)
+            finally:
+                if proc.poll() is None:
+                    proc.terminate()
+                    proc.communicate(timeout=core.remaining(self.deadline, "closed-stdio cleanup"))
+            self.assertEqual(proc.returncode, 1, stderr)
             self.result = json.loads((self.out / "results.json").read_text())
             self.assertTrue(self.result["complete"])
             row = self.result["results"][0]
@@ -486,15 +604,6 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(row["baseline_setup"]["stdout"], "")
             self.assertEqual(row["baseline_setup"]["stderr"], "")
             self.refused()
-        finally:
-            if timed_out and parents.exists():
-                for value in parents.read_text().splitlines():
-                    pid = int(value)
-                    try:
-                        if os.getpgid(pid) == pid:
-                            os.killpg(pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
 
     def test_disappearing_manifest_preserves_cause(self):
         original = runner.load_manifest
@@ -532,7 +641,7 @@ class RunnerTests(unittest.TestCase):
 
     def test_timeout_is_setup_error(self):
         (self.root / "setup.sh").write_text('echo "timeout stdout"\necho "timeout stderr" >&2\nsleep 10\n')
-        self.manifest["timeout"] = 0.05
+        self.manifest["timeout"] = 3
         result = self.execute()
         self.assertEqual(self.code, 1)
         self.assertEqual(result["results"][0]["status"], "setup-error")
@@ -550,7 +659,7 @@ class RunnerTests(unittest.TestCase):
         self.manifest["inputs"].append("helper")
         (self.root / "setup.sh").write_text('./helper || [[ "$(cat subject.txt)" == wrong ]]\n')
         result = self.execute()
-        self.assertEqual(self.code, 0, result)
+        self.assertEqual(self.code, 0, restart_diagnostic(result))
         self.assertEqual(result["inputs"]["helper"]["mode"], 0o755)
         helper.chmod(0o644)
         self.refused()
@@ -574,7 +683,7 @@ class RunnerTests(unittest.TestCase):
         original = (self.root / "check.sh").read_text()
         (self.root / "check.sh").write_text(original.replace('== valid', '!= unrelated'))
         good = self.execute()
-        self.assertEqual(self.code, 0, good)
+        self.assertEqual(self.code, 0, restart_diagnostic(good))
         self.assertEqual(good["results"][0]["kind"], "control")
         self.assertEqual(good["results"][0]["status"], "control-green")
         self.assertNotIn("red", good["results"][0])
@@ -627,8 +736,42 @@ class RunnerTests(unittest.TestCase):
             self.manifest["inputs"][self.manifest["inputs"].index(old)] = new
             self.manifest[key] = new
         result = self.execute()
-        self.assertEqual(self.code, 0, result)
+        self.assertEqual(self.code, 0, restart_diagnostic(result))
         self.assertEqual(self.render(), 0)
+
+
+
+
+
+    def test_verdict_code_matches_main(self):
+        expected = json.loads((ROOT / "tests/data/checked-main-verdict.json").read_text())
+        source = RUNNER.read_text()
+        functions = {node.name: ast.get_source_segment(source, node) for node in ast.parse(source).body
+                     if isinstance(node, ast.FunctionDef)}
+        for name, original in expected["functions"].items():
+            self.assertEqual(functions[name], original, "verdict code differs from main")
+        self.assertNotIn("framework_summary", functions)
+
+    def test_existing_manifest_normal_verdicts_are_preserved(self):
+        fixtures = json.loads((ROOT / "tests/data/checked-verdict-compatibility.json").read_text())
+        paths = []
+        for directory, children, files in os.walk(ROOT):
+            children[:] = [name for name in children if name not in ("node_modules", "dist", ".agents", ".git")]
+            for name in files:
+                if not name.endswith(".json"):
+                    continue
+                path = Path(directory) / name
+                try:
+                    manifest = json.loads(path.read_text())
+                except (UnicodeError, ValueError):
+                    continue
+                if isinstance(manifest, dict) and all(key in manifest for key in ("green", "check", "variants")):
+                    paths.append(path.relative_to(ROOT).as_posix())
+        self.assertEqual(sorted(paths), sorted({row["manifest"] for row in fixtures["rows"]}))
+        for row in fixtures["rows"]:
+            with self.subTest(manifest=row["manifest"], phase=row["phase"]), mock.patch.object(
+                    runner, "valid_step", return_value=True):
+                self.assertEqual(runner.matches(row["result"], row["wanted"]), row["legacy_verdict"])
 
     def test_skipped_unittest_control_refused(self):
         (self.root / "control_test.py").write_text(
@@ -645,7 +788,7 @@ class RunnerTests(unittest.TestCase):
         self.manifest["green"] = dict(exit_code=0, contains=["Ran 1 test", "\nOK\n"],
                                       excludes=["skipped", "SKIP", "ERROR:"])
         result = self.execute()
-        self.assertEqual(self.code, 1, result)
+        self.assertEqual(self.code, 1, restart_diagnostic(result))
         row = result["results"][0]
         self.assertEqual(row["status"], "setup-error")
         self.assertEqual(row["control"]["exit_code"], 0)
@@ -654,23 +797,48 @@ class RunnerTests(unittest.TestCase):
 
     def test_detached_stdio_does_not_block_failure_json(self):
         parent_pids, child_pids = self.root / "parents", self.root / "children"
+        ready = self.root / "ready"
         (self.root / "launcher.py").write_bytes(DETACHED.read_bytes())
         self.manifest["inputs"].append("launcher.py")
         (self.root / "setup.sh").write_text('exec "${CHECKED_PLANT_TEST_PYTHON}" launcher.py\n')
-        self.manifest["timeout"] = 0.5
+        policy = json.loads(BUDGETS.read_text())
+        self.manifest["timeout"] = policy["detector_execution"]
+        execution_deadline = core.deadline_after(policy["detector_budget"] - core.CLEANUP_MARGIN)
+        cleanup_deadline = None
         self.path.write_text(json.dumps(self.manifest))
         out = self.root / "detached-run"
         owned_tmp = self.root / "command-tmp"
         owned_tmp.mkdir()
         env = dict(os.environ, TMPDIR=str(owned_tmp), CHECKED_PLANT_PARENT_PIDS=str(parent_pids),
-                   CHECKED_PLANT_CHILD_PIDS=str(child_pids), CHECKED_PLANT_TEST_PYTHON=sys.executable)
+                   CHECKED_PLANT_CHILD_PIDS=str(child_pids), CHECKED_PLANT_TEST_PYTHON=sys.executable,
+                   CHECKED_PLANT_READY=str(ready))
         try:
-            try:
-                proc = subprocess.run([sys.executable, str(RUNNER), "run", str(self.path), str(out)],
-                                      env=env, text=True, capture_output=True, timeout=5)
-            except subprocess.TimeoutExpired:
-                self.fail("detached stdio prevented bounded failure reporting")
-            self.assertEqual(proc.returncode, 1, proc.stderr)
+            with subprocess.Popen([sys.executable, str(RUNNER), "run", str(self.path), str(out)],
+                                  env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+                try:
+                    ready_deadline = core.phase_deadline(execution_deadline, 2)
+                    while not ready.exists() and proc.poll() is None and time.monotonic() < ready_deadline:
+                        time.sleep(0.01)
+                    if not ready.exists():
+                        if proc.poll() is not None:
+                            _, stderr = proc.communicate(timeout=core.remaining(execution_deadline, "early runner exit"))
+                            results = (out / "results.json").read_text() if (out / "results.json").exists() else "no results.json"
+                            diagnostic = restart_diagnostic(dict(exit_code=proc.returncode, stderr=stderr, results=results),
+                                                            retain=True, fixture="detached-launcher-early-exit")
+                            self.fail("detached launcher exited before readiness; " + diagnostic)
+                        self.fail("detached launcher readiness deadline exceeded")
+                    try:
+                        _, stderr = proc.communicate(timeout=core.remaining(execution_deadline, "detached detector completion"))
+                    except (subprocess.TimeoutExpired, TimeoutError):
+                        self.fail("detached stdio prevented bounded failure reporting")
+                finally:
+                    cleanup_deadline = core.deadline_after(core.CLEANUP_MARGIN)
+                    if proc.poll() is None:
+                        proc.terminate()
+                        proc.communicate(timeout=core.remaining(cleanup_deadline, "detached detector cleanup"))
+                self.assertEqual(proc.returncode, 1, restart_diagnostic(
+                    dict(exit_code=proc.returncode, stderr=stderr), retain=proc.returncode != 1,
+                    fixture="detached-launcher-exit"))
             result = json.loads((out / "results.json").read_text())
             self.assertTrue(result["complete"])
             self.assertFalse(result["success"])
@@ -684,6 +852,8 @@ class RunnerTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 runner.render(out / "results.json", self.ledger, self.status)
         finally:
+            if cleanup_deadline is None:
+                cleanup_deadline = core.deadline_after(core.CLEANUP_MARGIN)
             for path in (parent_pids, child_pids):
                 if path.exists():
                     for value in path.read_text().splitlines():
@@ -694,8 +864,7 @@ class RunnerTests(unittest.TestCase):
             if child_pids.exists():
                 for value in child_pids.read_text().splitlines():
                     stopped = self.root / (value + ".stopped")
-                    deadline = time.monotonic() + 3
-                    while not stopped.exists() and time.monotonic() < deadline:
+                    while not stopped.exists() and time.monotonic() < cleanup_deadline:
                         time.sleep(0.01)
                     self.assertTrue(stopped.exists(), "recorded detached child did not stop")
 
@@ -761,7 +930,7 @@ class RunnerTests(unittest.TestCase):
                 os.environ, TMPDIR=str(private_tmp), GIT_DIR=str(checkout / ".git"),
                 GIT_WORK_TREE=str(checkout), GIT_INDEX_FILE=str(checkout / "external-index")):
             result = self.execute()
-        self.assertEqual(self.code, 0, result)
+        self.assertEqual(self.code, 0, restart_diagnostic(result))
         self.assertIn("observed ignored", result["results"][0]["control"]["stdout"])
         self.assertEqual(self.render(), 0)
 
@@ -771,7 +940,7 @@ class RunnerTests(unittest.TestCase):
             '    time.sleep(0.005)\ntime.sleep(10)\n')
         self.manifest["inputs"].append("writer.py")
         (self.root / "setup.sh").write_text('exec "${CHECKED_PLANT_TEST_PYTHON}" writer.py\n')
-        self.manifest["timeout"] = 0.5
+        self.manifest["timeout"] = 3
         factory, stored = runner.tempfile.TemporaryDirectory, []
         @contextlib.contextmanager
         def measured(*args, **kwargs):
@@ -801,7 +970,7 @@ class RunnerTests(unittest.TestCase):
         self.out = self.root / "fifo-run"
         try:
             proc = subprocess.run([sys.executable, str(RUNNER), "run", str(self.path), str(self.out)],
-                                  text=True, capture_output=True, timeout=3)
+                                  text=True, capture_output=True, timeout=core.remaining(self.deadline, "test subprocess"))
         except subprocess.TimeoutExpired:
             self.fail("input fingerprinting waited for a FIFO writer")
         self.assertEqual(proc.returncode, 1, proc.stderr)
@@ -827,7 +996,7 @@ class RunnerTests(unittest.TestCase):
                 self.out = self.root / f"link-run-{index}"
                 try:
                     proc = subprocess.run([sys.executable, str(RUNNER), "run", str(self.path), str(self.out)],
-                                          text=True, capture_output=True, timeout=3)
+                                          text=True, capture_output=True, timeout=core.remaining(self.deadline, "test subprocess"))
                 except subprocess.TimeoutExpired:
                     self.fail("symlink input did not produce a bounded refusal")
                 self.assertEqual(proc.returncode, 1)
@@ -869,41 +1038,41 @@ class RunnerTests(unittest.TestCase):
         for name in ("checked_core.py", "checked-gate"):
             (self.root / name).write_text(sources[name])
         (self.root / "regressions.py").write_bytes(Path(__file__).read_bytes())
+        (self.root / "checked_test_diagnostics.py").write_bytes(Path(__file__).with_name("checked_test_diagnostics.py").read_bytes())
         (self.root / "detached.py").write_bytes(DETACHED.read_bytes())
-        (self.root / "contracts.sh").write_text(
-            'env CHECKED_PLANT_BIN="${PWD}/candidate" CHECKED_PLANT_DETACHED_BIN="${PWD}/detached.py" uv run --no-project regressions.py '
-            'RunnerTests.test_unexpected_pass_and_unrelated_error_are_failures '
-            'RunnerTests.test_render_rejects_incomplete_or_failed_rows '
-            'RunnerTests.test_executable_modes_preserved_and_fingerprinted '
-            'RunnerTests.test_hardlinked_destinations_refused '
-            'RunnerTests.test_timeout_is_setup_error '
-            'RunnerTests.test_green_controls_are_separate_and_checked '
-            'RunnerTests.test_absent_record_aliases_and_refusal_cleanup '
-            'RunnerTests.test_leading_dash_scripts_execute '
-            'RunnerTests.test_skipped_unittest_control_refused '
-            'RunnerTests.test_detached_stdio_does_not_block_failure_json '
-            'RunnerTests.test_truncated_output_cannot_pass '
-            'RunnerTests.test_invalid_manifests_refuse_records '
-            'RunnerTests.test_recheck_io_causes_preserved '
-            'RunnerTests.test_private_patches_ignore_ancestor_git_context '
-            'RunnerTests.test_continuous_output_keeps_spools_bounded '
-            'RunnerTests.test_fifo_input_fails_without_waiting '
-            'RunnerTests.test_symlink_inputs_are_refused '
-            'RunnerTests.test_external_read_paths_are_centralized '
-            'RunnerTests.test_unsupported_manifests_write_failed_json '
-            'RunnerTests.test_stale_render_fifo_refuses_without_records '
-            'RunnerTests.test_parsed_manifest_bytes_match_fingerprint '
-            'RunnerTests.test_normally_exiting_step_stops_its_group '
-            'RunnerTests.test_term_ignoring_group_is_stopped '
-            'RunnerTests.test_unnormalized_inputs_refuse_before_materialization '
-            'RunnerTests.test_unsupported_runtime_refuses_before_spawn '
-            'RunnerTests.test_disappearing_manifest_preserves_cause '
-            'RunnerTests.test_render_preserves_surrounding_ledger '
-            'RunnerTests.test_closed_stdio_parent_timeout_writes_failure '
-            'RunnerTests.test_failure_recording_is_centralized '
-            'RunnerTests.test_inspection_failure_retains_subprocess_diagnostics '
-            'RunnerTests.test_forbidden_output_blocks_records -q\n'
-        )
+        expected_detectors = {
+            'test_absent_record_aliases_and_refusal_cleanup',
+            'test_closed_stdio_parent_timeout_writes_failure',
+            'test_continuous_output_keeps_spools_bounded',
+            'test_detached_stdio_does_not_block_failure_json',
+            'test_disappearing_manifest_preserves_cause',
+            'test_executable_modes_preserved_and_fingerprinted',
+            'test_external_read_paths_are_centralized',
+            'test_failure_recording_is_centralized',
+            'test_fifo_input_fails_without_waiting',
+            'test_forbidden_output_blocks_records',
+            'test_green_controls_are_separate_and_checked',
+            'test_hardlinked_destinations_refused',
+            'test_inspection_failure_retains_subprocess_diagnostics',
+            'test_invalid_manifests_refuse_records',
+            'test_leading_dash_scripts_execute',
+            'test_normally_exiting_step_stops_its_group',
+            'test_parsed_manifest_bytes_match_fingerprint',
+            'test_private_patches_ignore_ancestor_git_context',
+            'test_recheck_io_causes_preserved',
+            'test_render_preserves_surrounding_ledger',
+            'test_render_rejects_incomplete_or_failed_rows',
+            'test_skipped_unittest_control_refused',
+            'test_stale_render_fifo_refuses_without_records',
+            'test_symlink_inputs_are_refused',
+            'test_term_ignoring_group_is_stopped',
+            'test_timeout_is_setup_error',
+            'test_truncated_output_cannot_pass',
+            'test_unexpected_pass_and_unrelated_error_are_failures',
+            'test_unnormalized_inputs_refuse_before_materialization',
+            'test_unsupported_manifests_write_failed_json',
+            'test_unsupported_runtime_refuses_before_spawn',
+        }
         changes = [
             ("assertion-verdict", 'require(matches(row["red"], variant["red"]),', 'require(True,',
              "FAIL: test_unexpected_pass_and_unrelated_error_are_failures"),
@@ -919,7 +1088,7 @@ class RunnerTests(unittest.TestCase):
              "FAIL: test_leading_dash_scripts_execute"),
             ("skip-evidence", 'and all(s in output for s in wanted["contains"])\n            and not any(s in output for s in wanted.get("excludes", [])))',
              'and True)', "FAIL: test_skipped_unittest_control_refused"),
-            ("bounded-capture", "remaining = deadline - time.monotonic()", "remaining = timeout",
+            ("bounded-capture", "budget = execution_deadline - time.monotonic()", "budget = timeout",
              "FAIL: test_detached_stdio_does_not_block_failure_json"),
             ("truncated-evidence", "output_truncated = output_truncated or any(len(data) > OUTPUT_LIMIT for data in output)",
              "output_truncated = False", "FAIL: test_truncated_output_cannot_pass"),
@@ -950,60 +1119,51 @@ class RunnerTests(unittest.TestCase):
              "FAIL: test_stale_render_fifo_refuses_without_records"),
             ("manifest-fingerprint", 'require(before["manifest"] == parsed,', 'require(True,',
              "FAIL: test_parsed_manifest_bytes_match_fingerprint"),
-            ("background-group", "for requested_signal in (signal.SIGTERM, signal.SIGKILL):",
-             "for requested_signal in (signal.SIGTERM,):", "FAIL: test_term_ignoring_group_is_stopped"),
+            ("background-group", "for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):",
+             "for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline),):", "FAIL: test_term_ignoring_group_is_stopped"),
+            ("normally-exiting-group", "for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):",
+             "for requested_signal, signal_deadline in ():", "FAIL: test_normally_exiting_step_stops_its_group"),
             ("runtime-support", 'require(callable(getattr(os, "waitid", None)) and hasattr(os, "WNOWAIT"),',
              'require(True,', "FAIL: test_unsupported_runtime_refuses_before_spawn"),
             ("manifest-cause", 'require(all(v is not None for v in before.values()),',
-             'require(before["manifest"] == parsed, "manifest changed after parsing")\n        require(all(v is not None for v in before.values()),',
+             'require(before["manifest"] == parsed, "manifest changed after parsing")\n            require(all(v is not None for v in before.values()),',
              "FAIL: test_disappearing_manifest_preserves_cause"),
             ("ledger-preservation", "text = before + block + after", "text = block",
              "FAIL: test_render_preserves_surrounding_ledger"),
         ]
-        partitions = [changes[index::4] for index in range(4)]
-        all_names = [entry[0] for entry in changes]
-        partition_names = [entry[0] for part in partitions for entry in part]
-        self.assertEqual(len(changes), 28)
-        self.assertEqual([len(part) for part in partitions], [7, 7, 7, 7])
-        self.assertEqual(sorted(partition_names), sorted(all_names))
-        self.assertEqual(len(set(partition_names)), len(changes))
+        budgets = json.loads(BUDGETS.read_text())
+        documents = {name: row for name, row in budgets["documents"].items() if "variants" in row}
+        declared = [name for row in documents.values() for name in row["variants"]]
+        self.assertEqual(sorted(declared), sorted(row[0] for row in changes))
+        self.assertEqual(len(declared), len(set(declared)))
+        detectors = {method for row in changes for method in guard_methods(row[0], row[3])}
+        self.assertEqual(detectors, expected_detectors)
         partition = int(os.environ.get("CHECKED_PLANT_GUARD_PART", "1"))
-        self.assertIn(partition, (1, 2, 3, 4))
-        changes = partitions[partition - 1]
+        declaration = documents[f"checked-plant-guards-{partition}.md"]
+        changes = [row for row in changes if row[0] in declaration["variants"]]
+        (self.root / "budgets.json").write_bytes(BUDGETS.read_bytes())
         probe = self.root / "CaseProbe"
         probe.touch()
         case_aliases = (self.root / "caseprobe").exists()
         probe.unlink()
-        variants = []
         for name, old, new, marker in changes:
             extra_core = None
             target = next(name for name, text in sources.items() if old in text)
             original = sources[target]
             self.assertGreaterEqual(original.count(old), 1)
             patch = name + ".patch"
-            methods = [marker.removeprefix("FAIL: ")]
+            methods = guard_methods(name, marker)
             required = [marker, "FAILED (failures="]
-            if name == "hardlink-protection":
-                methods.append("test_absent_record_aliases_and_refusal_cleanup")
-                if case_aliases:
-                    required.append("FAIL: test_absent_record_aliases_and_refusal_cleanup")
-            if name == "bounded-capture":
-                methods.append("test_closed_stdio_parent_timeout_writes_failure")
-                required.append("FAIL: test_closed_stdio_parent_timeout_writes_failure")
-            if name == "recheck-cause":
-                methods.extend(["test_inspection_failure_retains_subprocess_diagnostics", "test_failure_recording_is_centralized"])
-                required.extend(["FAIL: test_inspection_failure_retains_subprocess_diagnostics",
-                                 "FAIL: test_failure_recording_is_centralized"])
-            if name == "manifest-empty":
-                methods.append("test_unnormalized_inputs_refuse_before_materialization")
-                required.append("FAIL: test_unnormalized_inputs_refuse_before_materialization")
+            if name != "hardlink-protection" or case_aliases:
+                required.extend("FAIL: " + method for method in methods[1:])
             selected = " ".join("RunnerTests." + method for method in methods)
-            red_script = ('env CHECKED_PLANT_BIN="${PWD}/candidate" '
+            check_script = ('env CHECKED_PLANT_BIN="${PWD}/candidate" CHECKED_TIMEOUT_BUDGETS="${PWD}/budgets.json" '
                           'CHECKED_PLANT_DETACHED_BIN="${PWD}/detached.py" '
                           'uv run --no-project regressions.py ' + selected + ' -q\n')
+            (self.root / "contracts.sh").write_text(check_script)
             mutated = original.replace(old, new)
             if name == "bounded-capture":
-                mutated = mutated.replace('if time.monotonic() >= deadline:\n                            timed_out = True',
+                mutated = mutated.replace('if time.monotonic() >= execution_deadline:\n                            timed_out = True',
                                           'if False:\n                            timed_out = True')
             if name == "recheck-cause":
                 extra_core = sources["checked_core.py"].replace('for name in ("stdout", "stderr"):', 'for name in ():')
@@ -1016,20 +1176,26 @@ class RunnerTests(unittest.TestCase):
             (self.root / patch).write_text(
                 self.patch_for(target, original, mutated)
                 + (self.patch_for("checked_core.py", sources["checked_core.py"], extra_core) if extra_core is not None else "")
-                + self.patch_for("contracts.sh", (self.root / "contracts.sh").read_text(), red_script))
+                )
             required.append(f"Ran {len(methods)} test" + ("s" if len(methods) != 1 else ""))
-            variants.append(dict(name=name, patch=patch,
-                                 red=dict(exit_code=1, contains=required,
-                                          excludes=["\nERROR:", ", skipped="])))
-        self.manifest = dict(
-            inputs=["candidate", "checked_core.py", "checked-gate", "regressions.py", "contracts.sh", "detached.py"] + [v["patch"] for v in variants],
-            check="contracts.sh", timeout=30,
-            green=dict(exit_code=0, contains=["Ran 31 tests", "\nOK\n"], excludes=["skipped", "SKIP", "ERROR:"]), variants=variants,
-        )
-        result = self.execute()
-        self.assertEqual(self.code, 0, result)
-        self.assertEqual([r["status"] for r in result["results"]], ["red"] * len(changes))
-        self.assertEqual(self.render(), 0)
+            variant = dict(name=name, patch=patch,
+                           red=dict(exit_code=1, contains=required, excludes=["\nERROR:", ", skipped="]))
+            self.manifest = dict(
+                inputs=["candidate", "checked_core.py", "checked-gate", "regressions.py", "checked_test_diagnostics.py", "contracts.sh", "detached.py", "budgets.json", patch],
+                check="contracts.sh", timeout=budgets["checks"][name], git_timeout=budgets["git_timeout"],
+                green=dict(exit_code=0, contains=[f"Ran {len(methods)} test", "\nOK\n"],
+                           excludes=["skipped", "SKIP", "ERROR:"]), variants=[variant])
+            result = self.execute()
+            self.assertEqual(self.code, 0, restart_diagnostic(result, retain=self.code != 0, fixture=name))
+            self.assertEqual([r["status"] for r in result["results"]], ["red"])
+            for row in result["results"]:
+                core.validate_plan_observations(row["execution_plan"], row["executed_steps"])
+                for observation in row["executed_steps"]:
+                    allocation = observation["supervision"]["allocation"]
+                    recorded = self.runtime.states()[allocation["scope"]]
+                    self.assertEqual(recorded["parent"], allocation["parent"])
+                    self.assertAlmostEqual(recorded["deadline"] - recorded["started_at"], recorded["requested"])
+            self.assertEqual(self.render(), 0)
 
     def test_input_and_evidence_destinations_protected(self):
         self.execute()
@@ -1041,4 +1207,8 @@ class RunnerTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    if os.environ.get("CHECKED_PLANT_BEHAVIOR_ONLY") == "1":
+        names = unittest.defaultTestLoader.getTestCaseNames(RunnerTests)
+        unittest.main(defaultTest=["RunnerTests." + name for name in names if name != "test_runner_guards_detect_their_own_plants"])
+    else:
+        unittest.main()

@@ -1,0 +1,361 @@
+{
+  "limit": 300,
+  "detector_execution": 10,
+  "detector_budget": 45,
+  "checks": {
+    "assertion-verdict": 30,
+    "publication-verdict": 30,
+    "executable-mode": 30,
+    "hardlink-protection": 30,
+    "timeout-evidence": 30,
+    "control-verdict": 30,
+    "script-operands": 30,
+    "skip-evidence": 30,
+    "bounded-capture": 90,
+    "truncated-evidence": 30,
+    "manifest-empty": 30,
+    "manifest-zero-red": 30,
+    "manifest-no-assertion": 30,
+    "step-evidence": 30,
+    "recheck-cause": 30,
+    "private-git": 30,
+    "disk-bound": 30,
+    "regular-input": 30,
+    "symlink-input": 30,
+    "forbidden-output": 30,
+    "parallel-reader": 30,
+    "manifest-reader": 30,
+    "render-manifest-reader": 30,
+    "manifest-fingerprint": 30,
+    "background-group": 30,
+    "normally-exiting-group": 30,
+    "runtime-support": 30,
+    "manifest-cause": 30,
+    "ledger-preservation": 30
+  },
+  "documents": {
+    "checked-plant.md": {
+      "behavior": true,
+      "limit": 300
+    },
+    "checked-plant-guards-1.md": {
+      "partition": 1,
+      "variants": ["bounded-capture"]
+    },
+    "checked-plant-guards-2.md": {
+      "partition": 2,
+      "variants": ["assertion-verdict", "publication-verdict"]
+    },
+    "checked-plant-guards-3.md": {
+      "partition": 3,
+      "variants": ["executable-mode", "hardlink-protection"]
+    },
+    "checked-plant-guards-4.md": {
+      "partition": 4,
+      "variants": ["timeout-evidence", "control-verdict"]
+    },
+    "checked-plant-guards-5.md": {
+      "partition": 5,
+      "variants": ["script-operands", "skip-evidence"]
+    },
+    "checked-plant-guards-6.md": {
+      "partition": 6,
+      "variants": ["truncated-evidence", "manifest-empty"]
+    },
+    "checked-plant-guards-7.md": {
+      "partition": 7,
+      "variants": ["manifest-zero-red", "manifest-no-assertion"]
+    },
+    "checked-plant-guards-8.md": {
+      "partition": 8,
+      "variants": ["step-evidence", "recheck-cause"]
+    },
+    "checked-plant-guards-9.md": {
+      "partition": 9,
+      "variants": ["private-git", "disk-bound"]
+    },
+    "checked-plant-guards-10.md": {
+      "partition": 10,
+      "variants": ["regular-input", "symlink-input"]
+    },
+    "checked-plant-guards-11.md": {
+      "partition": 11,
+      "variants": ["forbidden-output", "parallel-reader"]
+    },
+    "checked-plant-guards-12.md": {
+      "partition": 12,
+      "variants": ["manifest-reader", "render-manifest-reader"]
+    },
+    "checked-plant-guards-13.md": {
+      "partition": 13,
+      "variants": ["manifest-fingerprint", "background-group"]
+    },
+    "checked-plant-guards-14.md": {
+      "partition": 14,
+      "variants": ["normally-exiting-group", "runtime-support"]
+    },
+    "checked-plant-guards-15.md": {
+      "partition": 15,
+      "variants": ["manifest-cause", "ledger-preservation"]
+    },
+    "checked-gate.md": {
+      "limit": 300
+    },
+    "checked-gate-plants.md": {
+      "gate_variants": ["action-verdict"],
+      "partition": 1
+    },
+    "checked-gate-plants-2.md": {
+      "gate_variants": ["action-once"],
+      "partition": 2
+    },
+    "checked-gate-plants-3.md": {
+      "gate_variants": ["pipeline-verdict"],
+      "partition": 3
+    },
+    "checked-gate-plants-4.md": {
+      "gate_variants": ["no-interpreter-classification"],
+      "partition": 4
+    },
+    "checked-gate-plants-5.md": {
+      "gate_variants": ["failure-rendering"],
+      "partition": 5
+    },
+    "checked-gate-plants-6.md": {
+      "gate_variants": ["duplicate-reader"],
+      "partition": 6
+    },
+    "checked-gate-plants-7.md": {
+      "gate_variants": ["downstream-capture"],
+      "partition": 7
+    },
+    "checked-gate-plants-8.md": {
+      "gate_variants": ["persist-exits"],
+      "partition": 8
+    },
+    "checked-gate-plants-9.md": {
+      "gate_variants": ["stage-capture-bound"],
+      "partition": 9
+    },
+    "checked-gate-plants-10.md": {
+      "gate_variants": ["stage-evidence-order"],
+      "partition": 10
+    },
+    "checked-gate-plants-11.md": {
+      "gate_variants": ["monotonic-exit"],
+      "partition": 11
+    },
+    "checked-gate-plants-12.md": {
+      "gate_variants": ["empty-argument"],
+      "partition": 12
+    },
+    "checked-gate-plants-13.md": {
+      "gate_variants": ["expected-exit-range"],
+      "partition": 13
+    },
+    "checked-gate-plants-14.md": {
+      "gate_variants": ["index-flags"],
+      "partition": 14
+    },
+    "checked-gate-plants-15.md": {
+      "gate_variants": ["finite-json"],
+      "partition": 15
+    },
+    "checked-gate-plants-16.md": {
+      "gate_variants": ["typed-start-state"],
+      "partition": 16
+    },
+    "checked-gate-plants-17.md": {
+      "gate_variants": ["row-states"],
+      "partition": 17
+    },
+    "checked-gate-plants-18.md": {
+      "gate_variants": ["row-constructor"],
+      "partition": 18
+    },
+    "checked-gate-plants-19.md": {
+      "gate_variants": ["tree-guard"],
+      "partition": 19
+    },
+    "checked-gate-plants-20.md": {
+      "gate_variants": ["unrun-guard"],
+      "partition": 20
+    },
+    "checked-gate-plants-21.md": {
+      "gate_variants": ["verify-action-head"],
+      "partition": 21
+    },
+    "checked-gate-plants-22.md": {
+      "gate_variants": ["verify-tree"],
+      "partition": 22
+    },
+    "checked-gate-plants-23.md": {
+      "gate_variants": ["verify-complete"],
+      "partition": 23
+    },
+    "checked-gate-plants-24.md": {
+      "gate_variants": ["verify-success"],
+      "partition": 24
+    },
+    "checked-gate-plants-25.md": {
+      "gate_variants": ["verify-membership"],
+      "partition": 25
+    },
+    "checked-gate-plants-26.md": {
+      "gate_variants": ["completion-envelope"],
+      "partition": 26
+    },
+    "checked-gate-plants-27.md": {
+      "gate_variants": ["supervisor-spool"],
+      "partition": 27
+    },
+    "checked-gate-plants-28.md": {
+      "gate_variants": ["exponent-overflow"],
+      "partition": 28
+    },
+    "checked-gate-plants-29.md": {
+      "gate_variants": ["journal-bypass"],
+      "partition": 29
+    },
+    "checked-gate-plants-30.md": {
+      "gate_variants": ["stage-render-cause"],
+      "partition": 30
+    },
+    "checked-gate-plants-31.md": {
+      "gate_variants": ["action-render-cause"],
+      "partition": 31
+    },
+    "checked-gate-plants-32.md": {
+      "gate_variants": ["manifest-stability"],
+      "partition": 32
+    },
+    "checked-gate-plants-33.md": {
+      "gate_variants": ["untracked-tree"],
+      "partition": 33
+    },
+    "checked-gate-plants-34.md": {
+      "gate_variants": ["partial-setup-capture"],
+      "partition": 34
+    },
+    "checked-gate-plants-35.md": {
+      "gate_variants": ["partial-setup-reap"],
+      "partition": 35
+    },
+    "checked-gate-plants-36.md": {
+      "gate_variants": ["journal-error-action"],
+      "partition": 36
+    },
+    "checked-gate-plants-37.md": {
+      "gate_variants": ["journal-error-marker"],
+      "partition": 37
+    },
+    "checked-gate-plants-38.md": {
+      "gate_variants": ["empty-check-manifest"],
+      "partition": 38
+    },
+    "checked-gate-plants-39.md": {
+      "gate_variants": ["automatic-core-fingerprint"],
+      "partition": 39
+    },
+    "checked-gate-plants-40.md": {
+      "gate_variants": ["automatic-core-content"],
+      "partition": 40
+    },
+    "checked-gate-plants-41.md": {
+      "gate_variants": ["automatic-core-mode"],
+      "partition": 41
+    },
+    "checked-gate-plants-42.md": {
+      "gate_variants": ["linked-core-resolution"],
+      "partition": 42
+    },
+    "checked-gate-plants-43.md": {
+      "gate_variants": ["linked-core-protection"],
+      "partition": 43
+    },
+    "checked-gate-plants-44.md": {
+      "gate_variants": ["entry-gate-bytecode"],
+      "partition": 44
+    },
+    "checked-gate-plants-45.md": {
+      "gate_variants": ["entry-plant-bytecode"],
+      "partition": 45
+    },
+    "checked-gate-plants-46.md": {
+      "gate_variants": ["action-outcome"],
+      "partition": 46
+    },
+    "checked-gate-plants-47.md": {
+      "gate_variants": ["declared-file-content"],
+      "partition": 47
+    },
+    "checked-gate-plants-48.md": {
+      "gate_variants": ["declared-file-mode"],
+      "partition": 48
+    },
+    "checked-gate-plants-49.md": {
+      "gate_variants": ["check-boundaries"],
+      "partition": 49
+    },
+    "checked-gate-plants-50.md": {
+      "gate_variants": ["codec-bypass"],
+      "partition": 50
+    },
+    "checked-timeout-budgets.md": {
+      "limit": 300
+    }
+  },
+  "git_timeout": 10,
+  "gate_checks": {
+    "action-verdict": 60,
+    "action-once": 60,
+    "pipeline-verdict": 60,
+    "no-interpreter-classification": 60,
+    "failure-rendering": 60,
+    "duplicate-reader": 60,
+    "downstream-capture": 60,
+    "persist-exits": 60,
+    "stage-capture-bound": 60,
+    "stage-evidence-order": 60,
+    "monotonic-exit": 60,
+    "empty-argument": 60,
+    "expected-exit-range": 60,
+    "index-flags": 60,
+    "finite-json": 60,
+    "typed-start-state": 60,
+    "row-states": 60,
+    "row-constructor": 60,
+    "tree-guard": 60,
+    "unrun-guard": 60,
+    "verify-action-head": 60,
+    "verify-tree": 60,
+    "verify-complete": 60,
+    "verify-success": 60,
+    "verify-membership": 60,
+    "completion-envelope": 60,
+    "supervisor-spool": 60,
+    "exponent-overflow": 60,
+    "journal-bypass": 60,
+    "stage-render-cause": 60,
+    "action-render-cause": 60,
+    "manifest-stability": 60,
+    "untracked-tree": 60,
+    "partial-setup-capture": 60,
+    "partial-setup-reap": 60,
+    "journal-error-action": 60,
+    "journal-error-marker": 60,
+    "empty-check-manifest": 60,
+    "automatic-core-fingerprint": 60,
+    "automatic-core-content": 60,
+    "automatic-core-mode": 60,
+    "linked-core-resolution": 60,
+    "linked-core-protection": 60,
+    "entry-gate-bytecode": 60,
+    "entry-plant-bytecode": 60,
+    "action-outcome": 60,
+    "declared-file-content": 60,
+    "declared-file-mode": 60,
+    "check-boundaries": 60,
+    "codec-bypass": 60
+  }
+}
