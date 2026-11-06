@@ -1,0 +1,9 @@
+--- a/tests/checked_timeout_budget_test.py
++++ b/tests/checked_timeout_budget_test.py
+@@ -418,5 +418,5 @@
+                 term_wait = 0.4
+                 # Worker TERM observes one twelfth of the inclusive pipeline limit.
+-                pipeline_limit = term_wait * 12 * 3
++                pipeline_limit = 3
+                 stage = ('import os,signal,time\n'
+                          'def stop(signum,frame):\n'

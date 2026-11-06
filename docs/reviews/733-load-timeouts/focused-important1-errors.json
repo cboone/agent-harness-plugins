@@ -1,0 +1,26 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "The first SIGTERM raises SupervisorTerminated even when cleanup is already running. For example, if a command times out with a TERM-ignoring child, SIGTERM received while stop_group is observing that child interrupts the finally block before SIGKILL, reaping and final observations. The child runs in a separate session and can survive; final reconciliation only reports its group and cannot complete the skipped cleanup. Pipeline cleanup has the same unprotected interruption path.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "fix": "Defer SIGTERM throughout command and pipeline cleanup, finish termination, reaping and diagnostic recording, then propagate the pending termination. Add coverage that delivers the first SIGTERM during cleanup.",
+      "line": 570,
+      "severity": "important",
+      "title": "Uncited: SIGTERM can interrupt the cleanup it is meant to preserve."
+    },
+    {
+      "confidence": 97,
+      "detail": "Captured stdout, stderr and cleanup diagnostics are printed only after root_supervision exits successfully. If final reconciliation raises because a descendant remains unconfirmed, ps fails or the audit becomes unreadable, execution skips lines 21–24. The document's retained test output and original cleanup_error are then lost, leaving only the finalization traceback. This hides the diagnostics needed to explain the failed document.",
+      "file": "tests/run_checked_budget.py",
+      "fix": "Publish the captured streams and invalid-step diagnostics before leaving the supervision context, or from a finally block that also handles finalization failures. Report finalization errors separately and retain a nonzero exit.",
+      "line": 19,
+      "severity": "important",
+      "title": "Uncited: Final supervision failures discard captured document diagnostics."
+    }
+  ],
+  "reviewed": "96b0e644a0395e3c2edb79e97e7d9fec57ec5be8",
+  "strengths": ["Cleanup preserves permission errors, subprocess diagnostics and phase expiration causes.", "Missing parent allocations and unconfirmed process groups fail closed."],
+  "summary": "Reviewed all membership paths for introduced error-handling problems, including supervision, publication, tests and documentation. Two Important issues remain; validation was static and no tests were run."
+}

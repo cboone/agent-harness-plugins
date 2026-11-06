@@ -1,0 +1,44 @@
+{
+  "aspect": "cleanup-simplification",
+  "findings": [
+    {
+      "confidence": 97,
+      "detail": "Runner selection and planned versus direct dispatch produce four invocation branches. Both runner kinds repeat the plan decision and journal/target wiring, requiring synchronized edits whenever dispatch options change.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "fix": "Select the runner and arguments first, then use one planned dispatch branch and one direct dispatch branch, preserving the exception handler.",
+      "line": 122,
+      "severity": "suggestion",
+      "title": "Uncited: Execution dispatch duplicates the optional-plan branch."
+    },
+    {
+      "confidence": 96,
+      "detail": "The nested conditional and subsequent fallback obscure precedence among explicit, active and default deadlines. Understanding a lock wait requires reconstructing all four combinations of explicit and active deadline availability across two expressions.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "fix": "Use explicit branches that select the available deadline, take the minimum when both exist, and apply IO_LIMIT when neither exists.",
+      "line": 107,
+      "severity": "suggestion",
+      "title": "Uncited: Nested conditionals obscure lock-deadline precedence."
+    },
+    {
+      "confidence": 100,
+      "detail": "Every variant's execution plan is constructed twice with identical parameters, first for summation and then for validation. This repeats list and dictionary allocation and duplicates timeout-parameter wiring for both runner and gate variants.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Construct each plan once in the variant loop, validate it, and accumulate its timeout sum.",
+      "line": 153,
+      "severity": "suggestion",
+      "title": "Uncited: Document accounting constructs each execution plan twice."
+    },
+    {
+      "confidence": 100,
+      "detail": "The test reads checked_plant_test.py and constructs its AST without consuming either value. It immediately loads the gate-module AST used by the remaining assertions, leaving an unnecessary file read and AST allocation on every invocation.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Remove the unused plant-module read and ast.parse assignment while retaining the gate-module parsing.",
+      "line": 477,
+      "severity": "suggestion",
+      "title": "Uncited: The supervision-limit test constructs an unused AST."
+    }
+  ],
+  "reviewed": "c41f7dd656aa3596e2cf29b54dde777d89901f82",
+  "strengths": ["Execution plans provide a useful boundary between declared limits, dispatch and observations.", "Process launches share one explicit deadline-checking boundary."],
+  "summary": "Reviewed all 162 membership paths and their committed changes for simplification, confirming generated mirrors match canonical sources at both endpoints. Four optional cleanup opportunities remain; no files were changed or tests run."
+}

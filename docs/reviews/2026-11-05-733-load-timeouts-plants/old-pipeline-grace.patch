@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -1169,5 +1169,5 @@
+                     except OSError as error:
+                         fail(failure_cause(error), f"{target}/stage/{index}")
+-            signal_deadline = phase_deadline(until, phases_left)
++            signal_deadline = time.monotonic() + 0.2
+             while True:
+                 collect_exits()

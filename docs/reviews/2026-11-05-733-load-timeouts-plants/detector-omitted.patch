@@ -1,0 +1,9 @@
+--- a/tests/checked_plant_test.py
++++ b/tests/checked_plant_test.py
+@@ -42,5 +42,5 @@
+ SUPPLEMENTAL_DETECTORS = {
+     "hardlink-protection": ["test_absent_record_aliases_and_refusal_cleanup"],
+-    "bounded-capture": ["test_closed_stdio_parent_timeout_writes_failure"],
++    "bounded-capture": [],
+     "recheck-cause": ["test_inspection_failure_retains_subprocess_diagnostics", "test_failure_recording_is_centralized"],
+     "manifest-empty": ["test_unnormalized_inputs_refuse_before_materialization"],

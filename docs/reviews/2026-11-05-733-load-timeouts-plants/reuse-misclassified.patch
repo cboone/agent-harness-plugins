@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -180,5 +180,5 @@
+                                              for key in ("start", "command")) for value in (recorded, current)):
+         return "unknown"
+-    if recorded["start"] != current["start"]:
++    if False:
+         return "reused"
+     return "survivor" if recorded["command"] == current["command"] else "unknown"

@@ -1,0 +1,17 @@
+{
+  "aspect": "cleanup-altitude",
+  "findings": [
+    {
+      "confidence": 94,
+      "detail": "execute interleaves command-versus-pipeline selection with planned-versus-direct dispatch, producing four invocation branches. Shared journal and target wiring is repeated across them, so adding an invocation option requires synchronized edits and reviewers must compare branches to establish that both runners receive equivalent supervision.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "fix": "Select the runner and arguments first, then use one planned dispatch branch and one direct dispatch branch. Keep error recording in the same function.",
+      "line": 122,
+      "severity": "suggestion",
+      "title": "Uncited: Runner selection is interleaved with duplicated plan dispatch."
+    }
+  ],
+  "reviewed": "dc74f33138a105cb274a792389083e9dc3c0d921",
+  "strengths": ["Deadline allocation and process launches have centralized boundaries.", "Execution plans connect declared limits with dispatch and recorded observations."],
+  "summary": "Reviewed all 158 membership paths and their required committed diffs for abstraction consistency. One cleanup suggestion remains; the review was read-only and tests were not run."
+}

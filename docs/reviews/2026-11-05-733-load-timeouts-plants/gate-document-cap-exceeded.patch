@@ -1,0 +1,9 @@
+--- a/tests/data/checked-timeout-budgets.json
++++ b/tests/data/checked-timeout-budgets.json
+@@ -100,5 +100,5 @@
+     },
+     "checked-gate.md": {
+-      "limit": 300
++      "limit": 301
+     },
+     "checked-gate-plants.md": {

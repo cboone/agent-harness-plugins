@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -282,4 +282,6 @@
+                 observe(journal, "error", target, cause=failure_cause(error))
+                 raise
++            if "pipeline-worker" in argv:
++                execution_deadline = time.monotonic() + timeout + 2
+             try:
+                 runtime.record(allocation["scope"], "started", pgid=process.pid)

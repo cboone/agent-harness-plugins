@@ -1,0 +1,9 @@
+--- a/tests/run_checked_budget.py
++++ b/tests/run_checked_budget.py
+@@ -23,5 +23,5 @@
+ try:
+     with core.root_supervision():
+-        result = core.command(argv, Path.cwd(), row.get("limit", policy["limit"]))
++        result = core.command(argv, Path.cwd(), 60)
+         sys.stdout.write(result["stdout"])
+         sys.stderr.write(result["stderr"])

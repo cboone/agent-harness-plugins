@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -1261,5 +1261,5 @@
+             fail(failure_cause(error), target)
+         finally:
+-            interruption["protected"] = True
++            interruption["protected"] = False
+             if time.monotonic() >= deadline:
+                 observe(journal, "flags", target, timed_out=True)

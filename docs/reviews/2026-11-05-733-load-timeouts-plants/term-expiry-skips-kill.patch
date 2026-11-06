@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -204,5 +204,5 @@
+                 except (subprocess.TimeoutExpired, TimeoutError) as failure:
+                     phase_expirations.append(dict(phase=requested_signal.name, cause=failure_cause(failure)))
+-                    if requested_signal != signal.SIGTERM:
++                    if requested_signal == signal.SIGTERM:
+                         raise
+                     break

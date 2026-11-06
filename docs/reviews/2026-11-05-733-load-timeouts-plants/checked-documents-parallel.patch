@@ -1,0 +1,9 @@
+--- a/bin/lib/run-scrut-documents
++++ b/bin/lib/run-scrut-documents
+@@ -230,5 +230,5 @@
+   for ((i = 0; i < count; i++)); do
+     case "${documents[i]##*/}" in
+-      checked-plant* | checked-gate*) queue=serial ;;
++      checked-plant* | checked-gate*) queue=parallel ;;
+       *) queue=parallel ;;
+     esac

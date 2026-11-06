@@ -1,0 +1,26 @@
+{
+  "aspect": "cleanup-reuse",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Uncited: document_budgets constructs each variant's execution plan twice with identical arguments, first for summation and then for validation. This duplicates timeout-parameter wiring and unnecessarily allocates every plan twice.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Construct each plan once inside the variant loop, validate it, and accumulate its step timeouts.",
+      "line": 153,
+      "severity": "suggestion",
+      "title": "Uncited: Reuse each execution plan for summation and validation."
+    },
+    {
+      "confidence": 98,
+      "detail": "Uncited: execute repeats planned-versus-direct dispatch separately for commands and pipelines, producing four invocation sites with repeated journal and target arguments. Dispatch-option changes require synchronized maintenance even though both runners accept the same interface here.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "fix": "Select the runner and payload first, then share one planned dispatch branch and one direct dispatch branch, retaining the exception handler.",
+      "line": 122,
+      "severity": "suggestion",
+      "title": "Uncited: Share dispatch wiring between commands and pipelines."
+    }
+  ],
+  "reviewed": "c41f7dd656aa3596e2cf29b54dde777d89901f82",
+  "strengths": ["Process launches share one deadline-checking boundary.", "Fingerprint planning and execution reuse the same operation declarations."],
+  "summary": "Reviewed all 162 membership paths and required committed diffs for reuse, including generated-mirror comparisons. Two localized cleanup suggestions remain. The review was read-only; tests were not run."
+}

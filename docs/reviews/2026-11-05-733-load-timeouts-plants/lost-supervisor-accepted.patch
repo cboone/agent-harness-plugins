@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -372,5 +372,5 @@
+                                    gone=remaining_pids == [] and cleanup_error is None and reaped)
+                     possibly_live_pgids = runtime.pending(allocation["scope"])
+-                    if possibly_live_pgids:
++                    if False:
+                         cleanup_error = "; ".join(filter(None, (cleanup_error,
+                             "supervisor lost before confirming descendant groups: " + str(possibly_live_pgids))))

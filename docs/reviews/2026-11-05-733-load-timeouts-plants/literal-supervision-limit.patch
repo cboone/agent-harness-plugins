@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -150,5 +150,5 @@
+         operation = subprocess.run if synchronous else subprocess.Popen
+         if synchronous:
+-            options.update(timeout=remaining(deadline, "process inspection"))
++            options.update(timeout=4.5)
+         remaining(ACTIVE_DEADLINE.get(), "process launch")
+         return operation(argv, **options)

@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -214,4 +214,6 @@
+         error = failure_cause(failure)
+         try:
++            if isinstance(failure, PermissionError) and not live_group(pid, deadline):
++                return [], None
+             terminate_group(pid)
+         except OSError as failure:

@@ -1,0 +1,35 @@
+{
+  "complete": true,
+  "excluded": ["dist/codex/plugins/plant-defects/.claude-plugin/plugin.json", "dist/codex/plugins/plant-defects/CHANGELOG.md", "dist/codex/plugins/plant-defects/scripts/checked-gate", "dist/codex/plugins/plant-defects/scripts/checked-plant", "dist/codex/plugins/plant-defects/scripts/checked_core.py", "dist/codex/plugins/plant-defects/skills/plant-defects/SKILL.md", "dist/codex/plugins/plant-defects/skills/plant-defects/references/checked-runner.md"],
+  "findings": [
+    {
+      "detail": "Angle: Simplification. Lock-deadline selection combines explicit and active deadlines through nested conditional expressions, then applies another fallback. Understanding the operation requires reconstructing the None combinations across both statements. Replace this with explicit branches that preserve the minimum when both deadlines exist and IO_LIMIT when neither exists. Skipped because this pass is report-only.",
+      "evidence": "Lines 106–109 implement three deadline sources using a nested conditional expression followed by another conditional assignment.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "line": 107,
+      "severity": "nit",
+      "title": "Uncited: Make lock-deadline selection explicit"
+    },
+    {
+      "detail": "Angles: Reuse, Efficiency and Simplification. document_budgets constructs each variant's execution plan twice with identical parameters: once to sum its limits and again to validate them. This repeats list and dictionary allocation for every runner and gate variant and duplicates the parameter wiring. Construct each plan once and use it for both operations. Skipped because this pass is report-only.",
+      "evidence": "Lines 97–99 call execution_plan inside the sum; lines 100–103 immediately reconstruct the same plans for validate_fixed_limits.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "line": 97,
+      "severity": "nit",
+      "title": "Uncited: Reuse each document execution plan"
+    },
+    {
+      "detail": "Angles: Efficiency and Simplification. This test reads and parses the complete plant test module but never consumes the resulting AST. Every invocation therefore performs an unnecessary file read and AST construction. Remove these abandoned assignments while retaining the explicit mutation-validity and module-loading checks elsewhere in the suite. Skipped because this pass is report-only.",
+      "evidence": "Lines 331–332 read checked_plant_test.py and assign ast.parse(source) to tree. Neither value is subsequently consumed; line 333 replaces source with the gate AST, which supplies PARTIAL_DRIVER.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "line": 331,
+      "severity": "nit",
+      "title": "Uncited: Remove the unused plant-test AST construction"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Completed one report-only simplify pass over 302c0d91a77097f1ae66e39bd996253e4bbb17d8..7e6aacc13ea94956a675e2d722b1cfa478e97e62. Read all 134 applicable changed files in full, including implementation, tests, fixtures, manifests, mutation patches, documentation and review records. The seven listed exclusions are generated Codex mirrors. No PR body applies.\n\nApplied Reuse, Simplification, Efficiency and Altitude inline because delegation was explicitly prohibited. Found three deduplicated Nit cleanup proposals: zero fixed and three skipped because editing was prohibited. No additional worthwhile altitude finding was established. The independent inclusive limits, containment design and plant-defects 1.3.0 were preserved as review constraints.\n\nNo Critical defect or production budget/deadline defect was established. Prior review counts remain unchanged; this pass does not authorize another editing round.\n\nMechanical checks run: none. Session could write: no, read-only sandbox. No edits, tests, project checks, network access, gh commands, messages or nested reviewers ran. Success denotes complete static simplify coverage, not runtime validation.\n\nclean at Critical",
+  "reviewed": "302c0d91a77097f1ae66e39bd996253e4bbb17d8..7e6aacc13ea94956a675e2d722b1cfa478e97e62",
+  "status": "success",
+  "unverified": ["Runtime tests, formatting, lint and repository validation were intentionally not run. Settle with: make test-all", "Source-plant effectiveness was not exercised. Settle outside this read-only pass with: uv run --script plugins/plant-defects/scripts/checked-plant run \\\n  2026-11-05-733-load-timeouts-plants.json <fresh-output-directory>"]
+}

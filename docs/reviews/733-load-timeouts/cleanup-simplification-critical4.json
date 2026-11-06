@@ -1,0 +1,44 @@
+{
+  "aspect": "cleanup-simplification",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "The nested conditional followed by another fallback spreads deadline selection across two expressions. Assessing lock behavior requires reconstructing all four combinations of explicit and active deadlines before understanding which limit applies.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "fix": "Use explicit branches for missing explicit or active deadlines, taking their minimum when both exist and using IO_LIMIT when neither exists.",
+      "line": 107,
+      "severity": "suggestion",
+      "title": "Uncited: Nested conditionals obscure lock-deadline precedence."
+    },
+    {
+      "confidence": 99,
+      "detail": "Each variant's execution plan is constructed once for summation and again for validation with identical arguments. This unnecessarily allocates the same lists and dictionaries twice and duplicates timeout-parameter wiring.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Construct each plan once inside the variant loop, validate it, and accumulate its timeout sum.",
+      "line": 151,
+      "severity": "suggestion",
+      "title": "Uncited: Document accounting constructs every execution plan twice."
+    },
+    {
+      "confidence": 100,
+      "detail": "The test reads checked_plant_test.py and constructs its AST, but never consumes that tree. Execution immediately switches to the gate module, leaving an unnecessary file read and full AST allocation on every invocation.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Remove the unused plant-module read and ast.parse assignment.",
+      "line": 463,
+      "severity": "suggestion",
+      "title": "Uncited: The supervision-limit test constructs an unused AST."
+    },
+    {
+      "confidence": 97,
+      "detail": "Runner selection and optional-plan dispatch are interleaved into four invocation branches. Both runner kinds repeat the plan decision and journal/target arguments, requiring synchronized maintenance whenever dispatch options change.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "fix": "Select the runner and command arguments first, then use one explicit planned/unplanned dispatch branch.",
+      "line": 122,
+      "severity": "suggestion",
+      "title": "Uncited: Execution dispatch repeats the optional-plan branch for each runner."
+    }
+  ],
+  "reviewed": "dc74f33138a105cb274a792389083e9dc3c0d921",
+  "strengths": ["StepPlan provides a useful boundary between execution declarations and dispatch.", "Supplemental detector declarations now supply both inventory and execution."],
+  "summary": "Reviewed all 158 scoped paths for simplification only and found four optional cleanup opportunities. No files were changed or tests run; the cleanup review is clean at Important."
+}

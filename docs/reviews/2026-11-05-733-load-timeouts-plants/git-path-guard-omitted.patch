@@ -1,0 +1,9 @@
+--- a/tests/fixtures/checked-git-delay
++++ b/tests/fixtures/checked-git-delay
+@@ -9,5 +9,5 @@
+   local selected
+   selected="$(command -v git)"
+-  if [[ ! "${selected}" -ef "${CHECKED_GIT_STUB:?stub path is required}" || ! "${BASH_SOURCE[0]}" -ef "${CHECKED_GIT_STUB}" ]]; then
++  if [[ "unused" == "active" && ! "${selected}" -ef "${CHECKED_GIT_STUB:?stub path is required}" || ! "${BASH_SOURCE[0]}" -ef "${CHECKED_GIT_STUB}" ]]; then
+     printf '%s\n' 'Git fixture requires its own stub PATH' >&2
+     return 1

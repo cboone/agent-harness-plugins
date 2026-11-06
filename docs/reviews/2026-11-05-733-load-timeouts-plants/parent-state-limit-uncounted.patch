@@ -1,0 +1,15 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -239,9 +239,9 @@
+     require(not runtime.cancelled, "supervisor is terminating; no new command may start")
+     allocation = allocation or runtime.allocate(timeout, step=step)
++    runtime.validate_allocation(allocation)
++    require(runtime.states().get(allocation["scope"], {}).get("parent") == runtime.scope,
++            "supervised step has no durable parent record")
+     token = ACTIVE_DEADLINE.set(allocation["deadline"])
+     try:
+-        runtime.validate_allocation(allocation)
+-        require(runtime.states().get(allocation["scope"], {}).get("parent") == runtime.scope,
+-                "supervised step has no durable parent record")
+         with term_unwind() as interruption:
+             return _command(argv, root, timeout, git_boundary=git_boundary, env_overrides=env_overrides,

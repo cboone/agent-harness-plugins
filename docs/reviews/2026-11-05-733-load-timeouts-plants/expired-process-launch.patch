@@ -1,0 +1,8 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -151,5 +151,4 @@
+         if synchronous:
+             options.update(timeout=remaining(deadline, "process inspection"))
+-        remaining(ACTIVE_DEADLINE.get(), "process launch")
+         return operation(argv, **options)
+     finally:

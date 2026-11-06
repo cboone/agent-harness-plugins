@@ -1,0 +1,8 @@
+--- a/tests/checked_test_diagnostics.py
++++ b/tests/checked_test_diagnostics.py
+@@ -19,4 +19,5 @@
+         destination = directory / "result.json"
+         destination.write_text(json.dumps(dict(fixture=fixture, result=result), indent=2) + "\n")
++        print(json.dumps(result))
+         metadata["result_file"] = str(destination)
+     return repr(metadata)

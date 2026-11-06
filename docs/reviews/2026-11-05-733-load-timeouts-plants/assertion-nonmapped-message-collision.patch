@@ -1,0 +1,9 @@
+--- a/tests/checked_plant_test.py
++++ b/tests/checked_plant_test.py
+@@ -552,5 +552,5 @@
+                 core, "terminate_group"):
+             remaining, cause = core.stop_group(123, self.deadline)
+-        self.assertIsNotNone(cause, "unknown final KILL state must fail closed")
++        self.assertIsNotNone(cause, "skipped final KILL observation")
+         self.assertIn("final state unknown", cause)
+         self.assertFalse(core.valid_step(dict(result, remaining_pids=remaining, cleanup_error=cause)))

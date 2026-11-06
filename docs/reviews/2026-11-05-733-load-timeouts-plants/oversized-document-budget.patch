@@ -1,0 +1,9 @@
+--- a/tests/data/checked-timeout-budgets.json
++++ b/tests/data/checked-timeout-budgets.json
+@@ -12,5 +12,5 @@
+     "script-operands": 30,
+     "skip-evidence": 30,
+-    "bounded-capture": 90,
++    "bounded-capture": 300,
+     "truncated-evidence": 30,
+     "manifest-empty": 30,

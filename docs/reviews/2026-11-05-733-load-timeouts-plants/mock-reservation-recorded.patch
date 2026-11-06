@@ -1,0 +1,9 @@
+--- a/tests/checked_plant_test.py
++++ b/tests/checked_plant_test.py
+@@ -498,5 +498,5 @@
+         original_record = self.runtime.record
+         def record(scope, event, **data):
+-            if event == "allocated":
++            if True:
+                 original_record(scope, event, **data)
+         with mock.patch.object(self.runtime, "record", side_effect=record), mock.patch.object(core.os, "waitid", None), mock.patch.object(

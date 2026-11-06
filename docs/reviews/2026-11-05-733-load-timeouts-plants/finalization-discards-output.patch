@@ -1,0 +1,16 @@
+--- a/tests/run_checked_budget.py
++++ b/tests/run_checked_budget.py
+@@ -24,9 +24,9 @@
+     with core.root_supervision():
+         result = core.command(argv, Path.cwd(), row.get("limit", policy["limit"]))
+-        sys.stdout.write(result["stdout"])
+-        sys.stderr.write(result["stderr"])
+-        if not core.valid_step(result):
+-            print("Document supervision failed: " + repr(result), file=sys.stderr)
+         code = 0 if core.valid_step(result) and result["exit_code"] == 0 else 1
++    sys.stdout.write(result["stdout"])
++    sys.stderr.write(result["stderr"])
++    if not core.valid_step(result):
++        print("Document supervision failed: " + repr(result), file=sys.stderr)
+ except (OSError, ValueError, subprocess.SubprocessError) as error:
+     phase = "execution" if result is None else "finalization"

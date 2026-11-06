@@ -1,0 +1,27 @@
+{
+  "complete": true,
+  "excluded": ["dist/codex/plugins/plant-defects/.claude-plugin/plugin.json", "dist/codex/plugins/plant-defects/CHANGELOG.md", "dist/codex/plugins/plant-defects/scripts/checked-gate", "dist/codex/plugins/plant-defects/scripts/checked-plant", "dist/codex/plugins/plant-defects/scripts/checked_core.py", "dist/codex/plugins/plant-defects/skills/plant-defects/SKILL.md", "dist/codex/plugins/plant-defects/skills/plant-defects/references/checked-runner.md"],
+  "findings": [
+    {
+      "detail": "Angles: Reuse and Altitude. Pipeline dispatch manually repeats step selection and supervision-observation recording already provided by StepPlan.run. Maintaining this bookkeeping in two places requires synchronizing future observation changes across ordinary commands and pipelines. Use StepPlan.run with runner=pipeline_command for the planned pipeline path, retaining the existing no-plan path. Skipped because this review is report-only.",
+      "evidence": "checked-gate:122-125 repeats checked_core.py:775-778. pipeline_command accepts the same positional arguments and step keyword that StepPlan.run supplies. Existing execute callers derive limit from the same manifest timeout used by the plan.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "line": 122,
+      "severity": "nit",
+      "title": "Uncited: Reuse StepPlan.run for pipeline bookkeeping"
+    },
+    {
+      "detail": "Angles: Efficiency and Simplification. finish calls pending twice in one require expression, including when no groups remain, because Python eagerly evaluates the error message. Each call traverses descendants and opens, locks and reads the audit. Store the post-reconciliation pending result once and use it for both the condition and diagnostic, avoiding one locked audit read and traversal per finalization. Skipped because this review is report-only.",
+      "evidence": "Line 698 evaluates self.pending() twice. pending calls descendants, which calls states; states opens regular_file with a shared lock and reads from the cached offset even when no new records exist.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "line": 698,
+      "severity": "nit",
+      "title": "Uncited: Avoid rereading the audit for an unused error message"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Completed one report-only simplify pass over all 58 changed non-generated files, reading each in full. HEAD matches the requested endpoint. Applied Reuse, Simplification, Efficiency and Altitude inline because nested reviewers were prohibited. Coverage included supervision and pipeline execution, inherited allocations, metadata-only group audits, Git execution plans and git_timeout, detector declarations, fixtures, Scrut documents, manifests and review records. The approved design was preserved as a review constraint.\n\nFound two deduplicated Nit cleanup proposals: zero fixed, two skipped because execution was report-only. No Important cleanup findings. Seven changed dist mirrors were excluded; no changed .agents mirrors appeared. No PR body applies.\n\nExecution remained read-only. No files were mutated, and no tests, checks, gh commands or nested agents ran. Success denotes complete simplify coverage, not runtime validation.",
+  "reviewed": "302c0d91a77097f1ae66e39bd996253e4bbb17d8..c3de2319f8413479381a3739b8ea7dde55fccbd3",
+  "status": "success",
+  "unverified": ["Runtime tests, formatting checks, lint and repository validation were intentionally not run; settle with: make test-all."]
+}

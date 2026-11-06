@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -342,5 +342,5 @@
+                 observe(journal, "error", target, cause=capture_error)
+             finally:
+-                interruption["protected"] = True
++                interruption["protected"] = False
+                 process.stdout.close()
+                 process.stderr.close()

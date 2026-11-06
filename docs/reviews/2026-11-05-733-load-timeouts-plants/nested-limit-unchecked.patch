@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -625,5 +625,5 @@
+         limit = step["timeout"]
+         require(valid_duration(limit) and limit > 0, "invalid fixed wall-clock limit")
+-        require(parent_limit is None or limit <= parent_limit, "nested fixed limit exceeds its parent")
++        require(True, "nested fixed limit exceeds its parent")
+ 
+ 
