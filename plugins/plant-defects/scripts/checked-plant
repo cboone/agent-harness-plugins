@@ -18,7 +18,7 @@ import tempfile
 sys.dont_write_bytecode = True
 from checked_core import (
     require, parse_json, digest, failure_cause, write_json, relative, read_regular,
-    command, valid_step, reserve_outputs,
+    command, valid_step, reserve_outputs, StepPlan, root_supervision, validate_plan_observations,
 )
 
 SCHEMA = 1
@@ -60,6 +60,8 @@ def validate_manifest(manifest):
     require(manifest.get("setup") is None or manifest["setup"] in inputs, "setup script must be an input")
     timeout = manifest.get("timeout", 60)
     require(type(timeout) in (int, float) and 0 < timeout <= 3600, "timeout must be in (0, 3600]")
+    git_timeout = manifest.get("git_timeout", timeout)
+    require(type(git_timeout) in (int, float) and 0 < git_timeout <= 3600, "git_timeout must be in (0, 3600]")
     for kind, variant in declarations(manifest):
         require(variant.get("patch") in inputs, "variant/control patch must be an input")
         if kind == "plant":
@@ -109,8 +111,22 @@ def materialize(root, manifest, contents):
         target.chmod(mode)
 
 
-def checked(argv, root, timeout):
-    result = command(argv, root, timeout, git_boundary=True)
+def execution_plan(manifest, kind="plant"):
+    timeout = manifest.get("timeout", 60)
+    git_timeout = manifest.get("git_timeout", timeout)
+    steps = []
+    for phase in ("baseline", "red" if kind == "plant" else "control", "green"):
+        if phase in ("red", "control"):
+            steps.extend(dict(name=name, timeout=git_timeout, kind="git")
+                         for name in ("git_init", "git_validate", "git_apply"))
+        if manifest.get("setup"):
+            steps.append(dict(name=phase + "_setup", timeout=timeout, kind="setup"))
+        steps.append(dict(name=phase, timeout=timeout, kind="check"))
+    return steps
+
+
+def checked(argv, root, plan, step):
+    result = plan.run(step, argv, root, runner=command, git_boundary=True)
     require(valid_step(result) and result["exit_code"] == 0, f"step failed: {argv}: {result}")
     return result
 
@@ -121,14 +137,12 @@ def matches(result, wanted):
             and all(s in output for s in wanted["contains"])
             and not any(s in output for s in wanted.get("excludes", [])))
 
-
-def check(root, manifest, row, phase):
-    timeout = manifest.get("timeout", 60)
+def check(root, manifest, row, phase, plan):
     if manifest.get("setup"):
-        row[phase + "_setup"] = command(["bash", "-euo", "pipefail", "--", manifest["setup"]], root, timeout)
+        row[phase + "_setup"] = plan.run(phase + "_setup", ["bash", "-euo", "pipefail", "--", manifest["setup"]], root, runner=command)
         require(valid_step(row[phase + "_setup"]) and row[phase + "_setup"]["exit_code"] == 0,
                 f"{phase} setup failed: {row[phase + '_setup']}")
-    row[phase] = command(["bash", "-euo", "pipefail", "--", manifest["check"]], root, timeout)
+    row[phase] = plan.run(phase, ["bash", "-euo", "pipefail", "--", manifest["check"]], root, runner=command)
     require(valid_step(row[phase]), f"{phase} check incomplete, timed out or truncated: {row[phase]}")
 
 
@@ -136,23 +150,25 @@ def run_variant(parent, manifest, contents, variant, row):
     root = parent / "subject"
     root.mkdir()
     materialize(root, manifest, contents)
+    plan = StepPlan(execution_plan(manifest, row["kind"]))
+    row["execution_plan"], row["executed_steps"] = plan.steps, plan.observations
     try:
-        check(root, manifest, row, "baseline")
+        check(root, manifest, row, "baseline", plan)
         require(matches(row["baseline"], manifest["green"]), "baseline control failed")
         patch = parent / "variant.patch"
         patch.write_bytes(contents[variant["patch"]][0])
         git_context = parent / "patch.git"
         checked(["git", "init", "--bare", "--quiet", "--template=", str(git_context)],
-                parent, manifest.get("timeout", 60))
-        for args in (["--check"], []):
+                parent, plan, "git_init")
+        for args, step in ((["--check"], "git_validate"), ([], "git_apply")):
             checked(["git", "--git-dir=" + str(git_context.resolve()), "--work-tree=" + str(root.resolve()),
-                     "apply", *args, str(patch)], root, manifest.get("timeout", 60))
+                     "apply", *args, str(patch)], root, plan, step)
         if row["kind"] == "plant":
-            check(root, manifest, row, "red")
+            check(root, manifest, row, "red", plan)
             require(matches(row["red"], variant["red"]), "plant did not satisfy its named assertion verdict")
             row.update(status="red", reason="named assertion reached")
         else:
-            check(root, manifest, row, "control")
+            check(root, manifest, row, "control", plan)
             require(matches(row["control"], manifest["green"]), "green control failed")
             row.update(status="control-green", reason="green control verified")
     except (OSError, ValueError, subprocess.SubprocessError) as error:
@@ -166,7 +182,7 @@ def run_variant(parent, manifest, contents, variant, row):
             row["restored"] = all(read_regular(root / name, root=root) == contents[name]
                                   for name in manifest["inputs"])
             require(row["restored"], "restored input differs")
-            check(root, manifest, row, "green")
+            check(root, manifest, row, "green", plan)
             row["green_passed"] = matches(row["green"], manifest["green"])
             require(row["green_passed"], "restored control failed")
         except (OSError, ValueError, subprocess.SubprocessError) as error:
@@ -184,27 +200,32 @@ def run(path, out):
         report["results"] = [dict(kind=kind, name=v["name"], status="unrun", reason="preceding variant/control did not complete",
                                   restored=False, green_passed=False) for kind, v in declarations(manifest)]
         validate_manifest(manifest)
-        before, contents = snapshot(path, manifest, report["inputs"])
-        require(all(v is not None for v in before.values()),
-                "; ".join(contents[k] for k, v in before.items() if v is None))
-        require(before["manifest"] == parsed, "manifest changed after parsing")
-        for row, (_, variant) in zip(report["results"], declarations(manifest), strict=True):
-            with tempfile.TemporaryDirectory(prefix="checked-plant-") as work:
-                run_variant(Path(work), manifest, contents, variant, row)
-            if row["status"] != outcome(row["kind"]) or not row["restored"] or not row["green_passed"]:
-                break
-        current, failures = snapshot(path, manifest, retain=False)
-        require(not failures, "; ".join(failures.values()))
-        report["inputs_unchanged"] = current == before
-        require(report["inputs_unchanged"], "inputs changed during run")
-        report["success"] = all(r["status"] == outcome(r["kind"]) and r["restored"] and r["green_passed"]
-                                for r in report["results"])
-        report["reason"] = "all variants verified" if report["success"] else "one or more variants failed or never ran"
+        with root_supervision(out):
+            before, contents = snapshot(path, manifest, report["inputs"])
+            require(all(v is not None for v in before.values()),
+                    "; ".join(contents[k] for k, v in before.items() if v is None))
+            require(before["manifest"] == parsed, "manifest changed after parsing")
+            for row, (_, variant) in zip(report["results"], declarations(manifest), strict=True):
+                with tempfile.TemporaryDirectory(prefix="checked-plant-") as work:
+                    run_variant(Path(work), manifest, contents, variant, row)
+                if row["status"] != outcome(row["kind"]) or not row["restored"] or not row["green_passed"]:
+                    break
+            current, failures = snapshot(path, manifest, retain=False)
+            require(not failures, "; ".join(failures.values()))
+            report["inputs_unchanged"] = current == before
+            require(report["inputs_unchanged"], "inputs changed during run")
+            report["success"] = all(r["status"] == outcome(r["kind"]) and r["restored"] and r["green_passed"]
+                                    for r in report["results"])
+            report["reason"] = "all variants verified" if report["success"] else "one or more variants failed or never ran"
     except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
+        report["success"] = False
         report["reason"] = failure_cause(error)
         if report["results"] and all(r["status"] == "unrun" for r in report["results"]):
             report["results"][0].update(status="setup-error", reason=report["reason"])
     finally:
+        if sys.exc_info()[0] is not None:
+            report["success"] = False
+            report["reason"] = failure_cause(sys.exc_info()[1])
         report["complete"] = True
         write_json(out / "results.json", report)
     print(str(out / "results.json"))
@@ -227,6 +248,8 @@ def verified(value):
     for row, (kind, variant) in zip(rows, declarations(manifest), strict=True):
         require(row["status"] == outcome(kind) and row["restored"] is True and row["green_passed"] is True,
                 "variant/control failed or unrun")
+        require(row["execution_plan"] == execution_plan(manifest, kind), "execution plan differs from manifest")
+        validate_plan_observations(row["execution_plan"], row["executed_steps"])
         phase = "red" if kind == "plant" else "control"
         expected = variant["red"] if kind == "plant" else manifest["green"]
         for phase, wanted in (("baseline", manifest["green"]), (phase, expected), ("green", manifest["green"])):

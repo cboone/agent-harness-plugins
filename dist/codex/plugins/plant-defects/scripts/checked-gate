@@ -17,10 +17,11 @@ import time
 
 # Keep module bytecode out of the shipped plugin.
 sys.dont_write_bytecode = True
-from checked_core import (command, pipeline_command, digest, failure_cause, read_regular, relative,
-                          require, passed, parse_json, encode_json, FactJournal, journal_context, fold_receipt, validate_fold, valid_step, row_complete, row_for, record_result, record_error, validate_row, write_receipt, boundaries_match)
+from checked_core import (command, pipeline_command, root_supervision, CLEANUP_MARGIN, StepPlan, ACTIVE_RUNTIME, digest, failure_cause, read_regular, relative,
+                          require, passed, parse_json, encode_json, FactJournal, journal_context, fold_receipt, validate_fold, valid_step, row_complete, row_for, record_result, record_error, validate_row, write_receipt, boundaries_match, validate_plan_observations)
 
 SCHEMA = 1
+FINGERPRINT_LIMIT = 5
 HEX = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 
 
@@ -65,76 +66,116 @@ def validate(manifest):
     return manifest
 
 
-def git(root, *args, env=None):
-    result = command(["git", *args], root, 60,
-                     env_overrides={"GIT_INDEX_FILE": env} if env is not None else None)
+def fingerprint_steps(manifest):
+    steps = [("head", ["rev-parse", "--verify", "HEAD"], False),
+             ("read", ["read-tree", "HEAD"], True),
+             ("add", ["add", "--all", "--", "."], True),
+             ("tree", ["write-tree"], True)]
+    if any("index" in row["inputs"] for row in manifest["checks"]):
+        steps.extend([("index_tree", ["write-tree"], False), ("entries", ["ls-files", "--stage", "-v", "-z"], False)])
+    return steps + [("head_tree", ["rev-parse", "HEAD^{tree}"], False)]
+
+
+def execution_plan(manifest):
+    def fingerprint_plan(prefix, value):
+        return [dict(name=prefix + "/" + name, kind="fingerprint", timeout=FINGERPRINT_LIMIT)
+                for name, _, _ in fingerprint_steps(value)]
+    steps = [dict(name="root", kind="fingerprint", timeout=FINGERPRINT_LIMIT), *fingerprint_plan("before", manifest)]
+    for index, check in enumerate(manifest["checks"]):
+        steps.extend(fingerprint_plan(f"check/{index}/start", dict(checks=[check])))
+        steps.append(dict(name=f"check/{index}", kind="check", timeout=check.get("timeout", 60)))
+        steps.extend(fingerprint_plan(f"check/{index}/end", dict(checks=[check])))
+    return [*steps, *fingerprint_plan("after_checks", manifest),
+            dict(name="action", kind="action", timeout=manifest.get("action_timeout", 60)),
+            *fingerprint_plan("after_action", manifest)]
+
+
+def git(root, *args, env=None, plan=None, step=None):
+    options = dict(env_overrides={"GIT_INDEX_FILE": env} if env is not None else None)
+    result = (plan.run(step, ["git", *args], root, runner=command, **options) if plan is not None
+              else command(["git", *args], root, FINGERPRINT_LIMIT, **options))
     require(valid_step(result) and result["exit_code"] == 0, f"Git fingerprint failed: {args}: {result}")
     return result["stdout"].strip()
 
 
-def fingerprint(root, manifest):
-    head = git(root, "rev-parse", "--verify", "HEAD")
-    require(HEX.fullmatch(head), "invalid HEAD")
+def fingerprint(root, manifest, *, plan=None, prefix=None):
+    values = {}
     with tempfile.TemporaryDirectory(prefix="checked-gate-index-") as work:
         index = str(Path(work) / "index")
-        git(root, "read-tree", "HEAD", env=index)
-        git(root, "add", "--all", "--", ".", env=index)
-        tree = git(root, "write-tree", env=index)
+        for name, args, private in fingerprint_steps(manifest):
+            values[name] = git(root, *args, env=index if private else None,
+                               plan=plan, step=prefix + "/" + name if prefix else None)
+    require(HEX.fullmatch(values["head"]), "invalid HEAD")
     names = sorted({name for c in manifest["checks"] for name in c["inputs"]})
     files = {}
     for name in names:
         if name not in ("HEAD", "tree", "index"):
             data, mode = read_regular(root / relative(name), root=root)
             files[name] = dict(sha256=digest(data), mode=mode)
-    index_state = None
-    if "index" in names:
-        index_state = dict(tree=git(root, "write-tree"),
-                           entries_sha256=digest(git(root, "ls-files", "--stage", "-v", "-z").encode()))
-    return dict(head=head, head_tree=git(root, "rev-parse", "HEAD^{tree}"), tree=tree, index=index_state, files=files)
+    index_state = (dict(tree=values["index_tree"], entries_sha256=digest(values["entries"].encode()))
+                   if "index" in names else None)
+    return dict(head=values["head"], head_tree=values["head_tree"], tree=values["tree"], index=index_state, files=files)
 
 
-def execute(row, root, limit, *, journal, target):
+def execute(row, root, limit, *, journal, target, plan=None):
     try:
         if row["pipeline"] is not None:
-            pipeline_command(row["pipeline"], root, limit, journal=journal, target=target)
+            runner, payload = pipeline_command, row["pipeline"]
         else:
-            command(row["argv"], root, limit, journal=journal, target=target)
+            runner, payload = command, row["argv"]
+        if plan is None:
+            runner(payload, root, limit, journal=journal, target=target)
+        else:
+            plan.run(target, payload, root, runner=runner, journal=journal, target=target)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         journal.append("error", target, cause=failure_cause(error))
 
 
 
-def record_boundary(journal, target, root, check, phase):
+def record_boundary(journal, target, root, check, phase, plan=None):
     state, cause = None, None
     try:
-        state = fingerprint(root, dict(checks=[check]))
+        state = fingerprint(root, dict(checks=[check]), plan=plan, prefix=target + "/" + phase)
     except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
         cause = failure_cause(error)
     journal.append("fingerprint", target, phase=phase, value=state, cause=cause)
 
 
 def run(path, out, root):
-    root, out = root.resolve(), out.resolve()
     out.mkdir(parents=True, exist_ok=False)
+    raw, manifest, plan, failure = None, None, None, None
+    try:
+        raw, _ = read_regular(path)
+        manifest = parse_json(raw)
+        validate(manifest)
+        plan = StepPlan(execution_plan(manifest))
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        failure = failure_cause(error)
+    with root_supervision(out):
+        return run_supervised(path, out, root, raw, manifest, plan, failure)
+
+
+def run_supervised(path, out, root, raw, manifest, plan, failure):
+    root, out = root.resolve(), out.resolve()
     journal = FactJournal(out / "facts.jsonl", create=True)
     journal.append("begin", manifest=str(path))
     write_receipt(out / "receipt.json", journal.receipt())
     success = False
     with journal_context(journal):
         try:
-            raw, _ = read_regular(path)
-            manifest = parse_json(raw)
+            require(raw is not None and manifest is not None, failure)
             journal.append("manifest", value=manifest, sha256=digest(raw))
             validate(manifest)
+            require(plan is not None, failure)
             require(not out.is_relative_to(root), "output directory must be outside the checkout")
-            require(Path(git(root, "rev-parse", "--show-toplevel")).resolve() == root, "root must be the Git checkout root")
-            journal.append("fingerprint", phase="before", value=fingerprint(root, manifest))
+            require(Path(git(root, "rev-parse", "--show-toplevel", plan=plan, step="root")).resolve() == root, "root must be the Git checkout root")
+            journal.append("fingerprint", phase="before", value=fingerprint(root, manifest, plan=plan, prefix="before"))
             for index, check in enumerate(manifest["checks"]):
-                record_boundary(journal, f"check/{index}", root, check, "start")
+                record_boundary(journal, f"check/{index}", root, check, "start", plan)
                 receipt = journal.receipt()
-                execute(receipt["checks"][index], root, check.get("timeout", 60), journal=journal, target=f"check/{index}")
-                record_boundary(journal, f"check/{index}", root, check, "end")
-            journal.append("fingerprint", phase="after_checks", value=fingerprint(root, manifest))
+                execute(receipt["checks"][index], root, check.get("timeout", 60), journal=journal, target=f"check/{index}", plan=plan)
+                record_boundary(journal, f"check/{index}", root, check, "end", plan)
+            journal.append("fingerprint", phase="after_checks", value=fingerprint(root, manifest, plan=plan, prefix="after_checks"))
             receipt = journal.receipt()
             require(not receipt["journal_errors"], "journal contains unavailable evidence")
             require(receipt["before"] == receipt["after_checks"], "inputs changed between checks and action")
@@ -143,15 +184,23 @@ def run(path, out, root):
             require(all(passed(r, c.get("expected_exit", 0)) for r, c in
                         zip(receipt["checks"], manifest["checks"], strict=True)), "check failed, incomplete or unrun")
             journal.append("allow-action")
-            execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action")
-            journal.append("fingerprint", phase="after_action", value=fingerprint(root, manifest))
+            execute(receipt["action"], root, manifest.get("action_timeout", 60), journal=journal, target="action", plan=plan)
+            journal.append("fingerprint", phase="after_action", value=fingerprint(root, manifest, plan=plan, prefix="after_action"))
             receipt = journal.receipt()
             require(passed(receipt["action"], 0), "action failed or incomplete")
             require(not receipt["journal_errors"], "journal contains unavailable evidence")
+            validate_plan_observations(plan.steps, plan.observations)
             success = True
         except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
             journal.append("refused", cause=failure_cause(error))
         finally:
+            if sys.exc_info()[0] is not None:
+                success = False
+            try:
+                ACTIVE_RUNTIME.get().finish()
+            except (OSError, ValueError, subprocess.SubprocessError) as error:
+                success = False
+                journal.append("refused", cause=failure_cause(error))
             journal.append("finished", success=success)
             receipt = journal.receipt()
             write_receipt(out / "receipt.json", receipt)

@@ -20,6 +20,28 @@ import tempfile
 import time
 
 OUTPUT_LIMIT = 1024 * 1024
+CLEANUP_MARGIN = 15
+IO_LIMIT = 15
+ACTIVE_DEADLINE = ContextVar("supervision_deadline", default=None)
+ACTIVE_RUNTIME = ContextVar("supervision_runtime", default=None)
+AUDIT_CACHE = {}
+
+
+def remaining(deadline, phase):
+    budget = deadline - time.monotonic()
+    if budget <= 0:
+        raise TimeoutError(f"{phase} deadline exceeded")
+    return budget
+
+
+def deadline_after(limit):
+    require(valid_duration(limit) and limit > 0, "invalid fixed wall-clock limit")
+    return time.monotonic() + limit
+
+
+def phase_deadline(deadline, phases_left):
+    now = time.monotonic()
+    return now + max(0, deadline - now) / phases_left
 
 
 def require(condition, message):
@@ -58,7 +80,7 @@ def relative(value):
 
 
 @contextmanager
-def regular_file(path, *, root=None, reserve=False, write=False, read=True, lock=None):
+def regular_file(path, *, root=None, reserve=False, write=False, read=True, lock=None, deadline=None, offset=0):
     current = path.parent.resolve() if root is None else root.resolve()
     parts = (path.name,) if root is None else path.relative_to(root).parts
     for part in parts:
@@ -81,7 +103,12 @@ def regular_file(path, *, root=None, reserve=False, write=False, read=True, lock
             info = os.fstat(descriptor)
             require(stat.S_ISREG(info.st_mode), "input must be a regular file")
             if lock is not None:
-                deadline = time.monotonic() + 0.25
+                active_deadline = ACTIVE_DEADLINE.get()
+                if deadline is None:
+                    deadline = active_deadline
+                elif active_deadline is not None:
+                    deadline = min(deadline, active_deadline)
+                deadline = deadline if deadline is not None else deadline_after(IO_LIMIT)
                 while True:
                     try:
                         fcntl.flock(descriptor, lock | fcntl.LOCK_NB)
@@ -91,6 +118,8 @@ def regular_file(path, *, root=None, reserve=False, write=False, read=True, lock
                             raise TimeoutError("journal lock deadline exceeded")
                         time.sleep(0.001)
             with os.fdopen(descriptor, "r+b" if reserve or write else "rb", closefd=False) as stream:
+                require(type(offset) is int and 0 <= offset <= info.st_size, "regular input was truncated")
+                stream.seek(offset)
                 data = stream.read() if read else b""
                 yield stream, data, stat.S_IMODE(info.st_mode), created
         finally:
@@ -99,8 +128,8 @@ def regular_file(path, *, root=None, reserve=False, write=False, read=True, lock
         raise ValueError(failure_cause(error)) from error
 
 
-def read_regular(path, *, root=None, lock=False):
-    with regular_file(path, root=root, lock=fcntl.LOCK_SH if lock else None) as (_, data, mode, _):
+def read_regular(path, *, root=None, lock=False, deadline=None):
+    with regular_file(path, root=root, lock=fcntl.LOCK_SH if lock else None, deadline=deadline) as (_, data, mode, _):
         return data, mode
 
 
@@ -111,9 +140,25 @@ def terminate_group(pid, requested_signal=signal.SIGKILL):
         pass
 
 
-def live_group(pid):
-    listing = subprocess.run(["ps", "-axo", "pid=,pgid=,stat="], capture_output=True,
-                             text=True, check=True, timeout=0.25)
+def launch(argv, *, deadline=None, synchronous=False, **options):
+    active = ACTIVE_DEADLINE.get()
+    if active is not None:
+        deadline = active if deadline is None else min(deadline, active)
+    require(deadline is not None, "process launch requires an active deadline")
+    token = ACTIVE_DEADLINE.set(deadline)
+    try:
+        operation = subprocess.run if synchronous else subprocess.Popen
+        if synchronous:
+            options.update(timeout=remaining(deadline, "process inspection"))
+        remaining(ACTIVE_DEADLINE.get(), "process launch")
+        return operation(argv, **options)
+    finally:
+        ACTIVE_DEADLINE.reset(token)
+
+
+def live_group(pid, deadline):
+    listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
+                     capture_output=True, text=True, check=True)
     members = []
     for line in listing.stdout.splitlines():
         member, group, state = line.split()
@@ -122,27 +167,52 @@ def live_group(pid):
     return members
 
 
-def stop_group(pid):
+def leader_identity(pid, deadline):
+    result = launch(["ps", "-o", "lstart=", "-o", "command=", "-p", str(pid)], deadline=deadline, synchronous=True,
+                    env=dict(os.environ, LC_ALL="C", TZ="UTC"), capture_output=True, text=True, check=True)
+    fields = result.stdout.strip().split(maxsplit=5)
+    require(len(fields) == 6 and fields[-1], "unreadable group leader identity")
+    return dict(start=" ".join(fields[:5]), command=fields[-1])
+
+
+def classify_leader(recorded, current):
+    if not all(isinstance(value, dict) and all(isinstance(value.get(key), str) and value[key]
+                                             for key in ("start", "command")) for value in (recorded, current)):
+        return "unknown"
+    if recorded["start"] != current["start"]:
+        return "reused"
+    return "survivor" if recorded["command"] == current["command"] else "unknown"
+
+
+def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
     remaining, error = None, None
+    phase_expirations = phase_expirations if phase_expirations is not None else []
+    term_deadline = term_deadline if term_deadline is not None else phase_deadline(deadline, 2)
     try:
-        remaining = live_group(pid)
-        if not remaining:
-            return remaining, None
-        for requested_signal in (signal.SIGTERM, signal.SIGKILL):
+        members = live_group(pid, phase_deadline(term_deadline, 2))
+        remaining = members
+        if not members:
+            return members, None
+        for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):
             terminate_group(pid, requested_signal)
-            deadline = time.monotonic() + 0.2
             while True:
-                remaining = live_group(pid)
+                if time.monotonic() >= signal_deadline:
+                    phase_expirations.append(dict(phase=requested_signal.name, cause="signal observation deadline exceeded"))
+                    break
+                try:
+                    remaining = live_group(pid, signal_deadline)
+                except (subprocess.TimeoutExpired, TimeoutError) as failure:
+                    phase_expirations.append(dict(phase=requested_signal.name, cause=failure_cause(failure)))
+                    if requested_signal != signal.SIGTERM:
+                        raise
+                    break
                 if not remaining:
                     return remaining, None
-                if time.monotonic() >= deadline:
-                    break
-                time.sleep(0.01)
+                time.sleep(min(0.01, max(0, signal_deadline - time.monotonic())))
+        error = "group shutdown deadline exceeded after SIGKILL"
     except (OSError, ValueError, subprocess.SubprocessError) as failure:
         error = failure_cause(failure)
         try:
-            if isinstance(failure, PermissionError) and not live_group(pid):
-                return [], None
             terminate_group(pid)
         except OSError as failure:
             error += "; cleanup: " + failure_cause(failure)
@@ -162,14 +232,37 @@ def read_spool(stream):
     return stream.read(OUTPUT_LIMIT + 1)
 
 
-def command(argv, root, timeout, *, git_boundary=False, env_overrides=None, journal=None, target=None):
+def command(argv, root, timeout, *, git_boundary=False, env_overrides=None, journal=None, target=None,
+            allocation=None, step=None):
+    runtime = ACTIVE_RUNTIME.get()
+    require(runtime is not None, "command requires an enclosing supervision deadline")
+    require(not runtime.cancelled, "supervisor is terminating; no new command may start")
+    allocation = allocation or runtime.allocate(timeout, step=step)
+    token = ACTIVE_DEADLINE.set(allocation["deadline"])
+    try:
+        runtime.validate_allocation(allocation)
+        require(runtime.states().get(allocation["scope"], {}).get("parent") == runtime.scope,
+                "supervised step has no durable parent record")
+        with term_unwind() as interruption:
+            return _command(argv, root, timeout, git_boundary=git_boundary, env_overrides=env_overrides,
+                            journal=journal, target=target, allocation=allocation, runtime=runtime,
+                            interruption=interruption)
+    finally:
+        ACTIVE_DEADLINE.reset(token)
+
+
+def _command(argv, root, timeout, *, git_boundary=False, env_overrides=None, journal=None, target=None,
+             allocation, runtime, interruption):
     require(callable(getattr(os, "waitid", None)) and hasattr(os, "WNOWAIT"),
             "runtime requires waitid and WNOWAIT for safe group cleanup")
     journal = journal or ACTIVE_JOURNAL.get()
     target = target or "aux/" + uuid.uuid4().hex
     observe(journal, "command", target, argv=argv)
+    deadline, execution_deadline = allocation["deadline"], allocation["execution_deadline"]
     with tempfile.TemporaryDirectory(prefix="checked-plant-cache-") as cache:
-        env = dict(os.environ, PYTHONPYCACHEPREFIX=cache, PYTHONDONTWRITEBYTECODE="1")
+        env = dict(os.environ, PYTHONPYCACHEPREFIX=cache, PYTHONDONTWRITEBYTECODE="1",
+                   CHECKED_STEP_LIMIT=str(timeout), CHECKED_SUPERVISION_AUDIT=str(runtime.journal.path),
+                   CHECKED_SUPERVISION_SCOPE=allocation["scope"])
         env.update(env_overrides or {})
         if git_boundary:
             env = {key: value for key, value in env.items() if not key.startswith("GIT_")}
@@ -177,30 +270,43 @@ def command(argv, root, timeout, *, git_boundary=False, env_overrides=None, jour
                        GIT_CONFIG_NOSYSTEM="1", GIT_CEILING_DIRECTORIES=str(root.parent.resolve()),
                        GIT_TERMINAL_PROMPT="0")
         with (Path(cache) / "stdout").open("w+b") as stdout_file, (Path(cache) / "stderr").open("w+b") as stderr_file:
+            interruption["protected"] = True
+            runtime.record(allocation["scope"], "reserved", reserved=True)
+            registration_error = None
             try:
-                process = subprocess.Popen(argv, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                process = launch(argv, deadline=execution_deadline, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                            start_new_session=True)
             except OSError as error:
+                interruption["protected"] = False
+                runtime.record(allocation["scope"], "spawn-error", gone=True)
                 observe(journal, "error", target, cause=failure_cause(error))
                 raise
+            try:
+                runtime.record(allocation["scope"], "started", pgid=process.pid)
+                runtime.record(allocation["scope"], "identity", leader=leader_identity(process.pid, deadline))
+            except (OSError, ValueError, subprocess.SubprocessError) as error:
+                registration_error = failure_cause(error)
             observe(journal, "started", target, pgid=process.pid)
-            deadline = time.monotonic() + timeout
             timed_out, output_truncated, reaped = False, False, False
             termination_requested, capture_error = False, None
             counts = {process.stdout: 0, process.stderr: 0}
             channels = {process.stdout: "stdout", process.stderr: "stderr"}
             try:
+                interruption["protected"] = False
+                if interruption["requested"]:
+                    raise SupervisorTerminated()
+                require(registration_error is None, "group registration failed: " + str(registration_error))
                 with selectors.DefaultSelector() as selector:
                     for transport, destination in ((process.stdout, stdout_file), (process.stderr, stderr_file)):
                         os.set_blocking(transport.fileno(), False)
                         selector.register(transport, selectors.EVENT_READ, destination)
                     while selector.get_map():
-                        remaining = deadline - time.monotonic()
-                        if remaining <= 0:
+                        budget = execution_deadline - time.monotonic()
+                        if budget <= 0:
                             timed_out = True
                             observe(journal, "flags", target, timed_out=True)
                             break
-                        for key, _ in selector.select(remaining):
+                        for key, _ in selector.select(budget):
                             try:
                                 chunk = os.read(key.fd, 65536)
                             except BlockingIOError:
@@ -223,11 +329,11 @@ def command(argv, root, timeout, *, git_boundary=False, env_overrides=None, jour
                             break
                 if not (timed_out or output_truncated):
                     while (exited := os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG)) is None:
-                        if time.monotonic() >= deadline:
+                        if time.monotonic() >= execution_deadline:
                             timed_out = True
                             observe(journal, "flags", target, timed_out=True)
                             break
-                        time.sleep(min(0.01, max(0, deadline - time.monotonic())))
+                        time.sleep(min(0.01, max(0, execution_deadline - time.monotonic())))
                     if exited is not None:
                         code = exited.si_status if exited.si_code == os.CLD_EXITED else -exited.si_status
                         observe(journal, "exit", target, code=code)
@@ -235,22 +341,46 @@ def command(argv, root, timeout, *, git_boundary=False, env_overrides=None, jour
                 capture_error = failure_cause(error)
                 observe(journal, "error", target, cause=capture_error)
             finally:
+                interruption["protected"] = True
                 process.stdout.close()
                 process.stderr.close()
                 # Keep the leader unreaped until its owned group is stopped and checked.
                 termination_requested = True
                 observe(journal, "flags", target, timed_out=timed_out, output_truncated=output_truncated,
                         termination_requested=True)
-                remaining_pids, cleanup_error = stop_group(process.pid)
-                observe(journal, "cleanup", target, remaining_pids=remaining_pids, cause=cleanup_error)
+                cleanup = runtime.cleanup_allocation(allocation)
+                cleanup_deadline = cleanup["deadline"]
+                phase_expirations = []
+                remaining_pids, cleanup_error = stop_group(process.pid, cleanup["group_deadline"],
+                                                          term_deadline=cleanup["term_deadline"],
+                                                          phase_expirations=phase_expirations)
+                observe(journal, "cleanup", target, remaining_pids=remaining_pids, cause=cleanup_error,
+                        phase_expirations=phase_expirations)
                 if not reaped:
                     try:
-                        process.wait(timeout=1)
+                        process.wait(timeout=remaining(cleanup_deadline, "leader reap"))
                         reaped = True
                         observe(journal, "exit", target, code=process.returncode)
-                    except subprocess.TimeoutExpired:
-                        pass
+                    except (subprocess.TimeoutExpired, TimeoutError) as error:
+                        cause = "leader reap deadline exceeded: " + failure_cause(error)
+                        cleanup_error = "; ".join(filter(None, (cleanup_error, cause)))
+                        observe(journal, "cleanup", target, remaining_pids=remaining_pids, cause=cleanup_error)
                 observe(journal, "reap", target, reaped=reaped)
+                possibly_live_pgids = []
+                try:
+                    runtime.record(allocation["scope"], "finished", pgid=process.pid,
+                                   gone=remaining_pids == [] and cleanup_error is None and reaped)
+                    possibly_live_pgids = runtime.pending(allocation["scope"])
+                    if possibly_live_pgids:
+                        cleanup_error = "; ".join(filter(None, (cleanup_error,
+                            "supervisor lost before confirming descendant groups: " + str(possibly_live_pgids))))
+                except (OSError, ValueError) as error:
+                    cleanup_error = "; ".join(filter(None, (cleanup_error, "group audit: " + failure_cause(error))))
+                    possibly_live_pgids = [None]
+                observe(journal, "cleanup", target, remaining_pids=remaining_pids, cause=cleanup_error,
+                        phase_expirations=phase_expirations, possibly_live_pgids=possibly_live_pgids,
+                        supervision=dict(audit=str(runtime.journal.path), scope=allocation["scope"],
+                                         allocation=allocation))
             output = []
             for channel, stream in (("stdout", stdout_file), ("stderr", stderr_file)):
                 try:
@@ -267,7 +397,9 @@ def command(argv, root, timeout, *, git_boundary=False, env_overrides=None, jour
     return dict(exit_code=process.returncode, stdout=stdout, stderr=stderr, timed_out=timed_out,
                 termination_requested=termination_requested, terminated=process.returncode is not None and process.returncode < 0,
                 reaped=reaped, output_truncated=output_truncated, capture_error=capture_error,
-                pgid=process.pid, remaining_pids=remaining_pids, cleanup_error=cleanup_error)
+                pgid=process.pid, remaining_pids=remaining_pids, cleanup_error=cleanup_error,
+                phase_expirations=phase_expirations, possibly_live_pgids=possibly_live_pgids,
+                supervision=dict(audit=str(runtime.journal.path), scope=allocation["scope"], allocation=allocation))
 
 
 def valid_step(result):
@@ -454,8 +586,231 @@ def encode_json(value, **options):
 
 
 FACT_KINDS = {"begin", "manifest", "fingerprint", "allow-action", "refused", "finished", "command",
-              "started", "exit", "bytes", "eof", "loaded", "capture-error", "flags", "cleanup", "reap", "error", "journal-error"}
+              "started", "exit", "bytes", "eof", "loaded", "capture-error", "flags", "cleanup", "reap", "error", "journal-error", "supervision"}
 ACTIVE_JOURNAL = ContextVar("checked_gate_journal", default=None)
+
+
+class SupervisorTerminated(SystemExit):
+    def __init__(self):
+        super().__init__(128 + signal.SIGTERM)
+
+
+@contextmanager
+def term_unwind():
+    require(threading.current_thread() is threading.main_thread(), "supervision requires the signal-handling thread")
+    state = dict(protected=False, requested=False)
+    previous = signal.getsignal(signal.SIGTERM)
+    def stop(signum, frame):
+        if state["requested"]:
+            return
+        state["requested"] = True
+        runtime = ACTIVE_RUNTIME.get()
+        if runtime is not None:
+            runtime.cancelled = True
+        if not state["protected"]:
+            raise SupervisorTerminated()
+    signal.signal(signal.SIGTERM, stop)
+    try:
+        yield state
+        if state["requested"]:
+            raise SupervisorTerminated()
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
+def validate_fixed_limits(steps, parent_limit=None):
+    if parent_limit is not None:
+        require(valid_duration(parent_limit) and parent_limit > 0, "invalid declared parent limit")
+    for step in steps:
+        limit = step["timeout"]
+        require(valid_duration(limit) and limit > 0, "invalid fixed wall-clock limit")
+        require(parent_limit is None or limit <= parent_limit, "nested fixed limit exceeds its parent")
+
+
+class SupervisionRuntime:
+    def __init__(self, journal, scope, cancellation=None):
+        self.journal, self.scope = journal, scope
+        self.sealed = False
+        self.cancellation = cancellation if cancellation is not None else dict(cancelled=False)
+        self.cache = AUDIT_CACHE.setdefault(str(journal.path), dict(offset=0, identity=None, states={}, children={}))
+
+    def record(self, scope, event, **data):
+        self.journal.append("supervision", scope, event=event, **data)
+
+    @property
+    def cancelled(self):
+        return self.cancellation["cancelled"]
+
+    @cancelled.setter
+    def cancelled(self, value):
+        self.cancellation["cancelled"] = value
+
+    def allocate(self, timeout, *, step=None, pipeline=False):
+        parent = os.environ.get("CHECKED_STEP_LIMIT")
+        validate_fixed_limits([dict(timeout=timeout)], float(parent) if parent is not None else None)
+        now = time.monotonic()
+        phases = 3 if pipeline else 2
+        reserve = min(CLEANUP_MARGIN, timeout / (phases + 1))
+        deadline = now + timeout
+        execution_deadline = deadline - 2 * reserve
+        allocation = dict(scope=uuid.uuid4().hex, parent=self.scope, started_at=now,
+                          deadline=deadline, execution_deadline=execution_deadline,
+                          term_deadline=deadline - reserve, group_deadline=deadline - reserve / 2,
+                          reserve=reserve, requested=timeout, step=step)
+        if pipeline:
+            allocation["worker_deadline"] = execution_deadline - reserve
+        self.validate_allocation(allocation)
+        token = ACTIVE_DEADLINE.set(deadline)
+        try:
+            self.record(allocation["scope"], "allocated", **{k: v for k, v in allocation.items() if k != "scope"})
+        finally:
+            ACTIVE_DEADLINE.reset(token)
+        return allocation
+
+    def validate_allocation(self, value):
+        require(value["parent"] == self.scope, "supervised step has the wrong parent")
+        require(math.isclose(value["deadline"] - value["started_at"], value["requested"], abs_tol=1e-6)
+                and value["started_at"] < value["execution_deadline"] < value["term_deadline"] < value["deadline"],
+                "supervised step differs from its fixed limit")
+
+    def cleanup_allocation(self, value):
+        return {key: value[key] for key in ("deadline", "term_deadline", "group_deadline")}
+
+    def states(self):
+        self.journal.flush()
+        states = self.cache["states"]
+        with regular_file(self.journal.path, lock=fcntl.LOCK_SH,
+                          offset=self.cache["offset"]) as (stream, data, _, _):
+            file_identity = identity(os.fstat(stream.fileno()))
+            require(self.cache["identity"] in (None, file_identity), "supervision audit identity changed")
+            require(not data or data.endswith(b"\n"), "incomplete supervision audit")
+            for line in data.splitlines():
+                if not line.strip():
+                    continue
+                fact = parse_json(line)
+                require(fact["schema"] == 1 and fact["kind"] == "supervision", "incomplete supervision audit")
+                row = states.setdefault(fact["target"], {})
+                row.update(fact["data"])
+                self.cache["children"].setdefault(row.get("parent"), set()).add(fact["target"])
+            self.cache.update(offset=stream.tell(), identity=file_identity)
+        return states
+
+    def descendants(self, scope=None):
+        scope = scope or self.scope
+        self.states()
+        descendants, pending = set(), list(self.cache["children"].get(scope, []))
+        while pending:
+            child = pending.pop()
+            if child not in descendants:
+                descendants.add(child)
+                pending.extend(self.cache["children"].get(child, []))
+        return descendants
+
+    def pending(self, scope=None):
+        descendants = self.descendants(scope)
+        states = self.cache["states"]
+        return sorted({states[name].get("pgid") for name in descendants
+                       if states[name].get("reserved") and not states[name].get("gone")},
+                      key=lambda value: -1 if value is None else value)
+
+    def reconcile(self):
+        pending = self.pending()
+        if not pending:
+            return
+        deadline = deadline_after(IO_LIMIT)
+        listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
+                         capture_output=True, text=True, check=True)
+        live = {int(group) for _, group, state in (line.split() for line in listing.stdout.splitlines())
+                if not state.startswith("Z")}
+        for scope, row in self.states().items():
+            if type(row.get("pgid")) is int and row["pgid"] in pending and row["pgid"] not in live:
+                self.record(scope, "absent", gone=True, confirmed_by="ps absence; no signal sent")
+            elif type(row.get("pgid")) is int and row["pgid"] in pending:
+                try:
+                    current = leader_identity(row["pgid"], deadline)
+                except (OSError, ValueError, subprocess.SubprocessError) as error:
+                    self.record(scope, "identity-unavailable", identity_error=failure_cause(error))
+                    if not live_group(row["pgid"], deadline):
+                        self.record(scope, "absent", gone=True, confirmed_by="ps absence after identity read; no signal sent")
+                    continue
+                if classify_leader(row.get("leader"), current) == "reused":
+                    self.record(scope, "reused", gone=True, confirmed_by="different leader start time; no signal sent",
+                                replacement_leader=current)
+
+    def finish(self):
+        try:
+            self.reconcile()
+            pending = self.pending()
+            causes = [row["identity_error"] for row in self.cache["states"].values()
+                      if row.get("pgid") in pending and row.get("identity_error")]
+            require(not pending, "unconfirmed possibly live groups: " + str(pending)
+                    + ("; leader identity: " + "; ".join(causes) if causes else ""))
+        finally:
+            self.sealed = True
+
+
+@contextmanager
+def root_supervision(directory=None):
+    # Contexts carry containment ownership, never a cumulative execution budget.
+    current = ACTIVE_RUNTIME.get()
+    if current is not None:
+        runtime = SupervisionRuntime(current.journal, uuid.uuid4().hex, current.cancellation)
+        runtime.record(runtime.scope, "in-process", parent=current.scope)
+    else:
+        audit = os.environ.get("CHECKED_SUPERVISION_AUDIT")
+        parent = os.environ.get("CHECKED_SUPERVISION_SCOPE")
+        require((audit is None) == (parent is None), "incomplete inherited supervision context")
+        if audit is None:
+            directory = Path(directory) if directory is not None else Path(tempfile.mkdtemp(prefix="checked-supervision-"))
+            journal = FactJournal(directory / "groups.jsonl", create=True)
+        else:
+            journal = FactJournal(Path(audit))
+        runtime = SupervisionRuntime(journal, uuid.uuid4().hex)
+        if parent is not None:
+            require(runtime.states().get(parent, {}).get("reserved"), "inherited context has no held enclosing group")
+        runtime.record(runtime.scope, "root" if audit is None else "inherited", parent=parent)
+    token = ACTIVE_RUNTIME.set(runtime)
+    try:
+        yield runtime
+    finally:
+        try:
+            if not runtime.sealed:
+                runtime.finish()
+        finally:
+            ACTIVE_RUNTIME.reset(token)
+
+
+class StepPlan:
+    def __init__(self, steps):
+        parent = os.environ.get("CHECKED_STEP_LIMIT")
+        validate_fixed_limits(steps, float(parent) if parent is not None else None)
+        self.steps = steps
+        self.executed = set()
+        self.observations = []
+
+    def take(self, name):
+        matches = [step for step in self.steps if step["name"] == name]
+        require(len(matches) == 1 and name not in self.executed, "missing or repeated execution-plan step: " + name)
+        self.executed.add(name)
+        return matches[0]
+
+    def run(self, name, argv, root, *, runner=command, **options):
+        step = self.take(name)
+        result = runner(argv, root, step["timeout"], step=step, **options)
+        self.observations.append(dict(step=step, supervision=result.get("supervision")))
+        return result
+
+
+def validate_plan_observations(steps, observations):
+    require(isinstance(observations, list) and [row["step"] for row in observations] == steps,
+            "missing or reordered executed plan steps")
+    for row in observations:
+        require(isinstance(row["supervision"], dict), "missing step supervision observation")
+        allocation = row["supervision"]["allocation"]
+        require(allocation["step"] == row["step"] and allocation["requested"] == row["step"]["timeout"],
+                "execution budget differs from its plan")
+        require(math.isclose(allocation["deadline"] - allocation["started_at"], row["step"]["timeout"], abs_tol=1e-6),
+                "executed wall-clock limit differs from its plan")
 
 
 class ReceiptFold(dict):
@@ -463,15 +818,16 @@ class ReceiptFold(dict):
 
 
 class FactJournal:
-    def __init__(self, path, *, create=False):
+    def __init__(self, path, *, create=False, deadline=None):
         self.path = Path(path)
+        self.deadline = deadline
         self.pending, self.failures = [], set()
         self.mutex = threading.RLock()
         if create:
-            with regular_file(self.path, reserve=True, read=False, lock=fcntl.LOCK_EX) as (_, _, _, created):
+            with regular_file(self.path, reserve=True, read=False, lock=fcntl.LOCK_EX, deadline=self.deadline) as (_, _, _, created):
                 require(created, "journal already exists")
         else:
-            read_regular(self.path, lock=True)
+            read_regular(self.path, lock=True, deadline=self.deadline)
 
     def note_failure(self, cause):
         with self.mutex:
@@ -498,7 +854,7 @@ class FactJournal:
                 self.failures.clear()
             if not self.pending:
                 return
-            with regular_file(self.path, write=True, read=False, lock=fcntl.LOCK_EX) as (stream, _, _, _):
+            with regular_file(self.path, write=True, read=False, lock=fcntl.LOCK_EX, deadline=self.deadline) as (stream, _, _, _):
                 while self.pending:
                     fact = self.pending[0]
                     stream.seek(0, os.SEEK_END)
@@ -509,7 +865,7 @@ class FactJournal:
     def facts(self):
         self.flush()
         facts, failures, seen = [], [], {}
-        for line in read_regular(self.path, lock=True)[0].splitlines():
+        for line in read_regular(self.path, lock=True, deadline=self.deadline)[0].splitlines():
             if not line.strip():
                 continue
             try:
@@ -551,7 +907,8 @@ def fold_command(facts, target, args, pipeline=None):
         return row
     result = dict(exit_code=None, stdout="", stderr="", timed_out=False, termination_requested=False,
                   terminated=False, reaped=False, output_truncated=False, capture_error=None,
-                  pgid=None, remaining_pids=None, cleanup_error=None)
+                  pgid=None, remaining_pids=None, cleanup_error=None, phase_expirations=[],
+                  possibly_live_pgids=[], supervision=None)
     if pipeline is not None:
         result.update(stages=[], pipeline_complete=False)
     buffers = {key: bytearray() for key in ("stdout", "stderr")}
@@ -592,6 +949,9 @@ def fold_command(facts, target, args, pipeline=None):
                 result[key] = result[key] or data.get(key, False)
         elif kind == "cleanup":
             result["remaining_pids"] = data["remaining_pids"]
+            result["phase_expirations"] = data.get("phase_expirations", result["phase_expirations"])
+            result["possibly_live_pgids"] = data.get("possibly_live_pgids", result["possibly_live_pgids"])
+            result["supervision"] = data.get("supervision", result["supervision"])
             if data["cause"]:
                 result["cleanup_error"] = data["cause"]
         elif kind == "reap":
@@ -692,15 +1052,25 @@ def validate_fold(value):
 
 
 def pipeline_worker(request, response):
+    with term_unwind() as interruption:
+        return _pipeline_worker(request, response, interruption)
+
+
+def _pipeline_worker(request, response, interruption):
     """Capture, stop and reap every started stage, including partial setup."""
     request_value = parse_json(read_regular(request)[0])
     stages, target = request_value["stages"], request_value["target"]
     deadline = request_value["deadline"]
-    journal = FactJournal(request_value["journal"])
+    cleanup_deadline = request_value["cleanup_deadline"]
+    runtime = ACTIVE_RUNTIME.get()
+    require(runtime is not None and deadline < cleanup_deadline,
+            "pipeline worker requires its enclosing deadline")
+    journal = FactJournal(request_value["journal"], deadline=cleanup_deadline)
     current_stage = target
     report = dict(complete=False, stages=[dict(command=args, code=None, elapsed=None) for args in stages], cause=None)
     for row in report["stages"]:
         row.update(started=False, started_at=None, output_truncated=False, capture_error=None,
+                   phase_expirations=[],
                    streams={key: dict(eof=False, cause=None) for key in ("stdout", "stderr")})
     processes, threads, spools, pending_pumps = [], [], [], []
     stopping = threading.Event()
@@ -789,7 +1159,8 @@ def pipeline_worker(request, response):
 
     def cleanup_started():
         collect_exits()
-        for requested_signal, grace in ((signal.SIGTERM, 0.2), (signal.SIGKILL, 0.5)):
+        until = cleanup_deadline
+        for requested_signal, phases_left in ((signal.SIGTERM, 3), (signal.SIGKILL, 2)):
             for index, process in enumerate(processes):
                 if process.returncode is None:
                     observe(journal, "flags", f"{target}/stage/{index}", termination_requested=True)
@@ -797,20 +1168,23 @@ def pipeline_worker(request, response):
                         process.send_signal(requested_signal)
                     except OSError as error:
                         fail(failure_cause(error), f"{target}/stage/{index}")
-            until = time.monotonic() + grace
+            signal_deadline = phase_deadline(until, phases_left)
             while True:
                 collect_exits()
-                if all(p.returncode is not None for p in processes) or time.monotonic() >= until:
+                if all(p.returncode is not None for p in processes) or time.monotonic() >= signal_deadline:
                     break
                 time.sleep(0.01)
+            for index, process in enumerate(processes):
+                if process.returncode is None:
+                    report["stages"][index]["phase_expirations"].append(
+                        dict(phase=requested_signal.name, cause="pipeline stage observation deadline exceeded"))
         stopping.set()
         for transport, _, spool, row, channel, stage_target in pending_pumps:
             pump(transport, None, spool, row, channel, stage_target)
-        until = time.monotonic() + 0.3
         for thread, index, channel in threads:
             thread.join(max(0, until - time.monotonic()))
             if thread.is_alive():
-                cause = "capture thread did not finish during pipeline cleanup"
+                cause = "capture thread join deadline exceeded"
                 report["stages"][index]["capture_error"] = cause
                 observe(journal, "capture-error", f"{target}/stage/{index}", channel=channel, cause=cause)
         unjoined = any(thread.is_alive() for thread, _, _ in threads)
@@ -818,8 +1192,9 @@ def pipeline_worker(request, response):
             if process.stdin is not None and not unjoined:
                 process.stdin.close()
             remaining = [] if process.returncode is not None else [process.pid]
-            cause = None if not remaining else "pipeline stage did not reap during bounded cleanup"
-            observe(journal, "cleanup", f"{target}/stage/{index}", remaining_pids=remaining, cause=cause)
+            cause = None if not remaining else "pipeline stage reap deadline exceeded after SIGKILL"
+            observe(journal, "cleanup", f"{target}/stage/{index}", remaining_pids=remaining, cause=cause,
+                    phase_expirations=report["stages"][index]["phase_expirations"])
             observe(journal, "reap", f"{target}/stage/{index}", reaped=not remaining)
             if cause:
                 fail(cause, f"{target}/stage/{index}")
@@ -840,10 +1215,14 @@ def pipeline_worker(request, response):
                     if time.monotonic() >= deadline:
                         raise subprocess.TimeoutExpired(row["command"], 0)
                     journal.append("command", current_stage, argv=row["command"])
-                    processes.append(subprocess.Popen(row["command"], stdin=subprocess.PIPE if index else subprocess.DEVNULL,
+                    interruption["protected"] = True
+                    processes.append(launch(row["command"], deadline=deadline, stdin=subprocess.PIPE if index else subprocess.DEVNULL,
                                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0))
                     row.update(started=True, started_at=time.monotonic())
                     journal.append("started", current_stage, pgid=os.getpgrp(), pid=processes[-1].pid)
+                    interruption["protected"] = False
+                    if interruption["requested"]:
+                        raise SupervisorTerminated()
                     write_json(response, report)
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
                 fail(failure_cause(error), current_stage)
@@ -881,6 +1260,7 @@ def pipeline_worker(request, response):
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
             fail(failure_cause(error), target)
         finally:
+            interruption["protected"] = True
             if time.monotonic() >= deadline:
                 observe(journal, "flags", target, timed_out=True)
                 for index, process in enumerate(processes):
@@ -910,44 +1290,54 @@ def validate_worker_response(report, stages):
                     "invalid worker stream metadata")
 
 
-def pipeline_command(stages, root, timeout, *, journal=None, target=None):
+def pipeline_command(stages, root, timeout, *, journal=None, target=None, step=None):
     journal = journal or ACTIVE_JOURNAL.get()
     require(journal is not None and target is not None, "pipeline requires a fact journal")
-    with tempfile.TemporaryDirectory(prefix="checked-gate-pipeline-") as work:
-        request, response = Path(work) / "request.json", Path(work) / "response.json"
-        write_json(request, dict(stages=stages, journal=str(journal.path), target=target, deadline=time.monotonic() + timeout))
-        command([sys.executable, str(Path(__file__).resolve()), "pipeline-worker", str(request), str(response)],
-                root, timeout + 2, journal=journal, target=target)
-        try:
-            report = parse_json(read_regular(response)[0])
-            validate_worker_response(report, stages)
-            if report.get("cause"):
-                journal.append("error", target, cause=report["cause"])
-        except (OSError, ValueError, KeyError, TypeError) as error:
-            journal.append("error", target, cause=failure_cause(error))
-        snapshot = journal.facts()
-        supervisor = fold_command(snapshot, target, None)
-        for index, args in enumerate(stages):
-            stage_target = f"{target}/stage/{index}"
-            stage = fold_command(snapshot, stage_target, args)
-            if supervisor["result"] is not None:
-                group = supervisor["result"]
-                journal.append("cleanup", stage_target, remaining_pids=group["remaining_pids"], cause=group["cleanup_error"])
-                journal.append("flags", stage_target, termination_requested=group["termination_requested"],
-                               timed_out=group["timed_out"] and not stage["exit_observed"])
-            if stage["started"] is not True:
-                continue
-            for channel in ("stdout", "stderr"):
-                try:
-                    data, _ = read_regular(Path(work) / f"stage-{index}-{channel}")
-                    journal.append("loaded", stage_target, channel=channel, size=len(data), sha256=digest(data))
-                except (OSError, ValueError) as error:
-                    journal.append("capture-error", stage_target, channel=channel, cause=failure_cause(error))
-        return fold_command(journal.facts(), target, None)["result"]
+    runtime = ACTIVE_RUNTIME.get()
+    require(runtime is not None, "pipeline requires an enclosing supervision deadline")
+    allocation = runtime.allocate(timeout, pipeline=True, step=step)
+    token = ACTIVE_DEADLINE.set(allocation["deadline"])
+    try:
+        with tempfile.TemporaryDirectory(prefix="checked-gate-pipeline-") as work:
+            request, response = Path(work) / "request.json", Path(work) / "response.json"
+            write_json(request, dict(stages=stages, journal=str(journal.path), target=target,
+                                     deadline=allocation["worker_deadline"], cleanup_deadline=allocation["execution_deadline"]))
+            command([sys.executable, str(Path(__file__).resolve()), "pipeline-worker", str(request), str(response)],
+                    root, timeout, journal=journal, target=target, allocation=allocation)
+            try:
+                report = parse_json(read_regular(response)[0])
+                validate_worker_response(report, stages)
+                if report.get("cause"):
+                    journal.append("error", target, cause=report["cause"])
+            except (OSError, ValueError, KeyError, TypeError) as error:
+                journal.append("error", target, cause=failure_cause(error))
+            snapshot = journal.facts()
+            supervisor = fold_command(snapshot, target, None)
+            for index, args in enumerate(stages):
+                stage_target = f"{target}/stage/{index}"
+                stage = fold_command(snapshot, stage_target, args)
+                if supervisor["result"] is not None:
+                    group = supervisor["result"]
+                    journal.append("cleanup", stage_target, remaining_pids=group["remaining_pids"], cause=group["cleanup_error"])
+                    journal.append("flags", stage_target, termination_requested=group["termination_requested"],
+                                   timed_out=group["timed_out"] and not stage["exit_observed"])
+                if stage["started"] is not True:
+                    continue
+                for channel in ("stdout", "stderr"):
+                    try:
+                        data, _ = read_regular(Path(work) / f"stage-{index}-{channel}")
+                        journal.append("loaded", stage_target, channel=channel, size=len(data), sha256=digest(data))
+                    except (OSError, ValueError) as error:
+                        journal.append("capture-error", stage_target, channel=channel, cause=failure_cause(error))
+            return fold_command(journal.facts(), target, None)["result"]
+
+    finally:
+        ACTIVE_DEADLINE.reset(token)
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 4 or sys.argv[1] != "pipeline-worker":
         print("Internal pipeline worker arguments required", file=sys.stderr)
         raise SystemExit(2)
-    raise SystemExit(pipeline_worker(Path(sys.argv[2]), Path(sys.argv[3])))
+    with root_supervision():
+        raise SystemExit(pipeline_worker(Path(sys.argv[2]), Path(sys.argv[3])))

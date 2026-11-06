@@ -193,6 +193,27 @@ function run_document() {
   return 0
 }
 
+# Keep checked-runner documents out of the parallel batch.
+# Both batches share one owned worker group, including when interrupted.
+function run_queues() {
+  local jobs="$1"
+  local result=0
+  local queue parallel_status
+  for queue in parallel serial; do
+    if [[ -s "${RUN_SCRUT_LOG_DIR}/${queue}.queue" ]]; then
+      parallel_status=0
+      # shellcheck disable=SC2016 # The child shell expands its positional arguments.
+      xargs -0 -n 2 -P "${jobs}" bash -c 'run_document "$1" "$2"' run_document \
+        < "${RUN_SCRUT_LOG_DIR}/${queue}.queue" || parallel_status=$?
+      if ((parallel_status != 0)); then
+        result="${parallel_status}"
+      fi
+    fi
+    jobs=1
+  done
+  return "${result}"
+}
+
 function run_parallel() {
   local jobs="$1"
   shift
@@ -201,12 +222,18 @@ function run_parallel() {
 
   LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/run-scrut-documents.XXXXXX")"
   export RUN_SCRUT_LOG_DIR="${LOG_DIR}"
-  export -f run_document check_summary
+  export -f run_document check_summary run_queues
 
-  local i
+  local i queue
+  : > "${LOG_DIR}/parallel.queue"
+  : > "${LOG_DIR}/serial.queue"
   for ((i = 0; i < count; i++)); do
-    printf '%s\0%s\0' "${i}" "${documents[i]}"
-  done > "${LOG_DIR}/queue"
+    case "${documents[i]##*/}" in
+      checked-plant* | checked-gate*) queue=serial ;;
+      *) queue=parallel ;;
+    esac
+    printf '%s\0%s\0' "${i}" "${documents[i]}" >> "${LOG_DIR}/${queue}.queue"
+  done
 
   printf 'Running %s scrut documents, %s at a time\n' "${count}" "${jobs}"
 
@@ -215,8 +242,8 @@ function run_parallel() {
   local progress="${LOG_DIR}/progress"
   mkfifo "${progress}"
   # shellcheck disable=SC2016 # $1 and $2 expand in the child bash, not here.
-  run_in_group xargs -0 -n 2 -P "${jobs}" bash -c 'run_document "$1" "$2"' run_document \
-    < "${LOG_DIR}/queue" > "${progress}" 2>&1 & # error-output-allow: FIFO streams progress live to the parent cat process
+  run_in_group bash -c 'run_queues "$1"' run_queues "${jobs}" \
+    > "${progress}" 2>&1 & # error-output-allow: FIFO streams progress live to the parent cat process
   WORKER_PGID=$!
   cat "${progress}" &
   PROGRESS_PID=$!

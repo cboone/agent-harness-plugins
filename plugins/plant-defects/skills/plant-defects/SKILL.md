@@ -107,3 +107,12 @@ The practice and every measurement quoted in these references come from two of t
 - `cboone/springer`: the verification program table in its build plan, and the ADRs that make planting an acceptance criterion rather than a formality
 
 Related plugins in this catalog: `write-lean-code` for the compile-time API regression case, `write-scrut-tests` for snapshot assertions that can stop discriminating, `set-up-ci` for the gates these controls are attached to, and `review-branch`, where a plant table is what a reviewer should be looking for.
+
+## Supervision budgets
+
+The runner's manifest supports `timeout` for setup/check execution and optional
+`git_timeout` for Git initialization, patch validation and patch application.
+Both default to 60 seconds when `timeout` is omitted; otherwise `git_timeout`
+defaults to `timeout`. Each fixed wall-clock limit includes cleanup. Nested helpers retain containment
+ownership; their declared limits cannot exceed their parent limits. See `./references/checked-runner.md` for the limits,
+execution plan and fail-closed group records.
