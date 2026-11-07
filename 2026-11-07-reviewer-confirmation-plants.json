@@ -1,0 +1,108 @@
+{
+  "inputs": ["plugins/set-up-review-config/skills/set-up-review-config/SKILL.md", "tests/scrut/review-config-reporting.md", "bin/run-scrut", "bin/lib/git-environment.bash", "AGENTS.md", ".github/skills/code-review/SKILL.md", "REVIEW.md", "plugins/set-up-review-config/skills/set-up-review-config/references/agents-md-section.md", "plugins/set-up-review-config/skills/set-up-review-config/references/code-review-skill.md", "plugins/set-up-review-config/skills/set-up-review-config/references/review-md.md", "docs/reviews/2026-11-07-reviewer-confirmation-plants/check.sh", "plugins/set-up-review-config/README.md", "plugins/bootstrap-project/skills/bootstrap-project/SKILL.md", "docs/reviews/2026-11-07-reviewer-confirmation-plants/old-codex-wording.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/old-copilot-wording.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/workflow-inspection-omitted.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/absent-workflow-disabled.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/codex-activation-overclaim.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/copilot-activation-overclaim.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/instruction-files-overclaim.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/report-partitions-omitted.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/readme-review-promise.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/bootstrap-review-promise.patch", "docs/reviews/2026-11-07-reviewer-confirmation-plants/wording-control.patch"],
+  "check": "docs/reviews/2026-11-07-reviewer-confirmation-plants/check.sh",
+  "timeout": 120,
+  "green": {
+    "exit_code": 0,
+    "contains": ["Result: 1 document(s) with 10 testcase(s): 10 succeeded, 0 failed and 0 skipped\n"],
+    "excludes": ["Error:"]
+  },
+  "variants": [
+    {
+      "name": "old-codex-wording",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/old-codex-wording.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["Codex activation is always unverifiable from the tree"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "old-copilot-wording",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/old-copilot-wording.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["Copilot review depends on activation and a request"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "workflow-inspection-omitted",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/workflow-inspection-omitted.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["A Claude workflow confirms configuration only"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "absent-workflow-disabled",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/absent-workflow-disabled.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["An absent workflow leaves Claude activation unconfirmed"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "codex-activation-overclaim",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/codex-activation-overclaim.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["Codex activation is always unverifiable from the tree"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "copilot-activation-overclaim",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/copilot-activation-overclaim.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["Copilot installation leaves activation unconfirmed"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "instruction-files-overclaim",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/instruction-files-overclaim.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["Copilot installation leaves activation unconfirmed"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "report-partitions-omitted",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/report-partitions-omitted.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["Copilot installation leaves activation unconfirmed"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "readme-review-promise",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/readme-review-promise.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["The README qualifies the setup pull request"],
+        "excludes": ["Error:"]
+      }
+    },
+    {
+      "name": "bootstrap-review-promise",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/bootstrap-review-promise.patch",
+      "red": {
+        "exit_code": 50,
+        "contains": ["Bootstrap reports installation separately from activation"],
+        "excludes": ["Error:"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "wording-control",
+      "patch": "docs/reviews/2026-11-07-reviewer-confirmation-plants/wording-control.patch"
+    }
+  ]
+}

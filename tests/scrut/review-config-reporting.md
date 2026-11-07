@@ -36,3 +36,71 @@ $ cd "${REPO_ROOT}" && for file in plugins/set-up-review-config/skills/set-up-re
 > done && echo 'repeat handling: six surfaces'
 repeat handling: six surfaces
 ```
+
+## A Claude workflow confirms configuration only
+
+```scrut
+$ cd "${REPO_ROOT}" && skill=plugins/set-up-review-config/skills/set-up-review-config/SKILL.md &&
+>   sed -n '/### 1\. Check the Repository/,/### 2\./p' "${skill}" | grep -F 'Inspect `.github/workflows/*.yml` and `.github/workflows/*.yaml`' &&
+>   grep -Fq 'a filename or a general Claude task alone does not confirm review wiring' "${skill}" &&
+>   grep -Fq 'A workflow confirms configuration only' "${skill}"
+*Inspect `.github/workflows/*.yml` and `.github/workflows/*.yaml`* (glob)
+```
+
+## An absent workflow leaves Claude activation unconfirmed
+
+```scrut
+$ cd "${REPO_ROOT}" && skill=plugins/set-up-review-config/skills/set-up-review-config/SKILL.md &&
+>   grep -Fq 'If no review workflow is found, report "Claude Code Review: not confirmable from the repository"' "${skill}" &&
+>   grep -Fq 'The Claude GitHub App can provide Code Review without a workflow' "${skill}" &&
+>   grep -Fq 'Preserve step 1' "${skill}" && echo 'absent workflow: not proof of inactivity'
+absent workflow: not proof of inactivity
+```
+
+## Codex activation is always unverifiable from the tree
+
+```scrut
+$ cd "${REPO_ROOT}" && skill=plugins/set-up-review-config/skills/set-up-review-config/SKILL.md &&
+>   grep -Fq 'Always report "Codex cloud review: unverifiable from the repository"' "${skill}" &&
+>   grep -Fq 'If Codex cloud review is enabled and runs' "${skill}" &&
+>   ! grep -Fq 'so from Codex expect the Important rules only' "${skill}" && echo 'Codex: external activation'
+Codex: external activation
+```
+
+## Copilot review depends on activation and a request
+
+```scrut
+$ cd "${REPO_ROOT}" && skill=plugins/set-up-review-config/skills/set-up-review-config/SKILL.md &&
+>   grep -Fq 'When Copilot review is enabled and requested' "${skill}" &&
+>   ! grep -Fq 'so that pull request is already reviewed with the new config' "${skill}" && echo 'Copilot: conditional review'
+Copilot: conditional review
+```
+
+## Copilot installation leaves activation unconfirmed
+
+```scrut
+$ cd "${REPO_ROOT}" && skill=plugins/set-up-review-config/skills/set-up-review-config/SKILL.md &&
+>   grep -Fq 'Separate **Confirmed repository wiring**' "${skill}" &&
+>   grep -Fq 'from **Not confirmed**' "${skill}" &&
+>   grep -Fq 'Report "Copilot review: instructions installed; activation not confirmable from the repository"' "${skill}" &&
+>   grep -Fq 'Installed instruction files alone do not confirm whether any reviewer is running.' "${skill}" && echo 'Copilot: installed instructions only'
+Copilot: installed instructions only
+```
+
+## The README qualifies the setup pull request
+
+```scrut
+$ cd "${REPO_ROOT}" && file=plugins/set-up-review-config/README.md &&
+>   grep -Fq 'The instructions are installed; Copilot review requires external activation and a review request.' "${file}" &&
+>   ! grep -Fq 'so that pull request is already reviewed with the new config' "${file}" && echo 'README: installation only'
+README: installation only
+```
+
+## Bootstrap reports installation separately from activation
+
+```scrut
+$ cd "${REPO_ROOT}" && file=plugins/bootstrap-project/skills/bootstrap-project/SKILL.md &&
+>   grep -Fq 'Report installed instructions separately from confirmed wiring; reviewer activation is not confirmed by installation.' "${file}" &&
+>   ! grep -Fq 'so that pull request is already reviewed with the new config' "${file}" && echo 'bootstrap: installation only'
+bootstrap: installation only
+```

@@ -34,6 +34,7 @@ The checklists are bundled in `./references/checklists/`, one per style guide, a
 ### 1. Check the Repository
 
 1. Work from the repository root (`git rev-parse --show-toplevel`). Stop if the directory is not in a git repository.
+1. Inspect `.github/workflows/*.yml` and `.github/workflows/*.yaml` for Claude review wiring. Read action usage (such as `anthropics/claude-code-action`), triggers, conditions and review prompts; a filename or a general Claude task alone does not confirm review wiring. Report matching paths and what they configure, including manual or conditional triggers. If no review workflow is found, report "Claude Code Review: not confirmable from the repository". The Claude GitHub App can provide Code Review without a workflow, so absence does not prove it is off. Detection reads only the working tree; do not use network or `gh` calls to check reviewer activation.
 1. In `.github/skills/code-review/SKILL.md`, `AGENTS.md` and `REVIEW.md`, check the BEGIN and END marker lines. A file must have none, or exactly one BEGIN line followed later by exactly one END line. For anything else, such as a second BEGIN or END, a BEGIN without an END, an END without a BEGIN, or an END before its BEGIN, stop and ask the user how to repair it.
 1. If `.github/skills/code-review/SKILL.md` exists, read its frontmatter. Copilot requires `name: code-review` and a non-empty `description`; if either is missing or different, report it and ask before continuing.
 1. Report any `.claude/skills/code-review/` or `.agents/skills/code-review/` directory: a second skill with the same name may compete with the installed one. Do not change it.
@@ -101,9 +102,11 @@ Fill the templates in `./references/code-review-skill.md`, `./references/agents-
 
 Summarize each file and its action, the pins, the CI checks, the skip paths, any words added to the spell checker's word list, the files waiting on a future checklist, and any conflicts. Then give the next steps:
 
-- Commit on a branch and open a pull request. Copilot reads skills and instructions from a pull request's head branch, so that pull request is already reviewed with the new config.
+Separate **Confirmed repository wiring** (the workflow paths and conditions found in step 1, or none) from **Not confirmed** (reviewer activation and execution). A workflow confirms configuration only, not credentials, app access or a successful run. Always report "Codex cloud review: unverifiable from the repository" because it is enabled in external Codex settings. Report "Copilot review: instructions installed; activation not confirmable from the repository" because GitHub settings and rulesets outside the tree control it. Installed instruction files alone do not confirm whether any reviewer is running. Preserve step 1's Claude status when no workflow is found; enabling the Claude GitHub App's Code Review is an external setup option, not an action this skill takes. Still install all three surfaces regardless of detection, subject to the existing AGENTS.md opt-out.
+
+- Commit on a branch and open a pull request. When Copilot review is enabled and requested, it reads skills and instructions from the pull request's head branch.
 - Add repository-specific checks to `REVIEW.md` under an `## Always check` heading outside the managed block.
-- Codex posts only P0 and P1 findings on GitHub, so from Codex expect the Important rules only.
+- If Codex cloud review is enabled and runs, it posts only P0 and P1 findings on GitHub, corresponding to the Important rules.
 - Rerun `/set-up-review-config` after updating the marketplace or when the repository gains a new file type; `/refresh-project-scaffolding` audits installed review config.
 
 Ask whether to commit. Suggest `chore: set up review config` as the commit message.

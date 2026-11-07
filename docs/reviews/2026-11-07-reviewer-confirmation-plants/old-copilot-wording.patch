@@ -1,0 +1,7 @@
+--- a/plugins/set-up-review-config/skills/set-up-review-config/SKILL.md
++++ b/plugins/set-up-review-config/skills/set-up-review-config/SKILL.md
+@@ -106,3 +106,3 @@
+ 
+-- Commit on a branch and open a pull request. When Copilot review is enabled and requested, it reads skills and instructions from the pull request's head branch.
++- Commit on a branch and open a pull request. Copilot reads skills and instructions from a pull request's head branch, so that pull request is already reviewed with the new config.
+ - Add repository-specific checks to `REVIEW.md` under an `## Always check` heading outside the managed block.
