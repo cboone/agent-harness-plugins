@@ -1,0 +1,11 @@
+--- a/plugins/publish-report-board/scripts/report-board
++++ b/plugins/publish-report-board/scripts/report-board
+@@ -910,7 +910,7 @@
+     entry("Changed board identity"; [("board", "title", "repo", "repoUrl") as $field
+       | (if $field == "repoUrl" then ($old | effective_repo_url) else ($old[$field] // null) end) as $was
+       | (if $field == "repoUrl" then ($new | effective_repo_url) else ($new[$field] // null) end) as $now
+-      | select($was != $now and ($field != "repoUrl" or ([$old, $new] | any(stated_repo_url != null))))
++      | select($was != $now and ($field != "repoUrl" or ($old.repoUrl // null) != null or ($new.repoUrl // null) != null))
+       | "\($field) (\($old[$field] // null | shown) to \($new[$field] // null | shown))"]),
+     entry("Closed"; [$old | issues_of | .[] | select($now[.number | tostring] == null) | describe]),
+     # A new issue reaches none of the transition entries below, which compare

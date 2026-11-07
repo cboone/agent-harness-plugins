@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export REPO_ROOT="${PWD}"
+export REPORT_BOARD_BIN="${PWD}/plugins/publish-report-board/scripts/report-board"
+export REPORT_BOARD_DATA_DIR="${PWD}/tests/data/report-board"
+echo "RUN identity matrix"
+tests/fixtures/report-board-identity

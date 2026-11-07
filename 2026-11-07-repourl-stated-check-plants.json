@@ -1,0 +1,39 @@
+{
+  "inputs": ["plugins/publish-report-board/scripts/report-board", "tests/fixtures/report-board-identity", "tests/data/report-board/backlog-triage.json", "bin/lib/capture-child.bash", "docs/reviews/2026-11-07-repourl-stated-check-plants/check", "docs/reviews/2026-11-07-repourl-stated-check-plants/old-suppression.patch", "docs/reviews/2026-11-07-repourl-stated-check-plants/ignore-explicit-url.patch", "docs/reviews/2026-11-07-repourl-stated-check-plants/keep-trailing-slash.patch", "bin/lib/git-environment.bash"],
+  "check": "docs/reviews/2026-11-07-repourl-stated-check-plants/check",
+  "timeout": 60,
+  "green": {
+    "exit_code": 0,
+    "contains": ["RUN identity matrix\n", "PASS identity matrix\n"],
+    "excludes": ["FAIL identity:", "ERROR:", "SKIP", "skipped"]
+  },
+  "variants": [
+    {
+      "name": "old-alternative-suppression",
+      "patch": "docs/reviews/2026-11-07-repourl-stated-check-plants/old-suppression.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["RUN identity matrix\n", "FAIL identity: {} omitted example/gadgets forward"],
+        "excludes": ["PASS identity matrix", "ERROR:", "SKIP", "skipped", "jq: error"]
+      }
+    },
+    {
+      "name": "ignore-explicit-url",
+      "patch": "docs/reviews/2026-11-07-repourl-stated-check-plants/ignore-explicit-url.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["RUN identity matrix\n", "FAIL identity: {} custom example/widgets forward"],
+        "excludes": ["PASS identity matrix", "ERROR:", "SKIP", "skipped", "jq: error"]
+      }
+    },
+    {
+      "name": "keep-trailing-slash",
+      "patch": "docs/reviews/2026-11-07-repourl-stated-check-plants/keep-trailing-slash.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["RUN identity matrix\n", "FAIL trailing slash: forward"],
+        "excludes": ["PASS identity matrix", "ERROR:", "SKIP", "skipped", "jq: error"]
+      }
+    }
+  ]
+}
