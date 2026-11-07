@@ -1,0 +1,11 @@
+--- a/plugins/publish-report-board/scripts/report-board
++++ b/plugins/publish-report-board/scripts/report-board
+@@ -884,7 +884,7 @@
+ def shared_with($other): . - (. - $other);
+ def reordered($a; $b): ($a | shared_with($b)) != ($b | shared_with($a));
+ def stated_repo_url: .repoUrl | if type == "string" then . else null end;
+-def effective_repo_url: (stated_repo_url // "https://github.com/\(.repo // "")") | sub("/+$"; "");
++def effective_repo_url: "https://github.com/\(.repo // "")" | sub("/+$"; "");
+ 
+ $previous[0] as $old
+ | $current[0] as $new
