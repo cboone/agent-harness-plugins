@@ -1,0 +1,19 @@
+{
+  "inputs": ["bin/validate-plugins", "bin/lib/capture-child.bash", "bin/build-review-checklists", "plugins/write-markdown/skills/write-markdown/references/review-checklist.md", "plugins/set-up-review-config/skills/set-up-review-config/references/checklists/write-markdown.md", "plugins/set-up-review-config/skills/set-up-review-config/references/guides.md", ".github/skills/code-review/write-markdown.md", "docs/reviews/2026-11-07-installed-checklist-drift-plants/check.bash", "docs/reviews/2026-11-07-installed-checklist-drift-plants/remove-body-comparison.patch", "docs/reviews/2026-11-07-installed-checklist-drift-plants/detector.py", "docs/reviews/2026-11-07-installed-checklist-drift-plants/detector.bash"],
+  "check": "docs/reviews/2026-11-07-installed-checklist-drift-plants/check.bash",
+  "timeout": 120,
+  "green": {
+    "exit_code": 0,
+    "contains": ["ASSERT: stale body rejected\n", "::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\n"]
+  },
+  "variants": [
+    {
+      "name": "body-comparison-removed",
+      "patch": "docs/reviews/2026-11-07-installed-checklist-drift-plants/remove-body-comparison.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: stale body comparison removed\n"]
+      }
+    }
+  ]
+}
