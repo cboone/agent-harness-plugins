@@ -200,6 +200,40 @@ Codex skill inventory: * (glob)
 [1]
 ```
 
+## Installed review checklist bodies match their sources
+
+The catalog document's `valid` case covers an absent installed directory.
+Installed copies ignore pins. Renaming a source rule and rebuilding bundled
+copies still reports the stale installed filename.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" installed-current 2>&1
+Codex skill inventory: * (glob)
+All plugin validations passed.
+```
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" installed-stale-pin 2>&1
+Codex skill inventory: * (glob)
+All plugin validations passed.
+```
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" installed-stale 2>&1
+Codex skill inventory: * (glob)
+::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config
+1 plugin validation error(s) found.
+[1]
+```
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" installed-orphan 2>&1
+Codex skill inventory: * (glob)
+::error::Installed review checklist '.github/skills/code-review/write-orphan.md' has no source checklist; rerun /set-up-review-config
+1 plugin validation error(s) found.
+[1]
+```
+
 ## Validator rejects stale shared reference copies
 
 `suggest-next-issue` ships a byte-identical copy of the progress model that

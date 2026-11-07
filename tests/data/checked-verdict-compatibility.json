@@ -225,6 +225,48 @@
         "stderr": ""
       },
       "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-installed-checklist-drift-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["ASSERT: stale body rejected\n", "::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\n"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "Review checklists: 1 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (1 written, 0 removed).\n::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\nASSERT: stale body rejected\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-installed-checklist-drift-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: stale body comparison removed\n"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "Review checklists: 1 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (0 written, 0 removed).\nFAIL: stale body comparison removed\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-installed-checklist-drift-plants.json",
+      "phase": "green",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["ASSERT: stale body rejected\n", "::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\n"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "Review checklists: 1 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (1 written, 0 removed).\n::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\nASSERT: stale body rejected\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
     }
   ],
   "normalization": "Machine-specific temporary directories and interpreter paths are replaced by labels; framework lines and predicates are unchanged."
