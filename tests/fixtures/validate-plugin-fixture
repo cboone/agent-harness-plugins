@@ -214,6 +214,24 @@ function main() {
 
   case "${scenario}" in
     valid) ;;
+    installed-current | installed-stale-pin | installed-stale | installed-orphan)
+      mkdir -p "${FIXTURE_ROOT}/.github/skills"
+      cp -R "${REPO_ROOT}/.github/skills/code-review" "${FIXTURE_ROOT}/.github/skills/code-review"
+      case "${scenario}" in
+        installed-stale-pin)
+          perl -pi -e 's/ at [^.]+\./ at unpinned./ if $. == 1' "${FIXTURE_ROOT}/.github/skills/code-review/write-markdown.md"
+          ;;
+        installed-stale)
+          perl -pi -e 's/\*\*([^*]+)\*\*/**Renamed rule**/ if /^- \*\*/ && !$changed++' \
+            "${FIXTURE_ROOT}/plugins/write-markdown/skills/write-markdown/references/review-checklist.md"
+          (cd "${FIXTURE_ROOT}" && bin/build-review-checklists > /dev/null)
+          ;;
+        installed-orphan)
+          cp "${FIXTURE_ROOT}/.github/skills/code-review/write-markdown.md" "${FIXTURE_ROOT}/.github/skills/code-review/write-orphan.md"
+          ;;
+        *) ;;
+      esac
+      ;;
     leading-zero)
       jq '.version = "01.2.3"' "${FIXTURE_ROOT}/plugins/release/.claude-plugin/plugin.json" > "${FIXTURE_ROOT}/manifest.json"
       mv "${FIXTURE_ROOT}/manifest.json" "${FIXTURE_ROOT}/plugins/release/.claude-plugin/plugin.json"
