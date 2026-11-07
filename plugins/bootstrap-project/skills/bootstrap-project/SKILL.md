@@ -186,7 +186,7 @@ After all tools have run, print a summary:
   - Run `/lint-and-fix` to fix any initial linting issues.
   - Make an initial commit if the repo is new.
   - Push to the remote and verify CI passes.
-  - When `set-up-review-config` ran, open the setup as a pull request: Copilot reads review skills from a pull request's head branch, so that pull request is already reviewed with the new config.
+  - When `set-up-review-config` ran, open the setup as a pull request. Report installed instructions separately from confirmed wiring; reviewer activation is not confirmed by installation.
   - When the plan marked the Dependabot config as already set up, run `/dependabot:review-config` to check that the config covers everything the repository uses.
 
 ## Error Handling
