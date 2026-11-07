@@ -53,6 +53,27 @@ fails publication. Its outcome is `control-green`, never a red plant. Either lis
 may be omitted; at least one declaration is required. Names are unique across both
 lists. The runner executes assertion variants first, then green controls.
 
+`timeout` is the positive finite wall-clock limit for each setup and check,
+in seconds, at most 3600. TERM, KILL and reap time is included in that limit.
+Optional `git_timeout` sets the inclusive limit for Git init, patch validation and
+patch application; it defaults to `timeout` and has the same range. The execution
+plan names the actual calls and their fixed limits. A nested call's declared
+limit cannot exceed its parent's declared limit. This comparison uses durations,
+not remaining time; completed calls never consume a later call's allowance.
+
+Supervised runners inherit containment ownership and a durable parent record.
+Each call creates fresh local deadlines for execution and cleanup. TERM unwinds
+supervisors, which stop and verify their held process groups before reaping their
+leaders. Records retain allocated deadlines, phase expirations, EPERM causes and
+possibly live groups. An unconfirmed group or lost supervisor fails the run.
+Group records support observation only; they never authorize signaling a group
+whose leader is no longer held.
+Leader records retain start time and command. A later different start time
+identifies a reused PGID; matching start time and command identifies a survivor.
+Unreadable identities and changed commands with the same start time remain
+unknown and red. Defer TERM received during cleanup until cleanup and its records finish,
+then propagate it.
+
 `setup` is optional. It must return zero, including compilation and other
 prerequisites that must succeed before the check can assert the named property.
 The runner invokes each script with `bash -euo pipefail` from the private input
@@ -65,6 +86,12 @@ in both green and red expectations. For unittest, `OK (skipped=1)` is not green
 evidence: require `\nOK\n` and exclude `skipped`, `SKIP` and `ERROR:`. Move compilation and dependency setup out of
 the assertion command. Shell constructs that deliberately mask failure remain
 the script author's responsibility.
+
+Route every process launch through `checked_core.launch`. It prepares launch
+options, checks the active phase deadline, then dispatches immediately. Command
+execution, pipeline stages and synchronous process inspection use this same
+boundary. The launch AST guard rejects launch API references outside it,
+including imported aliases.
 
 Input fingerprints include SHA-256 content digests and permission modes. Private
 and restored copies preserve those modes so supporting executables run.

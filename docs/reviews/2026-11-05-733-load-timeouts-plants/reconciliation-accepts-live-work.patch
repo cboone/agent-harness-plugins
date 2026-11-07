@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -734,5 +734,5 @@
+                         self.record(scope, "absent", gone=True, confirmed_by="ps absence after identity read; no signal sent")
+                     continue
+-                if classify_leader(row.get("leader"), current) == "reused":
++                if True:
+                     self.record(scope, "reused", gone=True, confirmed_by="different leader start time; no signal sent",
+                                 replacement_leader=current)

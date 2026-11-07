@@ -511,3 +511,18 @@ run-scrut-documents: unknown option: --jobs
 Run run-scrut-documents --help for usage.
 [2]
 ```
+
+## Serialize checked runners and preserve parallel execution for other documents
+
+The stub's parallel pair requires both members to start. Its checked pair rejects
+an overlapping invocation through an atomic directory reservation.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir stub docs state \
+>   && cp "${SCRUT_STUB_BIN}" stub/scrut && export PATH="${dir}/stub:${PATH}" \
+>   && [[ "$(command -v scrut)" == "${dir}/stub/scrut" ]] \
+>   && touch docs/lane-parallel-a.md docs/lane-parallel-b.md docs/checked-plant-lane.md docs/checked-gate-lane.md \
+>   && STUB_SCRUT_SCHEDULER_DIR="${dir}/state" SCRUT_JOBS=2 "${RUN_SCRUT_DOCUMENTS_BIN}" docs > run.log \
+>   && tail -1 run.log
+All 4 scrut documents passed.
+```

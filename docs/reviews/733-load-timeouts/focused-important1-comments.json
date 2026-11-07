@@ -1,0 +1,17 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 99,
+      "detail": "The table claims 285 seconds of execution plus 15 seconds of cleanup. With the current 300-second parent budget, allocation_budget(300, 285) reserves 15 seconds for the parent and two 15-second child cleanup phases, leaving at most 255 seconds for execution. A maintainer investigating a document timeout could therefore expect 30 seconds more execution than the driver permits.",
+      "file": "docs/reviews/2026-11-05-733-load-timeouts.md",
+      "fix": "Replace the table entry with: \"Requests 285 s; allocation permits at most 255 s execution, 30 s child cleanup and 15 s enclosing cleanup within 300 s.\" Update the matching description at lines 42–43.",
+      "line": 59,
+      "severity": "suggestion",
+      "title": "Uncited: The documented execution allowance exceeds the allocated budget."
+    }
+  ],
+  "reviewed": "96b0e644a0395e3c2edb79e97e7d9fec57ec5be8",
+  "strengths": ["The runner reference clearly explains that group records support observation and cannot authorize signaling after releasing the leader.", "The review ledger distinguishes historical passing evidence from failed and pending current-tree validation."],
+  "summary": "Reviewed changed comments and documentation across all 67 scoped paths against the implementation. Found one minor budget-description discrepancy; clean at Important."
+}

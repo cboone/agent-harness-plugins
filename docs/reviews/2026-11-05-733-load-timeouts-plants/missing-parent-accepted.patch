@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -242,5 +242,5 @@
+     try:
+         runtime.validate_allocation(allocation)
+-        require(runtime.states().get(allocation["scope"], {}).get("parent") == runtime.scope,
++        require(True,
+                 "supervised step has no durable parent record")
+         with term_unwind() as interruption:

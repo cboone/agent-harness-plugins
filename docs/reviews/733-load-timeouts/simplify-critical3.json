@@ -1,0 +1,51 @@
+{
+  "complete": true,
+  "excluded": ["dist/codex/plugins/plant-defects/.claude-plugin/plugin.json", "dist/codex/plugins/plant-defects/CHANGELOG.md", "dist/codex/plugins/plant-defects/scripts/checked-gate", "dist/codex/plugins/plant-defects/scripts/checked-plant", "dist/codex/plugins/plant-defects/scripts/checked_core.py", "dist/codex/plugins/plant-defects/skills/plant-defects/SKILL.md", "dist/codex/plugins/plant-defects/skills/plant-defects/references/checked-runner.md"],
+  "findings": [
+    {
+      "detail": "Important, below Critical; reported under the explicit verdict-classification stop. A test can print a nested unittest report ending in OK (skipped=1) to stdout while its outer suite produces a valid result on stderr. Combining the streams makes the nested summary an outer verdict, rejecting valid baseline or named assertion evidence and blocking publication. Skipped because this pass is report-only.",
+      "evidence": "matches concatenates stdout and stderr at line 171. framework_lines retains summaries preceding the first exception separator at line 151, or every summary when no separator exists. Thus a nested skipped summary on stdout survives selection and returns an empty status list at lines 154–155, even when stderr contains the correct outer summary. The existing nested-diagnostic test covers reports after an exception separator, not this sibling.",
+      "file": "plugins/plant-defects/scripts/checked-plant",
+      "line": 151,
+      "severity": "important",
+      "title": "Uncited: Nested stdout reports still determine the outer verdict"
+    },
+    {
+      "detail": "Angle: Simplification. Nested conditional expressions obscure the four combinations of explicit and active lock deadlines. Maintainers must reconstruct those combinations before assessing deadline propagation. Use explicit branches preserving the minimum when both exist and IO_LIMIT when neither exists. Skipped because editing is prohibited.",
+      "evidence": "Lines 107–109 select among explicit, active and fallback deadlines using a nested conditional assignment followed by another conditional assignment.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "line": 107,
+      "severity": "nit",
+      "title": "Uncited: Make lock-deadline selection explicit"
+    },
+    {
+      "detail": "Angles: Reuse, Efficiency and Simplification. Each variant's identical execution plan is constructed twice, duplicating allocation and timeout-parameter wiring across all 79 runner and gate variants. Construct each plan once, then sum and validate it. Skipped because editing is prohibited.",
+      "evidence": "document_budgets calls execution_plan at lines 97–99 for summation and repeats the same construction at lines 100–103 for validation.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "line": 97,
+      "severity": "nit",
+      "title": "Uncited: Reuse each document execution plan"
+    },
+    {
+      "detail": "Angles: Efficiency and Simplification. The test reads and parses the complete plant-test module without consuming its AST. Every invocation repeats this unnecessary file read and AST allocation. Remove these assignments while retaining the dedicated mutation-validity checks. Skipped because editing is prohibited.",
+      "evidence": "Lines 378–379 read checked_plant_test.py and assign its parsed tree. Neither value is consumed before line 380 replaces source with the gate-module AST used to extract PARTIAL_DRIVER.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "line": 378,
+      "severity": "nit",
+      "title": "Uncited: Remove the unused plant-test AST construction"
+    },
+    {
+      "detail": "Angles: Reuse, Simplification and Altitude. Command-kind selection and optional-plan dispatch are interleaved into four invocation branches, repeating journal and target wiring. Select the runner and arguments first, then retain two explicit planned/unplanned dispatch paths. This reduces synchronized maintenance without adding another abstraction. Skipped because editing is prohibited.",
+      "evidence": "execute repeats the plan-is-None decision and invocation options separately for pipeline_command and command at lines 122–131. Both runners accept the positional arguments and journal/target options used here.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "line": 122,
+      "severity": "nit",
+      "title": "Uncited: Separate runner selection from plan dispatch"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Completed one report-only simplify pass over all 144 applicable changed files, reading each in full. Applied Reuse, Simplification, Efficiency and Altitude inline because nested reviewers were prohibited. Seven generated mirrors were excluded. HEAD matches the endpoint; working-tree changes: none. No PR body applies, as supplied by the caller.\n\nFound four Nit cleanup proposals and one Important verdict-classification recurrence under the explicit stop exception. Zero fixed; five skipped because editing was prohibited. No Critical defect or additional production deadline defect was established. Independent inclusive limits, containment boundaries and plant-defects 1.3.0 were preserved as review constraints.\n\nCritical-only round 3 continues the supplied counts. Mechanical verification, full source-plant replay and restart validation remain unverified. Session could write: no, read-only sandbox. No edits, tests, project checks, network access, gh commands, messages or nested reviewers ran.\n\nstopped: recurring defect\n\n",
+  "reviewed": "302c0d91a77097f1ae66e39bd996253e4bbb17d8..25914133a1f1614854b4e140f8adcff959a26b94",
+  "status": "success",
+  "unverified": ["Tests, formatting, lint and repository validation were intentionally not run. Settle outside this pass with: make test-all", "The nested-stdout counterexample was established by source inspection, not execution. Add that sibling to the framework-status regression, then run: make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant.md", "Full source-plant replay, restoration and old-code failure checks remain pending. Command:\nuv run --script plugins/plant-defects/scripts/checked-plant run \\\n  2026-11-05-733-load-timeouts-plants.json <fresh-output-directory>"]
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "aspect": "code",
+    "findings": [],
+    "reviewed": "2327153d38c168caf1882ce5718092e2d48fd98a",
+    "strengths": ["Execution plans connect declared budgets to dispatched operations, including Git steps.", "Cleanup preserves phase expirations, subprocess diagnostics and unresolved group evidence."],
+    "summary": "Reviewed every scoped path and the committed changes against the trusted guidelines; the change meets the project's standards, with no reportable defects. Static review only because tests create files; clean at Important."
+  },
+  {
+    "aspect": "errors",
+    "findings": [],
+    "reviewed": "2327153d38c168caf1882ce5718092e2d48fd98a",
+    "strengths": ["Cleanup retains permission errors, subprocess diagnostics and phase-expiration causes.", "Unconfirmed process groups prevent successful completion.", "Captured document output is published before finalization, whose failures are reported separately."],
+    "summary": "Reviewed all 76 scoped paths for error propagation, cleanup and diagnostic handling. No reportable introduced defects were found; tests were not run because they create files, so this static review is clean at Important."
+  },
+  {
+    "aspect": "tests",
+    "findings": [
+      {
+        "confidence": 94,
+        "detail": "Criticality 7/10. This test checks classify_leader directly, but no test verifies reconciliation's decision to clear or retain a live group. The nested-supervisor tests eventually assert an empty pending list, so incorrectly clearing a live survivor would satisfy them. Changing reconcile's comparison from == \"reused\" to != \"reused\" could therefore escape coverage while allowing finish() to accept surviving or unknown work.",
+        "file": "tests/checked_timeout_budget_test.py",
+        "fix": "Add reconciliation tests with recorded allocations and controlled process observations. Assert that survivors, changed-command identities and unreadable identities remain pending and make finish() fail, while confirmed absence and reused identities clear without sending signals.",
+        "line": 80,
+        "severity": "important",
+        "title": "Uncited: Identity tests do not cover reconciliation's fail-closed decisions."
+      }
+    ],
+    "reviewed": "2327153d38c168caf1882ce5718092e2d48fd98a",
+    "strengths": ["Subprocess tests cover delayed pipeline cleanup and TERM arriving during command and pipeline cleanup.", "Negative cases cover permission errors, exhausted TERM observation and unknown final shutdown state.", "Git timeout enforcement, document deadlines and detector inventory have targeted regression coverage.", "Existing integration tests continue to cover action refusal, partial pipelines and evidence preservation."],
+    "summary": "Reviewed the complete scoped changes and mapped supervision behavior to new and existing tests. Coverage is substantial, with one important gap in final group reconciliation. Tests were not executed because they create files."
+  },
+  {
+    "aspect": "comments",
+    "findings": [],
+    "reviewed": "2327153d38c168caf1882ce5718092e2d48fd98a",
+    "strengths": ["The runner reference clearly distinguishes group observation from permission to signal.", "The ledger accurately explains execution and cleanup allocations.", "Historical passing evidence is clearly separated from pending validation."],
+    "summary": "Reviewed changed comments and documentation across all 76 membership paths against the implementation, confirming generated mirrors match their canonical sources. No actionable comment defects found; clean at Important. Review remained read-only, and tests were not run."
+  },
+  {
+    "aspect": "types",
+    "findings": [],
+    "reviewed": "2327153d38c168caf1882ce5718092e2d48fd98a",
+    "strengths": ["SupervisionRuntime preserves parent ownership, cleanup reserves and unresolved-group tracking; encapsulation 6/10, invariant expression 7/10, usefulness 10/10, enforcement 8/10.", "StepPlan connects declared budgets to dispatch, rejects repeated steps and validates observation order before accepting success; encapsulation 6/10, invariant expression 7/10, usefulness 9/10, enforcement 8/10.", "FactJournal preserves serialized append behavior while bounding lock acquisition by the enclosing deadline; encapsulation 7/10, invariant expression 7/10, usefulness 9/10, enforcement 8/10.", "SupervisorTerminated consistently represents SIGTERM termination with exit status 143; encapsulation 9/10, invariant expression 10/10, usefulness 8/10, enforcement 10/10.", "Allocation records explicitly carry parent identity and deadline relationships, checked before dispatch; encapsulation 6/10, invariant expression 7/10, usefulness 10/10, enforcement 8/10.", "Leader-identity records distinguish reuse from survival and retain unknown states conservatively; encapsulation 6/10, invariant expression 8/10, usefulness 9/10, enforcement 8/10."],
+    "summary": "Reviewed all 76 membership paths, including changed classes, record structures, fixtures and generated mirrors. No concrete introduced type-design defect met the reporting threshold; clean at Important based on static review, with tests unrun under the read-only constraint."
+  }
+]

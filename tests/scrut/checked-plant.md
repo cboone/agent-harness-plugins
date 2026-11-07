@@ -1,15 +1,14 @@
 # Checked plant runner
 
-## Real plants, negative restart check and publication gate
-
-The committed behavior suite checks each runner phase and refuses failed,
-unrun, stale or incomplete evidence without changing existing records.
+Behavior checks run once under the document backstop. Each supervised call has
+its own inclusive limit.
 
 ```scrut {output_stream: stderr}
 $ source "${REPO_ROOT}/bin/lib/git-environment.bash"
-> CHECKED_PLANT_GUARD_PART=1 "${CHECKED_PLANT_TESTS_BIN}" -q
+> uv run --no-project "${REPO_ROOT}/tests/run_checked_budget.py" checked-plant.md \
+>   "${CHECKED_PLANT_TESTS_BIN}" -q
 ----------------------------------------------------------------------
-Ran 43 tests in *s (glob)
+Ran 45 tests in *s (glob)
 
 OK
 ```

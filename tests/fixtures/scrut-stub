@@ -16,6 +16,30 @@ function main() {
   local document="${*: -1}"
 
   case "${document}" in
+    *lane-parallel-*)
+      local state="${STUB_SCRUT_SCHEDULER_DIR:?scheduler state is required}"
+      local name="${document##*/}"
+      touch "${state}/${name}"
+      local wait_deadline=$((SECONDS + 10))
+      while [[ ! -f "${state}/lane-parallel-a.md" || ! -f "${state}/lane-parallel-b.md" ]]; do
+        if ((SECONDS >= wait_deadline)); then
+          printf '%s\n' 'parallel documents did not overlap' >&2
+          return 1
+        fi
+        sleep 0.01
+      done
+      printf 'Result: 1 document(s) with 1 testcase(s): 1 succeeded, 0 failed and 0 skipped\n'
+      ;;
+    *checked-plant-lane* | *checked-gate-lane*)
+      local state="${STUB_SCRUT_SCHEDULER_DIR:?scheduler state is required}"
+      if ! mkdir "${state}/checked-active"; then
+        printf '%s\n' 'checked documents overlapped' >&2
+        return 1
+      fi
+      sleep 1
+      rmdir "${state}/checked-active"
+      printf 'Result: 1 document(s) with 1 testcase(s): 1 succeeded, 0 failed and 0 skipped\n'
+      ;;
     *signals*)
       trap -p INT QUIT
       printf 'signal probe ran\n'

@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -284,5 +284,5 @@
+             try:
+                 runtime.record(allocation["scope"], "started", pgid=process.pid)
+-                runtime.record(allocation["scope"], "identity", leader=leader_identity(process.pid, deadline))
++                leader_identity(process.pid, deadline)
+             except (OSError, ValueError, subprocess.SubprocessError) as error:
+                 registration_error = failure_cause(error)

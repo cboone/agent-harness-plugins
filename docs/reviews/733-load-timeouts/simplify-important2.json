@@ -1,0 +1,19 @@
+{
+  "complete": true,
+  "excluded": ["dist/codex/plugins/plant-defects/.claude-plugin/plugin.json", "dist/codex/plugins/plant-defects/scripts/checked_core.py"],
+  "findings": [
+    {
+      "detail": "Angles: Reuse and Simplification. Five supplemental detector names are maintained both in detectors.update(...) and in the per-mutation methods lists. Changing a supplemental check requires synchronizing both declarations. Declare supplemental methods once per mutation and reuse that declaration for inventory and execution, while retaining the independent expected_detectors oracle. Skipped because this review is report-only.",
+      "evidence": "Lines 1033–1035 enumerate the same five supplemental methods added to execution lists at lines 1053–1066.",
+      "file": "tests/checked_plant_test.py",
+      "line": 1033,
+      "severity": "nit",
+      "title": "Uncited: Consolidate supplemental detector declarations"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Completed one read-only simplify pass over all 44 changed non-generated files in the requested range, reading each file fully. Applied Altitude, Efficiency, Reuse and Simplification inline because child reviewers were prohibited. Found one deduplicated maintenance-cost suggestion; zero fixes and one skipped proposal. No edits, tests, nested reviewers or gh commands ran. HEAD matched the requested endpoint; working-tree status remained clean. No Important cleanup findings. clean at Important.\n\n",
+  "reviewed": "302c0d91a77097f1ae66e39bd996253e4bbb17d8..9ce65bed9489882038c328d0e8d2bdfd756345cf",
+  "status": "success",
+  "unverified": ["Runtime, lint and test results were intentionally not verified under the no-tests instruction; make test-all would provide that validation."]
+}

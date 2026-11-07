@@ -1,0 +1,8 @@
+--- a/tests/checked_gate_test.py
++++ b/tests/checked_gate_test.py
+@@ -372,5 +372,4 @@
+                 self.assertFalse(self.action.exists())
+                 result = value['checks'][0]['result']
+-                self.assertIsInstance(result, dict, value.get('cause'))
+                 rows = result['stages']
+                 for number, row in enumerate(rows, 1):

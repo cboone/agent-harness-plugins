@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -205,5 +205,5 @@
+                     phase_expirations.append(dict(phase=requested_signal.name, cause=failure_cause(failure)))
+                     if requested_signal != signal.SIGTERM:
+-                        raise
++                        return [], None
+                     break
+                 if not remaining:

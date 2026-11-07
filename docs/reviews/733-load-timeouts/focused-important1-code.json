@@ -1,0 +1,17 @@
+{
+  "aspect": "code",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "If the first SIGTERM arrives while _command is already executing its cleanup finally block, such as while stop_group waits for a TERM-ignoring child, protected remains false. This handler raises SupervisorTerminated immediately, skipping SIGKILL, leader reaping and the final audit record. The new document supervisor can trigger this during cancellation or deadline exhaustion. Descendant commands occupy separate process groups, and root_supervision.finish only observes those groups, so they can remain running.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "fix": "Defer TERM exceptions throughout command and pipeline cleanup, complete shutdown and reaping, then propagate the deferred termination. Add a regression that delivers the first TERM during cleanup of a TERM-ignoring child.",
+      "line": 570,
+      "severity": "important",
+      "title": "Uncited: TERM can interrupt cleanup and leave descendant groups running."
+    }
+  ],
+  "reviewed": "96b0e644a0395e3c2edb79e97e7d9fec57ec5be8",
+  "strengths": ["Execution plans connect declared budgets to dispatched steps, including Git operations.", "Cleanup records retain phase expirations and subprocess diagnostics."],
+  "summary": "Reviewed the complete committed scope against the trusted project guidelines. One important cancellation defect remains; tests were not executed because they create files."
+}

@@ -1,0 +1,9 @@
+--- a/tests/fixtures/checked-git-delay
++++ b/tests/fixtures/checked-git-delay
+@@ -13,5 +13,5 @@
+     return 1
+   fi
+-  printf '%s\n' ready > "${CHECKED_GIT_READY_FILE:?ready file is required}"
++  [[ "${CHECKED_GIT_DELAY}" != 0 ]] || printf '%s\n' ready > "${CHECKED_GIT_READY_FILE:?ready file is required}"
+   sleep "${CHECKED_GIT_DELAY:?delay is required}"
+   exec "${CHECKED_REAL_GIT:?real Git is required}" "$@"

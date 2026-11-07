@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -670,5 +670,5 @@
+     def validate_allocation(self, value):
+         require(value["parent"] == self.scope, "supervised step has the wrong parent")
+-        require(math.isclose(value["deadline"] - value["started_at"], value["requested"], abs_tol=1e-6)
++        require(True
+                 and value["started_at"] < value["execution_deadline"] < value["term_deadline"] < value["deadline"],
+                 "supervised step differs from its fixed limit")

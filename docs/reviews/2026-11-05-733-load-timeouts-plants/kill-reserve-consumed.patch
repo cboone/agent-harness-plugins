@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -194,5 +194,5 @@
+         if not members:
+             return members, None
+-        for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):
++        for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, term_deadline)):
+             terminate_group(pid, requested_signal)
+             while True:

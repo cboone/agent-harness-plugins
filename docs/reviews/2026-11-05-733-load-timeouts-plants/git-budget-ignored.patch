@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked-plant
++++ b/plugins/plant-defects/scripts/checked-plant
+@@ -114,5 +114,5 @@
+ def execution_plan(manifest, kind="plant"):
+     timeout = manifest.get("timeout", 60)
+-    git_timeout = manifest.get("git_timeout", timeout)
++    git_timeout = timeout
+     steps = []
+     for phase in ("baseline", "red" if kind == "plant" else "control", "green"):

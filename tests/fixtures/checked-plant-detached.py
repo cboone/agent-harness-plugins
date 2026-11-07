@@ -25,6 +25,7 @@ with record.open("a") as output:
     output.write(str(pid) + "\n")
 print("detached stdout", flush=True)
 print("detached stderr", file=sys.stderr, flush=True)
+Path(os.environ["CHECKED_PLANT_READY"]).write_text("ready")
 time.sleep(60)
 '''
 subprocess.Popen([sys.executable, "-c", child], start_new_session=True)

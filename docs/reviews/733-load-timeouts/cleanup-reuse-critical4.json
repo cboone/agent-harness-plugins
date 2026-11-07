@@ -1,0 +1,26 @@
+{
+  "aspect": "cleanup-reuse",
+  "findings": [
+    {
+      "confidence": 100,
+      "detail": "Uncited: document_budgets constructs every variant's execution plan twice with identical arguments, first for summation and then for validation. Across the 79 declared variants, this repeats list and dictionary allocation and duplicates timeout-parameter wiring.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Construct each variant's plan once, validate it, and add its step timeouts to the document total in the same loop.",
+      "line": 151,
+      "severity": "suggestion",
+      "title": "Uncited: Reuse each execution plan for summation and validation."
+    },
+    {
+      "confidence": 98,
+      "detail": "Uncited: execute repeats the planned/unplanned dispatch decision separately for commands and pipelines, producing four invocation sites with identical journal and target wiring. Any dispatch-option change must therefore be maintained in both branches, although the runners accept the same interface here.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "fix": "Select the runner and payload first, then use one planned dispatch and one unplanned dispatch, retaining the existing exception handler.",
+      "line": 122,
+      "severity": "suggestion",
+      "title": "Uncited: Share dispatch logic between commands and pipelines."
+    }
+  ],
+  "reviewed": "dc74f33138a105cb274a792389083e9dc3c0d921",
+  "strengths": ["Process launches share one deadline-checking boundary.", "Fingerprint planning and execution reuse the same operation declarations."],
+  "summary": "Reviewed all 158 membership paths for reuse, confirming generated mirrors match their canonical sources. Two localized suggestions reduce repeated work and maintenance without adding abstractions. Review remained read-only; tests were not run."
+}

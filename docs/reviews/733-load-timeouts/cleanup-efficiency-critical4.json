@@ -1,0 +1,44 @@
+{
+  "aspect": "cleanup-efficiency",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "Each new inherited supervisor opens FactJournal, whose constructor reads and discards the entire audit. The subsequent runtime.states() reads that audit again from offset zero. Every pipeline worker therefore incurs one redundant whole-file read and bytes allocation as the shared audit grows.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "fix": "Validate the inherited journal with a locked read=False open, preserving file checks and deadlines, then let states() ingest its contents once.",
+      "line": 765,
+      "severity": "suggestion",
+      "title": "Uncited: Inherited supervisors read the complete audit twice at startup."
+    },
+    {
+      "confidence": 99,
+      "detail": "ROOT.rglob descends into excluded directories before the loop discards their matches. Every compatibility-test invocation unnecessarily enumerates dependency and generated trees; dist and node_modules currently contain 2,850 files combined.",
+      "file": "tests/checked_plant_test.py",
+      "fix": "Use a directory walk that prunes node_modules, dist, .agents and .git before descending, retaining the existing manifest parsing and sorted comparison.",
+      "line": 785,
+      "severity": "suggestion",
+      "title": "Uncited: Manifest discovery traverses directories it explicitly excludes."
+    },
+    {
+      "confidence": 100,
+      "detail": "document_budgets constructs identical execution plans once for summation and again for validation. A complete policy calculation allocates 79 unnecessary six-step plans, repeating the same timeout lookup and parameter construction.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Construct each variant's plan once and reuse it for summation and validation, preserving validation order and document-cap checks.",
+      "line": 151,
+      "severity": "suggestion",
+      "title": "Uncited: Budget accounting constructs every variant plan twice."
+    },
+    {
+      "confidence": 100,
+      "detail": "Each invocation reads the approximately 70 KB plant-test module and constructs its complete AST, but neither value is consumed afterward. The next statement loads the gate-module AST used by the actual assertion.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Remove the unused plant-module read and ast.parse assignment while retaining the gate-module parsing and assertions.",
+      "line": 463,
+      "severity": "suggestion",
+      "title": "Uncited: The deadline guard constructs an unused module AST."
+    }
+  ],
+  "reviewed": "dc74f33138a105cb274a792389083e9dc3c0d921",
+  "strengths": ["Audit state ingestion uses saved offsets to avoid repeatedly parsing prior records within a process.", "Mutation checks select named detectors instead of repeating the complete behavior suite."],
+  "summary": "Reviewed all 158 committed membership paths for efficiency cleanup and found four optional improvements with concrete I/O or allocation costs. Review remained read-only; tests were not run because they create files."
+}

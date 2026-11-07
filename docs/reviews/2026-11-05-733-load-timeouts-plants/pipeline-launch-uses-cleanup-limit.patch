@@ -1,0 +1,9 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -1217,5 +1217,5 @@
+                     journal.append("command", current_stage, argv=row["command"])
+                     interruption["protected"] = True
+-                    processes.append(launch(row["command"], deadline=deadline, stdin=subprocess.PIPE if index else subprocess.DEVNULL,
++                    processes.append(launch(row["command"], deadline=cleanup_deadline, stdin=subprocess.PIPE if index else subprocess.DEVNULL,
+                                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0))
+                     row.update(started=True, started_at=time.monotonic())

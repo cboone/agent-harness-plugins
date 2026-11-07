@@ -1,11 +1,11 @@
 # Checked plant guards, partition 2
 
-Seven declared mutations run through the checked runner. The suite verifies
-that all four partitions cover the complete mutation list exactly once.
+Each mutation has its own baseline, named detector and restored check.
 
 ```scrut {output_stream: stderr}
 $ source "${REPO_ROOT}/bin/lib/git-environment.bash"
-> CHECKED_PLANT_GUARD_PART=2 "${CHECKED_PLANT_TESTS_BIN}" \
+> uv run --no-project "${REPO_ROOT}/tests/run_checked_budget.py" checked-plant-guards-2.md \
+>   "${CHECKED_PLANT_TESTS_BIN}" \
 >   RunnerTests.test_runner_guards_detect_their_own_plants -q
 ----------------------------------------------------------------------
 Ran 1 test in *s (glob)

@@ -1,0 +1,27 @@
+{
+  "complete": true,
+  "excluded": ["dist/codex/plugins/plant-defects/.claude-plugin/plugin.json", "dist/codex/plugins/plant-defects/scripts/checked_core.py"],
+  "findings": [
+    {
+      "detail": "The new document supervisor can terminate its test process while leaving nested commands running. command() replaces the enclosing deadline with a fresh timeout, and each nested command starts a separate session. If the 285-second document deadline expires during an inner command or pipeline, document cleanup cannot reach that separate process group, and terminating the test process bypasses its cleanup code.",
+      "evidence": "tests/run_checked_budget.py:19 supervises the document through core.command(). checked_core.py:190 creates a fresh deadline without consulting ACTIVE_DEADLINE or CHECKED_EXECUTION_DEADLINE; line 208 overwrites the exported deadline, and lines 217-218 create a new session. live_group() selects only the supervised PGID. pipeline_command() likewise creates fresh execution and cleanup deadlines at lines 969-971.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "line": 190,
+      "severity": "important",
+      "title": "Parallel paths: nested supervisors discard the enclosing document deadline"
+    },
+    {
+      "detail": "Document accounting counts only baseline, red and restored checks. Each mutation also executes Git initialization, patch validation and patch application, each with the same independent timeout and cleanup allowance. For checked-plant-guards-2.md, the validator accepts 270 seconds, but the six supervised commands per mutation permit 540 seconds across its two mutations, before file operations. Load can therefore exhaust the 285-second driver budget while every individual command remains within its allowance, interrupting the required restored check.",
+      "evidence": "document_budgets() computes 3 * (check budget + cleanup margin). checked-plant:140-151 and 169 execute three checks plus three separately supervised Git commands. tests/checked_plant_test.py:1094 assigns the declared budget as the manifest timeout, which those Git commands also use. The policy assigns two 30-second mutations to checked-plant-guards-2.md: accounting is 2*3*(30+15)=270, while their command allowances total 2*6*(30+15)=540.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "line": 60,
+      "severity": "important",
+      "title": "Boundary arithmetic: document totals omit Git setup and patch commands"
+    }
+  ],
+  "not_reviewed": [],
+  "report": "Scope: 302c0d91a77097f1ae66e39bd996253e4bbb17d8..9ce65bed9489882038c328d0e8d2bdfd756345cf. All 44 applicable canonical files were read in full, including tests, fixtures, patches, the plant manifest, metadata, Makefile and review documentation. HEAD matches the range endpoint. Working-tree changes: none. Excluded: the two listed dist/codex files, because they are generated mirrors. No PR body applies; the caller supplied that no PR exists and supplied repository ownership/status.\n\nGroups: code and docs. Items walked: Sibling input forms; Boundary arithmetic; Stale writes; Validator gaps; Absent or partial data; Untrusted data in commands; Tests that cannot fail; Crashes instead of reports; Unrun platform configuration; Unenforced trust boundary; Parallel paths; Docs drift. Agent-prose control flow did not apply.\n\nTwo Important correctness findings remain. Deadline siblings examined: document supervision, command(), pipeline_command(), exported execution deadlines, process-group inspection and detector deadline handling. Accounting siblings examined: all 15 plant guard declarations, per-mutation manifests, baseline/red/restored checks, Git initialization/application and the document driver.\n\nMechanical checks run: none. Tests, mutation runs, lint and validation remain unverified. Findings are based on source inspection and arithmetic, not executed reproductions. Session could write: no, read-only sandbox. --run-checks: off. No files were written. GitHub commands, subagents and nested Codex were not used, as requested.\n\nstopped: recurring defect",
+  "reviewed": "302c0d91a77097f1ae66e39bd996253e4bbb17d8..9ce65bed9489882038c328d0e8d2bdfd756345cf",
+  "status": "success",
+  "unverified": ["Behavior, detector execution and budget regressions were not run, as requested. Settle with: make test-scrut", "Committed supervision mutations and their control were not executed. Use plant-defects with 2026-11-05-733-load-timeouts-plants.json and a fresh output directory.", "Formatting and lint checks were not run, as requested. Settle with: make lint", "Repository and manifest validation were not run, as requested. Settle with: make validate"]
+}

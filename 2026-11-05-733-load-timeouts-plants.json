@@ -1,0 +1,414 @@
+{
+  "inputs": ["plugins/plant-defects/scripts/checked_core.py", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked-gate", "tests/checked_plant_test.py", "tests/checked_gate_test.py", "tests/checked_timeout_budget_test.py", "tests/run_checked_budget.py", "tests/data/checked-timeout-budgets.json", "tests/fixtures/checked-plant-detached.py", "tests/fixtures/checked-git-delay", "bin/lib/git-environment.bash", "bin/lib/run-scrut-documents", "bin/run-scrut", "tests/fixtures/scrut-stub", "docs/reviews/2026-11-05-733-load-timeouts-plants/check.sh", "docs/reviews/2026-11-05-733-load-timeouts-plants/old-ps-limit.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/suppressed-eperm.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/old-pipeline-allowance.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/old-pipeline-grace.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/literal-supervision-limit.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/oversized-document-budget.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/unenforced-driver-budget.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/term-expiry-skips-kill.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/unknown-final-state-accepted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/kill-reserve-consumed.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/git-budget-ignored.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/detector-omitted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/fixed-limit-escape.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/missing-parent-accepted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/lost-supervisor-accepted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/term-interrupts-command-cleanup.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/term-interrupts-pipeline-cleanup.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/reuse-misclassified.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/exec-misclassified.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/finalization-discards-output.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/identity-record-omitted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/reconciliation-accepts-live-work.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/git-alias-rejected.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/git-path-guard-omitted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/git-delay-unarmed.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/assertion-message-collision.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/assertion-nonmapped-message-collision.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/old-cleanup-fixture-limit.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/manifest-cause-indentation.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/mock-reservation-recorded.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/pipeline-fixture-missing-result.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/checked-documents-parallel.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/nested-limit-unchecked.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/gate-document-cap-exceeded.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/allocation-lock-uncounted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/parent-state-limit-uncounted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/expired-process-launch.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/launch-outside-boundary.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/pipeline-launch-uses-cleanup-limit.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/nested-restart-output.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/old-detector-window.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/diagnostic-retention-output.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/undeclared-detector-accepted.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/retention-fixture-missing-metadata.patch", "docs/reviews/2026-11-05-733-load-timeouts-plants/longer-delay-control.patch", "tests/checked_test_diagnostics.py", "tests/data/checked-main-verdict.json", "tests/fixtures/checked-pipeline-launch-lock.py", "tests/fixtures/checked-audit-lock.py", "tests/data/checked-verdict-compatibility.json", "review-scope-plants.json", "review-validity-policy-plants.json", "2026-11-05-733-load-timeouts-plants.json", "tests/scrut/checked-plant.md", "tests/scrut/checked-plant-guards-1.md", "tests/scrut/checked-plant-guards-2.md", "tests/scrut/checked-plant-guards-3.md", "tests/scrut/checked-plant-guards-4.md", "tests/scrut/checked-plant-guards-5.md", "tests/scrut/checked-plant-guards-6.md", "tests/scrut/checked-plant-guards-7.md", "tests/scrut/checked-plant-guards-8.md", "tests/scrut/checked-plant-guards-9.md", "tests/scrut/checked-plant-guards-10.md", "tests/scrut/checked-plant-guards-11.md", "tests/scrut/checked-plant-guards-12.md", "tests/scrut/checked-plant-guards-13.md", "tests/scrut/checked-plant-guards-14.md", "tests/scrut/checked-plant-guards-15.md", "tests/scrut/checked-gate.md", "tests/scrut/checked-gate-plants.md", "tests/scrut/checked-gate-plants-2.md", "tests/scrut/checked-gate-plants-3.md", "tests/scrut/checked-gate-plants-4.md", "tests/scrut/checked-gate-plants-5.md", "tests/scrut/checked-gate-plants-6.md", "tests/scrut/checked-gate-plants-7.md", "tests/scrut/checked-gate-plants-8.md", "tests/scrut/checked-gate-plants-9.md", "tests/scrut/checked-gate-plants-10.md", "tests/scrut/checked-gate-plants-11.md", "tests/scrut/checked-gate-plants-12.md", "tests/scrut/checked-gate-plants-13.md", "tests/scrut/checked-gate-plants-14.md", "tests/scrut/checked-gate-plants-15.md", "tests/scrut/checked-gate-plants-16.md", "tests/scrut/checked-gate-plants-17.md", "tests/scrut/checked-gate-plants-18.md", "tests/scrut/checked-gate-plants-19.md", "tests/scrut/checked-gate-plants-20.md", "tests/scrut/checked-gate-plants-21.md", "tests/scrut/checked-gate-plants-22.md", "tests/scrut/checked-gate-plants-23.md", "tests/scrut/checked-gate-plants-24.md", "tests/scrut/checked-gate-plants-25.md", "tests/scrut/checked-gate-plants-26.md", "tests/scrut/checked-gate-plants-27.md", "tests/scrut/checked-gate-plants-28.md", "tests/scrut/checked-gate-plants-29.md", "tests/scrut/checked-gate-plants-30.md", "tests/scrut/checked-gate-plants-31.md", "tests/scrut/checked-gate-plants-32.md", "tests/scrut/checked-gate-plants-33.md", "tests/scrut/checked-gate-plants-34.md", "tests/scrut/checked-gate-plants-35.md", "tests/scrut/checked-gate-plants-36.md", "tests/scrut/checked-gate-plants-37.md", "tests/scrut/checked-gate-plants-38.md", "tests/scrut/checked-gate-plants-39.md", "tests/scrut/checked-gate-plants-40.md", "tests/scrut/checked-gate-plants-41.md", "tests/scrut/checked-gate-plants-42.md", "tests/scrut/checked-gate-plants-43.md", "tests/scrut/checked-gate-plants-44.md", "tests/scrut/checked-gate-plants-45.md", "tests/scrut/checked-gate-plants-46.md", "tests/scrut/checked-gate-plants-47.md", "tests/scrut/checked-gate-plants-48.md", "tests/scrut/checked-gate-plants-49.md", "tests/scrut/checked-gate-plants-50.md", "tests/scrut/checked-timeout-budgets.md", "tests/checked_fixture_limits.py", "tests/fixtures/review-validity-policy-plant-check", "bin/check-review-validity.py", "tests/fixtures/review-validity-unreadable", "tests/fixtures/review-scope-plant-check", "tests/fixtures/review-scope-validity"],
+  "check": "docs/reviews/2026-11-05-733-load-timeouts-plants/check.sh",
+  "timeout": 120,
+  "green": {
+    "exit_code": 0,
+    "contains": ["inspection, pipeline and budget checks completed", "\nOK\n"],
+    "excludes": ["skipped", "SKIP", "ERROR:"]
+  },
+  "variants": [
+    {
+      "name": "old-ps-limit",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/old-ps-limit.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_inspection_failure_retains_subprocess_diagnostics", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "suppressed-eperm",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/suppressed-eperm.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_inspection_failure_retains_subprocess_diagnostics", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "old-pipeline-allowance",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/old-pipeline-allowance.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_supervision_limits_derive_from_deadlines", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "old-pipeline-grace",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/old-pipeline-grace.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_pipeline_timeout_and_capture_bound", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "literal-supervision-limit",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/literal-supervision-limit.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_supervision_limits_derive_from_deadlines", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "oversized-document-budget",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/oversized-document-budget.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_document_bounds_use_executed_declarations", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "unenforced-driver-budget",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/unenforced-driver-budget.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_document_driver_enforces_execution_deadline", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "term-expiry-skips-kill",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/term-expiry-skips-kill.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_inspection_failure_retains_subprocess_diagnostics", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "unknown-final-state-accepted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/unknown-final-state-accepted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_inspection_failure_retains_subprocess_diagnostics", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "kill-reserve-consumed",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/kill-reserve-consumed.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_inspection_failure_retains_subprocess_diagnostics", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "git-budget-ignored",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/git-budget-ignored.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_git_budget_and_execution_plan", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "detector-omitted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/detector-omitted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_document_bounds_use_executed_declarations", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "fixed-limit-escape",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/fixed-limit-escape.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_supervised_calls_require_parent_and_fixed_limits", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "missing-parent-accepted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/missing-parent-accepted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_supervised_calls_require_parent_and_fixed_limits", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "lost-supervisor-accepted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/lost-supervisor-accepted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_nested_supervisor_unwinds_and_lost_supervisor_is_red", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "term-interrupts-command-cleanup",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/term-interrupts-command-cleanup.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_first_term_during_cleanup_is_deferred", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "term-interrupts-pipeline-cleanup",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/term-interrupts-pipeline-cleanup.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_first_term_during_cleanup_is_deferred", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "reuse-misclassified",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/reuse-misclassified.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_group_identity_classifies_reuse_survival_and_unknown", "FAILED (failures="],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "exec-misclassified",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/exec-misclassified.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_group_identity_classifies_reuse_survival_and_unknown", "FAILED (failures="],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "finalization-discards-output",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/finalization-discards-output.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_document_diagnostics_survive_finalization_failure", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "identity-record-omitted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/identity-record-omitted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_git_budget_and_execution_plan", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "reconciliation-accepts-live-work",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/reconciliation-accepts-live-work.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_reconciliation_refuses_survivors_and_unknown_identities", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "git-alias-rejected",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/git-alias-rejected.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_git_budget_and_execution_plan", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "git-path-guard-omitted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/git-path-guard-omitted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_git_budget_and_execution_plan", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "git-delay-unarmed",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/git-delay-unarmed.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_git_budget_and_execution_plan", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "assertion-message-collision",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/assertion-message-collision.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_assertion_messages_avoid_verdict_exclusions", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "assertion-nonmapped-message-collision",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/assertion-nonmapped-message-collision.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_assertion_messages_avoid_verdict_exclusions", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "old-cleanup-fixture-limit",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/old-cleanup-fixture-limit.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_first_term_during_cleanup_is_deferred", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "manifest-cause-indentation",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/manifest-cause-indentation.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_runner_mutations_are_valid_python", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "mock-reservation-recorded",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/mock-reservation-recorded.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_runtime_support_fixture_does_not_reserve_a_mock_process", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "pipeline-fixture-missing-result",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/pipeline-fixture-missing-result.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_pipeline_fixture_asserts_before_stage_access", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "checked-documents-parallel",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/checked-documents-parallel.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_checked_documents_serialize_and_other_documents_overlap", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "nested-limit-unchecked",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/nested-limit-unchecked.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_nested_limits_are_checked_without_elapsed_admission", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "gate-document-cap-exceeded",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/gate-document-cap-exceeded.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_document_bounds_use_executed_declarations", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "allocation-lock-uncounted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/allocation-lock-uncounted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_audit_lock_obeys_inclusive_call_limit", "FAILED (failures="],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "parent-state-limit-uncounted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/parent-state-limit-uncounted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_parent_state_reads_use_call_deadline_and_expired_launch_refuses", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "expired-process-launch",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/expired-process-launch.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_parent_state_reads_use_call_deadline_and_expired_launch_refuses", "FAILED (failures="],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "launch-outside-boundary",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/launch-outside-boundary.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_process_launches_share_one_guarded_boundary", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "pipeline-launch-uses-cleanup-limit",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/pipeline-launch-uses-cleanup-limit.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_pipeline_journal_lock_cannot_launch_expired_stage", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "nested-restart-output",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/nested-restart-output.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_restart_fixture_diagnostics_omit_runner_output", "FAIL: test_restart_diagnostics_retain_inner_results_without_printing", "FAILED (failures=2)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "old-detector-window",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/old-detector-window.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_plant_fixture_execution_covers_declared_detector_waits", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "diagnostic-retention-output",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/diagnostic-retention-output.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_restart_diagnostics_retain_inner_results_without_printing", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "undeclared-detector-accepted",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/undeclared-detector-accepted.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_plant_fixture_execution_covers_declared_detector_waits", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "retention-fixture-missing-metadata",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/retention-fixture-missing-metadata.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_retention_fixture_asserts_before_missing_metadata", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "longer-delay-control",
+      "patch": "docs/reviews/2026-11-05-733-load-timeouts-plants/longer-delay-control.patch"
+    }
+  ]
+}

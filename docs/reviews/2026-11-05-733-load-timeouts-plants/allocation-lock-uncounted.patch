@@ -1,0 +1,13 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -661,9 +661,5 @@
+             allocation["worker_deadline"] = execution_deadline - reserve
+         self.validate_allocation(allocation)
+-        token = ACTIVE_DEADLINE.set(deadline)
+-        try:
+-            self.record(allocation["scope"], "allocated", **{k: v for k, v in allocation.items() if k != "scope"})
+-        finally:
+-            ACTIVE_DEADLINE.reset(token)
++        self.record(allocation["scope"], "allocated", **{k: v for k, v in allocation.items() if k != "scope"})
+         return allocation
+ 

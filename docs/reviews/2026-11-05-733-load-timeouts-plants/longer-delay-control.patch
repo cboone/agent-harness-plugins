@@ -1,0 +1,11 @@
+--- a/tests/checked_plant_test.py
++++ b/tests/checked_plant_test.py
+@@ -529,7 +529,7 @@
+             if argv != ["ps", "-axo", "pid=,pgid=,stat="]:
+                 return real_run(argv, **kwargs)
+             return real_run([sys.executable, "-c",
+-                             'import os, time; time.sleep(0.4); os.execvp("ps", ["ps", "-axo", "pid=,pgid=,stat="])'],
++                             'import os, time; time.sleep(0.6); os.execvp("ps", ["ps", "-axo", "pid=,pgid=,stat="])'],
+                             **kwargs)
+ 
+         with mock.patch.object(core.subprocess, "run", side_effect=delayed_ps):

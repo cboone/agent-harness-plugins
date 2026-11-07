@@ -1,0 +1,9 @@
+--- a/tests/checked_plant_test.py
++++ b/tests/checked_plant_test.py
+@@ -1127,5 +1127,5 @@
+              'require(True,', "FAIL: test_unsupported_runtime_refuses_before_spawn"),
+             ("manifest-cause", 'require(all(v is not None for v in before.values()),',
+-             'require(before["manifest"] == parsed, "manifest changed after parsing")\n            require(all(v is not None for v in before.values()),',
++             'require(before["manifest"] == parsed, "manifest changed after parsing")\n        require(all(v is not None for v in before.values()),',
+              "FAIL: test_disappearing_manifest_preserves_cause"),
+             ("ledger-preservation", "text = before + block + after", "text = block",

@@ -103,6 +103,14 @@
     {
       "name": "bin/check-review-validity.py",
       "reason": "Python source policy guard reads plugin prose and scope helper text without executing it."
+    },
+    {
+      "name": "tests/fixtures/checked-audit-lock.py",
+      "reason": "Python fault probe isolates its expected audit failure and retains holder and timeout results as JSON."
+    },
+    {
+      "name": "tests/fixtures/checked-pipeline-launch-lock.py",
+      "reason": "Python pipeline journal-lock probe retains the stage launch flag and recorded holder exit as JSON."
     }
   ],
   "parse_exceptions": []

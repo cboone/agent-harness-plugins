@@ -1,0 +1,9 @@
+--- a/tests/checked_timeout_budget_test.py
++++ b/tests/checked_timeout_budget_test.py
+@@ -411,5 +411,5 @@
+                 self.assertFalse(runtime.pending())
+                 self.assertTrue(ready.exists(), "command fixture never became ready")
+-                self.assertTrue(core.valid_step(result), "first TERM interrupted command cleanup confirmation: " + restart_diagnostic(result))
++                self.assertTrue(core.valid_step(result), "first TERM during command cleanup skipped confirmation: " + restart_diagnostic(result))
+                 self.assertEqual(result["exit_code"], 143)
+                 self.assertEqual(pending, [])

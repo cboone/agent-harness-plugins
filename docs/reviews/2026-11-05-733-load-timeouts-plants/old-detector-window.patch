@@ -1,0 +1,16 @@
+--- a/tests/data/checked-timeout-budgets.json
++++ b/tests/data/checked-timeout-budgets.json
+@@ -2,5 +2,5 @@
+   "limit": 300,
+   "detector_execution": 10,
+-  "detector_budget": 45,
++  "detector_budget": 60,
+   "checks": {
+     "assertion-verdict": 30,
+@@ -12,5 +12,5 @@
+     "script-operands": 30,
+     "skip-evidence": 30,
+-    "bounded-capture": 90,
++    "bounded-capture": 60,
+     "truncated-evidence": 30,
+     "manifest-empty": 30,

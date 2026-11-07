@@ -1,0 +1,141 @@
+{
+  "frameworks": ["unittest", "repository Bash validity fixtures"],
+  "rows": [
+    {
+      "manifest": "2026-11-05-733-load-timeouts-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["inspection, pipeline and budget checks completed", "\nOK\n"],
+        "excludes": ["skipped", "SKIP", "ERROR:"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "inspection, pipeline and budget checks completed\n",
+        "stderr": "----------------------------------------------------------------------\nRan 2 tests in 2.154s\n\nOK\n----------------------------------------------------------------------\nRan 1 test in 8.473s\n\nOK\n----------------------------------------------------------------------\nRan 17 tests in 19.087s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-05-733-load-timeouts-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_inspection_failure_retains_subprocess_diagnostics", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped", "SyntaxError", "ImportError"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "======================================================================\nFAIL: test_inspection_failure_retains_subprocess_diagnostics (__main__.RunnerTests.test_inspection_failure_retains_subprocess_diagnostics)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/checked_plant_test.py\", line 535, in test_inspection_failure_retains_subprocess_diagnostics\n    self.assertIsNone(result[\"cleanup_error\"], \"delayed ps must survive the old inspection limit\")\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'TimeoutExpired: Command \\'[\\'<python>\\', \\'-c\\', \\'import os, time; time.sleep(0.4); os.execvp(\"ps\", [\"ps\", \"-axo\", \"pid=,pgid=,stat=\"])\\']\\' timed out after 0.25 seconds; cleanup: PermissionError: [Errno 1] Operation not permitted' is not None : delayed ps must survive the old inspection limit\n\n----------------------------------------------------------------------\nRan 2 tests in 1.962s\n\nFAILED (failures=1)\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-05-733-load-timeouts-plants.json",
+      "phase": "green",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["inspection, pipeline and budget checks completed", "\nOK\n"],
+        "excludes": ["skipped", "SKIP", "ERROR:"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "inspection, pipeline and budget checks completed\n",
+        "stderr": "----------------------------------------------------------------------\nRan 2 tests in 2.142s\n\nOK\n----------------------------------------------------------------------\nRan 1 test in 8.430s\n\nOK\n----------------------------------------------------------------------\nRan 17 tests in 19.061s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "review-scope-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["PASS: base round validity\n", "PASS: head round validity\n", "PASS: merge-base round validity\n", "PASS: rebase round validity\n", "PASS: membership round validity\n", "PASS: base-collection round validity\n", "PASS: merge-base-collection round validity\n", "PASS: alias round validity\n"],
+        "excludes": ["FAIL:", "unbound variable", "command not found"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "PASS: base round validity\nPASS: alias round validity\nPASS: head round validity\nPASS: merge-base round validity\nPASS: rebase round validity\nPASS: membership round validity\nPASS: base-collection round validity\nreview-scope: the index, HEAD or merge base changed while the scope was being read; rerun once it has settled\nPASS: merge-base-collection round validity\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "review-scope-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: unrelated base advance preserves snapshot\n"],
+        "excludes": ["Unknown case:", "command not found", "unbound variable"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "FAIL: unrelated base advance preserves snapshot\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "review-scope-plants.json",
+      "phase": "green",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["PASS: base round validity\n", "PASS: head round validity\n", "PASS: merge-base round validity\n", "PASS: rebase round validity\n", "PASS: membership round validity\n", "PASS: base-collection round validity\n", "PASS: merge-base-collection round validity\n", "PASS: alias round validity\n"],
+        "excludes": ["FAIL:", "unbound variable", "command not found"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "PASS: base round validity\nPASS: alias round validity\nPASS: head round validity\nPASS: merge-base round validity\nPASS: rebase round validity\nPASS: membership round validity\nPASS: base-collection round validity\nreview-scope: the index, HEAD or merge base changed while the scope was being read; rerun once it has settled\nPASS: merge-base-collection round validity\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "review-validity-policy-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["Review validity policy passed.\n", "PASS: unreadable policy subtree rejected\n", "PASS: invalid UTF-8 policy input rejected\n"],
+        "excludes": ["Traceback", "SyntaxError"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "Review validity policy passed.\nreview validity policy: check failed: [Errno 13] Permission denied: '<fixture>/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects'\nPASS: unreadable policy subtree rejected\nreview validity policy: check failed: plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects/fixture.md: invalid UTF-8 policy source: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\nPASS: invalid UTF-8 policy input rejected\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "review-validity-policy-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["review validity policy: plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md: validity copy differs from source\n"],
+        "excludes": ["Traceback", "SyntaxError", "command not found"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "review validity policy: plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md: validity copy differs from source\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "review-validity-policy-plants.json",
+      "phase": "green",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["Review validity policy passed.\n", "PASS: unreadable policy subtree rejected\n", "PASS: invalid UTF-8 policy input rejected\n"],
+        "excludes": ["Traceback", "SyntaxError"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "Review validity policy passed.\nreview validity policy: check failed: [Errno 13] Permission denied: '<fixture>/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects'\nPASS: unreadable policy subtree rejected\nreview validity policy: check failed: plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects/fixture.md: invalid UTF-8 policy source: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\nPASS: invalid UTF-8 policy input rejected\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    }
+  ],
+  "normalization": "Machine-specific temporary directories and interpreter paths are replaced by labels; framework lines and predicates are unchanged."
+}

@@ -1,0 +1,26 @@
+{
+  "aspect": "cleanup-altitude",
+  "findings": [
+    {
+      "confidence": 97,
+      "detail": "Command-versus-pipeline selection is interleaved with planned-versus-direct dispatch, producing four invocation sites. Adding a shared dispatch option requires synchronized edits, and reviewers must compare all four branches to establish equivalent journal and target wiring.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "fix": "Select the runner and payload first, then use one planned dispatch branch and one direct dispatch branch. Keep error recording together.",
+      "line": 122,
+      "severity": "suggestion",
+      "title": "Uncited: Runner selection repeats the optional-plan dispatch logic."
+    },
+    {
+      "confidence": 91,
+      "detail": "The inventory check and mutation-syntax check independently parse another test's source to recover local declarations. Both depend on its method name, variable names and assignment shapes. Moving the mutation list into a constant or accessor therefore requires updating source-extraction machinery unrelated to the assertions being checked.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Expose mutation declarations as shared test data consumed directly by execution and validation. Retain the independent expected-detector inventory and AST validation of mutated source.",
+      "line": 498,
+      "severity": "suggestion",
+      "title": "Uncited: Declarative test data is recovered through implementation-specific AST traversal."
+    }
+  ],
+  "reviewed": "c41f7dd656aa3596e2cf29b54dde777d89901f82",
+  "strengths": ["Deadline allocation and process launches have centralized boundaries.", "Fingerprint planning and execution share operation declarations."],
+  "summary": "Reviewed all 162 membership paths and their committed diffs for abstraction consistency. Two optional cleanup suggestions identify concrete maintenance costs. The review remained read-only; tests were not run."
+}

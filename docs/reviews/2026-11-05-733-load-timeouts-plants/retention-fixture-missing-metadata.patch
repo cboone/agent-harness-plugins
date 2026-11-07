@@ -1,0 +1,9 @@
+--- a/tests/checked_timeout_budget_test.py
++++ b/tests/checked_timeout_budget_test.py
+@@ -203,6 +203,4 @@
+                 diagnostic = restart_diagnostic(payload, retain=True, fixture="retention-test")
+             metadata = ast.literal_eval(diagnostic)
+-            self.assertTrue(isinstance(metadata, dict) and isinstance(metadata.get("result_file"), str),
+-                            "result retention did not provide a result file")
+             path = Path(metadata["result_file"])
+             self.assertTrue(path.is_relative_to(directory) and path.is_file(),

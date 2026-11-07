@@ -1,0 +1,11 @@
+--- a/plugins/plant-defects/scripts/checked_core.py
++++ b/plugins/plant-defects/scripts/checked_core.py
+@@ -139,4 +139,8 @@
+     except ProcessLookupError:
+         pass
++
++
++def outside_launch():
++    return subprocess.Popen(["true"])
+ 
+ 

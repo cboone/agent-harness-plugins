@@ -1,0 +1,114 @@
+[
+  {
+    "finding": {
+      "confidence": 98,
+      "detail": "Each fresh inherited supervisor constructs FactJournal, which reads and discards the entire audit. The immediately following runtime.states() reads it again from offset zero. Every inherited pipeline worker therefore performs one unnecessary whole-audit read and bytes allocation.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "fix": "Validate the inherited journal using a locked read=False open, preserving file checks and deadlines, then let states() read its contents once.",
+      "line": 765,
+      "severity": "suggestion",
+      "title": "Uncited: Inherited supervisors read the complete audit twice."
+    },
+    "angles": ["cleanup-efficiency"],
+    "reviewer_label": "suggestion",
+    "our_severity": "Nit",
+    "disposition": "record: broader refactoring below active threshold",
+    "review_again": false
+  },
+  {
+    "finding": {
+      "confidence": 100,
+      "detail": "ROOT.rglob descends into excluded directories before the loop discards their matches. Each compatibility-test invocation unnecessarily enumerates dependency and generated trees; dist and node_modules currently contain 604 directories and 2,858 files combined.",
+      "file": "tests/checked_plant_test.py",
+      "fix": "Use a directory walk that prunes node_modules, dist, .agents and .git before descending, retaining manifest parsing and the sorted comparison.",
+      "line": 758,
+      "severity": "suggestion",
+      "title": "Uncited: Manifest discovery traverses directories it excludes."
+    },
+    "angles": ["cleanup-efficiency"],
+    "reviewer_label": "suggestion",
+    "our_severity": "Nit",
+    "disposition": "take: local behavior-preserving cleanup",
+    "review_again": false
+  },
+  {
+    "finding": {
+      "confidence": 100,
+      "detail": "document_budgets constructs identical execution plans first for summation and again for validation. Each complete policy calculation allocates 79 unnecessary six-step plans and repeats their timeout-parameter construction.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Construct each document's plans once, sum their timeouts, then validate those same plans in the existing order.",
+      "line": 153,
+      "severity": "suggestion",
+      "title": "Uncited: Budget accounting constructs every variant plan twice."
+    },
+    "angles": ["cleanup-efficiency", "cleanup-reuse", "cleanup-simplification"],
+    "reviewer_label": "suggestion",
+    "our_severity": "Nit",
+    "disposition": "take: local behavior-preserving cleanup",
+    "review_again": false
+  },
+  {
+    "finding": {
+      "confidence": 100,
+      "detail": "Each invocation reads the 67,818-byte plant-test module and constructs its complete AST, but neither value is consumed. The next statement loads the gate-module AST used by the actual assertions.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Remove the unused plant-module read and AST construction, retaining the gate-module parsing and assertions.",
+      "line": 477,
+      "severity": "suggestion",
+      "title": "Uncited: The deadline guard constructs an unused module AST."
+    },
+    "angles": ["cleanup-efficiency", "cleanup-simplification"],
+    "reviewer_label": "suggestion",
+    "our_severity": "Nit",
+    "disposition": "take: local behavior-preserving cleanup",
+    "review_again": false
+  },
+  {
+    "finding": {
+      "confidence": 97,
+      "detail": "Command-versus-pipeline selection is interleaved with planned-versus-direct dispatch, producing four invocation sites. Adding a shared dispatch option requires synchronized edits, and reviewers must compare all four branches to establish equivalent journal and target wiring.",
+      "file": "plugins/plant-defects/scripts/checked-gate",
+      "fix": "Select the runner and payload first, then use one planned dispatch branch and one direct dispatch branch. Keep error recording together.",
+      "line": 122,
+      "severity": "suggestion",
+      "title": "Uncited: Runner selection repeats the optional-plan dispatch logic."
+    },
+    "angles": ["cleanup-altitude", "cleanup-reuse", "cleanup-simplification"],
+    "reviewer_label": "suggestion",
+    "our_severity": "Nit",
+    "disposition": "take: local behavior-preserving cleanup",
+    "review_again": false
+  },
+  {
+    "finding": {
+      "confidence": 91,
+      "detail": "The inventory check and mutation-syntax check independently parse another test's source to recover local declarations. Both depend on its method name, variable names and assignment shapes. Moving the mutation list into a constant or accessor therefore requires updating source-extraction machinery unrelated to the assertions being checked.",
+      "file": "tests/checked_timeout_budget_test.py",
+      "fix": "Expose mutation declarations as shared test data consumed directly by execution and validation. Retain the independent expected-detector inventory and AST validation of mutated source.",
+      "line": 498,
+      "severity": "suggestion",
+      "title": "Uncited: Declarative test data is recovered through implementation-specific AST traversal."
+    },
+    "angles": ["cleanup-altitude"],
+    "reviewer_label": "suggestion",
+    "our_severity": "Nit",
+    "disposition": "record: broader refactoring below active threshold",
+    "review_again": false
+  },
+  {
+    "finding": {
+      "confidence": 96,
+      "detail": "The nested conditional and subsequent fallback obscure precedence among explicit, active and default deadlines. Understanding a lock wait requires reconstructing all four combinations of explicit and active deadline availability across two expressions.",
+      "file": "plugins/plant-defects/scripts/checked_core.py",
+      "fix": "Use explicit branches that select the available deadline, take the minimum when both exist, and apply IO_LIMIT when neither exists.",
+      "line": 107,
+      "severity": "suggestion",
+      "title": "Uncited: Nested conditionals obscure lock-deadline precedence."
+    },
+    "angles": ["cleanup-simplification"],
+    "reviewer_label": "suggestion",
+    "our_severity": "Nit",
+    "disposition": "take: local behavior-preserving cleanup",
+    "review_again": false
+  }
+]
