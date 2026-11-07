@@ -1,0 +1,6 @@
+--- a/plugins/set-up-review-config/skills/set-up-review-config/SKILL.md
++++ b/plugins/set-up-review-config/skills/set-up-review-config/SKILL.md
+@@ -109,2 +109,3 @@
+ - If Codex cloud review is enabled and runs, it posts only P0 and P1 findings on GitHub, corresponding to the Important rules.
++- Codex posts only P0 and P1 findings on GitHub, so from Codex expect the Important rules only.
+ - Rerun `/set-up-review-config` after updating the marketplace or when the repository gains a new file type; `/refresh-project-scaffolding` audits installed review config.

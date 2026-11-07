@@ -1,0 +1,6 @@
+--- a/plugins/set-up-review-config/skills/set-up-review-config/SKILL.md
++++ b/plugins/set-up-review-config/skills/set-up-review-config/SKILL.md
+@@ -36,3 +36,2 @@
+ 1. Work from the repository root (`git rev-parse --show-toplevel`). Stop if the directory is not in a git repository.
+-1. Inspect `.github/workflows/*.yml` and `.github/workflows/*.yaml` for Claude review wiring. Read action usage (such as `anthropics/claude-code-action`), triggers, conditions and review prompts; a filename or a general Claude task alone does not confirm review wiring. Report matching paths and what they configure, including manual or conditional triggers. If no review workflow is found, report "Claude Code Review: not confirmable from the repository". The Claude GitHub App can provide Code Review without a workflow, so absence does not prove it is off. Detection reads only the working tree; do not use network or `gh` calls to check reviewer activation.
+ 1. In `.github/skills/code-review/SKILL.md`, `AGENTS.md` and `REVIEW.md`, check the BEGIN and END marker lines. A file must have none, or exactly one BEGIN line followed later by exactly one END line. For anything else, such as a second BEGIN or END, a BEGIN without an END, an END without a BEGIN, or an END before its BEGIN, stop and ask the user how to repair it.

@@ -37,7 +37,7 @@ Everything the skill writes sits in a managed block or a file marked as managed,
 
 `--dry-run` detects file types, CI checks and skip paths, and presents the plan without writing anything.
 
-After the skill runs, commit on a branch and open a pull request: Copilot reads skills from a pull request's head branch, so that pull request is already reviewed with the new config.
+After the skill runs, commit on a branch and open a pull request. The instructions are installed; Copilot review requires external activation and a review request.
 
 ## Recommended Permissions
 
