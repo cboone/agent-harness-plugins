@@ -180,6 +180,51 @@
         "stderr": ""
       },
       "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-repourl-stated-check-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["RUN identity matrix\n", "PASS identity matrix\n"],
+        "excludes": ["FAIL identity:", "ERROR:", "SKIP", "skipped"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "RUN identity matrix\nPASS identity matrix\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-repourl-stated-check-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["RUN identity matrix\n", "FAIL identity: {} omitted example/gadgets forward"],
+        "excludes": ["PASS identity matrix", "ERROR:", "SKIP", "skipped", "jq: error"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "RUN identity matrix\n",
+        "stderr": "FAIL identity: {} omitted example/gadgets forward\nexpected: - Changed board identity: repo (\"example/widgets\" to \"example/gadgets\")\nactual: - Changed board identity: repo (\"example/widgets\" to \"example/gadgets\"); repoUrl ({} to none)\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-repourl-stated-check-plants.json",
+      "phase": "green",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["RUN identity matrix\n", "PASS identity matrix\n"],
+        "excludes": ["FAIL identity:", "ERROR:", "SKIP", "skipped"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "RUN identity matrix\nPASS identity matrix\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
     }
   ],
   "normalization": "Machine-specific temporary directories and interpreter paths are replaced by labels; framework lines and predicates are unchanged."
