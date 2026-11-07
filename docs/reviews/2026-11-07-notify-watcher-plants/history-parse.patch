@@ -1,0 +1,12 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -136,6 +136,9 @@
+   local initial_bytes bytes_read=0 BYTE_COUNT=0 startup_suffix
+   initial_bytes="$(LC_ALL=C wc -c < "${rollout}")"
+   if [[ "${once}" == false ]]; then
++    while IFS= read -r historical; do
++      printf '%s' "${historical}" | jq -c . > /dev/null # error-output-allow: planted historical parser output is unused
++    done < "${rollout}"
+     startup_suffix="$(head -c "${initial_bytes}" "${rollout}" | tail -n 1 && printf '.')"
+     startup_suffix="${startup_suffix%.}"
+     if [[ "${startup_suffix}" != *$'\n' ]]; then

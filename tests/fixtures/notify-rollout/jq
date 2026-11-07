@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n "${ROLLOUT_LAUNCHES:-}" ]]; then printf 'jq\n' >> "${ROLLOUT_LAUNCHES}"; fi
+: "${ROLLOUT_REAL_JQ:?real jq must be captured before installing the fixture PATH}"
+[[ "${ROLLOUT_REAL_JQ}" != "${BASH_SOURCE[0]}" && -x "${ROLLOUT_REAL_JQ}" ]]
+exec "${ROLLOUT_REAL_JQ}" "$@"

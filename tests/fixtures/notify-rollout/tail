@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n "${ROLLOUT_LAUNCHES:-}" ]]; then printf 'tail\n' >> "${ROLLOUT_LAUNCHES}"; fi
+if [[ " $* " == *' -f '* ]]; then : > "${ROLLOUT_READY:?}"; fi
+if [[ " $* " == *' -f '* && -n "${ROLLOUT_FOLLOW_PID:-}" ]]; then
+  printf '%s\n' "$$" > "${ROLLOUT_FOLLOW_PID}"
+  if [[ "${ROLLOUT_FAIL_FOLLOWER:-}" == true ]]; then
+    for ((attempt = 0; attempt < 300; attempt++)); do
+      if [[ -f "${ROLLOUT_FOLLOW_RELEASE:?}" ]]; then
+        echo 'fixture follower failed' >&2
+        exit 1
+      fi
+      /bin/sleep 0.02
+    done
+    echo 'fixture follower release did not arrive' >&2
+    exit 1
+  fi
+elif [[ "${1:-}" == -c && " $* " != *' -f '* && -n "${ROLLOUT_DRAIN_READY:-}" ]]; then
+  if [[ -n "${ROLLOUT_FINAL_PID:-}" ]]; then printf '%s\n' "$$" > "${ROLLOUT_FINAL_PID}"; fi
+  printf 'drain-ready\n' > "${ROLLOUT_DRAIN_READY}"
+  : "${ROLLOUT_DRAIN_RELEASE:?}"
+  for ((attempt = 0; attempt < 300; attempt++)); do
+    if [[ -f "${ROLLOUT_DRAIN_RELEASE}" ]]; then
+      if [[ "${ROLLOUT_FAIL_FINAL:-}" == true ]]; then
+        echo 'fixture final reader failed' >&2
+        exit 1
+      fi
+      exec /usr/bin/tail "$@"
+    fi
+    /bin/sleep 0.02
+  done
+  echo 'fixture final-drain release did not arrive' >&2
+  exit 1
+fi
+exec /usr/bin/tail "$@"

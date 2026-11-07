@@ -101,9 +101,11 @@ function main() {
   CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-failure-test.XXXXXX")"
   trap cleanup EXIT
   stub_dir="${REPO_ROOT:?}/tests/fixtures/notify-rollout"
+  export ROLLOUT_REAL_JQ
+  ROLLOUT_REAL_JQ="$(command -v jq)"
   export PATH="${stub_dir}:${PATH}"
   local tool
-  for tool in alerter tmux sleep wc; do
+  for tool in alerter tmux sleep wc jq tail mktemp; do
     [[ "$(command -v "${tool}")" == "${stub_dir}/${tool}" ]] || return 1
   done
   export XDG_CACHE_HOME="${CASE_DIR}/cache" XDG_CONFIG_HOME="${CASE_DIR}/config"
@@ -112,6 +114,9 @@ function main() {
   export TMUX_PANE='%wrong-pane' TMUX='/tmp/unrelated-server,1,0'
   unset NOTIFY_TIER NOTIFY_SOUND_SET CLAUDE_PROJECT_DIR CLAUDE_CODE_SESSION_ID
   unset ROLLOUT_BOUNDARY_READY ROLLOUT_BOUNDARY_RELEASE
+  unset ROLLOUT_FAIL_TIMER ROLLOUT_TIMER_RECORD ROLLOUT_FOLLOW_PID ROLLOUT_READER_DIR_RECORD
+  unset ROLLOUT_DRAIN_READY ROLLOUT_DRAIN_RELEASE
+  unset ROLLOUT_HOLD_TIMER ROLLOUT_FAIL_FOLLOWER ROLLOUT_FOLLOW_RELEASE ROLLOUT_FAIL_FINAL ROLLOUT_FINAL_PID
   unset ROLLOUT_ALERTER_STATUS
   unset ROLLOUT_CLAIM_BARRIER ROLLOUT_CLAIM_ERROR ROLLOUT_READER ROLLOUT_SKIP_READY
   export ROLLOUT_ATTEMPTS="${CASE_DIR}/attempts"
@@ -123,6 +128,11 @@ function main() {
   CODEX_FAILURE_WATCHER_BIN="${CASE_DIR}/plugin/scripts/watch-codex-failures"
   case "${scenario}" in
     error)
+      run_case error
+      await_count 1
+      ;;
+    escaped-fields)
+      run_case escaped-fields --thread-id thread-sample
       run_case error
       await_count 1
       ;;
@@ -274,9 +284,12 @@ function main() {
       done
       return
       ;;
-    follow | startup | shutdown)
+    follow | startup | shutdown | follow-shapes | partial-startup)
       local boundary_env="" ready="${ROLLOUT_READY}"
       cp "${DATA}/error.jsonl" "${CASE_DIR}/live.jsonl"
+      if [[ "${scenario}" == partial-startup ]]; then
+        printf '%s' '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"partial-startup",' >> "${CASE_DIR}/live.jsonl"
+      fi
       if [[ "${scenario}" == startup ]]; then
         jq -nc '{type:"response_item",payload:{type:"message",role:"assistant",content:[{type:"output_text",text:("é" * 1000)}]}}' >> "${CASE_DIR}/live.jsonl"
         export ROLLOUT_BOUNDARY_READY="${CASE_DIR}/boundary-ready" ROLLOUT_BOUNDARY_RELEASE="${CASE_DIR}/boundary-release"
@@ -293,15 +306,21 @@ function main() {
         /bin/bash "${CODEX_FAILURE_WATCHER_BIN}" --rollout "${CASE_DIR}/live.jsonl" \
         --owner-pid "${OTHER_PID}" --session-name MONITOR --tmux-session atlas --tmux-window 'w sample' &
       CHILD_PID=$!
-      # Synchronize at EOF or the captured byte boundary before appending.
+      # Wait for follower-start readiness, the captured byte boundary, or the paused owner check before appending.
       local attempt
       for attempt in {1..150}; do
         if [[ -f "${ready}" ]]; then break; fi
         sleep 0.02
       done
       ((attempt < 150)) || return 1
-      if [[ "${scenario}" == startup ]]; then
-        # Append after the captured boundary, before the watcher reads the old records.
+      local expected_alerts=1
+      if [[ "${scenario}" == follow-shapes ]]; then
+        cat "${DATA}/follow-shapes.jsonl" >> "${CASE_DIR}/live.jsonl"
+        expected_alerts=6
+      elif [[ "${scenario}" == partial-startup ]]; then
+        printf '%s\n' '"error":{"codex_error_info":"other","message":"Partial startup error"}}}' >> "${CASE_DIR}/live.jsonl"
+      elif [[ "${scenario}" == startup ]]; then
+        # Append after the captured byte boundary, before following starts.
         printf '%s\n' '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"startup-turn","error":{"codex_error_info":"other","message":"Appended during startup"}}}' >> "${CASE_DIR}/live.jsonl"
         : > "${ROLLOUT_BOUNDARY_RELEASE}"
       elif [[ "${scenario}" == shutdown ]]; then
@@ -316,17 +335,17 @@ function main() {
         count_is 0
         printf '%s\n' '"error":{"codex_error_info":"other","message":"Appended error"}}}' >> "${CASE_DIR}/live.jsonl"
       fi
-      await_count 1
+      await_count "${expected_alerts}"
       if [[ -n "${OTHER_PID}" ]]; then
         kill "${OTHER_PID}"
         wait "${OTHER_PID}" 2> /dev/null || true # error-output-allow: owned supervisor termination status is expected during shutdown synchronization
         OTHER_PID=""
       fi
-      for attempt in {1..150}; do
+      for attempt in {1..250}; do
         if ! kill -0 "${CHILD_PID}" 2> /dev/null; then break; fi # error-output-allow: owned watcher existence predicate bounds fixture shutdown wait
         sleep 0.02
       done
-      ((attempt < 150)) || return 1
+      ((attempt < 250)) || return 1
       wait "${CHILD_PID}"
       CHILD_PID=""
       ;;

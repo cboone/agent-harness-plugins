@@ -1,0 +1,1 @@
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"drain-final","error":{"codex_error_info":"other","message":"Final drain error"}}}

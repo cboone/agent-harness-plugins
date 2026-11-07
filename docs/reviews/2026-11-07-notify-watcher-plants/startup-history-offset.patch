@@ -1,0 +1,11 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -184,7 +184,7 @@
+           exec 3<&- # error-output-allow: close owned metadata reader before starting the persistent follower
+           READER_DIR="$(mktemp -d "${TMPDIR:-/tmp}/notify-reader.XXXXXX")"
+           mkfifo "${READER_DIR}/records"
+-          tail -c "+$((initial_bytes + 1))" -f "${rollout}" > "${READER_DIR}/records" &
++          tail -c +1 -f "${rollout}" > "${READER_DIR}/records" &
+           READER_PID=$!
+           exec 3< "${READER_DIR}/records" # error-output-allow: persistent follower FIFO; errors remain on stderr
+           watch_owner "${owner_pid}" "${READER_PID}" &

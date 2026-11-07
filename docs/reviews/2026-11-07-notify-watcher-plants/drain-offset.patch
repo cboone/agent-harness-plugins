@@ -1,0 +1,11 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -246,7 +246,7 @@
+       fi
+       exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain
+       partial=""
+-      tail -c "+$((bytes_read + 1))" "${rollout}" > "${READER_DIR}/records" &
++      tail -c "+$((bytes_read + 2))" "${rollout}" > "${READER_DIR}/records" &
+       READER_PID=$!
+       exec 3< "${READER_DIR}/records" # error-output-allow: final drain FIFO; reader stderr remains live
+       state=final-drain
