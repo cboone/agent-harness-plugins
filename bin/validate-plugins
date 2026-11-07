@@ -847,7 +847,7 @@ else
   grep '^::warning::' <<< "${cross_reference_output}" || true
 fi
 
-# ─── 20. Bundled review checklists are current ──────────────────────────────
+# ─── 20. Bundled and installed review checklists are current ────────────────
 # bin/build-review-checklists copies each style guide's review checklist into
 # set-up-review-config, because a skill can read only the files its own plugin
 # ships. A hand edit to a copy, or a checklist edit without a rebuild, would
@@ -893,6 +893,21 @@ function validate_review_checklists() {
       error "Review checklist copy '${committed}' has no source checklist; run make build"
     elif ! grep -qF "./references/checklists/${name}" "${REVIEW_GUIDES_FILE}" 2> /dev/null; then # error-output-allow: missing checklist links produce the validator error below
       error "'${REVIEW_GUIDES_FILE}' does not name ./references/checklists/${name}; add detection and routing rules for it"
+    fi
+  done
+
+  # Match installed filenames to guides. Pins record guide links, not content;
+  # compare only the body after the managed line and blank line.
+  for committed in .github/skills/code-review/*; do
+    [[ -e "${committed}" ]] || continue
+    name="${committed##*/}"
+    [[ "${name}" != SKILL.md ]] || continue
+    if [[ ! -f "${expected_dir}/${name}" ]]; then
+      error "Installed review checklist '${committed}' has no source checklist; rerun /set-up-review-config"
+    elif ! tail -n +3 "${committed}" > "${expected_dir}/installed-body"; then
+      error "Cannot read installed review checklist '${committed}'"
+    elif ! cmp -s "${expected_dir}/${name}" "${expected_dir}/installed-body"; then
+      error "Installed review checklist '${committed}' does not match its source; rerun /set-up-review-config"
     fi
   done
 
