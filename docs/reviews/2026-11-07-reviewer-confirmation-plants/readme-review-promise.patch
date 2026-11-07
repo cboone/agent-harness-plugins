@@ -1,0 +1,7 @@
+--- a/plugins/set-up-review-config/README.md
++++ b/plugins/set-up-review-config/README.md
+@@ -39,3 +39,3 @@
+ 
+-After the skill runs, commit on a branch and open a pull request. The instructions are installed; Copilot review requires external activation and a review request.
++After the skill runs, commit on a branch and open a pull request: Copilot reads skills from a pull request's head branch, so that pull request is already reviewed with the new config.
+ 
