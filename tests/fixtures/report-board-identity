@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Assert the repository URL identity matrix. Exit 1 names a mismatched case.
+set -euo pipefail
+source "${REPO_ROOT:?}/bin/lib/git-environment.bash"
+: "${REPORT_BOARD_BIN:?}" "${REPORT_BOARD_DATA_DIR:?}"
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+readonly WORK_DIR
+trap 'rm -r -- "${WORK_DIR}"' EXIT
+
+function main() {
+  local work value peer repo direction previous current output identity expected raw url
+  work="${WORK_DIR}"
+  for value in '{}' 42 false; do
+    jq --argjson value "${value}" '.repoUrl = $value' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${work}/a.json"
+    for peer in omitted string custom; do
+      for repo in example/widgets example/gadgets; do
+        jq --arg repo "${repo}" --arg peer "${peer}" '.repo = $repo | if $peer == "omitted" then del(.repoUrl) else .repoUrl = ((if $peer == "custom" then "https://git.example.com/" else "https://github.com/" end) + $repo) end' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${work}/b.json"
+        for direction in forward reverse; do
+          previous=a current=b
+          [[ "${direction}" == forward ]] || { previous=b current=a; }
+          capture_child output "${REPORT_BOARD_BIN}" compare "${work}/${previous}.json" "${work}/${current}.json"
+          identity="$(sed -n '/^- Changed board identity:/p' <<< "${output}")"
+          expected=''
+          if [[ "${repo}" == example/gadgets ]]; then
+            expected='- Changed board identity: repo ("example/widgets" to "example/gadgets")'
+            [[ "${direction}" == forward ]] || expected='- Changed board identity: repo ("example/gadgets" to "example/widgets")'
+          fi
+          if [[ "${peer}" == custom || ("${peer}" == string && "${repo}" == example/gadgets) ]]; then
+            url="https://github.com/${repo}"
+            [[ "${peer}" != custom ]] || url="https://git.example.com/${repo}"
+            if [[ -z "${expected}" ]]; then expected='- Changed board identity: '; else expected+='; '; fi
+            raw="$(jq -cn --argjson value "${value}" '$value // null | if . == null then "none" else tojson end' -r)"
+            if [[ "${direction}" == forward ]]; then
+              expected+="repoUrl (${raw} to \"${url}\")"
+            else
+              expected+="repoUrl (\"${url}\" to ${raw})"
+            fi
+          fi
+          if [[ "${identity}" != "${expected}" ]]; then
+            printf 'FAIL identity: %s %s %s %s\nexpected: %s\nactual: %s\n' "${value}" "${peer}" "${repo}" "${direction}" "${expected}" "${identity}" >&2
+            exit 1
+          fi
+        done
+      done
+    done
+  done
+  jq '.repoUrl = "https://git.example.com/example/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${work}/a.json"
+  jq '.repoUrl += "/"' "${work}/a.json" > "${work}/b.json"
+  for direction in forward reverse; do
+    previous=a current=b
+    [[ "${direction}" == forward ]] || { previous=b current=a; }
+    capture_child output "${REPORT_BOARD_BIN}" compare "${work}/${previous}.json" "${work}/${current}.json"
+    if [[ "${output}" == *'- Changed board identity:'* ]]; then
+      printf 'FAIL trailing slash: %s\n%s\n' "${direction}" "${output}" >&2
+      exit 1
+    fi
+  done
+  echo 'PASS identity matrix'
+}
+
+main

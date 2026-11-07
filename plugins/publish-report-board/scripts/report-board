@@ -883,6 +883,8 @@ def branch_of: if . == null then "its own branch" else "the branch of #\(.)" end
 # The items of this list that are also in $other, in the order of this list.
 def shared_with($other): . - (. - $other);
 def reordered($a; $b): ($a | shared_with($b)) != ($b | shared_with($a));
+def stated_repo_url: .repoUrl | if type == "string" then . else null end;
+def effective_repo_url: (stated_repo_url // "https://github.com/\(.repo // "")") | sub("/+$"; "");
 
 $previous[0] as $old
 | $current[0] as $new
@@ -906,9 +908,9 @@ $previous[0] as $old
     # repo already reports itself, so there is no separate repoUrl change to
     # report. The message quotes what each side actually held.
     entry("Changed board identity"; [("board", "title", "repo", "repoUrl") as $field
-      | (if $field == "repoUrl" then ((if ($old.repoUrl | type) == "string" then $old.repoUrl else "https://github.com/\($old.repo // "")" end) | sub("/+$"; "")) else ($old[$field] // null) end) as $was
-      | (if $field == "repoUrl" then ((if ($new.repoUrl | type) == "string" then $new.repoUrl else "https://github.com/\($new.repo // "")" end) | sub("/+$"; "")) else ($new[$field] // null) end) as $now
-      | select($was != $now and ($field != "repoUrl" or ($old.repoUrl // null) != null or ($new.repoUrl // null) != null))
+      | (if $field == "repoUrl" then ($old | effective_repo_url) else ($old[$field] // null) end) as $was
+      | (if $field == "repoUrl" then ($new | effective_repo_url) else ($new[$field] // null) end) as $now
+      | select($was != $now and ($field != "repoUrl" or ([$old, $new] | any(stated_repo_url != null))))
       | "\($field) (\($old[$field] // null | shown) to \($new[$field] // null | shown))"]),
     entry("Closed"; [$old | issues_of | .[] | select($now[.number | tostring] == null) | describe]),
     # A new issue reaches none of the transition entries below, which compare

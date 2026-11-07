@@ -887,6 +887,17 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.repoUrl = {}' "${REP
 - No changes beyond the sync metadata.
 ```
 
+## Compare distinguishes stated URLs from non-string values
+
+Objects, numbers and false use the default URL. Check each on both sides of
+omitted and explicit URLs, with unchanged and changed repositories. A repository
+change alone must not also report a URL change when neither side states a URL.
+
+```scrut
+$ "${REPO_ROOT}/tests/fixtures/report-board-identity"
+PASS identity matrix
+```
+
 ## Compare reports a milestone whose short label changed
 
 The matrix heads a milestone column with its short label, so a new short label
