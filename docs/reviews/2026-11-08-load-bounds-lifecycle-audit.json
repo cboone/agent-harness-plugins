@@ -1,0 +1,1556 @@
+{
+  "mechanism": "backend ownership not finalized on every exit",
+  "approval": "TOOLING fe76520d 2026-11-08T12:53:36Z",
+  "status": "source audit complete; runtime and plant evidence pending",
+  "search": "(?i)(pid|wait|kill|trap|signal|diagnostic|stderr|communicate|Popen|subprocess|finaliz|register_backend|publish_backend)",
+  "files": [
+    {
+      "path": "2026-11-08-load-bounds-clock-real-grace-clock-plants.json",
+      "assessment": "Manifest or captured compatibility data; no backend process ownership.",
+      "sha256": "b5a0c2068043f1897858aedd9650f64c38f119a3de1079162d52ca136b1ee45b",
+      "sites": []
+    },
+    {
+      "path": "2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json",
+      "assessment": "Manifest or captured compatibility data; no backend process ownership.",
+      "sha256": "bad0789499ff029a3100548ca89d8226e7784c2b5256ba44c8c2dbaf3172d13d",
+      "sites": [
+        {
+          "line": 2,
+          "source": "  \"inputs\": [\"bin/lib/git-environment.bash\", \"bin/lib/capture-child.bash\", \"tests/fixtures/check-notifications\", \"tests/fixtures/notification-clock.bash\", \"tests/notification_load_test.py\", \"tests/scrut/bugs-gather.md\", \"plugins/notify/.claude-plugin/plugin.json\", \"plugins/notify/.codex-plugin/plugin.json\", \"plugins/notify/README.md\", \"plugins/notify/assets/claude-code.png\", \"plugins/notify/assets/codex.png\", \"plugins/notify/hooks/codex.hooks.json\", \"plugins/notify/hooks/hooks.json\", \"plugins/notify/scripts/claude-transcript.jq\", \"plugins/notify/scripts/codex-failure.jq\", \"plugins/notify/scripts/notify\", \"plugins/notify/scripts/watch-codex-failures\", \"docs/reviews/2026-11-08-load-bounds-plants/check-lifecycle.bash\", \"docs/reviews/2026-11-08-load-bounds-plants/owner-finalizer-disabled.patch\"],"
+        },
+        {
+          "line": 12,
+          "source": "      \"name\": \"owner-finalizer-disabled\","
+        },
+        {
+          "line": 13,
+          "source": "      \"patch\": \"docs/reviews/2026-11-08-load-bounds-plants/owner-finalizer-disabled.patch\","
+        }
+      ]
+    },
+    {
+      "path": "2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json",
+      "assessment": "Manifest or captured compatibility data; no backend process ownership.",
+      "sha256": "e979eca9e7759ffa9eabb244b01f728bf82e7ebdd64cad0a5975f10f283bb3bd",
+      "sites": [
+        {
+          "line": 2,
+          "source": "  \"inputs\": [\"bin/lib/git-environment.bash\", \"bin/lib/capture-child.bash\", \"tests/fixtures/check-notifications\", \"tests/fixtures/notification-clock.bash\", \"tests/notification_load_test.py\", \"tests/scrut/bugs-gather.md\", \"plugins/notify/.claude-plugin/plugin.json\", \"plugins/notify/.codex-plugin/plugin.json\", \"plugins/notify/README.md\", \"plugins/notify/assets/claude-code.png\", \"plugins/notify/assets/codex.png\", \"plugins/notify/hooks/codex.hooks.json\", \"plugins/notify/hooks/hooks.json\", \"plugins/notify/scripts/claude-transcript.jq\", \"plugins/notify/scripts/codex-failure.jq\", \"plugins/notify/scripts/notify\", \"plugins/notify/scripts/watch-codex-failures\", \"docs/reviews/2026-11-08-load-bounds-plants/check-lifecycle.bash\", \"docs/reviews/2026-11-08-load-bounds-plants/registration-diagnostic-suppressed.patch\"],"
+        },
+        {
+          "line": 12,
+          "source": "      \"name\": \"registration-diagnostic-suppressed\","
+        },
+        {
+          "line": 13,
+          "source": "      \"patch\": \"docs/reviews/2026-11-08-load-bounds-plants/registration-diagnostic-suppressed.patch\","
+        },
+        {
+          "line": 16,
+          "source": "        \"contains\": [\"FAIL: test_registration_error_diagnostic\", \"FAILED (\"],"
+        }
+      ]
+    },
+    {
+      "path": "2026-11-08-load-bounds-readers-early-reader-1-plants.json",
+      "assessment": "Manifest or captured compatibility data; no backend process ownership.",
+      "sha256": "9d3d68faac8fa4cbaaec5d33b218be062e0ac1f8bf5f63959abab5e822094c52",
+      "sites": []
+    },
+    {
+      "path": "2026-11-08-load-bounds-readers-early-reader-5-plants.json",
+      "assessment": "Manifest or captured compatibility data; no backend process ownership.",
+      "sha256": "076b6a3497c365497849650af3552b1387f364a564c417f0cb1ea036db4fd6e9",
+      "sites": []
+    },
+    {
+      "path": "Makefile",
+      "sha256": "4d02f855d37366e21135b163f026c7ee0525975a35fdcbc0aa2b832f487c5cac",
+      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
+      "sites": [
+        {
+          "line": 11,
+          "source": "\t-u WORKMUX_LAUNCH_WAIT_SECONDS -u WORKMUX_LAUNCH_TIMEOUT_SECONDS \\"
+        },
+        {
+          "line": 32,
+          "source": "\t-u STUB_SCRUT_PIDS -u STUB_SCRUT_CHILD_PIDS \\"
+        },
+        {
+          "line": 34,
+          "source": "\t-u PERL5OPT -u PERL5LIB -u SCRUT_GROUP_PROBE_MODE -u SCRUT_GROUP_PROBE_LOG -u SCRUT_GROUP_PROBE_PID \\"
+        },
+        {
+          "line": 55,
+          "source": "\tRUST_AUDIT_TEMPLATE=\"$(CURDIR)/plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template\" \\"
+        },
+        {
+          "line": 76,
+          "source": "\tGITHUB_SKILL_EXAMPLES_BIN=\"$(CURDIR)/tests/fixtures/github-skill-examples\" \\"
+        },
+        {
+          "line": 130,
+          "source": "\tMONITOR_SKILL_FILE=\"$(CURDIR)/plugins/monitor-pr/skills/monitor/SKILL.md\" \\"
+        },
+        {
+          "line": 146,
+          "source": "\tRESULT_CHECK_JQ=\"$(CURDIR)/plugins/review-anti-patterns/skills/review-anti-patterns/references/result-check.jq\" \\"
+        },
+        {
+          "line": 159,
+          "source": "\tWORKMUX_RESOURCE_DIAGNOSTICS_BIN=\"$(CURDIR)/plugins/workmux/scripts/resource-diagnostics.bash\" \\"
+        },
+        {
+          "line": 211,
+          "source": "\tenv -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT \\"
+        },
+        {
+          "line": 212,
+          "source": "\t\t-u CODEX_OTHER_SKILL_RESERVE_TOKENS -u CLAUDE_MARKETPLACE bin/validate-plugins"
+        }
+      ]
+    },
+    {
+      "path": "docs/plans/todo/2026-11-08-load-proof-notification-tests.md",
+      "sha256": "684cf9e24205834dbb8e52ef5471c2229bea01905296e2caa807523a206e2a3f",
+      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
+      "sites": [
+        {
+          "line": 9,
+          "source": "   Keep a generous bound for unavoidable readiness waits, with diagnostics."
+        },
+        {
+          "line": 15,
+          "source": "   ownership, diagnostics channel and bugs-gather pipe. Register only those"
+        }
+      ]
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-plants/check-clock.bash",
+      "sha256": "5f86c90295986818b43c4611cacd39bff921814f80af4df1b640c7b65dee9bc8",
+      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
+      "sites": []
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-plants/check-lifecycle.bash",
+      "sha256": "42b68c0898dff26286c28b9884df93a6d0f16d04cd1521398893c146411a29a4",
+      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
+      "sites": [
+        {
+          "line": 3,
+          "source": "exec uv run --no-project tests/notification_load_test.py NotificationLoadTests.test_readiness_error_cleanup NotificationLoadTests.test_observation_error_cleanup NotificationLoadTests.test_cancellation_cleanup NotificationLoadTests.test_deferred_cancellation_cleanup NotificationLoadTests.test_cancellation_status_survives_observation_error NotificationLoadTests.test_backend_error_diagnostic NotificationLoadTests.test_registration_error_diagnostic NotificationLoadTests.test_publication_error_after_success"
+        }
+      ]
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-plants/check.bash",
+      "sha256": "d6962e877b6803210d12dcd8c224055982814a2459c12c7cb09d7df1c0994ca4",
+      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
+      "sites": []
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-plants/early-reader-1.patch",
+      "sha256": "5f8aabda1635d3b2f24f6f927539e96128fa6c507523733890e957a529634491",
+      "assessment": "Mutation data only; executed behavior is judged by its manifest selector.",
+      "sites": []
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-plants/early-reader-5.patch",
+      "sha256": "947b7dd8d7127897e564a63a50b6bc6edf4262f4f2790b86c41e4640e1f52ef7",
+      "assessment": "Mutation data only; executed behavior is judged by its manifest selector.",
+      "sites": [
+        {
+          "line": 7,
+          "source": "-$ empty=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp \"${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json\" \"${empty}/\" && bugs STUB_CURL_DIR=\"${empty}\" gather \"${work}/config.json\" \"${work}/no-state.json\" 2>&1 | sed -n '1,2p'; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather"
+        },
+        {
+          "line": 8,
+          "source": "+$ empty=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp \"${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json\" \"${empty}/\" && bugs STUB_CURL_DIR=\"${empty}\" gather \"${work}/config.json\" \"${work}/no-state.json\" 2>&1 | head -2; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather"
+        }
+      ]
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-plants/owner-finalizer-disabled.patch",
+      "sha256": "0c8c22769d20c54b9aef717d4e0f72bae311e9baa0fe85b88c73630961677bca",
+      "assessment": "Mutation data only; executed behavior is judged by its manifest selector.",
+      "sites": [
+        {
+          "line": 4,
+          "source": "   NOTIFY_TEST_PENDING_SIGNAL=0"
+        },
+        {
+          "line": 5,
+          "source": "   NOTIFY_TEST_STOP_SIGNAL=none"
+        },
+        {
+          "line": 7,
+          "source": "-  trap 'notification_owner_finish 2>&7' EXIT # error-output-allow: owned descriptor retains probe errors without moving backend ownership into a capture subshell"
+        },
+        {
+          "line": 8,
+          "source": "+  trap - EXIT # error-output-allow: owned descriptor retains probe errors without moving backend ownership into a capture subshell"
+        },
+        {
+          "line": 9,
+          "source": "   trap 'notification_owner_interrupt 129' HUP"
+        },
+        {
+          "line": 10,
+          "source": "   trap 'notification_owner_interrupt 143' TERM"
+        }
+      ]
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-plants/real-grace-clock.patch",
+      "sha256": "b28f6e2dafaa2e821e7727c322691176bbc483db3832678fb303e919069ac10e",
+      "assessment": "Mutation data only; executed behavior is judged by its manifest selector.",
+      "sites": [
+        {
+          "line": 8,
+          "source": "   [[ \"${1}\" == 1 && -n \"${pid:-}\" ]] || return 0"
+        }
+      ]
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-plants/registration-diagnostic-suppressed.patch",
+      "assessment": "Mutation data only; the manifest selector judges the changed behavior.",
+      "sha256": "4f601c21229525033d8ebde79695a184fa11ce53c26239f39ce3f735eaab660e",
+      "sites": [
+        {
+          "line": 4,
+          "source": "     NOTIFY_TEST_OWNER_PID=\"${1}\""
+        }
+      ]
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds.md",
+      "sha256": "da61699c7a35b68612e87e824ee2f950366571f3643b1667eca2506d193d655d",
+      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
+      "sites": [
+        {
+          "line": 19,
+          "source": "needed. Unavoidable readiness uses a 120-second liveness bound; Python subprocess calls and individual lifecycle waits use 180-second timeouts."
+        },
+        {
+          "line": 29,
+          "source": "already retains child diagnostics. The candidate extends fixture control rather"
+        },
+        {
+          "line": 45,
+          "source": "Assertions in `NotificationLoadTests` observe specified subprocess exits, output"
+        },
+        {
+          "line": 71,
+          "source": "| Explicit fixture failures print diagnostics           | `test_failure_diagnostic`                                                | `silent-fixture-failure`                           |"
+        },
+        {
+          "line": 85,
+          "source": "| Backend stop was no longer observed                         | important      | Important: a no-op termination could still report successful shutdown | Take: observer records signal and reaped backend status; no-op plant       | Yes: fixture behavior changed             |"
+        },
+        {
+          "line": 87,
+          "source": "| Forwarding wait alias duplicated immediate count assertions | suggestion     | Nit: name implied synchronization that no longer occurred             | Take: call the count predicate directly                                    | No additional round for this cleanup      |"
+        },
+        {
+          "line": 106,
+          "source": "The former cleanup removed a misleading wait abstraction; the inline reread is a"
+        },
+        {
+          "line": 123,
+          "source": "| Clock diagnostics disappear through detached redirection | suggestion                      | Nit: the explicit cause is missing from the branch's own failure path               | Take with the lifecycle fix, using owned diagnostic capture   | Yes: diagnostic output changes    |"
+        },
+        {
+          "line": 129,
+          "source": "backend shutdown observation. The mechanism is backend ownership not finalized"
+        },
+        {
+          "line": 131,
+          "source": "and its audit. The proposed audit covers every ownership, completion, signal,"
+        },
+        {
+          "line": 132,
+          "source": "reaping, diagnostic and private-copy construction site in the diff and every"
+        },
+        {
+          "line": 144,
+          "source": "TOOLING approved \u201cbackend ownership not finalized on every exit\u201d in mailbox"
+        },
+        {
+          "line": 146,
+          "source": "class audit, private-copy declaration rename, diagnostic capture and comment"
+        },
+        {
+          "line": 149,
+          "source": "The fixture records the first backend PID and installs an owner EXIT finalizer."
+        },
+        {
+          "line": 151,
+          "source": "cancellation deferred until PID registration all pass through owned cleanup and"
+        },
+        {
+          "line": 152,
+          "source": "reaping. Publication follows cleanup and reports separate requested-signal,"
+        },
+        {
+          "line": 156,
+          "source": "readiness paths avoid reuse between dispatches. An owned diagnostic descriptor"
+        },
+        {
+          "line": 167,
+          "source": "touched file and the ownership, wait, cancellation, cleanup and diagnostic sites"
+        },
+        {
+          "line": 172,
+          "source": "| Every registered backend is stopped and reaped on readiness error | `test_readiness_error_cleanup`                            | `owner-finalizer-disabled`, `owner-cleanup-disabled`, `owner-reap-disabled` |"
+        },
+        {
+          "line": 174,
+          "source": "| HUP and TERM retain status and finalize ownership                 | `test_cancellation_cleanup`                               | `hup-status`, `term-status`, `owner-finalizer-disabled`                     |"
+        },
+        {
+          "line": 175,
+          "source": "| Cancellation before registration is retained and propagated       | `test_deferred_cancellation_cleanup`                      | `deferred-signal-forgotten`, `pending-signal-not-propagated`                |"
+        },
+        {
+          "line": 177,
+          "source": "| Detached causes reach the caller                                  | `test_readiness_error_cleanup`                            | `diagnostic-replay-disabled`                                                |"
+        },
+        {
+          "line": 178,
+          "source": "| Backend failure retains exit and cause                            | `test_backend_error_diagnostic`                           | `backend-status-hidden`                                                     |"
+        },
+        {
+          "line": 184,
+          "source": "the expected signal and statuses. Both TERM and INT banner mutations are plants."
+        },
+        {
+          "line": 186,
+          "source": "## Focused Important round 1: diagnostic recurrence stop"
+        },
+        {
+          "line": 192,
+          "source": "| Uncited: Process-probe redirection discards backend-registration diagnostics. | important      | Important: registration failures lose their cause, and deferred cancellation loses its asserted diagnostic | Take after conductor class approval                                  | Yes: diagnostic behavior changes |"
+        },
+        {
+          "line": 194,
+          "source": "| Uncited: The documented 180-second bound applies to individual waits.         | suggestion     | Nit: the containment description overstates an invocation-wide limit                                       | Take: describe separate wait budgets                                 | No: prose only                   |"
+        },
+        {
+          "line": 196,
+          "source": "The errors finding repeats the earlier diagnostic-loss mechanism: fixture errors inherit intentionally suppressed probe streams. The first correction restored detached diagnostics, but a caller-level `kill -0` redirection still suppresses registration errors and deferred-cancellation messages before they enter the owned log. Source changes stop pending TOOLING\u2019s class decision. The proposed structural audit covers every fixture emission beneath a redirected call, including registration I/O, deferred signals, readiness probes and the diagnostic replay boundary, with contract-only plants and a claim map. No Important label is downgraded."
+        },
+        {
+          "line": 200,
+          "source": "## Approved diagnostic class correction"
+        },
+        {
+          "line": 202,
+          "source": "TOOLING approved \u201cfixture diagnostics emitted under suppressed probe streams\u201d"
+        },
+        {
+          "line": 204,
+          "source": "The audit covers every diagnostic emission beneath redirected fixture calls."
+        },
+        {
+          "line": 205,
+          "source": "Backend registration writes install descriptor 7 as stderr before opening the"
+        },
+        {
+          "line": 206,
+          "source": "registration path, retaining open failures. Registration and deferred-signal"
+        },
+        {
+          "line": 207,
+          "source": "messages write directly to that descriptor. The owner EXIT trap also restores"
+        },
+        {
+          "line": 208,
+          "source": "that stream before cleanup; expected builtin existence-probe diagnostics alone"
+        },
+        {
+          "line": 209,
+          "source": "remain suppressed. Parent join diagnostics retain ordinary stderr because that"
+        },
+        {
+          "line": 211,
+          "source": "has no diagnostic file. Source changes remain confined to test fixtures."
+        },
+        {
+          "line": 215,
+          "source": "| Registration failures retain operation and destination                  | `test_registration_error_diagnostic`   | `registration-diagnostic-suppressed` |"
+        },
+        {
+          "line": 216,
+          "source": "| Deferred cancellation retains its explicit cause                        | `test_deferred_cancellation_cleanup`   | `deferred-diagnostic-suppressed`     |"
+        },
+        {
+          "line": 219,
+          "source": "The diagnostic site ledger is included in the lifecycle audit. The source audit"
+        },
+        {
+          "line": 238,
+          "source": "Receipt: `/Users/ctm/.local/state/codex-mailboxes/tooling/751-load-bounds/evidence/semgrep-1/gate/receipt.json`. The captured process exit is `2`; the CLI refused automatic configuration with metrics disabled before scanning. No scan output or clean verdict exists. The required baseline scan remains unrun. TOOLING receives the explicit-ruleset proposal; another baseline invocation waits for that decision."
+        },
+        {
+          "line": 248,
+          "source": "The repository `check-versions` skill compared this branch with `origin/main` at `5406e6c6ac46bbfd8cedf278760f607c1a32152a`. Changed plugins: `[]`; version bumps required: `False`. The repository plugin validator accepted current versions, mirrors and marketplace coverage. Receipt: `/Users/ctm/.local/state/codex-mailboxes/tooling/751-load-bounds/evidence/versions-1/gate/receipt.json`, verified against the current tree before this record in the same strict call. No manifest or catalog edits were needed."
+        },
+        {
+          "line": 260,
+          "source": "The direct diagnostic captured a registration path with a doubled separator from"
+        },
+        {
+          "line": 266,
+          "source": "`RuntimeError` before any signal."
+        },
+        {
+          "line": 280,
+          "source": "TOOLING authorized the direct diagnostic outside the lock in native message"
+        },
+        {
+          "line": 281,
+          "source": "`a7fa3907`. The corrected diagnostic completed, but receives no merge credit."
+        },
+        {
+          "line": 291,
+          "source": "## Finalizer output contract and independent plant declarations"
+        },
+        {
+          "line": 293,
+          "source": "Development-5 failed. Captured gate action exit: `1`. The failing plant `owner-finalizer-disabled` has status `setup-error`: ValueError: plant did not satisfy its named assertion verdict. Its baseline exit is `0`, red exit `1`, and restored exit `0`. These captures are from the failed receipt, not a pass claim. The red contains `ERROR: test_readiness_error_cleanup`: missing finalizer output raised a prerequisite exception before the named assertion. No plant or aggregate merge credit is claimed."
+        },
+        {
+          "line": 295,
+          "source": "TOOLING native message `73e99c42` authorized correcting the test gap and running every plant independently in one further development gate. The finalizer observation is subject output: its absence or wrong bytes now fails the exact output contract. Registration, process identity and filesystem errors other than absent output still raise non-assertion errors. The existing `owner-finalizer-disabled` plant guards this contract."
+        },
+        {
+          "line": 313,
+          "source": "| Backend ownership on exit             | `owner-finalizer-disabled`           | `test_readiness_error_cleanup`       |"
+        },
+        {
+          "line": 314,
+          "source": "| Diagnostics under redirected probes   | `registration-diagnostic-suppressed` | `test_registration_error_diagnostic` |"
+        }
+      ]
+    },
+    {
+      "path": "tests/checked_fixture_limits.py",
+      "assessment": "Explicit Python declaration of shell readiness containment; the fixture budget checker compares it to the plant allocation.",
+      "sha256": "abf0a019968bb19260e56e522301fd428b143e0b3c2c864987261fc8400aac6f",
+      "sites": [
+        {
+          "line": 1,
+          "source": "\"\"\"Compare plant checks with the waits declared by their actual detectors.\"\"\""
+        },
+        {
+          "line": 14,
+          "source": "# The notification shell clock waits only for readiness; its Python owner contains the whole invocation."
+        },
+        {
+          "line": 15,
+          "source": "SHELL_DETECTOR_WAITS = {\"tests/fixtures/notification-clock.bash\": 120}"
+        },
+        {
+          "line": 27,
+          "source": "def declared_waits(source, selectors, policy, cleanup_margin):"
+        },
+        {
+          "line": 51,
+          "source": "                raise ValueError(\"recursive detector wait\")"
+        },
+        {
+          "line": 87,
+          "source": "        raise ValueError(\"undeclared detector wait: \" + ast.unparse(node))"
+        },
+        {
+          "line": 112,
+          "source": "    waits = []"
+        },
+        {
+          "line": 118,
+          "source": "            if called.endswith((\".communicate\", \".wait\", \".run\")):"
+        },
+        {
+          "line": 123,
+          "source": "                    raise ValueError(\"invalid detector wait\")"
+        },
+        {
+          "line": 124,
+          "source": "                waits.append(dict(detector=name, line=call.lineno, seconds=value))"
+        },
+        {
+          "line": 132,
+          "source": "                        nested = declared_waits(embedded, [], policy, cleanup_margin)"
+        },
+        {
+          "line": 135,
+          "source": "                    waits.extend(dict(row, detector=name + \"/\" + row[\"detector\"]) for row in nested)"
+        },
+        {
+          "line": 136,
+          "source": "    return waits"
+        },
+        {
+          "line": 179,
+          "source": "            for detector, seconds in SHELL_DETECTOR_WAITS.items():"
+        },
+        {
+          "line": 183,
+          "source": "                                       shell_waits=[dict(detector=detector, line=None, seconds=seconds)]))"
+        },
+        {
+          "line": 198,
+          "source": "                if any(token in (\"timeout\", \"gtimeout\", \"wait\") for token in tokens):"
+        },
+        {
+          "line": 199,
+          "source": "                    raise ValueError(\"shell detector wait requires an explicit Python declaration: \" + str(script))"
+        },
+        {
+          "line": 200,
+          "source": "                shell_waits = []"
+        },
+        {
+          "line": 206,
+          "source": "                            raise ValueError(\"undeclared shell detector wait\") from error"
+        },
+        {
+          "line": 208,
+          "source": "                            raise ValueError(\"invalid shell detector wait\")"
+        },
+        {
+          "line": 209,
+          "source": "                        shell_waits.append(dict(detector=str(script.relative_to(root)), line=None, seconds=duration))"
+        },
+        {
+          "line": 211,
+          "source": "                                   selectors=[], shell_waits=shell_waits))"
+        },
+        {
+          "line": 234,
+          "source": "            waits = (check[\"shell_waits\"] if \"shell_waits\" in check else"
+        },
+        {
+          "line": 235,
+          "source": "                     declared_waits(check[\"path\"].read_text(), check[\"selectors\"], policy, core.CLEANUP_MARGIN))"
+        },
+        {
+          "line": 238,
+          "source": "                             execution=window, waits=waits))"
+        },
+        {
+          "line": 239,
+          "source": "            for wait in waits:"
+        },
+        {
+          "line": 241,
+          "source": "                           execution=window, **wait)"
+        },
+        {
+          "line": 242,
+          "source": "                if window < 2 * wait[\"seconds\"] and not math.isclose(window, 2 * wait[\"seconds\"], abs_tol=1e-6):"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/check-notifications",
+      "sha256": "91ccf33f14bbb9267ff66d463a30d2c9bfd63e10b64eff913db4ad0e5daff738",
+      "assessment": "Private-copy construction and cleanup, FIFO readiness, raw-observation contract; ledger maps guards and dispatch.",
+      "sites": [
+        {
+          "line": 440,
+          "source": "  trap - EXIT"
+        },
+        {
+          "line": 453,
+          "source": "  trap fixture_cleanup EXIT"
+        },
+        {
+          "line": 454,
+          "source": "  trap 'printf \"check-notifications: scenario %s failed at line %s (exit %s)\\n\" \"${NOTIFY_TEST_SCENARIO}\" \"${LINENO}\" \"$?\" >&2' ERR"
+        },
+        {
+          "line": 475,
+          "source": "  printf '%s\\n' 'source \"${NOTIFY_TEST_CLOCK}\"' 'trap notification_finish EXIT' 'main \"$@\"' >> \"${NOTIFY_BIN}\""
+        },
+        {
+          "line": 490,
+          "source": "  unset NOTIFY_WAIT_LIMIT NOTIFY_SOUND_SET NOTIFY_TIER CLAUDE_PROJECT_DIR CLAUDE_CODE_SESSION_ID \\"
+        },
+        {
+          "line": 494,
+          "source": "  # NOTIFY_TEST_HOLD keeps the stub waiting like an unanswered banner, and"
+        },
+        {
+          "line": 497,
+          "source": "    'trap '\\''echo TERM >> \"${NOTIFY_TEST_LOG}.signals\"; exit 143'\\'' TERM' \\"
+        },
+        {
+          "line": 624,
+          "source": "      payload=\"$(jq -nc --arg reply $'\u25b8 572 \u00b7 checks 20/20\\n\u25b8 waiting on review' \\"
+        },
+        {
+          "line": 817,
+          "source": "      write_transcript \"${transcript}\" ExitPlanMode '{\"plan\":\"Intro\\n\\n# Add a `sample` skill\\n\\n## Steps\"}'"
+        },
+        {
+          "line": 914,
+          "source": "      [[ \"${scenario}\" == delivery ]] || export NOTIFY_WAIT_LIMIT=09"
+        },
+        {
+          "line": 954,
+          "source": "      local observed_signal observed_status cleanup_status extra"
+        },
+        {
+          "line": 955,
+          "source": "      IFS=' ' read -r observed_signal observed_status cleanup_status extra < \"${NOTIFY_TEST_LOG}.backend\" || return 2"
+        },
+        {
+          "line": 956,
+          "source": "      [[ \"${observed_signal}\" =~ ^(-KILL|-TERM|-INT|none)$ && \"${observed_status}\" =~ ^([0-9]+|running)$ && \"${cleanup_status}\" =~ ^([0-9]+|none)$ && -z \"${extra}\" ]] || return 2"
+        },
+        {
+          "line": 958,
+          "source": "      [[ \"${observed_signal} ${observed_status} ${cleanup_status}\" == \"-KILL 137 none\" ]] || {"
+        },
+        {
+          "line": 963,
+          "source": "      [[ ! -e \"${NOTIFY_TEST_LOG}.signals\" ]] || exit 1"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/notification-clock.bash",
+      "sha256": "26c568086823ecd7ad9612205bee23d4c629380f1e7aee7bada129d0542dc2fe",
+      "assessment": "Owned async children, backend registration, finalizer, reaping and captured diagnostics; contract map in ledger.",
+      "sites": [
+        {
+          "line": 4,
+          "source": "NOTIFY_TEST_DIAGNOSTICS=\"\""
+        },
+        {
+          "line": 6,
+          "source": "  NOTIFY_TEST_DIAGNOSTICS=\"$(mktemp \"${NOTIFY_TEST_LOG}.diagnostics.XXXXXX\")\" || return 2"
+        },
+        {
+          "line": 7,
+          "source": "  export NOTIFY_TEST_RUN=\"${NOTIFY_TEST_DIAGNOSTICS}\""
+        },
+        {
+          "line": 8,
+          "source": "  exec 7>> \"${NOTIFY_TEST_DIAGNOSTICS}\" # error-output-allow: descriptor 7 owns fixture diagnostics; standard streams stay live"
+        },
+        {
+          "line": 17,
+          "source": "    wait \"${child}\" || child_status=$?"
+        },
+        {
+          "line": 23,
+          "source": "  if ((result != 0)) && [[ -n \"${NOTIFY_TEST_DIAGNOSTICS}\" && -s \"${NOTIFY_TEST_DIAGNOSTICS}\" ]]; then"
+        },
+        {
+          "line": 24,
+          "source": "    cat \"${NOTIFY_TEST_DIAGNOSTICS}\" >&2 || result=2"
+        },
+        {
+          "line": 30,
+          "source": "  if [[ -z \"${NOTIFY_TEST_OWNER_PID}\" ]]; then"
+        },
+        {
+          "line": 31,
+          "source": "    # Defer cancellation across launch until the first PID registration."
+        },
+        {
+          "line": 32,
+          "source": "    NOTIFY_TEST_PENDING_SIGNAL=\"${1}\""
+        },
+        {
+          "line": 39,
+          "source": "function notification_register_backend() {"
+        },
+        {
+          "line": 44,
+          "source": "  if [[ -z \"${NOTIFY_TEST_OWNER_PID}\" ]]; then"
+        },
+        {
+          "line": 45,
+          "source": "    NOTIFY_TEST_OWNER_PID=\"${1}\""
+        },
+        {
+          "line": 53,
+          "source": "    if ((NOTIFY_TEST_PENDING_SIGNAL != 0)); then notification_owner_interrupt \"${NOTIFY_TEST_PENDING_SIGNAL}\"; fi"
+        },
+        {
+          "line": 55,
+          "source": "  [[ \"${NOTIFY_TEST_OWNER_PID}\" == \"${1}\" ]] || {"
+        },
+        {
+          "line": 63,
+          "source": "  [[ \"${1}\" == 1 && -n \"${pid:-}\" ]] || return 0"
+        },
+        {
+          "line": 69,
+          "source": "  while [[ \"${NOTIFY_TEST_PAUSE_READY:-}\" == 1 || ! -f \"${NOTIFY_TEST_RUN:?}.${pid}.ready\" ]] && kill -0 \"${pid}\" 2> /dev/null; do # error-output-allow: fixture readiness checks its own registered backend"
+        },
+        {
+          "line": 71,
+          "source": "      printf 'notification-clock: backend %s not ready before liveness bound\\n' \"${pid}\" >&7"
+        },
+        {
+          "line": 74,
+          "source": "    if [[ \"${NOTIFY_TEST_PAUSE_READY:-}\" != 1 && -f \"${NOTIFY_TEST_RUN:?}.${pid}.starting\" && ! -f \"${NOTIFY_TEST_RUN:?}.${pid}.released\" ]]; then"
+        },
+        {
+          "line": 75,
+          "source": "      : > \"${NOTIFY_TEST_RUN:?}.${pid}.released\""
+        },
+        {
+          "line": 76,
+          "source": "      printf 'run\\n' > \"${NOTIFY_TEST_RUN:?}.${pid}.start\""
+        },
+        {
+          "line": 80,
+          "source": "  printf '%s\\n' \"${pid}\" >> \"${NOTIFY_TEST_LOG:?}.ticks\""
+        },
+        {
+          "line": 83,
+          "source": "function kill() {"
+        },
+        {
+          "line": 85,
+          "source": "    builtin kill \"$@\""
+        },
+        {
+          "line": 89,
+          "source": "    notification_register_backend \"${2}\" || return 2"
+        },
+        {
+          "line": 90,
+          "source": "    builtin kill \"$@\""
+        },
+        {
+          "line": 93,
+          "source": "  if [[ \"${1:-}\" != -KILL && \"${1:-}\" != -TERM && \"${1:-}\" != -INT ]]; then"
+        },
+        {
+          "line": 94,
+          "source": "    builtin kill \"$@\""
+        },
+        {
+          "line": 97,
+          "source": "  [[ \"${NOTIFY_TEST_OWNER_PID}\" == \"${2}\" ]] || {"
+        },
+        {
+          "line": 101,
+          "source": "  NOTIFY_TEST_STOP_SIGNAL=\"${1}\""
+        },
+        {
+          "line": 102,
+          "source": "  builtin kill \"$@\" 2>&7 || return # error-output-allow: owned descriptor retains probe errors without moving backend ownership into a capture subshell"
+        },
+        {
+          "line": 103,
+          "source": "  if [[ \"${1}\" == -KILL ]]; then"
+        },
+        {
+          "line": 105,
+          "source": "    wait \"${2}\" || NOTIFY_TEST_OBSERVED_EXIT=$?"
+        },
+        {
+          "line": 109,
+          "source": "function notification_publish_backend() {"
+        },
+        {
+          "line": 114,
+          "source": "  printf '%s %s %s\\n' \"${NOTIFY_TEST_STOP_SIGNAL}\" \"${NOTIFY_TEST_OBSERVED_EXIT}\" \"${NOTIFY_TEST_CLEANUP_EXIT}\" >> \"${NOTIFY_TEST_LOG:?}.backend\" || return 2"
+        },
+        {
+          "line": 116,
+          "source": "    printf '%s %s %s\\n' \"${NOTIFY_TEST_STOP_SIGNAL}\" \"${NOTIFY_TEST_OBSERVED_EXIT}\" \"${NOTIFY_TEST_CLEANUP_EXIT}\" > \"${NOTIFY_TEST_OBSERVATION}\" || return 2"
+        },
+        {
+          "line": 120,
+          "source": "# Finalize every exit before publishing; cleanup cannot rewrite observed success."
+        },
+        {
+          "line": 123,
+          "source": "  trap - EXIT"
+        },
+        {
+          "line": 124,
+          "source": "  trap '' HUP INT TERM"
+        },
+        {
+          "line": 126,
+          "source": "  if ((result == 0 && NOTIFY_TEST_PENDING_SIGNAL != 0)); then result=\"${NOTIFY_TEST_PENDING_SIGNAL}\"; fi"
+        },
+        {
+          "line": 128,
+          "source": "  if [[ -n \"${NOTIFY_TEST_OWNER_PID}\" ]]; then"
+        },
+        {
+          "line": 130,
+          "source": "      if builtin kill -0 \"${NOTIFY_TEST_OWNER_PID}\" 2> /dev/null; then # error-output-allow: owned backend existence selects cleanup"
+        },
+        {
+          "line": 132,
+          "source": "        if ! builtin kill -KILL \"${NOTIFY_TEST_OWNER_PID}\" 2>&7; then # error-output-allow: owned descriptor retains probe errors without moving backend ownership into a capture subshell"
+        },
+        {
+          "line": 137,
+          "source": "        wait \"${NOTIFY_TEST_OWNER_PID}\" || NOTIFY_TEST_CLEANUP_EXIT=$?"
+        },
+        {
+          "line": 140,
+          "source": "        wait \"${NOTIFY_TEST_OWNER_PID}\" || NOTIFY_TEST_OBSERVED_EXIT=$?"
+        },
+        {
+          "line": 144,
+          "source": "      if [[ \"${NOTIFY_TEST_STOP_SIGNAL} ${NOTIFY_TEST_OBSERVED_EXIT}\" != \"-KILL 137\" ]]; then"
+        },
+        {
+          "line": 149,
+          "source": "    if ! notification_publish_backend; then"
+        },
+        {
+          "line": 158,
+          "source": "  exec 2>&7 # error-output-allow: owner diagnostics are replayed by notification_finish"
+        },
+        {
+          "line": 164,
+          "source": "  NOTIFY_TEST_OWNER_PID=\"\""
+        },
+        {
+          "line": 166,
+          "source": "  NOTIFY_TEST_PENDING_SIGNAL=0"
+        },
+        {
+          "line": 167,
+          "source": "  NOTIFY_TEST_STOP_SIGNAL=none"
+        },
+        {
+          "line": 169,
+          "source": "  trap 'notification_owner_finish 2>&7' EXIT # error-output-allow: owned descriptor retains probe errors without moving backend ownership into a capture subshell"
+        },
+        {
+          "line": 170,
+          "source": "  trap 'notification_owner_interrupt 129' HUP"
+        },
+        {
+          "line": 171,
+          "source": "  trap 'notification_owner_interrupt 143' TERM"
+        }
+      ]
+    },
+    {
+      "path": "tests/notification_load_test.py",
+      "sha256": "6d9caa1a8fd74475d10239d2e3e3049ba4ea50195195313747214024bdc649f3",
+      "assessment": "Registration and process identity establish the instrument. Missing or malformed finalizer observation is subject output and fails its exact output contract; I/O, setup and identity failures remain errors.",
+      "sites": [
+        {
+          "line": 7,
+          "source": "import signal"
+        },
+        {
+          "line": 9,
+          "source": "import subprocess"
+        },
+        {
+          "line": 39,
+          "source": "        return subprocess.run([str(ROOT / 'tests/fixtures/check-notifications'), scenario],"
+        },
+        {
+          "line": 46,
+          "source": "            raise RuntimeError('fixture prerequisite failed: ' + result.stdout + result.stderr)"
+        },
+        {
+          "line": 50,
+          "source": "        observation = subprocess.CompletedProcess(['fixture'], 2, stdout='', stderr='missing observer')"
+        },
+        {
+          "line": 51,
+          "source": "        with mock.patch('subprocess.run', autospec=True, return_value=observation):"
+        },
+        {
+          "line": 68,
+          "source": "            self.assertIn('check-notifications: unexpected notifier entry point\\n', result.stderr)"
+        },
+        {
+          "line": 72,
+          "source": "        self.assertEqual((result.returncode, result.stderr), (0, ''))"
+        },
+        {
+          "line": 87,
+          "source": "            self.assertIn('check-notifications: expected one backend function declaration\\n', result.stderr)"
+        },
+        {
+          "line": 91,
+          "source": "        self.assertEqual((result.returncode, result.stdout, result.stderr),"
+        },
+        {
+          "line": 98,
+          "source": "                self.assertEqual((result.returncode, result.stdout, result.stderr),"
+        },
+        {
+          "line": 102,
+          "source": "        result = subprocess.run(['/bin/bash', '-c',"
+        },
+        {
+          "line": 107,
+          "source": "        self.assertRegex(result.stderr, r'^notification-clock: detached notifier [0-9]+ exited 23\\n$')"
+        },
+        {
+          "line": 110,
+          "source": "        result = subprocess.run(['/bin/bash', '-c',"
+        },
+        {
+          "line": 115,
+          "source": "        self.assertRegex(result.stderr, r'^notification-clock: detached notifier [0-9]+ exited 2\\n'"
+        },
+        {
+          "line": 118,
+          "source": "    def process_state(self, pid):"
+        },
+        {
+          "line": 119,
+          "source": "        result = subprocess.run([shutil.which('ps'), '-ww', '-p', str(pid), '-o', 'ppid=', '-o', 'stat=',"
+        },
+        {
+          "line": 121,
+          "source": "        if result.returncode == 1 and not (result.stdout.strip() or result.stderr.strip()):"
+        },
+        {
+          "line": 124,
+          "source": "            raise RuntimeError('process inspection failed: ' + result.stdout + result.stderr)"
+        },
+        {
+          "line": 143,
+          "source": "                stdout, stderr = process.communicate(timeout=PROCESS_LIMIT)"
+        },
+        {
+          "line": 144,
+          "source": "                raise RuntimeError('fixture ended before backend registration: ' + stdout + stderr)"
+        },
+        {
+          "line": 159,
+          "source": "        pid, directory = backend"
+        },
+        {
+          "line": 160,
+          "source": "        state = self.process_state(pid)"
+        },
+        {
+          "line": 166,
+          "source": "            raise RuntimeError('registered PID has an unknown identity; no signal sent')"
+        },
+        {
+          "line": 171,
+          "source": "            pid, directory = backend"
+        },
+        {
+          "line": 172,
+          "source": "            state = self.process_state(pid)"
+        },
+        {
+          "line": 175,
+          "source": "                    raise RuntimeError('cleanup refused an unknown PID identity')"
+        },
+        {
+          "line": 177,
+          "source": "                    os.kill(pid, signal.SIGKILL)"
+        },
+        {
+          "line": 182,
+          "source": "        process.communicate(timeout=PROCESS_LIMIT)"
+        },
+        {
+          "line": 185,
+          "source": "                          signal_number=signal.SIGTERM):"
+        },
+        {
+          "line": 194,
+          "source": "                extra['NOTIFY_TEST_INTERRUPT_BEFORE_REGISTER'] = str(128 + signal_number)"
+        },
+        {
+          "line": 199,
+          "source": "            process = subprocess.Popen([str(ROOT / 'tests/fixtures/check-notifications'), 'delivery'],"
+        },
+        {
+          "line": 200,
+          "source": "                                       env=self.fixture_environment(**extra), stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 201,
+          "source": "                                       stderr=subprocess.PIPE, text=True)"
+        },
+        {
+          "line": 212,
+          "source": "                    os.kill(state[0], signal_number)"
+        },
+        {
+          "line": 213,
+          "source": "                stdout, stderr = process.communicate(timeout=PROCESS_LIMIT)"
+        },
+        {
+          "line": 215,
+          "source": "                expected_status = 128 + signal_number if cancel or deferred else 2"
+        },
+        {
+          "line": 218,
+          "source": "                self.assertIn(expected_cause, stderr)"
+        },
+        {
+          "line": 220,
+          "source": "                    self.assertIn('injected observation failure', stderr)"
+        },
+        {
+          "line": 226,
+          "source": "                    self.assertEqual(output, 'none running 137\\n', 'backend finalizer observation output')"
+        },
+        {
+          "line": 230,
+          "source": "    def test_registration_error_diagnostic(self):"
+        },
+        {
+          "line": 235,
+          "source": "            self.assertIn('notification-clock: cannot record backend registration at ' + directory, result.stderr)"
+        },
+        {
+          "line": 240,
+          "source": "        self.assertIn('notification-clock: injected observation failure', result.stderr)"
+        },
+        {
+          "line": 241,
+          "source": "        self.assertIn('notification-clock: cannot publish backend observation', result.stderr)"
+        },
+        {
+          "line": 243,
+          "source": "    def test_backend_error_diagnostic(self):"
+        },
+        {
+          "line": 246,
+          "source": "        self.assertIn('injected backend failure', result.stderr)"
+        },
+        {
+          "line": 247,
+          "source": "        self.assertIn('notification-clock: backend exited 7', result.stderr)"
+        },
+        {
+          "line": 256,
+          "source": "        for value in (signal.SIGHUP, signal.SIGTERM):"
+        },
+        {
+          "line": 257,
+          "source": "            with self.subTest(signal=value):"
+        },
+        {
+          "line": 258,
+          "source": "                self.lifecycle_control(cancel=True, signal_number=value)"
+        },
+        {
+          "line": 261,
+          "source": "        for value in (signal.SIGHUP, signal.SIGTERM):"
+        },
+        {
+          "line": 262,
+          "source": "            with self.subTest(signal=value):"
+        },
+        {
+          "line": 263,
+          "source": "                self.lifecycle_control(deferred=True, signal_number=value)"
+        },
+        {
+          "line": 268,
+          "source": "    def test_failure_diagnostic(self):"
+        },
+        {
+          "line": 270,
+          "source": "        self.assertEqual((result.returncode, result.stdout, result.stderr),"
+        },
+        {
+          "line": 277,
+          "source": "                self.assertEqual((result.returncode, result.stdout, result.stderr), (0, 'No alert\\n', ''))"
+        },
+        {
+          "line": 299,
+          "source": "                self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))"
+        },
+        {
+          "line": 331,
+          "source": "            write_python_fixture(writer, 'import os, signal\\nsignal.signal(signal.SIGPIPE, signal.SIG_DFL)\\n'"
+        },
+        {
+          "line": 338,
+          "source": "                    result = subprocess.run(['/bin/bash', '-c',"
+        },
+        {
+          "line": 343,
+          "source": "                    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "sha256": "57615d3d02db57b07b31a66189e749bb728e96f728b93388457c216795f2a53f",
+      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
+      "sites": [
+        {
+          "line": 61,
+          "source": ">     \"${work}/config.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/scored.json\" 2>&1)\" || status=$? # error-output-allow: fixture checks merged failure diagnostics and status for each owner-lock fault"
+        },
+        {
+          "line": 150,
+          "source": "## Every open bug with a signal gets a stage of the progress model"
+        },
+        {
+          "line": 158,
+          "source": "$ jq -r '.bugs[] | select(.progress != null) | \"#\\(.number) \\(.progress.stage), \\(.progress.nextMove): \\(.progress.nextAction) (\\(.progress.signal))\\(if (.progress.flags | length) > 0 then \" [\\(.progress.flags | join(\", \"))]\" else \"\" end)\\(if (.progress.extraCarriers | length) > 0 then \" also \\(.progress.extraCarriers | map(to_entries[0] | \"\\(.key) \\(.value)\") | join(\", \"))\" else \"\" end)\"' \"${work}/gather.json\""
+        },
+        {
+          "line": 161,
+          "source": "#17 awaiting-review, nobody: request a review (pull request #44, review required, no review requested, mergeability unknown, checks passing)"
+        },
+        {
+          "line": 198,
+          "source": ".reviewDecision = \"REVIEW_REQUIRED\" | .reviewRequests.totalCount = 1 => awaiting-review, reviewer: wait for review"
+        },
+        {
+          "line": 199,
+          "source": ".reviewDecision = null | .commits.nodes[0].commit.statusCheckRollup.state = \"PENDING\" => awaiting-review, ci: wait for checks"
+        },
+        {
+          "line": 207,
+          "source": "## Unknown mergeability counts as no conflict, and the signal says so"
+        },
+        {
+          "line": 210,
+          "source": "$ dir=\"$(variant '(.closedByPullRequestsReferences.nodes |= map(if .number == 40 then .mergeable = \"UNKNOWN\" else . end))')\" && bugs STUB_GH_DIR=\"${dir}\" gather \"${work}/config.json\" \"${work}/unknown.json\" > /dev/null && jq -r '.bugs[] | select(.number == 16) | .progress.signal' \"${work}/unknown.json\""
+        },
+        {
+          "line": 241,
+          "source": "$ repo=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && (cd \"${repo}\" && export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_AUTHOR_DATE=2026-10-01T10:00:00Z GIT_COMMITTER_DATE=2026-10-01T10:00:00Z && git init -q -b main && git config user.email alice@example.com && git config user.name Alice && echo a > README.md && git add -A && git commit -q -m readme && git update-ref refs/remotes/origin/main HEAD && git remote add origin git@github.com:acme/widgets.git && git checkout -q -b 18-axios-test && mkdir -p src/deps && echo x > src/deps/axios.js && git add -A && GIT_AUTHOR_DATE=2026-10-14T10:00:00Z GIT_COMMITTER_DATE=2026-10-14T10:00:00Z git commit -q -m axios && git checkout -q main && bugs gather \"${work}/config.json\" \"${work}/checkout.json\" > /dev/null ) && jq -r '.checkout, (.bugs[] | select(.number == 18) | .progress | \"\\(.signal) on \\(.host): \\(.nextAction) [\\(.flags | join(\", \"))]\"), (.viewerFiles | .active[], .recent[] | \"\\(.path) via \\(.via)\")' \"${work}/checkout.json\""
+        },
+        {
+          "line": 256,
+          "source": "$ repo=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && (cd \"${repo}\" && git init -q -b main && git remote add origin https://evilgithub.com/acme/widgets.git && bugs gather \"${work}/config.json\" \"${work}/lookalike.json\" 2>&1 > /dev/null | grep 'origin is') && jq -c '.checkout' \"${work}/lookalike.json\" # error-output-allow: testcase asserts retained diagnostics: A checkout of a lookalike host supplies no local state"
+        },
+        {
+          "line": 271,
+          "source": "$ bugs gather \"${work}/config.json\" \"${work}/outside.json\" 2>&1 > /dev/null | grep checkout # error-output-allow: testcase asserts retained diagnostics: Outside a checkout, the gather reads no local state"
+        },
+        {
+          "line": 292,
+          "source": "awaiting-review, reviewer: wait for review"
+        },
+        {
+          "line": 422,
+          "source": "ready: #16/ready-to-merge #18/ready-to-fix #27/draft #17/awaiting-review #21/ready-to-fix #28/needs-author #26/close-out"
+        },
+        {
+          "line": 457,
+          "source": "    - #17 [47] Auth0 forces near-daily sign-outs (awaiting-review: pull request #44, review required, no review requested, mergeability unknown, checks passing)"
+        },
+        {
+          "line": 514,
+          "source": "$ jq 'map(if .number == 11 then .areas = [{name: \"api\", paths: [\"src/api/v2/\"]}] else . end)' \"${assessments}\" > \"${work}/clash.json\" && bugs score \"${work}/config.json\" \"${work}/gather.json\" \"${work}/clash.json\" \"${work}/clash-scored.json\" 2>&1 | sed \"s|${work}|WORK|g\"; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: An area named twice with different paths is refused"
+        },
+        {
+          "line": 523,
+          "source": "$ jq 'map(if .number == 11 then .areas = [{name: \"api\", paths: []}] elif .number == 12 then .areas = \"src\" else . end)' \"${assessments}\" > \"${work}/no-paths.json\" && bugs score \"${work}/config.json\" \"${work}/gather.json\" \"${work}/no-paths.json\" \"${work}/no-paths-scored.json\" 2>&1 | sed \"s|${work}|WORK|g\"; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: An area without a path pattern is refused"
+        },
+        {
+          "line": 540,
+          "source": "## Signals name their source and what each says"
+        },
+        {
+          "line": 543,
+          "source": "$ jq -r '.tiers.critical[] | select(.number == 10 or .number == 11 or .number == 25) | \"#\\(.number)\", (.signals[] | \"  \\(.source) \\(.kind): \\(.text)\")' \"${work}/scored.json\""
+        },
+        {
+          "line": 616,
+          "source": "$ note=\"$(mktemp \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && printf '%s\\n' '- 2026-10-14T09:00-04:00 snooze #10 until 2026-10-14: wait for the release' > \"${note}\" && config_with \".triageNote = \\\"${note}\\\"\" > \"${work}/snooze.json\" && for at in 2026-10-15T03:30:00Z 2026-10-15T04:30:00Z; do jq --arg at \"${at}\" '.gatheredAt = $at' \"${work}/gather.json\" > \"${work}/snooze-gather.json\" && bugs BUGS_GATHER_NOW=\"${at}\" score \"${work}/snooze.json\" \"${work}/snooze-gather.json\" \"${assessments}\" \"${work}/snooze-scored.json\" > /dev/null && jq -r --arg at \"${at}\" '\"\\($at): #10 \\([.tiers | to_entries[] | select(.value | any(.number == 10)) | .key] | first)\"' \"${work}/snooze-scored.json\"; done"
+        },
+        {
+          "line": 627,
+          "source": "$ jq 'map(select(.number != 20)) + [(.[] | select(.number == 11))] | map(if .number == 23 then .reproduced = \"no\" else . end) | map(if .number == 21 then .updatedAt = \"2026-10-01T00:00:00Z\" elif .number == 22 then .impact = \"severe\" | .gist = \"\" else . end)' \"${assessments}\" > \"${work}/bad-assessments.json\" && bugs score \"${work}/config.json\" \"${work}/gather.json\" \"${work}/bad-assessments.json\" \"${work}/bad-scored.json\" 2>&1 | sed \"s|${work}|WORK|g\"; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: Score refuses assessments that do not cover the gather"
+        },
+        {
+          "line": 640,
+          "source": "Every placement, signal, and fact comes from the score, so `report-board`"
+        },
+        {
+          "line": 644,
+          "source": "$ bugs draft \"${work}/config.json\" \"${work}/gather.json\" \"${work}/scored.json\" \"${work}/board.json\" | sed \"s|${work}|WORK|g\" && \"${REPORT_BOARD_BIN}\" validate \"${work}/board.json\" 2>&1 | grep -c '^  - ' && \"${REPORT_BOARD_BIN}\" validate \"${work}/board.json\" 2>&1 | grep '^  - ' | grep -v 'impact is required\\|^  - summary: ' | wc -l | tr -d ' ' # error-output-allow: testcase asserts retained diagnostics: Draft builds board data that lacks only its prose"
+        },
+        {
+          "line": 658,
+          "source": "ready #17 awaiting-review"
+        },
+        {
+          "line": 676,
+          "source": "$ bugs save \"${work}/config.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/scored.json\" 2>&1 | sed \"s|${work}|WORK|g\" && ls \"${work}/cache/report-boards/bugs/github.com/acme/widgets\" && bugs moved \"${work}/config.json\" \"${work}/gather.json\" # error-output-allow: testcase asserts retained diagnostics: Save stores the cache, and a warm gather reports that nothing moved"
+        },
+        {
+          "line": 688,
+          "source": "## Save waits for another sync's save, then refuses and names the lock"
+        },
+        {
+          "line": 691,
+          "source": "$ cache=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && mkdir -p \"${cache}/report-boards/bugs/github.com/acme/widgets/save.lock\" && touch \"${cache}/report-boards/bugs/github.com/acme/widgets/save.lock/owner\" && bugs XDG_CACHE_HOME=\"${cache}\" save \"${work}/config.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/scored.json\" 2>&1 | sed \"s|${cache}|CACHE|g\"; echo \"exit ${PIPESTATUS[0]}\"; ls \"${cache}/report-boards/bugs/github.com/acme/widgets\" # error-output-allow: snapshot checks normalized lock-contention diagnostics and producer status"
+        },
+        {
+          "line": 710,
+          "source": ">   && test ! -e \"${lock%/save.lock}/gather.json\" # error-output-allow: snapshot checks lock-contention diagnostics, status and unchanged owner"
+        },
+        {
+          "line": 723,
+          "source": "## Save releases its owner when PID recording fails"
+        },
+        {
+          "line": 768,
+          "source": "$ jq '(.bugs[] | select(.number == 12)) |= (.lastComment = {author: \"dave\", at: \"2026-10-15T15:00:00Z\", outside: true} | .updatedAt = \"2026-10-15T15:00:00Z\") | (.bugs[] | select(.number == 28) | .progress) |= (.stage = \"ready-to-merge\" | .signal = \"pull request #43, no review required, checks passing\") | (.bugs[] | select(.number == 21)) |= (.state = \"closed\" | .stateReason = \"COMPLETED\") | .bugs += [{number: 30, title: \"A new bug\", state: \"open\", author: \"erin\", outsideReporter: true, labels: [\"bug\"], fixes: [], reactions: 0, updatedAt: \"2026-10-15T15:30:00Z\", lastComment: null, zenhub: null}]' \"${work}/gather.json\" > \"${work}/moved.json\" && bugs moved \"${work}/config.json\" \"${work}/moved.json\""
+        },
+        {
+          "line": 793,
+          "source": "$ jq '.gatheredAt = \"2026-10-14T16:00:00Z\"' \"${work}/scored.json\" > \"${work}/other-scored.json\" && bugs save \"${work}/config.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/other-scored.json\" 2>&1 | sed \"s|${work}|WORK|g\"; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: Save refuses a score from a different gather"
+        },
+        {
+          "line": 812,
+          "source": "$ printf '%s\\n' '{\"repo\": \"acme\", \"bugLabels\": [], \"recentDays\": 0, \"zenhub\": {\"workspace\": \"ws 1\", \"tokenVarible\": \"ZH\"}, \"triageGit\": {\"gitDir\": \"a\", \"workTree\": \"b\", \"worktree\": \"c\"}, \"weights\": {\"impact\": {\"security\": \"high\"}, \"impcat\": {}}, \"triagenote\": \"triage.md\"}' > \"${work}/bad-config.json\" && bugs gather \"${work}/bad-config.json\" \"${work}/bad.json\" 2>&1 | sed \"s|${work}|WORK|g\"; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: An invalid config lists every problem"
+        },
+        {
+          "line": 833,
+          "source": "$ printf '%s\\n' '{\"repo\": \"acme/widgets\", \"claimLabels\": [\"In Progress\"], \"claimPipelines\": [\"Review/QA\", \"review/qa\"], \"quietDays\": 30, \"staleDays\": 30, \"uniformityShare\": 1.5, \"affinityWorkDays\": 0, \"weights\": {\"affinity\": {\"me\": 3, \"other\": \"much\"}}}' > \"${work}/overlap.json\" && bugs gather \"${work}/overlap.json\" \"${work}/overlap-gather.json\" 2>&1 | sed \"s|${work}|WORK|g\"; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: A label or pipeline cannot mark both work started and ownership"
+        },
+        {
+          "line": 848,
+          "source": "$ mkdir -p \"${work}/config/report-boards/bugs/github.com/acme\" && jq '.repo = \"acme/gadgets\"' \"${work}/config.json\" > \"${work}/config/report-boards/bugs/github.com/acme/widgets.json\" && bugs gather acme/widgets \"${work}/mismatch.json\" 2>&1 | sed \"s|${work}|WORK|g\"; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: A config for another repository is refused"
+        },
+        {
+          "line": 865,
+          "source": "$ jq '.repo = \"acme/..\"' \"${work}/config.json\" > \"${work}/dots-config.json\" && bugs gather \"${work}/dots-config.json\" \"${work}/dots.json\" 2>&1 | sed \"s|${work}|WORK|g\"; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: A repository with a . or .. segment is refused"
+        },
+        {
+          "line": 897,
+          "source": "$ note=\"$(mktemp \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && printf '%s\\n' '- 2026-10-14T09:00-04:00 demote #10: letters go out in batches, so a fix this week is soon enough' > \"${note}\" && config_with \".triageNote = \\\"${note}\\\"\" > \"${work}/demoted.json\" && bugs score \"${work}/demoted.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/demoted-scored.json\" > /dev/null && jq -r '[.tiers | to_entries[] | .key as $t | .value[] | select(.number == 10) | \"#10 \\($t): \\(.why), \\([.signals[] | select(.source == \"triage\") | .kind] | join(\", \"))\"] | first' \"${work}/demoted-scored.json\""
+        },
+        {
+          "line": 929,
+          "source": "$ cache=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && mkdir -p \"${cache}/report-boards/bugs/github.com/acme/widgets\" && printf 'not json' > \"${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json\" && bugs XDG_CACHE_HOME=\"${cache}\" reuse \"${work}/config.json\" \"${work}/gather.json\" \"${work}/corrupt-reused.json\" 2>&1 | sed -n '1,2p' | sed -e \"s|${cache}|CACHE|g\" -e \"s|${work}|WORK|g\" # error-output-allow: testcase asserts retained diagnostics: A cache file that cannot be read is named, not taken for a first sync"
+        },
+        {
+          "line": 937,
+          "source": "$ bugs gather \"${work}/config.json\" \"${work}/listed.json\" 2>&1 > /dev/null | sed -n '1,3p' # error-output-allow: testcase asserts retained diagnostics: Bugs ZenHub does not track are listed, and the gather goes on"
+        },
+        {
+          "line": 949,
+          "source": "$ empty=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp \"${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json\" \"${empty}/\" && bugs STUB_CURL_DIR=\"${empty}\" gather \"${work}/config.json\" \"${work}/no-state.json\" 2>&1 | sed -n '1,2p'; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather"
+        },
+        {
+          "line": 970,
+          "source": "$ bugs STUB_CURL_FAIL=1 gather \"${work}/config.json\" \"${work}/zenhub-down.json\" 2>&1 | sed -n '1,2p'; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: A failed ZenHub request stops the gather"
+        },
+        {
+          "line": 998,
+          "source": "$ cut=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp \"${BUGS_GATHER_DATA_DIR}/zenhub/\"*.json \"${cut}/\" && jq '.sprints.pageInfo = {hasNextPage: true}' \"${BUGS_GATHER_DATA_DIR}/zenhub/101-12.json\" > \"${cut}/101-12.json\" && bugs STUB_CURL_DIR=\"${cut}\" gather \"${work}/config.json\" \"${work}/cut.json\" 2>&1 > /dev/null | grep -A1 'ZenHub cut' # error-output-allow: testcase asserts retained diagnostics: ZenHub lists cut short are listed, and the gather goes on"
+        },
+        {
+          "line": 1017,
+          "source": "$ bugs draft \"${work}/bad-note.json\" \"${work}/gather.json\" \"${work}/bad-note-scored.json\" \"${work}/bad-note-board.json\" > /dev/null && jq '.summary = \"x\" | (.critical[], .high[]) |= (.impact = \"x\")' \"${work}/bad-note-board.json\" > \"${work}/bad-note-filled.json\" && \"${REPORT_BOARD_BIN}\" validate \"${work}/bad-note-filled.json\" 2>&1 | grep -c '^  - triage note: '; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: Problems with the triage note travel into the draft, which validation refuses"
+        },
+        {
+          "line": 1046,
+          "source": "$ cache=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && dir=\"${cache}/report-boards/bugs/github.com/acme/widgets\" && mkdir -p \"${dir}\" && printf '[{\"foo\": 1}]' > \"${dir}/assessments.json\" && printf '{\"version\": 2}' > \"${dir}/scored.json\" && { bugs XDG_CACHE_HOME=\"${cache}\" reuse \"${work}/config.json\" \"${work}/gather.json\" \"${work}/shape-reused.json\" 2>&1 > /dev/null; bugs XDG_CACHE_HOME=\"${cache}\" score \"${work}/config.json\" \"${work}/gather.json\" \"${assessments}\" \"${work}/shape-scored.json\" 2>&1 > /dev/null; } | sed \"s|${cache}|CACHE|g\" # error-output-allow: testcase asserts retained diagnostics: Cache files of the wrong shape are named and set aside"
+        },
+        {
+          "line": 1054,
+          "source": "$ capped=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp -R \"${BUGS_GATHER_DATA_DIR}/github/.\" \"${capped}/\" && jq 'map((.data.search.nodes[] | select(.number == 26) | .assignees.pageInfo) = {hasNextPage: true})' \"${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-type.json\" > \"${capped}/graphql/search-open-type.json\" && bugs STUB_GH_DIR=\"${capped}\" gather \"${work}/config.json\" \"${work}/assignees-cut.json\" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: Lists GitHub cut short are listed, and the gather goes on"
+        },
+        {
+          "line": 1079,
+          "source": "$ bugs score \"${work}/config.json\" 2>&1 | sed -n '1,1p' # error-output-allow: testcase asserts retained diagnostics: Usage errors"
+        },
+        {
+          "line": 1084,
+          "source": "$ bugs frobnicate 2>&1 | sed -n '1,1p' # error-output-allow: testcase asserts retained diagnostics: Usage errors"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/notification-load.md",
+      "sha256": "596f39ab006cf8140cc88e25d46599221f59dbc40ed85998a0a19f6c311afa1a",
+      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
+      "sites": [
+        {
+          "line": 13,
+          "source": "$ uv run --no-project \"${NOTIFICATION_LOAD_TESTS_BIN}\" 2>&1 | sed -E 's/Ran [0-9]+ tests in [0-9.]+s/Ran tests/' # error-output-allow: testcase asserts unittest diagnostics and normalizes measured runtime"
+        }
+      ]
+    }
+  ],
+  "diagnostic_class": {
+    "mechanism": "fixture diagnostics emitted under suppressed probe streams",
+    "approval": "TOOLING 12b20a5e 2026-11-08T14:00:30Z",
+    "sites": [
+      {
+        "path": "Makefile",
+        "line": 190,
+        "source": "\t@command -v actionlint > /dev/null || { echo \"actionlint is required: https://github.com/rhysd/actionlint\" >&2; exit 1; }",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "Makefile",
+        "line": 197,
+        "source": "\t@command -v shellcheck > /dev/null || { echo \"shellcheck is required: https://www.shellcheck.net\" >&2; exit 1; }",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "Makefile",
+        "line": 198,
+        "source": "\t@command -v shfmt > /dev/null || { echo \"shfmt is required: https://github.com/mvdan/sh\" >&2; exit 1; }",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "Makefile",
+        "line": 229,
+        "source": "\t@command -v scrut > /dev/null || { echo \"scrut is required: https://github.com/facebookincubator/scrut\" >&2; exit 1; }",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "Makefile",
+        "line": 235,
+        "source": "\t@command -v scrut > /dev/null || { echo \"scrut is required: https://github.com/facebookincubator/scrut\" >&2; exit 1; }",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "Makefile",
+        "line": 245,
+        "source": "\t\t{ echo 'test-bash32 requires /bin/bash 3.2' >&2; exit 1; }",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 64,
+        "source": "    printf 'check-notifications: expected %s alerts, observed %s\\n' \"${1}\" \"${actual}\" >&2",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 432,
+        "source": "      echo \"Unknown tier scenario: ${scenario}\" >&2",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 442,
+        "source": "    printf 'check-notifications: scenario %s exited %s\\n' \"${NOTIFY_TEST_SCENARIO}\" \"${result}\" >&2",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 454,
+        "source": "  trap 'printf \"check-notifications: scenario %s failed at line %s (exit %s)\\n\" \"${NOTIFY_TEST_SCENARIO}\" \"${LINENO}\" \"$?\" >&2' ERR",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 466,
+        "source": "    echo \"check-notifications: unexpected notifier entry point\" >&2",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 470,
+        "source": "    echo \"check-notifications: expected one backend function declaration\" >&2",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 504,
+        "source": "    'if [[ -n \"${NOTIFY_TEST_BACKEND_EXIT:-}\" ]]; then echo \"injected backend failure\" >&2; exit \"${NOTIFY_TEST_BACKEND_EXIT}\"; fi' \\",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 575,
+        "source": "        echo \"Unknown sound scenario: ${scenario}\" >&2",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 677,
+        "source": "        printf '%s' '{\"session_id\":\"manifest\"}' | \"${NOTIFY_BIN}\" \"${sub}\" > /dev/null 2>&1 || echo \"Not dispatched: ${sub}\" # error-output-allow: manifest dispatch probe reports Not dispatched on failure",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 950,
+        "source": "        echo \"Expected two grace-period ticks, observed ${ticks}\" >&2",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/check-notifications",
+        "line": 960,
+        "source": "        echo \"check-notifications: backend did not stop at grace expiry\" >&2",
+        "assessment": "Top-level fixture output or stub output; no injected probe calls this emission. Ordinary stderr and intentional predicate suppression retained."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 19,
+        "source": "      printf 'notification-clock: detached notifier %s exited %s\\n' \"${child}\" \"${child_status}\" >&2",
+        "assessment": "Parent-owned join output outside redirected probes; ordinary stderr retained."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 24,
+        "source": "    cat \"${NOTIFY_TEST_DIAGNOSTICS}\" >&2 || result=2",
+        "assessment": "Parent-owned join output outside redirected probes; ordinary stderr retained."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 34,
+        "source": "    printf 'notification-clock: owner interrupted %s\\n' \"${1}\" >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 47,
+        "source": "      if ! printf '%s\\t%s\\n' \"${1}\" \"${NOTIFY_TEST_BACKEND_PATH:?}\" 2>&7 >> \"${NOTIFY_TEST_REGISTRATION}\"; then",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 48,
+        "source": "        printf 'notification-clock: cannot record backend registration at %s\\n' \"${NOTIFY_TEST_REGISTRATION}\" >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 65,
+        "source": "    echo 'notification-clock: injected readiness failure' >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 69,
+        "source": "  while [[ \"${NOTIFY_TEST_PAUSE_READY:-}\" == 1 || ! -f \"${NOTIFY_TEST_RUN:?}.${pid}.ready\" ]] && kill -0 \"${pid}\" 2> /dev/null; do # error-output-allow: fixture readiness checks its own registered backend",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 71,
+        "source": "      printf 'notification-clock: backend %s not ready before liveness bound\\n' \"${pid}\" >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 102,
+        "source": "  builtin kill \"$@\" 2>&7 || return",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 111,
+        "source": "    echo 'notification-clock: injected observation failure' >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 130,
+        "source": "      if builtin kill -0 \"${NOTIFY_TEST_OWNER_PID}\" 2> /dev/null; then # error-output-allow: owned backend existence selects cleanup",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 132,
+        "source": "        if ! builtin kill -KILL \"${NOTIFY_TEST_OWNER_PID}\" 2>&7; then",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 133,
+        "source": "          echo 'notification-clock: cannot stop owned backend' >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 145,
+        "source": "        printf 'notification-clock: backend exited %s\\n' \"${NOTIFY_TEST_OBSERVED_EXIT}\" >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 150,
+        "source": "      echo 'notification-clock: cannot publish backend observation' >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 158,
+        "source": "  exec 2>&7 # error-output-allow: owner diagnostics are replayed by notification_finish",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 160,
+        "source": "    echo 'notification-clock: original backend function is unavailable' >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 169,
+        "source": "  trap 'notification_owner_finish 2>&7' EXIT",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/fixtures/notification-clock.bash",
+        "line": 176,
+        "source": "      echo 'notification-clock: invalid deferred interruption' >&7",
+        "assessment": "Owned descriptor for essential diagnostics; builtin existence probes alone may suppress their expected absence message."
+      },
+      {
+        "path": "tests/notification_load_test.py",
+        "line": 50,
+        "source": "        observation = subprocess.CompletedProcess(['fixture'], 2, stdout='', stderr='missing observer')",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "tests/notification_load_test.py",
+        "line": 192,
+        "source": "                                       stderr=subprocess.PIPE, text=True)",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "tests/notification_load_test.py",
+        "line": 309,
+        "source": "            'bugs score \"${work}/config.json\" 2>&1': 1,",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      },
+      {
+        "path": "tests/notification_load_test.py",
+        "line": 310,
+        "source": "            'bugs frobnicate 2>&1': 1,",
+        "assessment": "Detector capture or assertion data; prerequisites preserve subprocess stderr and use non-assertion errors."
+      }
+    ]
+  },
+  "registration_path_audit": {
+    "mechanism": "one-sided normalization before literal process command comparison",
+    "producer": "notification_register_backend writes the original backend path",
+    "decoder": "registered_backend retains directory spelling with os.path.dirname",
+    "consumers": ["owned_backend_present", "cleanup_control", "lifecycle_control backend check", "lifecycle_control owner check"],
+    "other_normalization": "ROOT.resolve locates code; Path.is_absolute validates without replacing the identity string",
+    "proof": "test_registration_path_spelling; normalized-registration-path plant; lifecycle preflight"
+  },
+  "audit_records": [
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-lifecycle-audit.json",
+      "assessment": "Generated audit data, no executed backend ownership. Self hash is omitted to avoid a cycle."
+    },
+    {
+      "path": "docs/reviews/2026-11-08-load-bounds-timing-audit.json",
+      "assessment": "Generated audit data, no executed backend ownership. Self hash is omitted to avoid a cycle."
+    }
+  ]
+}
