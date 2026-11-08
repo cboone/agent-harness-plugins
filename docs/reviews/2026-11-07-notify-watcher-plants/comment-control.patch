@@ -1,0 +1,10 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -14,6 +14,7 @@
+   fi
+ }
+ 
++# Byte-count control.
+ # Sets BYTE_COUNT without launching a subprocess or changing notification locales.
+ function count_bytes() {
+   local LC_ALL=C

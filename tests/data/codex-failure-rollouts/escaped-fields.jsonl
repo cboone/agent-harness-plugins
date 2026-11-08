@@ -1,0 +1,2 @@
+{"type":"session_meta","payload":{"id":"thread-sample\n","source":"cli"}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-sample\n","error":{"codex_error_info":"other","message":"API limit reached\n\n"}}}

@@ -1,0 +1,11 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -170,7 +170,7 @@
+       printf -v record_subagent '%b' "${record_subagent:1}"
+       printf -v turn '%b' "${turn:1}"
+       printf -v kind '%b' "${kind:1}"
+-      printf -v message '%b' "${message:1}"
++      printf -v message '%s' "${message:1}"
+       printf -v key_json '%b' "${key_json:1}"
+       if [[ "${action}" == meta ]]; then
+         [[ -n "${value}" ]] || value="${expected}"

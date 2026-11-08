@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Pause the watcher's second owner check, after its first EOF observation.
+# Pause the supervisor's first follow-mode owner check.
 function kill() {
   if [[ "${1:-}" == -0 && "${2:-}" == "${ROLLOUT_OWNER_PID:-}" ]]; then
     local count=0 attempt count_file="${ROLLOUT_OWNER_COUNT:?}" ready_file="${ROLLOUT_OWNER_READY:?}" release_file="${ROLLOUT_OWNER_RELEASE:?}"

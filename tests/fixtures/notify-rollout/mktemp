@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+value="$(/usr/bin/mktemp "$@")"
+if [[ -n "${ROLLOUT_READER_DIR_RECORD:-}" && " $* " == *'/notify-reader.XXXXXX '* ]]; then
+  printf '%s\n' "${value}" > "${ROLLOUT_READER_DIR_RECORD}"
+fi
+printf '%s\n' "${value}"

@@ -1,0 +1,11 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -48,7 +48,7 @@
+   trap 'exit 143' TERM
+   trap 'exit 130' INT
+   while kill -0 "${owner_pid}" 2> /dev/null; do # error-output-allow: explicit owner-existence predicate
+-    sleep 3 &
++    sleep 0.2 &
+     sleeper=$!
+     if wait "${sleeper}"; then
+       sleeper=""
