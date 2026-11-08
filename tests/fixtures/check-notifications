@@ -56,34 +56,14 @@ function write_transcript() {
   transcript_tool_use "${1}" tool-1 "${2}" "${3}"
 }
 
-# Retries the command in $2... every 0.02 seconds, up to $1 times, until it succeeds.
-function poll() {
-  local tries="${1}"
-  shift
-  until "$@"; do
-    [[ "${tries}" -gt 0 ]] || return 1
-    tries=$((tries - 1))
-    sleep 0.02
-  done
-}
-
+# These predicates run after the fixture driver has joined detached jobs.
 function alert_count_is() {
-  [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == "${1}" ]]
-}
-
-function not_running() {
-  ! kill -0 "${1}" 2> /dev/null # error-output-allow: process existence predicate verifies fixture shutdown
-}
-
-# Sets HELD_PID to the held alerter stub's PID; fails if none.
-function find_held_pid() {
-  HELD_PID="$(pgrep -f -- "${NOTIFY_TEST_STUB} --title" | head -n 1)" || true
-  [[ -n "${HELD_PID}" ]]
-}
-
-# Polls for up to 3 seconds until the alerter stub has logged $1 calls.
-function wait_for_alerts() {
-  poll 150 alert_count_is "${1}" || true
+  local actual
+  actual="$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')"
+  [[ "${actual}" == "${1}" ]] || {
+    printf 'check-notifications: expected %s alerts, observed %s\n' "${1}" "${actual}" >&2
+    return 1
+  }
 }
 
 # Tier scenarios run the notifier under /bin/bash, which is bash 3.2 on macOS.
@@ -116,15 +96,9 @@ function contract_event() {
   printf '%s-log: %s\n' "${1}" "$(tail -n 1 "${ATTENTION_LOG_DIR}/events.jsonl" | jq -r '.event')"
 }
 
-function no_detached_notifier() {
-  ! pgrep -f -- "${TIER_NOTIFY}" > /dev/null
-}
-
-# Prints each label's alert as "label: title | subtitle | sound", or
-# "label: none", once every detached notifier has finished.
+# Prints each label's alert after the fixture driver has joined detached jobs.
 function print_alerts() {
   local label line
-  poll 300 no_detached_notifier || return 1
   for label in "$@"; do
     line="$(jq -r --arg label "${label}" '
       index("--test-event") as $i
@@ -461,20 +435,50 @@ function tier_scenario() {
   esac
 }
 
+function fixture_cleanup() {
+  local result=$?
+  trap - EXIT
+  if ((result != 0)); then
+    printf 'check-notifications: scenario %s exited %s\n' "${NOTIFY_TEST_SCENARIO}" "${result}" >&2
+  fi
+  rm -r -- "${NOTIFY_TEST_DIRECTORY}"
+  exit "${result}"
+}
+
 function main() {
-  local scenario="${1}" test_dir quoted_test_dir
+  local scenario="${1}" test_dir
   test_dir="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
-  # Expand the local path now because EXIT runs after main returns.
-  # printf %q escapes the path, so a TMPDIR holding quotes or shell
-  # metacharacters cannot break out of the trap command.
-  printf -v quoted_test_dir '%q' "${test_dir}"
-  # Also stops held alerter stubs, even after a failed assertion.
-  # shellcheck disable=SC2064
-  trap "[[ -z \${NOTIFY_TEST_HOLD:-} ]] || pkill -KILL -f ${quoted_test_dir}/bin/alerter 2> /dev/null || true; rm -rf ${quoted_test_dir}" EXIT # error-output-allow: fixture cleanup tolerates an already stopped alerter
+  NOTIFY_TEST_DIRECTORY="${test_dir}"
+  NOTIFY_TEST_SCENARIO="${scenario}"
+  trap fixture_cleanup EXIT
+  trap 'printf "check-notifications: scenario %s failed at line %s (exit %s)\n" "${NOTIFY_TEST_SCENARIO}" "${LINENO}" "$?" >&2' ERR
+  set -E
+  [[ "${scenario}" != fixture-failure ]] || exit 1
   : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
   mkdir "${test_dir}/bin"
-  export NOTIFY_TEST_LOG="${test_dir}/alerts"
-  NOTIFY_TEST_STUB="${test_dir}/bin/alerter"
+  cp -R "$(dirname "${NOTIFY_BIN}")/.." "${test_dir}/notify-plugin"
+  NOTIFY_BIN="${test_dir}/notify-plugin/scripts/notify"
+  export NOTIFY_BIN NOTIFY_TEST_CLOCK="${NOTIFICATION_CLOCK_BIN:?Set NOTIFICATION_CLOCK_BIN}"
+  NOTIFY_TEST_REAL_SLEEP="$(command -v sleep)"
+  export NOTIFY_TEST_REAL_SLEEP
+  # Refuse a changed entry point before injecting the fixture-only trailer.
+  [[ "$(tail -n 1 "${NOTIFY_BIN}")" == 'main "$@"' ]] || {
+    echo "check-notifications: unexpected notifier entry point" >&2
+    return 1
+  }
+  [[ "$(grep -c '^function run_alerter() {' "${NOTIFY_BIN}")" == 1 ]] || {
+    echo "check-notifications: expected one backend function declaration" >&2
+    return 2
+  }
+  sed -e 's/^function run_alerter() {/function notification_original_run_alerter() {/' -e '$d' "${NOTIFY_BIN}" > "${test_dir}/notify-body"
+  cat "${test_dir}/notify-body" > "${NOTIFY_BIN}"
+  printf '%s\n' 'source "${NOTIFY_TEST_CLOCK}"' 'trap notification_finish EXIT' 'main "$@"' >> "${NOTIFY_BIN}"
+  if [[ "${scenario}" == fixture-copy ]]; then
+    cat "${NOTIFY_BIN}"
+    return
+  fi
+  export NOTIFY_TEST_LOG="${test_dir}/alerts" NOTIFY_TEST_BACKEND_PATH="${test_dir}/bin/alerter"
+  : > "${NOTIFY_TEST_LOG}" || return 2
   export NOTIFY_TEST_FRONT="com.example.background"
   export NOTIFY_TEST_VISIBLE="%99|attached,focused,UTF-8"
   export NOTIFY_TEST_TITLE="✳ Sample task"
@@ -487,13 +491,20 @@ function main() {
     CLAUDE_CONFIG_DIR __CFBundleIdentifier
 
   # The stub logs SIGTERM, which makes the real alerter remove its banner.
-  # The trap is set before the call is logged, since scenarios wait for that log.
   # NOTIFY_TEST_HOLD keeps the stub waiting like an unanswered banner, and
   # NOTIFY_TEST_EVENT labels the call for the tier scenarios.
-  printf '%s\n' '#!/usr/bin/env bash' \
+  printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail' \
     'trap '\''echo TERM >> "${NOTIFY_TEST_LOG}.signals"; exit 143'\'' TERM' \
+    'if [[ "${NOTIFY_TEST_GATE_START:-}" == 1 ]]; then' \
+    '  mkfifo "${NOTIFY_TEST_RUN:?}.$$.start"; exec 8<> "${NOTIFY_TEST_RUN:?}.$$.start"' \
+    '  touch "${NOTIFY_TEST_RUN:?}.$$.starting"' \
+    '  read -r -u 8 release || exit 2' \
+    'fi' \
+    'if [[ -n "${NOTIFY_TEST_BACKEND_EXIT:-}" ]]; then echo "injected backend failure" >&2; exit "${NOTIFY_TEST_BACKEND_EXIT}"; fi' \
     'jq -nc --args '\''$ARGS.positional'\'' -- "$@" ${NOTIFY_TEST_EVENT:+--test-event "${NOTIFY_TEST_EVENT}"} >> "${NOTIFY_TEST_LOG}"' \
-    'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then for _ in {1..300}; do sleep 0.1; done; fi' \
+    'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then mkfifo "${NOTIFY_TEST_RUN:?}.$$.fifo"; exec 9<> "${NOTIFY_TEST_RUN:?}.$$.fifo"; fi' \
+    'touch "${NOTIFY_TEST_RUN:?}.$$.ready"' \
+    'if [[ -n "${NOTIFY_TEST_HOLD:-}" ]]; then read -r -u 9 ignored; fi' \
     > "${test_dir}/bin/alerter"
   # display-message answers the pane title query (#T) and otherwise the
   # session and window names; show-environment fails without
@@ -574,7 +585,7 @@ function main() {
         --arg message "$(if [[ "${calls}" -eq 7 ]]; then printf '%s' 'Claude Code needs your approval for the plan'; fi)" \
         '{session_id: $session, message: $message, transcript_path: $transcript}')"
       printf '%s' "${sound_payload}" | HOME="${fixture_home}" /bin/bash "${NOTIFY_BIN}" "${event}"
-      poll 150 alert_count_is "${calls}" || return 1
+      alert_count_is "${calls}" || return 1
     done
     jq -r '.[index("--sound") + 1]' "${NOTIFY_TEST_LOG}"
     return
@@ -901,7 +912,6 @@ function main() {
       export NOTIFY_TEST_HOLD=1
       # A leading zero fails validation, so the default grace period applies.
       [[ "${scenario}" == delivery ]] || export NOTIFY_WAIT_LIMIT=09
-      local started="${SECONDS}"
       ;;
     *) ;;
   esac
@@ -914,55 +924,48 @@ function main() {
       '{session_id: "session-one", transcript_path: $path} + (if $message == "" then {} else {message: $message} end)')"
   fi
   printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
-  # Polls for up to 3 seconds for the detached alerter stub to log its call.
-  local count=0
-  case "${scenario}" in
-    visible | subagent | permission-question | quiet-*) ;;
-    *)
-      while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
-        sleep 0.02
-        count=$((count + 1))
-      done
-      [[ -s "${NOTIFY_TEST_LOG}" ]] || exit 1
-      ;;
-  esac
   case "${scenario}" in
     duplicate)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
-      # Polls for up to 3 seconds for a detached duplicate before asserting none came.
-      wait_for_alerts 2
       alert_count_is 1 || exit 1
       echo "One completion alert per turn"
       ;;
     reset | claude-reset)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action%-stop}-turn-start"
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
-      wait_for_alerts 2
-      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]] || exit 1
+      alert_count_is 2
       echo "Next user prompt allows another completion"
       ;;
     groups)
       printf '%s' '{"session_id":"session-two"}' | "${NOTIFY_BIN}" codex-stop
-      wait_for_alerts 2
+      alert_count_is 2
       [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
       echo "Separate sessions retain separate banners"
       ;;
     delivery | delivery-leading-zero)
-      # `|| exit 1` throughout: a failing [[ ]] does not trigger errexit in bash 3.2.
-      poll 150 find_held_pid || exit 1
-      # The default grace period is 2 seconds; allow 6 under parallel load.
-      poll 300 not_running "${HELD_PID}" || exit 1
-      # Two 1-second sleeps precede the stop, so whole-second SECONDS shows at least 2.
-      [[ $((SECONDS - started)) -ge 2 ]] || exit 1
+      local ticks
+      ticks="$(wc -l < "${NOTIFY_TEST_LOG}.ticks" | tr -d ' ')"
+      [[ "${ticks}" == 2 ]] || {
+        echo "Expected two grace-period ticks, observed ${ticks}" >&2
+        return 1
+      }
+      # A missing observation is a fixture error; an observed mismatch fails the contract.
+      [[ -f "${NOTIFY_TEST_LOG}.backend" ]] || return 2
+      local observed_signal observed_status cleanup_status extra
+      IFS=' ' read -r observed_signal observed_status cleanup_status extra < "${NOTIFY_TEST_LOG}.backend" || return 2
+      [[ "${observed_signal}" =~ ^(-KILL|-TERM|-INT|none)$ && "${observed_status}" =~ ^([0-9]+|running)$ && "${cleanup_status}" =~ ^([0-9]+|none)$ && -z "${extra}" ]] || return 2
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}.backend" | tr -d ' ')" == 1 ]] || return 2
+      [[ "${observed_signal} ${observed_status} ${cleanup_status}" == "-KILL 137 none" ]] || {
+        echo "check-notifications: backend did not stop at grace expiry" >&2
+        return 1
+      }
       # SIGTERM would make the real alerter remove its banner.
       [[ ! -e "${NOTIFY_TEST_LOG}.signals" ]] || exit 1
       [[ "$(jq -r '.[index("--timeout") + 1]' "${NOTIFY_TEST_LOG}")" == 86400 ]] || exit 1
       echo "Alerter stops after the grace period without SIGTERM"
       ;;
     visible | subagent | permission-question | quiet-*)
-      # Gives a detached alerter time to appear before asserting none did.
-      sleep 0.2
-      [[ ! -e "${NOTIFY_TEST_LOG}" ]] || exit 1
+      [[ ! -s "${NOTIFY_TEST_LOG}" ]] || exit 1
       echo "No alert"
       ;;
     *) jq -r '.[index("--title") + 1], .[index("--subtitle") + 1], .[index("--message") + 1], .[index("--sound") + 1], (.[index("--app-icon") + 1] | split("/") | last)' "${NOTIFY_TEST_LOG}" ;;
