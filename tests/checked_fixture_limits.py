@@ -11,6 +11,10 @@ from types import SimpleNamespace
 from unittest import mock
 
 
+# The notification shell clock waits only for readiness; its Python owner contains the whole invocation.
+SHELL_DETECTOR_WAITS = {"tests/fixtures/notification-clock.bash": 120}
+
+
 def execution_window(core, limit):
     journal = SimpleNamespace(path=Path("static-fixture-allocation"), append=lambda *args, **kwargs: None)
     runtime = core.SupervisionRuntime(journal, "static-fixture-allocation")
@@ -172,6 +176,11 @@ def fixture_checks(root, policy):
                 continue
             if not isinstance(value, dict) or not all(key in value for key in ("green", "check", "variants")):
                 continue
+            for detector, seconds in SHELL_DETECTOR_WAITS.items():
+                if detector in value.get("inputs", []):
+                    checks.append(dict(fixture=str(path.relative_to(root)), timeout=value["timeout"],
+                                       path=root / detector, selectors=[],
+                                       shell_waits=[dict(detector=detector, line=None, seconds=seconds)]))
             script = path.parent / value["check"]
             if not script.is_file():
                 raise ValueError("plant check script is unavailable: " + str(path.relative_to(root)))
