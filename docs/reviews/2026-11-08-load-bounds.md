@@ -319,3 +319,7 @@ round. Heavy admission is closed until TOOLING confirms the dark-mode switch
 passed. The remaining publication gate is discovery and these retained plants,
 with captured compatibility rows and tree-bound run/render receipts. The cut
 changes test data only and adds no review round.
+
+## Final validation receipts
+
+The retained manifests have captured compatibility rows. Final discovery and retained plant run/render evidence are recorded in the external `final-gate/receipt.json` and reconciled by `precis.json` under this worker's evidence directory. These pointers do not assert a gate result before its completion. Production hook entries and hook-invoked scripts remain unchanged.

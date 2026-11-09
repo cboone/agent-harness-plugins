@@ -112,9 +112,9 @@
       ]
     },
     {
-      "path": "docs/plans/todo/2026-11-08-load-proof-notification-tests.md",
+      "path": "docs/plans/done/2026-11-08-load-proof-notification-tests.md",
+      "assessment": "Prose record; no backend ownership transition. Claims map to tests and receipts.",
       "sha256": "684cf9e24205834dbb8e52ef5471c2229bea01905296e2caa807523a206e2a3f",
-      "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
       "sites": [
         {
           "line": 9,
@@ -225,7 +225,7 @@
     },
     {
       "path": "docs/reviews/2026-11-08-load-bounds.md",
-      "sha256": "da61699c7a35b68612e87e824ee2f950366571f3643b1667eca2506d193d655d",
+      "sha256": "206a62455ce699e2e7399b26766629f5c4adeec314959bf52d2ef3fc6525a2dd",
       "assessment": "Reviewed full file; no additional backend ownership transition. Existing process semantics retained outside declared fixture changes.",
       "sites": [
         {
@@ -550,6 +550,237 @@
         {
           "line": 242,
           "source": "                if window < 2 * wait[\"seconds\"] and not math.isclose(window, 2 * wait[\"seconds\"], abs_tol=1e-6):"
+        }
+      ]
+    },
+    {
+      "path": "tests/data/checked-verdict-compatibility.json",
+      "assessment": "Manifest or captured compatibility data; no backend process ownership.",
+      "sha256": "6ad17ae06d45e97a76619925c2f7957536ab2386b97b6867ec972476b8f15762",
+      "sites": [
+        {
+          "line": 15,
+          "source": "        \"stderr\": \"----------------------------------------------------------------------\\nRan 2 tests in 2.154s\\n\\nOK\\n----------------------------------------------------------------------\\nRan 1 test in 8.473s\\n\\nOK\\n----------------------------------------------------------------------\\nRan 17 tests in 19.087s\\n\\nOK\\n\""
+        },
+        {
+          "line": 24,
+          "source": "        \"contains\": [\"FAIL: test_inspection_failure_retains_subprocess_diagnostics\", \"FAILED (failures=1)\"],"
+        },
+        {
+          "line": 30,
+          "source": "        \"stderr\": \"======================================================================\\nFAIL: test_inspection_failure_retains_subprocess_diagnostics (__main__.RunnerTests.test_inspection_failure_retains_subprocess_diagnostics)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/checked_plant_test.py\\\", line 535, in test_inspection_failure_retains_subprocess_diagnostics\\n    self.assertIsNone(result[\\\"cleanup_error\\\"], \\\"delayed ps must survive the old inspection limit\\\")\\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: 'TimeoutExpired: Command \\\\'[\\\\'<python>\\\\', \\\\'-c\\\\', \\\\'import os, time; time.sleep(0.4); os.execvp(\\\"ps\\\", [\\\"ps\\\", \\\"-axo\\\", \\\"pid=,pgid=,stat=\\\"])\\\\']\\\\' timed out after 0.25 seconds; cleanup: PermissionError: [Errno 1] Operation not permitted' is not None : delayed ps must survive the old inspection limit\\n\\n----------------------------------------------------------------------\\nRan 2 tests in 1.962s\\n\\nFAILED (failures=1)\\n\""
+        },
+        {
+          "line": 45,
+          "source": "        \"stderr\": \"----------------------------------------------------------------------\\nRan 2 tests in 2.142s\\n\\nOK\\n----------------------------------------------------------------------\\nRan 1 test in 8.430s\\n\\nOK\\n----------------------------------------------------------------------\\nRan 17 tests in 19.061s\\n\\nOK\\n\""
+        },
+        {
+          "line": 60,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 75,
+          "source": "        \"stderr\": \"FAIL: unrelated base advance preserves snapshot\\n\""
+        },
+        {
+          "line": 90,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 104,
+          "source": "        \"stdout\": \"Review validity policy passed.\\nreview validity policy: check failed: [Errno 13] Permission denied: '<fixture>/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects'\\nPASS: unreadable policy subtree rejected\\nreview validity policy: check failed: plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects/fixture.md: invalid UTF-8 policy source: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\\nPASS: invalid UTF-8 policy input rejected\\n\","
+        },
+        {
+          "line": 105,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 114,
+          "source": "        \"contains\": [\"review validity policy: plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md: validity copy differs from source\\n\"],"
+        },
+        {
+          "line": 120,
+          "source": "        \"stderr\": \"review validity policy: plugins/review-until-clean/skills/review-until-clean/references/scope-validity.md: validity copy differs from source\\n\""
+        },
+        {
+          "line": 134,
+          "source": "        \"stdout\": \"Review validity policy passed.\\nreview validity policy: check failed: [Errno 13] Permission denied: '<fixture>/plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects'\\nPASS: unreadable policy subtree rejected\\nreview validity policy: check failed: plugins/review-pr-with-codex/skills/review-pr-with-codex/references/aspects/fixture.md: invalid UTF-8 policy source: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\\nPASS: invalid UTF-8 policy input rejected\\n\","
+        },
+        {
+          "line": 135,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 150,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 164,
+          "source": "        \"stdout\": \"// =============================================================================\\n// @ tests/scrut/review-config-reporting.md:63\\n// -----------------------------------------------------------------------------\\n// # Codex activation is always unverifiable from the tree\\n// -----------------------------------------------------------------------------\\n// $ cd \\\"${REPO_ROOT}\\\" && skill=plugins/set-up-review-config/skills/set-up-review-config/SKILL.md &&\\n//     grep -Fq 'Always report \\\"Codex cloud review: unverifiable from the repository\\\"' \\\"${skill}\\\" &&\\n//     grep -Fq 'If Codex cloud review is enabled and runs' \\\"${skill}\\\" &&\\n//     ! grep -Fq 'so from Codex expect the Important rules only' \\\"${skill}\\\" && echo 'Codex: external activation'\\n// =============================================================================\\n\\nunexpected exit code\\n  expected: 0\\n  actual:   1\\n\\n## STDOUT\\n## STDERR\\n\\n\\nResult: 1 document(s) with 10 testcase(s): 9 succeeded, 1 failed and 0 skipped\\n\","
+        },
+        {
+          "line": 165,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 180,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 195,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 210,
+          "source": "        \"stderr\": \"FAIL identity: {} omitted example/gadgets forward\\nexpected: - Changed board identity: repo (\\\"example/widgets\\\" to \\\"example/gadgets\\\")\\nactual: - Changed board identity: repo (\\\"example/widgets\\\" to \\\"example/gadgets\\\"); repoUrl ({} to none)\\n\""
+        },
+        {
+          "line": 225,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 234,
+          "source": "        \"contains\": [\"ASSERT: stale body rejected\\n\", \"::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\\n\"]"
+        },
+        {
+          "line": 238,
+          "source": "        \"stdout\": \"Review checklists: 1 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (1 written, 0 removed).\\n::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\\nASSERT: stale body rejected\\n\","
+        },
+        {
+          "line": 239,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 252,
+          "source": "        \"stdout\": \"Review checklists: 1 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (0 written, 0 removed).\\nFAIL: stale body comparison removed\\n\","
+        },
+        {
+          "line": 253,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 262,
+          "source": "        \"contains\": [\"ASSERT: stale body rejected\\n\", \"::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\\n\"]"
+        },
+        {
+          "line": 266,
+          "source": "        \"stdout\": \"Review checklists: 1 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (1 written, 0 removed).\\n::error::Installed review checklist '.github/skills/code-review/write-markdown.md' does not match its source; rerun /set-up-review-config\\nASSERT: stale body rejected\\n\","
+        },
+        {
+          "line": 267,
+          "source": "        \"stderr\": \"\""
+        },
+        {
+          "line": 283,
+          "source": "        \"stderr\": \"..\\n----------------------------------------------------------------------\\nRan 2 tests in 5.979s\\n\\nOK\\n\""
+        },
+        {
+          "line": 299,
+          "source": "        \"stderr\": \"FFFF\\n======================================================================\\nFAIL: test_blocked_startup (__main__.NotificationLoadTests.test_blocked_startup)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 91, in test_blocked_startup\\n    self.assertEqual((result.returncode, result.stdout, result.stderr),\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n                     (0, 'Done\\\\nsample-repo \u00b7 Sample task\\\\nCompleted sample\\\\nGlass\\\\ncodex.png\\\\n', ''))\\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (0, '', '') != (0, 'Done\\\\nsample-repo \u00b7 Sample task\\\\nCompleted sample\\\\nGlass\\\\ncodex.png\\\\n', '')\\n\\nFirst differing element 1:\\n''\\n'Done\\\\nsample-repo \u00b7 Sample task\\\\nCompleted sample\\\\nGlass\\\\ncodex.png\\\\n'\\n\\n- (0, '', '')\\n+ (0, 'Done\\\\nsample-repo \u00b7 Sample task\\\\nCompleted sample\\\\nGlass\\\\ncodex.png\\\\n', '')\\n\\n======================================================================\\nFAIL: test_reported_deliveries_after_blocked_startup (__main__.NotificationLoadTests.test_reported_deliveries_after_blocked_startup) (scenario='sound-full')\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 299, in test_reported_deliveries_after_blocked_startup\\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (1, '', 'check-notifications: expected 1 a[67 chars]1\\\\n') != (0, 'Chord-stop-4\\\\nChord-stop-4\\\\nChord-per[88 chars], '')\\n\\nFirst differing element 0:\\n1\\n0\\n\\n- (1,\\n+ (0,\\n+  'Chord-stop-4\\\\n'\\n+  'Chord-stop-4\\\\n'\\n+  'Chord-permission-4\\\\n'\\n+  'Chord-attention-4\\\\n'\\n+  'Chord-attention-4\\\\n'\\n+  'Chord-attention-4\\\\n'\\n+  'Chord-attention-4\\\\n',\\n-  '',\\n?    ^\\n\\n+  '')\\n?    ^\\n\\n-  'check-notifications: expected 1 alerts, observed 0\\\\n'\\n-  'check-notifications: scenario sound-full exited 1\\\\n')\\n\\n======================================================================\\nFAIL: test_reported_deliveries_after_blocked_startup (__main__.NotificationLoadTests.test_reported_deliveries_after_blocked_startup) (scenario='tier-top')\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 299, in test_reported_deliveries_after_blocked_startup\\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (0, 'stop: none\\\\npermission: none\\\\nplan: none\\\\nquest[66 chars], '') != (0, 'stop: Done | hub: coordinator | Glass\\\\npermissi[185 chars], '')\\n\\nFirst differing element 1:\\n'stop: none\\\\npermission: none\\\\nplan: none\\\\nquest[61 chars]ne\\\\n'\\n'stop: Done | hub: coordinator | Glass\\\\npermissi[180 chars]ss\\\\n'\\n\\n  (0,\\n-  'stop: none\\\\n'\\n-  'permission: none\\\\n'\\n+  'stop: Done | hub: coordinator | Glass\\\\n'\\n+  'permission: Approve Bash? | hub: coordinator | Funk\\\\n'\\n   'plan: none\\\\n'\\n   'question: none\\\\n'\\n-  'elicit: none\\\\n'\\n+  'elicit: Question | hub: coordinator | Tink\\\\n'\\n   'codex-question: none\\\\n'\\n-  'codex-stop: none\\\\n',\\n+  'codex-stop: Done | hub: coordinator | Glass\\\\n',\\n   '')\\n\\n======================================================================\\nFAIL: test_reported_deliveries_after_blocked_startup (__main__.NotificationLoadTests.test_reported_deliveries_after_blocked_startup) (scenario='tier-failure-boundaries')\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 299, in test_reported_deliveries_after_blocked_startup\\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (0, 'system: none\\\\nmetadata: none\\\\nlocal-output: none\\\\[81 chars], '') != (0, 'system: Refusal: thread-42 | atlas: w 42-fix-pars[462 chars], '')\\n\\nFirst differing element 1:\\n'system: none\\\\nmetadata: none\\\\nlocal-output: none\\\\[76 chars]ne\\\\n'\\n'system: Refusal: thread-42 | atlas: w 42-fix-pars[457 chars]r.\\\\n'\\n\\nDiff is 786 characters long. Set self.maxDiff to None to see it.\\n\\n----------------------------------------------------------------------\\nRan 2 tests in 34.189s\\n\\nFAILED (failures=4)\\n\""
+        },
+        {
+          "line": 315,
+          "source": "        \"stderr\": \"..\\n----------------------------------------------------------------------\\nRan 2 tests in 6.124s\\n\\nOK\\n\""
+        },
+        {
+          "line": 320,
+          "source": "      \"manifest\": \"2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json\","
+        },
+        {
+          "line": 321,
+          "source": "      \"variant\": \"owner-finalizer-disabled\","
+        },
+        {
+          "line": 331,
+          "source": "        \"stderr\": \"........\\n----------------------------------------------------------------------\\nRan 8 tests in 8.847s\\n\\nOK\\n\""
+        },
+        {
+          "line": 336,
+          "source": "      \"manifest\": \"2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json\","
+        },
+        {
+          "line": 337,
+          "source": "      \"variant\": \"owner-finalizer-disabled\","
+        },
+        {
+          "line": 347,
+          "source": "        \"stderr\": \"FFFFFFFFFF\\n======================================================================\\nFAIL: test_readiness_error_cleanup (__main__.NotificationLoadTests.test_readiness_error_cleanup)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 250, in test_readiness_error_cleanup\\n    self.lifecycle_control()\\n    ~~~~~~~~~~~~~~~~~~~~~~^^\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 214, in lifecycle_control\\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: True is not false : backend must be reaped before return\\n\\n======================================================================\\nFAIL: test_observation_error_cleanup (__main__.NotificationLoadTests.test_observation_error_cleanup)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 253, in test_observation_error_cleanup\\n    self.lifecycle_control(observation_error=True)\\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 214, in lifecycle_control\\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: True is not false : backend must be reaped before return\\n\\n======================================================================\\nFAIL: test_cancellation_cleanup (__main__.NotificationLoadTests.test_cancellation_cleanup) (signal=<Signals.SIGHUP: 1>)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 258, in test_cancellation_cleanup\\n    self.lifecycle_control(cancel=True, signal_number=value)\\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 214, in lifecycle_control\\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: True is not false : backend must be reaped before return\\n\\n======================================================================\\nFAIL: test_cancellation_cleanup (__main__.NotificationLoadTests.test_cancellation_cleanup) (signal=<Signals.SIGTERM: 15>)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 258, in test_cancellation_cleanup\\n    self.lifecycle_control(cancel=True, signal_number=value)\\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 214, in lifecycle_control\\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: True is not false : backend must be reaped before return\\n\\n======================================================================\\nFAIL: test_deferred_cancellation_cleanup (__main__.NotificationLoadTests.test_deferred_cancellation_cleanup) (signal=<Signals.SIGHUP: 1>)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 263, in test_deferred_cancellation_cleanup\\n    self.lifecycle_control(deferred=True, signal_number=value)\\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 214, in lifecycle_control\\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: True is not false : backend must be reaped before return\\n\\n======================================================================\\nFAIL: test_deferred_cancellation_cleanup (__main__.NotificationLoadTests.test_deferred_cancellation_cleanup) (signal=<Signals.SIGTERM: 15>)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 263, in test_deferred_cancellation_cleanup\\n    self.lifecycle_control(deferred=True, signal_number=value)\\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 214, in lifecycle_control\\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: True is not false : backend must be reaped before return\\n\\n======================================================================\\nFAIL: test_cancellation_status_survives_observation_error (__main__.NotificationLoadTests.test_cancellation_status_survives_observation_error)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 266, in test_cancellation_status_survives_observation_error\\n    self.lifecycle_control(cancel=True, observation_error=True)\\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 214, in lifecycle_control\\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: True is not false : backend must be reaped before return\\n\\n======================================================================\\nFAIL: test_backend_error_diagnostic (__main__.NotificationLoadTests.test_backend_error_diagnostic)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 245, in test_backend_error_diagnostic\\n    self.assertEqual((result.returncode, result.stdout), (7, ''))\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (0, '') != (7, '')\\n\\nFirst differing element 0:\\n0\\n7\\n\\n- (0, '')\\n?  ^\\n\\n+ (7, '')\\n?  ^\\n\\n\\n======================================================================\\nFAIL: test_registration_error_diagnostic (__main__.NotificationLoadTests.test_registration_error_diagnostic)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 234, in test_registration_error_diagnostic\\n    self.assertEqual((result.returncode, result.stdout), (2, ''))\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (0, '') != (2, '')\\n\\nFirst differing element 0:\\n0\\n2\\n\\n- (0, '')\\n?  ^\\n\\n+ (2, '')\\n?  ^\\n\\n\\n======================================================================\\nFAIL: test_publication_error_after_success (__main__.NotificationLoadTests.test_publication_error_after_success)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 239, in test_publication_error_after_success\\n    self.assertEqual((result.returncode, result.stdout), (2, ''))\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (0, 'Done\\\\nsample-repo \u00b7 Sample task\\\\nCompleted sample\\\\nGlass\\\\ncodex.png\\\\n') != (2, '')\\n\\nFirst differing element 0:\\n0\\n2\\n\\n- (0, 'Done\\\\nsample-repo \u00b7 Sample task\\\\nCompleted sample\\\\nGlass\\\\ncodex.png\\\\n')\\n+ (2, '')\\n\\n----------------------------------------------------------------------\\nRan 8 tests in 8.254s\\n\\nFAILED (failures=10)\\n\""
+        },
+        {
+          "line": 352,
+          "source": "      \"manifest\": \"2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json\","
+        },
+        {
+          "line": 353,
+          "source": "      \"variant\": \"owner-finalizer-disabled\","
+        },
+        {
+          "line": 363,
+          "source": "        \"stderr\": \"........\\n----------------------------------------------------------------------\\nRan 8 tests in 9.021s\\n\\nOK\\n\""
+        },
+        {
+          "line": 368,
+          "source": "      \"manifest\": \"2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json\","
+        },
+        {
+          "line": 369,
+          "source": "      \"variant\": \"registration-diagnostic-suppressed\","
+        },
+        {
+          "line": 379,
+          "source": "        \"stderr\": \"........\\n----------------------------------------------------------------------\\nRan 8 tests in 9.006s\\n\\nOK\\n\""
+        },
+        {
+          "line": 384,
+          "source": "      \"manifest\": \"2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json\","
+        },
+        {
+          "line": 385,
+          "source": "      \"variant\": \"registration-diagnostic-suppressed\","
+        },
+        {
+          "line": 389,
+          "source": "        \"contains\": [\"FAIL: test_registration_error_diagnostic\", \"FAILED (\"],"
+        },
+        {
+          "line": 395,
+          "source": "        \"stderr\": \"......F.\\n======================================================================\\nFAIL: test_registration_error_diagnostic (__main__.NotificationLoadTests.test_registration_error_diagnostic)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 235, in test_registration_error_diagnostic\\n    self.assertIn('notification-clock: cannot record backend registration at ' + directory, result.stderr)\\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: 'notification-clock: cannot record backend registration at <fixture>' not found in 'notification-clock: detached notifier 51102 exited 2\\\\n<subject>/subject/tests/fixtures/notification-clock.bash: line 47: <fixture> Is a directory\\\\ncheck-notifications: scenario completion failed at line 926 (exit 2)\\\\ncheck-notifications: scenario completion exited 2\\\\n'\\n\\n----------------------------------------------------------------------\\nRan 8 tests in 9.158s\\n\\nFAILED (failures=1)\\n\""
+        },
+        {
+          "line": 400,
+          "source": "      \"manifest\": \"2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json\","
+        },
+        {
+          "line": 401,
+          "source": "      \"variant\": \"registration-diagnostic-suppressed\","
+        },
+        {
+          "line": 411,
+          "source": "        \"stderr\": \"........\\n----------------------------------------------------------------------\\nRan 8 tests in 9.149s\\n\\nOK\\n\""
+        },
+        {
+          "line": 427,
+          "source": "        \"stderr\": \".\\n----------------------------------------------------------------------\\nRan 1 test in 0.314s\\n\\nOK\\n\""
+        },
+        {
+          "line": 443,
+          "source": "        \"stderr\": \"F\\n======================================================================\\nFAIL: test_draining_snapshot_readers (__main__.NotificationLoadTests.test_draining_snapshot_readers) (site='\\\"${work}/linked-bugs\\\" --help', reader='head -1')\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 343, in test_draining_snapshot_readers\\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (0, 'row 0\\\\nexit 141\\\\n', '') != (0, 'row 0\\\\nexit 1\\\\n', '')\\n\\nFirst differing element 1:\\n'row 0\\\\nexit 141\\\\n'\\n'row 0\\\\nexit 1\\\\n'\\n\\n- (0, 'row 0\\\\nexit 141\\\\n', '')\\n?                  --\\n\\n+ (0, 'row 0\\\\nexit 1\\\\n', '')\\n\\n----------------------------------------------------------------------\\nRan 1 test in 0.297s\\n\\nFAILED (failures=1)\\n\""
+        },
+        {
+          "line": 459,
+          "source": "        \"stderr\": \".\\n----------------------------------------------------------------------\\nRan 1 test in 0.301s\\n\\nOK\\n\""
+        },
+        {
+          "line": 475,
+          "source": "        \"stderr\": \".\\n----------------------------------------------------------------------\\nRan 1 test in 0.308s\\n\\nOK\\n\""
+        },
+        {
+          "line": 491,
+          "source": "        \"stderr\": \"F\\n======================================================================\\nFAIL: test_draining_snapshot_readers (__main__.NotificationLoadTests.test_draining_snapshot_readers) (site='\\\"${work}/no-state.json\\\"', reader='head -2')\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/notification_load_test.py\\\", line 343, in test_draining_snapshot_readers\\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Tuples differ: (0, 'row 0\\\\nrow 1\\\\nexit 141\\\\n', '') != (0, 'row 0\\\\nrow 1\\\\nexit 1\\\\n', '')\\n\\nFirst differing element 1:\\n'row 0\\\\nrow 1\\\\nexit 141\\\\n'\\n'row 0\\\\nrow 1\\\\nexit 1\\\\n'\\n\\n- (0, 'row 0\\\\nrow 1\\\\nexit 141\\\\n', '')\\n?                         --\\n\\n+ (0, 'row 0\\\\nrow 1\\\\nexit 1\\\\n', '')\\n\\n----------------------------------------------------------------------\\nRan 1 test in 0.303s\\n\\nFAILED (failures=1)\\n\""
+        },
+        {
+          "line": 507,
+          "source": "        \"stderr\": \".\\n----------------------------------------------------------------------\\nRan 1 test in 0.302s\\n\\nOK\\n\""
         }
       ]
     },
