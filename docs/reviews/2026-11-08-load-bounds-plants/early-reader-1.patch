@@ -1,0 +1,11 @@
+--- a/tests/scrut/bugs-gather.md
++++ b/tests/scrut/bugs-gather.md
+@@ -101,7 +101,7 @@
+ ## Invocation through a symlink loads dependencies beside the real script
+ 
+ ```scrut
+-$ ln -s "${BUGS_GATHER_BIN}" "${work}/linked-bugs" && "${work}/linked-bugs" --help | sed -n '1,1p'
++$ ln -s "${BUGS_GATHER_BIN}" "${work}/linked-bugs" && "${work}/linked-bugs" --help | head -1
+ Usage:
+ ```
+ 

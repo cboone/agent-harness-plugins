@@ -267,6 +267,246 @@
         "stderr": ""
       },
       "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-clock-real-grace-clock-plants.json",
+      "variant": "real-grace-clock",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "..\n----------------------------------------------------------------------\nRan 2 tests in 5.979s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-clock-real-grace-clock-plants.json",
+      "variant": "real-grace-clock",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_blocked_startup", "FAILED ("],
+        "excludes": ["ERROR:", "skipped", "ImportError", "SyntaxError"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "FFFF\n======================================================================\nFAIL: test_blocked_startup (__main__.NotificationLoadTests.test_blocked_startup)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 91, in test_blocked_startup\n    self.assertEqual((result.returncode, result.stdout, result.stderr),\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                     (0, 'Done\\nsample-repo · Sample task\\nCompleted sample\\nGlass\\ncodex.png\\n', ''))\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (0, '', '') != (0, 'Done\\nsample-repo · Sample task\\nCompleted sample\\nGlass\\ncodex.png\\n', '')\n\nFirst differing element 1:\n''\n'Done\\nsample-repo · Sample task\\nCompleted sample\\nGlass\\ncodex.png\\n'\n\n- (0, '', '')\n+ (0, 'Done\\nsample-repo · Sample task\\nCompleted sample\\nGlass\\ncodex.png\\n', '')\n\n======================================================================\nFAIL: test_reported_deliveries_after_blocked_startup (__main__.NotificationLoadTests.test_reported_deliveries_after_blocked_startup) (scenario='sound-full')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 299, in test_reported_deliveries_after_blocked_startup\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (1, '', 'check-notifications: expected 1 a[67 chars]1\\n') != (0, 'Chord-stop-4\\nChord-stop-4\\nChord-per[88 chars], '')\n\nFirst differing element 0:\n1\n0\n\n- (1,\n+ (0,\n+  'Chord-stop-4\\n'\n+  'Chord-stop-4\\n'\n+  'Chord-permission-4\\n'\n+  'Chord-attention-4\\n'\n+  'Chord-attention-4\\n'\n+  'Chord-attention-4\\n'\n+  'Chord-attention-4\\n',\n-  '',\n?    ^\n\n+  '')\n?    ^\n\n-  'check-notifications: expected 1 alerts, observed 0\\n'\n-  'check-notifications: scenario sound-full exited 1\\n')\n\n======================================================================\nFAIL: test_reported_deliveries_after_blocked_startup (__main__.NotificationLoadTests.test_reported_deliveries_after_blocked_startup) (scenario='tier-top')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 299, in test_reported_deliveries_after_blocked_startup\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (0, 'stop: none\\npermission: none\\nplan: none\\nquest[66 chars], '') != (0, 'stop: Done | hub: coordinator | Glass\\npermissi[185 chars], '')\n\nFirst differing element 1:\n'stop: none\\npermission: none\\nplan: none\\nquest[61 chars]ne\\n'\n'stop: Done | hub: coordinator | Glass\\npermissi[180 chars]ss\\n'\n\n  (0,\n-  'stop: none\\n'\n-  'permission: none\\n'\n+  'stop: Done | hub: coordinator | Glass\\n'\n+  'permission: Approve Bash? | hub: coordinator | Funk\\n'\n   'plan: none\\n'\n   'question: none\\n'\n-  'elicit: none\\n'\n+  'elicit: Question | hub: coordinator | Tink\\n'\n   'codex-question: none\\n'\n-  'codex-stop: none\\n',\n+  'codex-stop: Done | hub: coordinator | Glass\\n',\n   '')\n\n======================================================================\nFAIL: test_reported_deliveries_after_blocked_startup (__main__.NotificationLoadTests.test_reported_deliveries_after_blocked_startup) (scenario='tier-failure-boundaries')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 299, in test_reported_deliveries_after_blocked_startup\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (0, 'system: none\\nmetadata: none\\nlocal-output: none\\[81 chars], '') != (0, 'system: Refusal: thread-42 | atlas: w 42-fix-pars[462 chars], '')\n\nFirst differing element 1:\n'system: none\\nmetadata: none\\nlocal-output: none\\[76 chars]ne\\n'\n'system: Refusal: thread-42 | atlas: w 42-fix-pars[457 chars]r.\\n'\n\nDiff is 786 characters long. Set self.maxDiff to None to see it.\n\n----------------------------------------------------------------------\nRan 2 tests in 34.189s\n\nFAILED (failures=4)\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-clock-real-grace-clock-plants.json",
+      "variant": "real-grace-clock",
+      "phase": "restored",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "..\n----------------------------------------------------------------------\nRan 2 tests in 6.124s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json",
+      "variant": "owner-finalizer-disabled",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "........\n----------------------------------------------------------------------\nRan 8 tests in 8.847s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json",
+      "variant": "owner-finalizer-disabled",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_readiness_error_cleanup", "FAILED ("],
+        "excludes": ["ERROR:", "skipped", "ImportError", "SyntaxError"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "FFFFFFFFFF\n======================================================================\nFAIL: test_readiness_error_cleanup (__main__.NotificationLoadTests.test_readiness_error_cleanup)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 250, in test_readiness_error_cleanup\n    self.lifecycle_control()\n    ~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"<subject>/subject/tests/notification_load_test.py\", line 214, in lifecycle_control\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : backend must be reaped before return\n\n======================================================================\nFAIL: test_observation_error_cleanup (__main__.NotificationLoadTests.test_observation_error_cleanup)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 253, in test_observation_error_cleanup\n    self.lifecycle_control(observation_error=True)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<subject>/subject/tests/notification_load_test.py\", line 214, in lifecycle_control\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : backend must be reaped before return\n\n======================================================================\nFAIL: test_cancellation_cleanup (__main__.NotificationLoadTests.test_cancellation_cleanup) (signal=<Signals.SIGHUP: 1>)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 258, in test_cancellation_cleanup\n    self.lifecycle_control(cancel=True, signal_number=value)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<subject>/subject/tests/notification_load_test.py\", line 214, in lifecycle_control\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : backend must be reaped before return\n\n======================================================================\nFAIL: test_cancellation_cleanup (__main__.NotificationLoadTests.test_cancellation_cleanup) (signal=<Signals.SIGTERM: 15>)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 258, in test_cancellation_cleanup\n    self.lifecycle_control(cancel=True, signal_number=value)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<subject>/subject/tests/notification_load_test.py\", line 214, in lifecycle_control\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : backend must be reaped before return\n\n======================================================================\nFAIL: test_deferred_cancellation_cleanup (__main__.NotificationLoadTests.test_deferred_cancellation_cleanup) (signal=<Signals.SIGHUP: 1>)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 263, in test_deferred_cancellation_cleanup\n    self.lifecycle_control(deferred=True, signal_number=value)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<subject>/subject/tests/notification_load_test.py\", line 214, in lifecycle_control\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : backend must be reaped before return\n\n======================================================================\nFAIL: test_deferred_cancellation_cleanup (__main__.NotificationLoadTests.test_deferred_cancellation_cleanup) (signal=<Signals.SIGTERM: 15>)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 263, in test_deferred_cancellation_cleanup\n    self.lifecycle_control(deferred=True, signal_number=value)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<subject>/subject/tests/notification_load_test.py\", line 214, in lifecycle_control\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : backend must be reaped before return\n\n======================================================================\nFAIL: test_cancellation_status_survives_observation_error (__main__.NotificationLoadTests.test_cancellation_status_survives_observation_error)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 266, in test_cancellation_status_survives_observation_error\n    self.lifecycle_control(cancel=True, observation_error=True)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<subject>/subject/tests/notification_load_test.py\", line 214, in lifecycle_control\n    self.assertFalse(self.owned_backend_present(backend), 'backend must be reaped before return')\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : backend must be reaped before return\n\n======================================================================\nFAIL: test_backend_error_diagnostic (__main__.NotificationLoadTests.test_backend_error_diagnostic)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 245, in test_backend_error_diagnostic\n    self.assertEqual((result.returncode, result.stdout), (7, ''))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (0, '') != (7, '')\n\nFirst differing element 0:\n0\n7\n\n- (0, '')\n?  ^\n\n+ (7, '')\n?  ^\n\n\n======================================================================\nFAIL: test_registration_error_diagnostic (__main__.NotificationLoadTests.test_registration_error_diagnostic)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 234, in test_registration_error_diagnostic\n    self.assertEqual((result.returncode, result.stdout), (2, ''))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (0, '') != (2, '')\n\nFirst differing element 0:\n0\n2\n\n- (0, '')\n?  ^\n\n+ (2, '')\n?  ^\n\n\n======================================================================\nFAIL: test_publication_error_after_success (__main__.NotificationLoadTests.test_publication_error_after_success)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 239, in test_publication_error_after_success\n    self.assertEqual((result.returncode, result.stdout), (2, ''))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (0, 'Done\\nsample-repo · Sample task\\nCompleted sample\\nGlass\\ncodex.png\\n') != (2, '')\n\nFirst differing element 0:\n0\n2\n\n- (0, 'Done\\nsample-repo · Sample task\\nCompleted sample\\nGlass\\ncodex.png\\n')\n+ (2, '')\n\n----------------------------------------------------------------------\nRan 8 tests in 8.254s\n\nFAILED (failures=10)\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json",
+      "variant": "owner-finalizer-disabled",
+      "phase": "restored",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "........\n----------------------------------------------------------------------\nRan 8 tests in 9.021s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json",
+      "variant": "registration-diagnostic-suppressed",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "........\n----------------------------------------------------------------------\nRan 8 tests in 9.006s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json",
+      "variant": "registration-diagnostic-suppressed",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_registration_error_diagnostic", "FAILED ("],
+        "excludes": ["ERROR:", "skipped", "ImportError", "SyntaxError"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "......F.\n======================================================================\nFAIL: test_registration_error_diagnostic (__main__.NotificationLoadTests.test_registration_error_diagnostic)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 235, in test_registration_error_diagnostic\n    self.assertIn('notification-clock: cannot record backend registration at ' + directory, result.stderr)\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'notification-clock: cannot record backend registration at <fixture>' not found in 'notification-clock: detached notifier 51102 exited 2\\n<subject>/subject/tests/fixtures/notification-clock.bash: line 47: <fixture> Is a directory\\ncheck-notifications: scenario completion failed at line 926 (exit 2)\\ncheck-notifications: scenario completion exited 2\\n'\n\n----------------------------------------------------------------------\nRan 8 tests in 9.158s\n\nFAILED (failures=1)\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json",
+      "variant": "registration-diagnostic-suppressed",
+      "phase": "restored",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "........\n----------------------------------------------------------------------\nRan 8 tests in 9.149s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-readers-early-reader-1-plants.json",
+      "variant": "early-reader-1",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.314s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-readers-early-reader-1-plants.json",
+      "variant": "early-reader-1",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_draining_snapshot_readers", "FAILED ("],
+        "excludes": ["ERROR:", "skipped", "ImportError", "SyntaxError"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "F\n======================================================================\nFAIL: test_draining_snapshot_readers (__main__.NotificationLoadTests.test_draining_snapshot_readers) (site='\"${work}/linked-bugs\" --help', reader='head -1')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 343, in test_draining_snapshot_readers\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (0, 'row 0\\nexit 141\\n', '') != (0, 'row 0\\nexit 1\\n', '')\n\nFirst differing element 1:\n'row 0\\nexit 141\\n'\n'row 0\\nexit 1\\n'\n\n- (0, 'row 0\\nexit 141\\n', '')\n?                  --\n\n+ (0, 'row 0\\nexit 1\\n', '')\n\n----------------------------------------------------------------------\nRan 1 test in 0.297s\n\nFAILED (failures=1)\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-readers-early-reader-1-plants.json",
+      "variant": "early-reader-1",
+      "phase": "restored",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.301s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-readers-early-reader-5-plants.json",
+      "variant": "early-reader-5",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.308s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-readers-early-reader-5-plants.json",
+      "variant": "early-reader-5",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_draining_snapshot_readers", "FAILED ("],
+        "excludes": ["ERROR:", "skipped", "ImportError", "SyntaxError"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "F\n======================================================================\nFAIL: test_draining_snapshot_readers (__main__.NotificationLoadTests.test_draining_snapshot_readers) (site='\"${work}/no-state.json\"', reader='head -2')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/subject/tests/notification_load_test.py\", line 343, in test_draining_snapshot_readers\n    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, expected, ''))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Tuples differ: (0, 'row 0\\nrow 1\\nexit 141\\n', '') != (0, 'row 0\\nrow 1\\nexit 1\\n', '')\n\nFirst differing element 1:\n'row 0\\nrow 1\\nexit 141\\n'\n'row 0\\nrow 1\\nexit 1\\n'\n\n- (0, 'row 0\\nrow 1\\nexit 141\\n', '')\n?                         --\n\n+ (0, 'row 0\\nrow 1\\nexit 1\\n', '')\n\n----------------------------------------------------------------------\nRan 1 test in 0.303s\n\nFAILED (failures=1)\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-08-load-bounds-readers-early-reader-5-plants.json",
+      "variant": "early-reader-5",
+      "phase": "restored",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["\nOK\n"],
+        "excludes": ["ERROR:", "skipped", "SKIP"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.302s\n\nOK\n"
+      },
+      "legacy_verdict": true
     }
   ],
   "normalization": "Machine-specific temporary directories and interpreter paths are replaced by labels; framework lines and predicates are unchanged."
