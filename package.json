@@ -13,8 +13,8 @@
     "validate": "bin/validate-plugins"
   },
   "devDependencies": {
-    "@github/markdownlint-github": "0.8.4",
-    "markdownlint-cli2": "0.23.3",
+    "@github/markdownlint-github": "0.8.5",
+    "markdownlint-cli2": "0.24.0",
     "markdownlint-rule-relative-links": "5.1.4",
     "prettier": "3.9.10"
   }
