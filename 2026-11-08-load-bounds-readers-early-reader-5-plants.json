@@ -1,0 +1,21 @@
+{
+  "inputs": ["bin/lib/git-environment.bash", "bin/lib/capture-child.bash", "tests/fixtures/check-notifications", "tests/fixtures/notification-clock.bash", "tests/notification_load_test.py", "tests/scrut/bugs-gather.md", "plugins/notify/.claude-plugin/plugin.json", "plugins/notify/.codex-plugin/plugin.json", "plugins/notify/README.md", "plugins/notify/assets/claude-code.png", "plugins/notify/assets/codex.png", "plugins/notify/hooks/codex.hooks.json", "plugins/notify/hooks/hooks.json", "plugins/notify/scripts/claude-transcript.jq", "plugins/notify/scripts/codex-failure.jq", "plugins/notify/scripts/notify", "plugins/notify/scripts/watch-codex-failures", "docs/reviews/2026-11-08-load-bounds-plants/check.bash", "docs/reviews/2026-11-08-load-bounds-plants/early-reader-5.patch"],
+  "check": "docs/reviews/2026-11-08-load-bounds-plants/check.bash",
+  "timeout": 600,
+  "green": {
+    "exit_code": 0,
+    "contains": ["\nOK\n"],
+    "excludes": ["ERROR:", "skipped", "SKIP"]
+  },
+  "variants": [
+    {
+      "name": "early-reader-5",
+      "patch": "docs/reviews/2026-11-08-load-bounds-plants/early-reader-5.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_draining_snapshot_readers", "FAILED ("],
+        "excludes": ["ERROR:", "skipped", "ImportError", "SyntaxError"]
+      }
+    }
+  ]
+}

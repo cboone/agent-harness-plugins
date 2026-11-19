@@ -1,0 +1,11 @@
+--- a/tests/fixtures/notification-clock.bash
++++ b/tests/fixtures/notification-clock.bash
+@@ -45,7 +45,7 @@
+     NOTIFY_TEST_OWNER_PID="${1}"
+     if [[ -n "${NOTIFY_TEST_REGISTRATION:-}" ]]; then
+       if ! printf '%s\t%s\n' "${1}" "${NOTIFY_TEST_BACKEND_PATH:?}" 2>&7 >> "${NOTIFY_TEST_REGISTRATION}"; then # error-output-allow: owned descriptor retains probe errors without moving backend ownership into a capture subshell
+-        printf 'notification-clock: cannot record backend registration at %s\n' "${NOTIFY_TEST_REGISTRATION}" >&7
++        printf 'notification-clock: cannot record backend registration at %s\n' "${NOTIFY_TEST_REGISTRATION}" >&2
+         NOTIFY_TEST_OWNER_FAILURE=2
+         return 2
+       fi

@@ -1,0 +1,2749 @@
+{
+  "base": "5406e6c6ac46bbfd8cedf278760f607c1a32152a",
+  "search": "\\b(sleep|usleep|timeout|deadline|monotonic|SECONDS|perf_counter)\\b|read\\s+[^\\n]*-t\\b|time\\.(?:time|time_ns)\\(|date\\s+[^\\n]*\\+",
+  "scope": "Every tracked and unignored candidate file under tests, searched for clocks, sleeps, deadlines, read bounds and date commands. This is a lexical superset including fixture data and expected text. All retained real-clock sites are explicitly recorded, not claimed load-proof.",
+  "files": [
+    {
+      "path": "tests/AGENTS.md",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 27,
+          "source": "- Scrut gives each document a 15-minute total timeout. `timeout in execution` with no stdout or stderr means a document ran out of that budget, not that an assertion failed; the named case is only where execution happened to be, and the rest of the document is skipped. Split or speed up the document. In CI the 10-minute job timeout stops a slow document first, so an overrun shows as a cancelled job instead.",
+          "sha256": "fa907e983580568765d273c651f931f2d4a69d479adef8bd94f71304ad8260c8"
+        }
+      ]
+    },
+    {
+      "path": "tests/CLAUDE.md",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 27,
+          "source": "- Scrut gives each document a 15-minute total timeout. `timeout in execution` with no stdout or stderr means a document ran out of that budget, not that an assertion failed; the named case is only where execution happened to be, and the rest of the document is skipped. Split or speed up the document. In CI the 10-minute job timeout stops a slow document first, so an overrun shows as a cancelled job instead.",
+          "sha256": "fa907e983580568765d273c651f931f2d4a69d479adef8bd94f71304ad8260c8"
+        }
+      ]
+    },
+    {
+      "path": "tests/checked_fixture_limits.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 43,
+          "source": "        if isinstance(node, ast.Attribute) and ast.unparse(node) == \"self.deadline\":",
+          "sha256": "00b4508b0783b074f67c06dfdfd5a602158b6befc254d5640fd27eab284e4fd0"
+        },
+        {
+          "line": 45,
+          "source": "            returns = [part.value for part in functions[parent + \".deadline\"].body if isinstance(part, ast.Return)]",
+          "sha256": "8d3407200caefb1e3c31ddf6966bcdd959ba9a52a586ee87f82f4f09bf0e67d8"
+        },
+        {
+          "line": 47,
+          "source": "                raise ValueError(\"ambiguous detector deadline property\")",
+          "sha256": "b35a4e920f5301a37d8847546c357704e407572bcb62249ff3c6ad293b235752"
+        },
+        {
+          "line": 48,
+          "source": "            return evaluate(returns[0], functions[parent + \".deadline\"], seen)",
+          "sha256": "bfd2a4ee6aa1684ca69de33b63b98b31c6373bf0e7b2274c2efb1a62c06c2350"
+        },
+        {
+          "line": 119,
+          "source": "                expressions.extend(keyword.value for keyword in call.keywords if keyword.arg == \"timeout\")",
+          "sha256": "6001b222d04fe94acf3062d7a4f2ec4ef5f39e2babc24d25df011858d80c1339"
+        },
+        {
+          "line": 130,
+          "source": "                if isinstance(embedded, str) and re.search(r\"(?:core\\.deadline_after|timeout\\s*=)\", embedded):",
+          "sha256": "d4938e0f28462308c25e22bb806bf09d2831c6f0621fa99d720d0dcb3623930d"
+        },
+        {
+          "line": 162,
+          "source": "                    checks.append(dict(fixture=key + \"/\" + name, timeout=policy[key][name], path=path,",
+          "sha256": "00b71896a172311160ce4f781f4a29cddb1d951a8694d9eb732380e821d8b98c"
+        },
+        {
+          "line": 181,
+          "source": "                    checks.append(dict(fixture=str(path.relative_to(root)), timeout=value[\"timeout\"],",
+          "sha256": "e52796932f961abe7805057d5d6755c1a126b5f24c0fb1440f9d702c9c21782f"
+        },
+        {
+          "line": 195,
+          "source": "                    checks.append(dict(fixture=str(path.relative_to(root)), timeout=value[\"timeout\"], path=script, selectors=[]))",
+          "sha256": "249c14df6568dc25e4eb73186da8c1a6fa521d25825690a72c5bf088153584c7"
+        },
+        {
+          "line": 198,
+          "source": "                if any(token in (\"timeout\", \"gtimeout\", \"wait\") for token in tokens):",
+          "sha256": "0d299c60b20bface546f0ef56f650d49336f9465ef59e86264a43be7cc7f069c"
+        },
+        {
+          "line": 202,
+          "source": "                    if token == \"sleep\":",
+          "sha256": "47524fe2603d1b8b8a77072e83d8b4e5ad6b33a021e31d324d4e61b9556d67df"
+        },
+        {
+          "line": 210,
+          "source": "                checks.append(dict(fixture=str(path.relative_to(root)), timeout=value[\"timeout\"], path=script,",
+          "sha256": "ef2b77522a5e25f7206c816ced3fdd37a33bc807ed355a203608050acb7173db"
+        },
+        {
+          "line": 224,
+          "source": "                        checks.append(dict(fixture=str(path.relative_to(root)), timeout=value[\"timeout\"], path=candidate, selectors=selectors))",
+          "sha256": "33c58f3a93c3d4d90312d720d01ba3c88f34a55d5e763109648ad031d317e102"
+        },
+        {
+          "line": 236,
+          "source": "            window = execution_window(core, check[\"timeout\"])",
+          "sha256": "c923c35271e6e3eaab8150cde3870174e555a2b0b7bb72f99828c39f5108588a"
+        }
+      ]
+    },
+    {
+      "path": "tests/checked_gate_test.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 26,
+          "source": "BUDGETS = Path(os.environ.get('CHECKED_TIMEOUT_BUDGETS', Path(__file__).parent / 'data/checked-timeout-budgets.json'))",
+          "sha256": "91cab5b00242771bbdaad5cc4cdb5075c3d353d2e0b1af7eea748c01b7177b20"
+        },
+        {
+          "line": 45,
+          "source": "deadline = min(core.parse_json(core.read_regular(Path(sys.argv[6]))[0])[\"deadline\"], core.deadline_after(5))",
+          "sha256": "bb68013a02d1f97b0622b160927dc69701adc9a60b54c33b11c15c7f6812862d"
+        },
+        {
+          "line": 48,
+          "source": "        if time.monotonic() >= deadline:",
+          "sha256": "c9b9eaa9e8ac7720be63592f5c9d338c7bf31cd661a152e5441554c344d64275"
+        },
+        {
+          "line": 50,
+          "source": "        time.sleep(0.01)",
+          "sha256": "19393a0c3382e79fc6a8adef32008ac0b3352df0452d73e2aa44cbecb365bbe9"
+        },
+        {
+          "line": 51,
+          "source": "    code = None if phase == 'running' else started[0].wait(timeout=core.remaining(deadline, 'independent reap'))",
+          "sha256": "ccf64d84f8fa13c183fcb95b80d1eb701b93243191f58bff85d3c749b7a48c47"
+        },
+        {
+          "line": 212,
+          "source": "        for stages, limit in (([[sys.executable, '-c', 'import time; print(\"started\", flush=True); time.sleep(3)'], ['cat']], 0.4),",
+          "sha256": "6efe3c03b39db9c3dc8a4178b98cbbba46d5aabb1395ab654d3c3b1daf6e4eb1"
+        },
+        {
+          "line": 214,
+          "source": "            self.manifest['checks'][0] = dict(pipeline=stages, inputs=['tree'], timeout=limit)",
+          "sha256": "671f7c5492fcfea9fe1438c9ad79665b55a68f3def88466c67342367f22c5188"
+        },
+        {
+          "line": 229,
+          "source": "                   f'    time.sleep({term_wait!r})\\n'",
+          "sha256": "fcaeddb7ea0de47b5d4d62b7dad94686063f30965bd146b1eb860199ad643359"
+        },
+        {
+          "line": 234,
+          "source": "                   'while True: time.sleep(60)\\n')",
+          "sha256": "1ac83a21062eee430fb64f128cf082ec34de917c6034fd7aa31a1908c671cd8c"
+        },
+        {
+          "line": 236,
+          "source": "                                          inputs=['tree'], timeout=pipeline_limit)",
+          "sha256": "91800c526fb362a7202a0552b912ce70c0f05840fb83e7c97b884970e8abb7cc"
+        },
+        {
+          "line": 261,
+          "source": "        self.manifest['checks'][0] = dict(pipeline=[['false'], ['sleep', '3']], inputs=['tree'], timeout=1)",
+          "sha256": "82d06fba9c8b741fc8e2f399066ca0c74a0dea2074381fc4f193f16b4989b338"
+        },
+        {
+          "line": 269,
+          "source": "        cases = ['setup', 'spawn', 'timeout', 'truncation', 'capture', 'cleanup', 'reap']",
+          "sha256": "78982d52943f94ae3eebb0d051cd58aa593887d993203ccd41c6273f81e92821"
+        },
+        {
+          "line": 283,
+          "source": "                        if phase in ('timeout', 'truncation'):",
+          "sha256": "3e090edcef5743c5e0a64691add76a3ecddf7fcce4929c0ebb6022584f36d878"
+        },
+        {
+          "line": 284,
+          "source": "                            journal.append('flags', target, **{'timed_out' if phase == 'timeout' else 'output_truncated': True})",
+          "sha256": "9dd5ca0b39bf8a305b3d3cc811e135ebb76dea40fcd61067a3157412039aa3bb"
+        },
+        {
+          "line": 321,
+          "source": "                 'missing-stream', 'missing-duration', 'setup', 'spawn', 'timeout', 'bad-complete', 'missing-complete']",
+          "sha256": "f9c272daf235b8f2a1841690f7946c876f6b9bceab8378972a5150a5346ffdcd"
+        },
+        {
+          "line": 327,
+          "source": "                if phase == 'timeout': stages[1] = ['sleep', '3']",
+          "sha256": "5a2c1ffd3d8a680410b601a085948f8fad32ade3419203376ae285918a5806a8"
+        },
+        {
+          "line": 328,
+          "source": "                self.manifest['checks'][0] = dict(pipeline=stages, inputs=['tree'], timeout=1 if phase == 'timeout' else 5)",
+          "sha256": "633a82d502d276246af272bd75011d81ec1903095839938b35a379e5e6661b2c"
+        },
+        {
+          "line": 538,
+          "source": "                 ('spawn', ['/no/such/checked-gate-action'], 5), ('timeout', ['sleep', '3'], 0.1)]",
+          "sha256": "2b5db898d367c289d0f56d13c986670e5d26e75bf939d1a0b9d30a9d4a498ccc"
+        },
+        {
+          "line": 643,
+          "source": "                          + ('time.sleep(60)' if phase == 'running' else 'raise SystemExit(7)'))",
+          "sha256": "39bc6111e7d830edb3df0cefb7cdd14ca7404e92d486fe7d959e066068060032"
+        },
+        {
+          "line": 645,
+          "source": "                if phase == 'third': stages.insert(1, ['sleep', '60'])",
+          "sha256": "646356f1a368bf43102ceb2d823ad8060910f470811632b95205064b5122c52e"
+        },
+        {
+          "line": 647,
+          "source": "                self.manifest['checks'][0] = dict(pipeline=stages, inputs=['tree'], timeout=5)",
+          "sha256": "3d307495439858c9346e68af8e7043f3e596103a39264a0f7fb0dcfbf1c4f413"
+        },
+        {
+          "line": 739,
+          "source": "        manifest = dict(inputs=['subject.txt', 'check.sh', 'change.patch'], check='check.sh', timeout=5,",
+          "sha256": "8293748154674d78d6328aec57b1d02f9f3a5bb4255db95c65edc74df86b70f5"
+        },
+        {
+          "line": 914,
+          "source": "        for args in (['bash', '-c', 'sleep 3'], ['/no/such/checked-gate-command']):",
+          "sha256": "32ebf24868d11c56f2a4c350d614095d644e510d7a9efc43d3f07e0a6470a4ef"
+        },
+        {
+          "line": 915,
+          "source": "            self.manifest['checks'][0].update(argv=args, timeout=3)",
+          "sha256": "7b9b5a2b964277404ef5df2b2cd141726cdca3b1cfa4bb056469f119985e5d8b"
+        },
+        {
+          "line": 973,
+          "source": "                ('monotonic-exit', 'if row[\"exit_observed\"]:', 'if False:', 'test_command_facts_are_monotonic'),",
+          "sha256": "d3ba558d86cdfb6b92e1ca8bbce20f90cab66236bbb6c7c7495d1bc3d9eb24ba"
+        },
+        {
+          "line": 1073,
+          "source": "                                    timeout=policy['gate_checks'][name], git_timeout=policy['git_timeout'],",
+          "sha256": "9e007d90fbfabc097cec4deab73e2c52cb2f7ce60f5e650692cecea7f8dab94e"
+        }
+      ]
+    },
+    {
+      "path": "tests/checked_plant_test.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 34,
+          "source": "BUDGETS = Path(os.environ.get(\"CHECKED_TIMEOUT_BUDGETS\", Path(__file__).parent / \"data/checked-timeout-budgets.json\"))",
+          "sha256": "101595d6297c6ef3918cae76ecb7e30ff97dcff3828a797f0cc534526ffb9c82"
+        },
+        {
+          "line": 56,
+          "source": "    def deadline(self):",
+          "sha256": "92d9cfde7e6ea9d1b3d921742d620d38640516abd5f6e19a72522ec0d8a6740c"
+        },
+        {
+          "line": 77,
+          "source": "            check=\"check.sh\", setup=\"setup.sh\", timeout=10,",
+          "sha256": "1f54806be2f297a9d501b94337943a281e708c023e0849d1b7f6727192b65db8"
+        },
+        {
+          "line": 136,
+          "source": "        default = runner.execution_plan(dict(timeout=13))",
+          "sha256": "ad4e1b8473734de2ee5e1607c090b35c3649be2a41351927c4501d32c007925e"
+        },
+        {
+          "line": 137,
+          "source": "        self.assertEqual([step[\"timeout\"] for step in default if step[\"kind\"] == \"git\"], [13, 13, 13])",
+          "sha256": "506ab561bb6e04b1376b68a760092cca7f3f39d76f1184cddcc793dac412c063"
+        },
+        {
+          "line": 168,
+          "source": "        self.manifest[\"timeout\"], self.manifest[\"git_timeout\"] = 10, 3",
+          "sha256": "b604fc0b68894d27555fcea715c60a591da8dc65eca7b973696cace69172d53e"
+        },
+        {
+          "line": 171,
+          "source": "        self.assertTrue(ready.exists(), \"Git timeout detector was not armed\")",
+          "sha256": "401a17b71b97db77d1b9a0e5d273fe0b89d3902a4e5cab3bdcc9abd1aa8e0217"
+        },
+        {
+          "line": 323,
+          "source": "                              text=True, capture_output=True, timeout=core.remaining(self.deadline, \"test subprocess\"))",
+          "sha256": "33eeaf055d625202b34e61701ea5b2d332b02764e8117fce4225fd0256970ff2"
+        },
+        {
+          "line": 382,
+          "source": "                                          text=True, capture_output=True, timeout=core.remaining(self.deadline, \"test subprocess\"))",
+          "sha256": "eb92113d5029ee3e9d85d9c73c8f92dc76ab2809b770ae6cfb8e3489d91e9d0a"
+        },
+        {
+          "line": 405,
+          "source": "                                              text=True, capture_output=True, timeout=core.remaining(self.deadline, \"test subprocess\"))",
+          "sha256": "d9bebf206e8f1869bcf75c4724eb47ec083e540e57b0325afb6de47eca3a1895"
+        },
+        {
+          "line": 443,
+          "source": "        result = core.command([\"bash\", \"-c\", 'sleep 60 >/dev/null 2>&1 & echo $! > child.pid; echo marker'],",
+          "sha256": "173e7d3a826a0f6c2621d95f87ab80da2e3a9d41cad01fd2dab2a9b2a95829e9"
+        },
+        {
+          "line": 446,
+          "source": "        listing = subprocess.run([\"ps\", \"-o\", \"stat=\", \"-p\", str(child)], capture_output=True, text=True, timeout=core.remaining(self.deadline, \"test subprocess\"))",
+          "sha256": "3b960effd19cae81be04e85972e20284a05f21e301ef6f489d7a436bba998d6c"
+        },
+        {
+          "line": 459,
+          "source": "        script = ('bash -c \\'trap \"\" TERM; echo $$ > child.pid; exec sleep 60\\' >/dev/null 2>&1 &\\n'",
+          "sha256": "0fce3dccf07b3de9ffbad8fa611e686652fc5f90afc4ef25b7609ada3a4e5e54"
+        },
+        {
+          "line": 460,
+          "source": "                  'while [[ ! -s child.pid ]]; do sleep 0.01; done\\necho marker\\n')",
+          "sha256": "a218c1ad091a9e7cb05b78b99c505ed3c94f0b2e2fdca7fe210251eac13756fc"
+        },
+        {
+          "line": 463,
+          "source": "        listing = subprocess.run([\"ps\", \"-o\", \"stat=\", \"-p\", str(child)], capture_output=True, text=True, timeout=core.remaining(self.deadline, \"test subprocess\"))",
+          "sha256": "3b960effd19cae81be04e85972e20284a05f21e301ef6f489d7a436bba998d6c"
+        },
+        {
+          "line": 532,
+          "source": "                             'import os, time; time.sleep(0.4); os.execvp(\"ps\", [\"ps\", \"-axo\", \"pid=,pgid=,stat=\"])'],",
+          "sha256": "00748af1f8a6f4448a0a11ee994f86bbbcc74c4f740b22b519bfb95b0707aefa"
+        },
+        {
+          "line": 544,
+          "source": "            remaining, cause = core.stop_group(123, self.deadline, phase_expirations=expirations)",
+          "sha256": "fc1fe4efbd16058f7f6eea4a567d0111a88949ad7a35c7f17de50897ace38137"
+        },
+        {
+          "line": 553,
+          "source": "            remaining, cause = core.stop_group(123, self.deadline)",
+          "sha256": "2ae10fd346f83e02174995108dd7b179cbd97c15bbbed79f44fa045c39174066"
+        },
+        {
+          "line": 560,
+          "source": "            remaining, cause = core.stop_group(123, self.deadline)",
+          "sha256": "2ae10fd346f83e02174995108dd7b179cbd97c15bbbed79f44fa045c39174066"
+        },
+        {
+          "line": 564,
+          "source": "            _, cause = core.stop_group(123, self.deadline)",
+          "sha256": "7e4d7128bc7a5c9320d2b63ff5764b4598bd22d4c9d6e8e23c834bcd67ff6295"
+        },
+        {
+          "line": 571,
+          "source": "                    remaining, cause = core.stop_group(123, self.deadline)",
+          "sha256": "3777381733c520cd31a7c71a7d9d79b367e80a617deaa6833d08dcc8f363d9c0"
+        },
+        {
+          "line": 583,
+          "source": "        self.manifest[\"timeout\"] = 3",
+          "sha256": "505188d03366b4cc1ae76939bf3a56c21612aaff46c6e874f498596dca56be11"
+        },
+        {
+          "line": 590,
+          "source": "                _, stderr = proc.communicate(timeout=core.remaining(self.deadline, \"closed-stdio detector\"))",
+          "sha256": "7e39b21901cc1f802a8e534f363fdcadabeb2899ee29bb747f1c8ddd99a1bb41"
+        },
+        {
+          "line": 596,
+          "source": "                    proc.communicate(timeout=core.remaining(self.deadline, \"closed-stdio cleanup\"))",
+          "sha256": "a727bcabc944e22dbbd93db088cc98d8d428d23ba275798cca42e36f19d62729"
+        },
+        {
+          "line": 643,
+          "source": "        (self.root / \"setup.sh\").write_text('echo \"timeout stdout\"\\necho \"timeout stderr\" >&2\\nsleep 10\\n')",
+          "sha256": "657db810fef5149d44488f3a802ba707cb7fb0e358381697376fa4ddb70df5ef"
+        },
+        {
+          "line": 644,
+          "source": "        self.manifest[\"timeout\"] = 3",
+          "sha256": "505188d03366b4cc1ae76939bf3a56c21612aaff46c6e874f498596dca56be11"
+        },
+        {
+          "line": 650,
+          "source": "        self.assertIn(\"timeout stdout\", row[\"baseline_setup\"][\"stdout\"])",
+          "sha256": "56d8d8c4d7b297ca0cc86f4a95d16f15775c68ccccbcd17db82beebca34f4fa5"
+        },
+        {
+          "line": 651,
+          "source": "        self.assertIn(\"timeout stderr\", row[\"baseline_setup\"][\"stderr\"])",
+          "sha256": "c129148a756ef286cecce1ac7c2abd84936c9f1bc67179ae83c894ad98425b1d"
+        },
+        {
+          "line": 805,
+          "source": "        self.manifest[\"timeout\"] = policy[\"detector_execution\"]",
+          "sha256": "b519637e26575190d8b3c66763b6b5ca22e7123f882b48b35e309b17c12e3e76"
+        },
+        {
+          "line": 820,
+          "source": "                    while not ready.exists() and proc.poll() is None and time.monotonic() < ready_deadline:",
+          "sha256": "6bedda51c5ae85ce64dfdc76e0216b74648ec606c912cddca1806f4f3c88b874"
+        },
+        {
+          "line": 821,
+          "source": "                        time.sleep(0.01)",
+          "sha256": "27542a0879474c9e00b84588bd0f1daa33ef97d6b56ca56557de0f148f6de6dc"
+        },
+        {
+          "line": 824,
+          "source": "                            _, stderr = proc.communicate(timeout=core.remaining(execution_deadline, \"early runner exit\"))",
+          "sha256": "270e3e15e75c724fa9a4f68cbe7b6b0551780235593f5a4553a9e2296bdc780b"
+        },
+        {
+          "line": 829,
+          "source": "                        self.fail(\"detached launcher readiness deadline exceeded\")",
+          "sha256": "152e186218e1d474ed97f589152211ad9f837e5f599f5f0c252250f4af1f6c11"
+        },
+        {
+          "line": 831,
+          "source": "                        _, stderr = proc.communicate(timeout=core.remaining(execution_deadline, \"detached detector completion\"))",
+          "sha256": "a3774a8dbc764ede5befd5301447e6c65d21bfdb74201e29ef0906ed5b5c6c52"
+        },
+        {
+          "line": 838,
+          "source": "                        proc.communicate(timeout=core.remaining(cleanup_deadline, \"detached detector cleanup\"))",
+          "sha256": "b7efc43d7b03e2d7e763330ebd5eb0b540a8b00cb1a06becc33534e698be3067"
+        },
+        {
+          "line": 867,
+          "source": "                    while not stopped.exists() and time.monotonic() < cleanup_deadline:",
+          "sha256": "04077275e085279e856ad9c8325f9f58d4a1d2ca9931395faa88c80e1f509445"
+        },
+        {
+          "line": 868,
+          "source": "                        time.sleep(0.01)",
+          "sha256": "27542a0879474c9e00b84588bd0f1daa33ef97d6b56ca56557de0f148f6de6dc"
+        },
+        {
+          "line": 940,
+          "source": "            '    time.sleep(0.005)\\ntime.sleep(10)\\n')",
+          "sha256": "7fc61ac4b162d3dc2d0c9f4ee64c3670c05b95e1f1379fad6ca93bb5d54e72df"
+        },
+        {
+          "line": 943,
+          "source": "        self.manifest[\"timeout\"] = 3",
+          "sha256": "505188d03366b4cc1ae76939bf3a56c21612aaff46c6e874f498596dca56be11"
+        },
+        {
+          "line": 973,
+          "source": "                                  text=True, capture_output=True, timeout=core.remaining(self.deadline, \"test subprocess\"))",
+          "sha256": "f2536feb98896f047415fb0628cfe976b77f5dce0c33061521844a48f7101ed7"
+        },
+        {
+          "line": 999,
+          "source": "                                          text=True, capture_output=True, timeout=core.remaining(self.deadline, \"test subprocess\"))",
+          "sha256": "eb92113d5029ee3e9d85d9c73c8f92dc76ab2809b770ae6cfb8e3489d91e9d0a"
+        },
+        {
+          "line": 1084,
+          "source": "            (\"timeout-evidence\", \"timed_out = True\", \"timed_out = False\", \"FAIL: test_timeout_is_setup_error\"),",
+          "sha256": "e25d0e392f4fa320518ee11add8fab16e4bfcb9b477168c786acac5711c1c27a"
+        },
+        {
+          "line": 1091,
+          "source": "            (\"bounded-capture\", \"budget = execution_deadline - time.monotonic()\", \"budget = timeout\",",
+          "sha256": "84343a4310b0fe1971c418be2ee5e1f8572215a51e82b80546f791693b8716dc"
+        },
+        {
+          "line": 1122,
+          "source": "            (\"background-group\", \"for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):\",",
+          "sha256": "46f799960855f701487403de58564b92cc3ba2f3ead62e558af3969884f772eb"
+        },
+        {
+          "line": 1124,
+          "source": "            (\"normally-exiting-group\", \"for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):\",",
+          "sha256": "8f82feb71d290c0f283e8db3e696ce068a2b9539a2baac93b2eaf21c87d24344"
+        },
+        {
+          "line": 1166,
+          "source": "                mutated = mutated.replace('if time.monotonic() >= execution_deadline:\\n                            timed_out = True',",
+          "sha256": "e8e57b04604357522e9d6ed5afa1408707be8319d9704c349439090d96238710"
+        },
+        {
+          "line": 1185,
+          "source": "                check=\"contracts.sh\", timeout=budgets[\"checks\"][name], git_timeout=budgets[\"git_timeout\"],",
+          "sha256": "283f5a7f405fc39082bc568b9da98e55c4f3bede018fe1d72ab76f1da12cd233"
+        },
+        {
+          "line": 1197,
+          "source": "                    self.assertAlmostEqual(recorded[\"deadline\"] - recorded[\"started_at\"], recorded[\"requested\"])",
+          "sha256": "402d9831e346ecee3a66854aba53756d0ff98a3d665b315764483bae9b5e3155"
+        }
+      ]
+    },
+    {
+      "path": "tests/checked_python_test.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 24,
+          "source": "                        cwd=root, capture_output=True, text=True, timeout=120,",
+          "sha256": "338024cabd084c2e703ebf4234bb7bd4b4632edec6629c12a46288fe43a753a4"
+        }
+      ]
+    },
+    {
+      "path": "tests/checked_timeout_budget_test.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 118,
+          "source": "        if isinstance(node, ast.keyword) and node.arg == \"timeout\":",
+          "sha256": "7ed39147e3fbf0553a4da97a1f1cb907bd9fd781cce38ead14545de406a344c7"
+        },
+        {
+          "line": 132,
+          "source": "            if any(\"deadline\" in name or name == \"until\" for name in names):",
+          "sha256": "65a9b4ec2d1e2d3b8bab52643a02e3672c604ab494b339fe8d5ec88130fea57c"
+        },
+        {
+          "line": 134,
+          "source": "                       and child.func.attr == \"monotonic\" for child in ast.walk(node.value)) and any(",
+          "sha256": "0e888041f01e83f07aac5c6d836ca236b69caaa621c027f955407ecfba407b54"
+        },
+        {
+          "line": 154,
+          "source": "            plans = [plant_tests.runner.execution_plan(dict(timeout=policy[checks][variant],",
+          "sha256": "6a15b9d450ed82b0f4fff2c40de670f055dc7a7be48756223fc02349aa908f16"
+        },
+        {
+          "line": 157,
+          "source": "            total = sum(step[\"timeout\"] for plan in plans for step in plan)",
+          "sha256": "992b8190026c28dd18c78a24c9667473a2820a4958914f15cba22e1a806649c5"
+        },
+        {
+          "line": 162,
+          "source": "            core.validate_fixed_limits([dict(timeout=total)], policy[\"limit\"])",
+          "sha256": "77fff7c9a16538da1c1d3f042165ab9ac702bb65a1905752b9a7e26e7f6ad1d0"
+        },
+        {
+          "line": 171,
+          "source": "        policy = json.loads((ROOT / \"tests/data/checked-timeout-budgets.json\").read_text())",
+          "sha256": "2f9c39d8526631ee5a68733eab31bbdf404c751a5a6aabf5913b5ac5681ac2ec"
+        },
+        {
+          "line": 173,
+          "source": "            declared_waits('def test_unknown():\\n    subprocess.run([\"true\"], timeout=unknown)\\n',",
+          "sha256": "e505c34292e6e93cdefbdf155dd76420d33fcda8dcd2e8237df6156d8b67dbaa"
+        },
+        {
+          "line": 175,
+          "source": "        module_wait = declared_waits('subprocess.run([\"true\"], timeout=8)\\n'",
+          "sha256": "d7cf3e2d463c0f38b431bcbb994e8eeb852ca7a11a0fc524a836794125b2f39b"
+        },
+        {
+          "line": 177,
+          "source": "                                     '    def test_unused(self): subprocess.run([\"true\"], timeout=90)\\n',",
+          "sha256": "32a29d5bc2d721e781c63300cfb27ae6b2e6cee425b102c9f1ee187b2b4e3c24"
+        },
+        {
+          "line": 243,
+          "source": "                                 \"process launch bypasses the shared deadline boundary\")",
+          "sha256": "adab2fda864472635cdc8cb181f55bd00ed5159f80eb459b37c32ab977ebd8a2"
+        },
+        {
+          "line": 265,
+          "source": "            self.assertIn(\"process launch deadline\", value[\"report\"][\"cause\"])",
+          "sha256": "d7ceaf753374b153def30ec4f3174dc50683384a431db7e0fb2c0bf3cc947735"
+        },
+        {
+          "line": 275,
+          "source": "            self.assertIn(\"TimeoutError: journal lock deadline\", record[\"call_error\"])",
+          "sha256": "03bb7e17783b368af69bd9c436059c09ee399eba20cdb4c24139ce2c37db1432"
+        },
+        {
+          "line": 291,
+          "source": "            self.assertEqual(seen[0], result[\"supervision\"][\"allocation\"][\"deadline\"],",
+          "sha256": "9d9c8a6ebac0bda172f2a1b820caabc57d097de3582fe9ba29af76e5af9e3702"
+        },
+        {
+          "line": 292,
+          "source": "                             \"parent state inspection did not inherit call deadline\")",
+          "sha256": "6a0f344f3154bcb56362e4245d282f0a7b8bd259bb987d8a3aa203b87b99478e"
+        },
+        {
+          "line": 294,
+          "source": "            original_record, original_clock = runtime.record, time.monotonic",
+          "sha256": "3e76dcfb6227768ffec800ce4ae29d9eaa035ce8dfffd639e11eddb5c2904c13"
+        },
+        {
+          "line": 297,
+          "source": "                return allocation[\"deadline\"] + 1 if expired[0] else original_clock()",
+          "sha256": "28eaf63513350eff2da6b5e889b5c0b458f461ce09944894643419296a6292c4"
+        },
+        {
+          "line": 303,
+          "source": "                    core.time, \"monotonic\", side_effect=clock), mock.patch.object(",
+          "sha256": "585784bdaa869d71ff215265593ff42cdabc012683980dc4b319ae24ed7f3c0f"
+        },
+        {
+          "line": 310,
+          "source": "            self.assertIsInstance(failure, TimeoutError, \"expired launch did not report its deadline\")",
+          "sha256": "6e0896193f0260ef33d7cd30841d6fe089f0c321a9e628370102a0ef326b8434"
+        },
+        {
+          "line": 311,
+          "source": "            self.assertIn(\"process launch deadline\", str(failure))",
+          "sha256": "adb7f49bd71697ac07f50b17818505d15b7c065c9bec8c1d57a60f40bb32fb1d"
+        },
+        {
+          "line": 370,
+          "source": "            (root / \"data/checked-timeout-budgets.json\").write_text(json.dumps(",
+          "sha256": "cb6a4d80923ba2efcc8e809cbedbd047363eb6e38126751775e1bd393630cfbb"
+        },
+        {
+          "line": 393,
+          "source": "                     f'Path({str(ready)!r}).write_text(\"ready\"); time.sleep(5)')",
+          "sha256": "2b96d6f2848ce17155c8e395ea689e202a80196e19f3dff1af364c79dbd41d9e"
+        },
+        {
+          "line": 408,
+          "source": "                while runtime.pending() and time.monotonic() < until:",
+          "sha256": "e7e2a2fc9acb50f625fde972f82ce91ee7cd08119203df1338ea85f6a2e942a9"
+        },
+        {
+          "line": 410,
+          "source": "                    time.sleep(0.01)",
+          "sha256": "ff7ab6b6c703333895a48ad6bf3be99fb68c00a1bde46b3055918e2998c0aa99"
+        },
+        {
+          "line": 425,
+          "source": "                         f'    time.sleep({term_wait!r})\\n'",
+          "sha256": "eb72a19a0c15958843b17f222939c28b160f1488e6ba789c7b6176dfdc8428fd"
+        },
+        {
+          "line": 429,
+          "source": "                         'while True: time.sleep(2)\\n')",
+          "sha256": "83dcc227b29c26b5a5f45956aeedc448af6ba9a3cb50dedeffed58bfa2d1232c"
+        },
+        {
+          "line": 444,
+          "source": "                    with mock.patch.object(core.time, \"monotonic\", return_value=first[\"deadline\"] + 100):",
+          "sha256": "2e71ef2738a1ca3aeb4e9c3f1578406a004e1271b1e433b33df2e7395e8f1592"
+        },
+        {
+          "line": 446,
+          "source": "                    self.assertAlmostEqual(first[\"deadline\"] - first[\"started_at\"], 3)",
+          "sha256": "6e532dcf7ad2479b6c3a2206600e76080e7282e952701e970395b9dfa7d6d100"
+        },
+        {
+          "line": 447,
+          "source": "                    self.assertAlmostEqual(later[\"deadline\"] - later[\"started_at\"], 3)",
+          "sha256": "742a8d4ea1c2c1485b174c9f33ad5e74c35922af8101ba3f546eafeba0013be8"
+        },
+        {
+          "line": 448,
+          "source": "                    escaped = dict(first, deadline=first[\"deadline\"] + 1)",
+          "sha256": "1909f443cf589b8651639a1676866fe3b79ec556f285998f75b19e63d6bb960f"
+        },
+        {
+          "line": 460,
+          "source": "        core.validate_fixed_limits([dict(timeout=3)], 3)",
+          "sha256": "ec7b18daf7b8039e5f883ab5049259768d876b73e3633e9cf6adb8e91122b9db"
+        },
+        {
+          "line": 462,
+          "source": "            core.validate_fixed_limits([dict(timeout=4)], 3)",
+          "sha256": "5d4e8920e375d468203e9e7ab4ccfb8176565638f70d2abca604962fab7776f4"
+        },
+        {
+          "line": 464,
+          "source": "            with mock.patch.object(core.time, \"monotonic\", return_value=1e12):",
+          "sha256": "b41c300434d9e14c20f89ad589d9d0253f9f6d606311d81238c6fc4a8d08d550"
+        },
+        {
+          "line": 465,
+          "source": "                plan = core.StepPlan([dict(name=\"fixed\", kind=\"check\", timeout=3)])",
+          "sha256": "2c2413a7a7b84623207a35a96951ccb4e8d8fb679a28fa4ee8fa6e752e91d289"
+        },
+        {
+          "line": 466,
+          "source": "                self.assertEqual(plan.steps[0][\"timeout\"], 3)",
+          "sha256": "b8119aadffa8fc29c3f948e61d53666ad89078dffb376cc5ae9e29375a97e636"
+        },
+        {
+          "line": 479,
+          "source": "                    '    while not ready.exists(): time.sleep(0.01)\\n'",
+          "sha256": "fa88ae317931638c2b8f46241b57bb3717d5abc54b43100ec669ab531940c572"
+        },
+        {
+          "line": 485,
+          "source": "                    '\"import time; from pathlib import Path; Path(\"+repr(str(ready))+\").write_text(\\\\\\\"ready\\\\\\\"); time.sleep(2)\"],'",
+          "sha256": "ef03d046b3c180afae495beb241bcc301f377a1aac242afb314080a852bcf5ce"
+        },
+        {
+          "line": 503,
+          "source": "                    while runtime.pending() and time.monotonic() < until:",
+          "sha256": "4084d93c5ec2fb94a1ddf26bcf8a2d6373f104c65b1ba8a3147a673701498e9c"
+        },
+        {
+          "line": 505,
+          "source": "                        time.sleep(0.01)",
+          "sha256": "27542a0879474c9e00b84588bd0f1daa33ef97d6b56ca56557de0f148f6de6dc"
+        },
+        {
+          "line": 525,
+          "source": "                                                           and \"deadline\" in target.id for target in node.targets):",
+          "sha256": "c4014f5ceb5d7309286cffe3d700d3d5b5ea2e1855144a4a0597c9944d6f9c86"
+        },
+        {
+          "line": 527,
+          "source": "                                             and part.func.attr == \"monotonic\" for part in ast.walk(node.value)),",
+          "sha256": "5511403dabbf15da42d423bfda0dbb58dc33b95591431eab359dca694d857704"
+        },
+        {
+          "line": 528,
+          "source": "                                         \"independent deadline outside root allocation: \" + function.name)",
+          "sha256": "3822e26c3415ed009a96a3d43f03c71039862f047efd7ca9caafc86b333a3ebb"
+        },
+        {
+          "line": 535,
+          "source": "        self.assertTrue(literal_limits(\"subprocess.run(['ps'], timeout=0.25)\"))",
+          "sha256": "0f11865169b5dc1e53e128ec3bcfdf1175bec7dcc2ed7f047b75cea9a9ff495c"
+        },
+        {
+          "line": 536,
+          "source": "        self.assertTrue(literal_limits(\"deadline = time.monotonic() + 0.5\"))",
+          "sha256": "341ace56d1d9095bfc3a5754cb406af328b64afc11fdcf0d73fd3015555687db"
+        },
+        {
+          "line": 539,
+          "source": "        policy = json.loads((ROOT / \"tests/data/checked-timeout-budgets.json\").read_text())",
+          "sha256": "2f9c39d8526631ee5a68733eab31bbdf404c751a5a6aabf5913b5ac5681ac2ec"
+        },
+        {
+          "line": 547,
+          "source": "        documents.add(\"checked-timeout-budgets.md\")",
+          "sha256": "5af43029655bb8916cc6c68465d5166de319728c8b4194b1369e31495f5b54c3"
+        },
+        {
+          "line": 692,
+          "source": "            (root / \"data/checked-timeout-budgets.json\").write_text(json.dumps(policy))",
+          "sha256": "d3706433288e7224b96cbc1b07f15ff75826e689dba84085825be7478de69f1b"
+        },
+        {
+          "line": 694,
+          "source": "                                     'import time; print(\"budget probe started\", flush=True); time.sleep(4)'],",
+          "sha256": "853200b9906423236f1bcaef8992feb786485a1a0b49f76df1dd7b0b71ab1a45"
+        },
+        {
+          "line": 695,
+          "source": "                                    text=True, capture_output=True, timeout=policy[\"limit\"] + core.CLEANUP_MARGIN)",
+          "sha256": "ba040e14a7acb96559774fdb55df2c097ba625d7226f250e544237a8cd0a4234"
+        },
+        {
+          "line": 696,
+          "source": "            self.assertEqual(result.returncode, 1, \"document driver ignored its declared deadline\")",
+          "sha256": "19f95186e7da582cfca316fa8db7874563355e1db8b8d6baffffa97caf4a2cd1"
+        }
+      ]
+    },
+    {
+      "path": "tests/data/bugs-gather/assessments.json",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 13,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 37,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 61,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 79,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 97,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 115,
+          "source": "    \"deadline\": \"2026-10-20\",",
+          "sha256": "e94ea174a6e655ec4d9d11cac765d91d5db690c0ea26f0f3104ed1ce9cbee8a9"
+        },
+        {
+          "line": 133,
+          "source": "    \"deadline\": \"2026-11-03\",",
+          "sha256": "8ce4975cd2514d03f832e5f6895c87943dd9b9ae19b42e50367192314b73922c"
+        },
+        {
+          "line": 157,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 175,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 193,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 211,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 229,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 247,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 265,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 283,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 301,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 319,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 337,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 355,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        },
+        {
+          "line": 373,
+          "source": "    \"deadline\": null,",
+          "sha256": "dcf08a13812f266c6d8bef40cbed2f808eb4c334f452444f458f47d8ce02b5e0"
+        }
+      ]
+    },
+    {
+      "path": "tests/data/checked-timeout-budgets.json",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 10,
+          "source": "    \"timeout-evidence\": 30,",
+          "sha256": "f0a002582acecc344ae348739bb75ce43d27fa13addc8e81c3ed59f4e5c64d37"
+        },
+        {
+          "line": 55,
+          "source": "      \"variants\": [\"timeout-evidence\", \"control-verdict\"]",
+          "sha256": "b7236032bef6e5d269d6c44e58b451fc5f42b3ab5b8abb0d109c6e95246a3ddb"
+        },
+        {
+          "line": 145,
+          "source": "      \"gate_variants\": [\"monotonic-exit\"],",
+          "sha256": "38f1a24473709ca21d53f2f7c4b62eb073443951f05ad30f2c54668d7d55a1b3"
+        },
+        {
+          "line": 304,
+          "source": "    \"checked-timeout-budgets.md\": {",
+          "sha256": "56dc8b26b56fe7660c6e8e3deed82366624b99f87cec9df587d652b77ed7d78c"
+        },
+        {
+          "line": 320,
+          "source": "    \"monotonic-exit\": 60,",
+          "sha256": "bfc26cbd1bac07806e8f872d1b74fac906cd2c7ae176fccec04dd847d946753c"
+        }
+      ]
+    },
+    {
+      "path": "tests/data/checked-verdict-compatibility.json",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 30,
+          "source": "        \"stderr\": \"======================================================================\\nFAIL: test_inspection_failure_retains_subprocess_diagnostics (__main__.RunnerTests.test_inspection_failure_retains_subprocess_diagnostics)\\n----------------------------------------------------------------------\\nTraceback (most recent call last):\\n  File \\\"<subject>/subject/tests/checked_plant_test.py\\\", line 535, in test_inspection_failure_retains_subprocess_diagnostics\\n    self.assertIsNone(result[\\\"cleanup_error\\\"], \\\"delayed ps must survive the old inspection limit\\\")\\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: 'TimeoutExpired: Command \\\\'[\\\\'<python>\\\\', \\\\'-c\\\\', \\\\'import os, time; time.sleep(0.4); os.execvp(\\\"ps\\\", [\\\"ps\\\", \\\"-axo\\\", \\\"pid=,pgid=,stat=\\\"])\\\\']\\\\' timed out after 0.25 seconds; cleanup: PermissionError: [Errno 1] Operation not permitted' is not None : delayed ps must survive the old inspection limit\\n\\n----------------------------------------------------------------------\\nRan 2 tests in 1.962s\\n\\nFAILED (failures=1)\\n\"",
+          "sha256": "4465dfa5f6492d51194611d96f98468d31290ff66d8094e9f2fa5c625493745d"
+        }
+      ]
+    },
+    {
+      "path": "tests/data/git-review-chain-evals/assessment.md",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 52,
+          "source": "The host probes observed signed commits and a local bare-remote push under the configured full-access policy, TMPDIR writes, literal inline options and root-alias expansion, and a completed foreground wait. Question/scheduler availability came from actual session metadata; those mechanisms and real resume behavior were not exercised. A short completed wait does not establish a maximum command timeout. Read-only behavior was measured only in the explicit restriction case. Network access and interactive approvals were not tested, since fixture runs prohibit external effects. Claude interactive parity, installed-marketplace lifecycle, live GitHub and Linux remain unverified.",
+          "sha256": "466b4cd5e418994d7dc55334f2954636ff340b6069e915ba170c380fa476de1b"
+        }
+      ]
+    },
+    {
+      "path": "tests/data/git-review-chain-evals/comparison-evidence.json",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 448,
+          "source": "    \"reply\": \"{\\n  \\\"observed_tool_declarations\\\": {\\n    \\\"question\\\": [\\n      \\\"functions.request_user_input: Plan-mode only\\\",\\n      \\\"functions.request_user_input_async: asynchronous questions\\\"\\n    ],\\n    \\\"wait\\\": [\\n      \\\"functions.wait: resumes a running exec cell\\\",\\n      \\\"clock.sleep: interruptible pause\\\",\\n      \\\"collaboration.wait_agent: waits for agent updates\\\"\\n    ],\\n    \\\"foreground_command\\\": [\\n      \\\"functions.exec exposes tools.exec_command\\\",\\n      \\\"functions.exec exposes tools.write_stdin\\\"\\n    ],\\n    \\\"scheduling\\\": \\\"No dedicated scheduling tool is declared. functions.exec declares setTimeout and clearTimeout helpers.\\\"\\n  },\\n  \\\"tested_behavior\\\": {\\n    \\\"command\\\": \\\"sleep 0.05\\\",\\n    \\\"execution\\\": \\\"foreground\\\",\\n    \\\"completed\\\": true,\\n    \\\"exit_code\\\": 0,\\n    \\\"output\\\": \\\"\\\"\\n  },\\n  \\\"untested_behavior\\\": [\\n    \\\"Question tools\\\",\\n    \\\"Dedicated wait tools\\\",\\n    \\\"Scheduling helpers\\\"\\n  ],\\n  \\\"constraints\\\": {\\n    \\\"questions_asked\\\": false,\\n    \\\"work_scheduled\\\": false,\\n    \\\"delegation_used\\\": false,\\n    \\\"network_or_mcp_used\\\": false,\\n    \\\"gh_used\\\": false,\\n    \\\"dependencies_installed\\\": false,\\n    \\\"fixture_data_modified\\\": false\\n  }\\n}\",",
+          "sha256": "a5768671edfa20b06fc91e7664f6de5a71fdad631e6be2b6c76f70c57c0b163e"
+        },
+        {
+          "line": 451,
+          "source": "        \"command\": \"/bin/zsh -lc 'sleep 0.05'\",",
+          "sha256": "2749a7b361f8f6392bbf30b08e75b80d71bed221377378b9100bd584e76a72b9"
+        }
+      ]
+    },
+    {
+      "path": "tests/data/report-board/bugs.json",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 116,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 156,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 196,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 249,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 289,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 329,
+          "source": "        \"deadline\": \"2026-10-20\",",
+          "sha256": "87ad56e86f7d14defeed4130a82315ab5c98eb69f6d96eabe1b6ff90e11023dc"
+        },
+        {
+          "line": 375,
+          "source": "        \"deadline\": \"2026-11-03\",",
+          "sha256": "7ea5e6afbd2f5b968863cade163614b16daa0def95c98eff80d4774898738dcf"
+        },
+        {
+          "line": 429,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 469,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 509,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 549,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 589,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 629,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 669,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 709,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 749,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 789,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 835,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 898,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 951,
+          "source": "        \"deadline\": null,",
+          "sha256": "5ab20ab5888986d2c9fbb0942f9c540229adeb190a53d7c17515e8f650a7b6fd"
+        },
+        {
+          "line": 1189,
+          "source": "          \"kind\": \"deadline\",",
+          "sha256": "d40b852e5a62bddd29c1b00ba24db5fbe1385b44ee28cc7807a84c7049387c53"
+        },
+        {
+          "line": 1216,
+          "source": "          \"kind\": \"deadline\",",
+          "sha256": "d40b852e5a62bddd29c1b00ba24db5fbe1385b44ee28cc7807a84c7049387c53"
+        }
+      ]
+    },
+    {
+      "path": "tests/data/write-realtime-audio-code-evals/assessment.md",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 20,
+          "source": "| `RTAC-031` | Checklist; verifying concurrency                                  | Unverified | Reported: classifies the reached RTSan diagnostic as a detected positive control. Other entries, loading modes, and deadline behavior remain unverified.                                             |",
+          "sha256": "fb1e700b1e0df3d4e88322f8189eaab2884d33f7877c5e69d5bae912394db365"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/attention-lock-race.bash",
+      "disposition": "recorded",
+      "assessment": "Retain 1000 x 0.01 s barrier liveness bound; handoff is state driven.",
+      "sites": [
+        {
+          "line": 9,
+          "source": "    command sleep 0.01",
+          "sha256": "2ddddf6bdf721d6e41c61f2ae9e8e09549001a575ba757fcac360218d83fbef3"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/cache-lock-handoff",
+      "disposition": "recorded",
+      "assessment": "Retain captured real sleep for barrier coordination.",
+      "sites": [
+        {
+          "line": 56,
+          "source": "  LOCK_TEST_REAL_SLEEP=\"$(command -v sleep)\"",
+          "sha256": "a871ec9741a16c41e63abbe8e96016263df05965d2f111893056f1148251e2a2"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/check-codex-failures",
+      "disposition": "recorded",
+      "assessment": "Retain 150 x 0.02 s alert/delivery polls; 30 s FIFO arrival bounds (1 s deliberate failure); follow/shutdown polling and 0.3 s post-signal observation. These remain scheduler dependent.",
+      "sites": [
+        {
+          "line": 29,
+          "source": "    sleep 0.02",
+          "sha256": "63e462ec99c0e0efb64f8707414db4a2a93223e9765494d401ca55b0c864f0e1"
+        },
+        {
+          "line": 54,
+          "source": "    sleep 0.02",
+          "sha256": "63e462ec99c0e0efb64f8707414db4a2a93223e9765494d401ca55b0c864f0e1"
+        },
+        {
+          "line": 72,
+          "source": "  if ! IFS= read -r -t \"${readiness_timeout}\" ready_one <&4; then",
+          "sha256": "3ae95a328a69dde530628ca82b91bd5c5b41b562cdfb77dbf266219aa3514281"
+        },
+        {
+          "line": 75,
+          "source": "  elif ! IFS= read -r -t \"${readiness_timeout}\" ready_two <&4; then",
+          "sha256": "be566f1e21255fb7f285632f21b3e6de666a164ffc14d4413d4dd314456da8e3"
+        },
+        {
+          "line": 106,
+          "source": "  for tool in alerter tmux sleep wc; do",
+          "sha256": "c18531cbf4974323e158b8b0db70e3ac72744dea6cada83e134df771ecaa75aa"
+        },
+        {
+          "line": 162,
+          "source": "    concurrent-timeout)",
+          "sha256": "b52d3bc7c5a40b621e43fd7158db753dd0af3d3c3b43488a09de937d6528cc65"
+        },
+        {
+          "line": 173,
+          "source": "      echo 'readiness timeout identifies missing reader; both statuses retained'",
+          "sha256": "c7850a8bc832536e7f8a041893dd79161bffbb08f0b94d3148e6a4f42e46f2f9"
+        },
+        {
+          "line": 290,
+          "source": "      /bin/sleep 30 &",
+          "sha256": "6a59cea5c5e1de59bd16c998d29d6afde3ac943257c319e3ccb26d0523dcd9f6"
+        },
+        {
+          "line": 300,
+          "source": "        sleep 0.02",
+          "sha256": "83bc4168d48b1074e7d950d889d0d4774606a4f5e283bf480f8b621fb6181fc0"
+        },
+        {
+          "line": 315,
+          "source": "        sleep 0.3",
+          "sha256": "e4eeddebe6d66ea17a7d1f2d6ab36363afefcc1fc4838d679f8bce078f166a29"
+        },
+        {
+          "line": 327,
+          "source": "        sleep 0.02",
+          "sha256": "83bc4168d48b1074e7d950d889d0d4774606a4f5e283bf480f8b621fb6181fc0"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/check-notifications",
+      "disposition": "fixed",
+      "assessment": "Candidate fix: readiness-controlled grace ticks, owned detached completion, no absence sleep or process-name signalling.",
+      "sites": [
+        {
+          "line": 462,
+          "source": "  NOTIFY_TEST_REAL_SLEEP=\"$(command -v sleep)\"",
+          "sha256": "4f63bfed40ae0099e26f3e3bc8fc4ba3d0ba1ebcd8dbf6da6dfbc13d9543440a"
+        },
+        {
+          "line": 964,
+          "source": "      [[ \"$(jq -r '.[index(\"--timeout\") + 1]' \"${NOTIFY_TEST_LOG}\")\" == 86400 ]] || exit 1",
+          "sha256": "6cdfa79ee2541adbcc64f2453fedc1d7855503216f08eda26ad4cc2de048edf7"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/checked-audit-lock.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 22,
+          "source": "          \" Path(sys.argv[2]).touch()\\n time.sleep(6)\\n\")",
+          "sha256": "0b7167fc3a02e52b66b0ea9d893c29c2814702d2701247c753bf40f0b288a4d1"
+        },
+        {
+          "line": 32,
+          "source": "                time.sleep(0.01)",
+          "sha256": "48b8610a7d5c1df33691227ab79cd30440fe5b2105c7673305481299381a29b9"
+        },
+        {
+          "line": 33,
+          "source": "            started = time.monotonic()",
+          "sha256": "170da78a0b4f1f2d107fa6e89abe88fcc21a0e3791e12f2b11b57f555c99955b"
+        },
+        {
+          "line": 40,
+          "source": "                record[\"elapsed\"] = time.monotonic() - started",
+          "sha256": "51fd220ae1c6dfc19ef5bedefa21e5d8fdb9b498b5c358a5a48ccd8c0938b774"
+        },
+        {
+          "line": 42,
+          "source": "            record[\"holder_exit\"] = holder.wait(timeout=15)",
+          "sha256": "175c2cb21203a412f71509b93ab39aed471bbde26bb9756ca37b5bf5055a41dd"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/checked-git-delay",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 16,
+          "source": "  sleep \"${CHECKED_GIT_DELAY:?delay is required}\"",
+          "sha256": "e44e2d75790879f5945ada61ab4bcebbc67b2b0b6adde1c4713575752323d1d3"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/checked-pipeline-launch-lock.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 1,
+          "source": "\"\"\"Delay a pipeline stage's command record across its execution deadline.\"\"\"",
+          "sha256": "c8e1291f5ea5a6184266d21aa79f523f6f7bae4ab2e535283e0a7101873afc1c"
+        },
+        {
+          "line": 23,
+          "source": "          \" Path(sys.argv[2]).touch()\\n time.sleep(float(sys.argv[3]))\\n\")",
+          "sha256": "7bc7259428ba74f670043d58057b284575e328964c3fcb6512e5e4b3dcbeb7ac"
+        },
+        {
+          "line": 35,
+          "source": "                time.sleep(0.01)",
+          "sha256": "48b8610a7d5c1df33691227ab79cd30440fe5b2105c7673305481299381a29b9"
+        },
+        {
+          "line": 42,
+          "source": "                                 target=\"fixture\", deadline=allocation[\"worker_deadline\"],",
+          "sha256": "f4058735e452a1c7af942f141774c7c45c95ade412eaa4788bc3cc798047d261"
+        },
+        {
+          "line": 49,
+          "source": "        holder_exit = holder.wait(timeout=15) if holder is not None else None",
+          "sha256": "fd60c8555e92ddac638d6b9e8b1eca94d0eeada455d23dbc0d9969586527027c"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/checked-plant-detached.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 29,
+          "source": "time.sleep(60)",
+          "sha256": "fa9edd8d72d651a789115aa78a27e04898ed6c11cb40c01423caf1aec8a29758"
+        },
+        {
+          "line": 34,
+          "source": "time.sleep(60)",
+          "sha256": "fa9edd8d72d651a789115aa78a27e04898ed6c11cb40c01423caf1aec8a29758"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/codex-anchor-probe.bash",
+      "disposition": "recorded",
+      "assessment": "Retain fixed-attempt 0.1 s readiness loops. Timeout modes deliberately assert setup failures.",
+      "sites": [
+        {
+          "line": 37,
+          "source": "      sleep 0.1",
+          "sha256": "2c76d209b3f069c0ae5a0ee34b7439caa09e34f4a53df91533b9d727e75a0297"
+        },
+        {
+          "line": 48,
+          "source": "      sleep 0.1",
+          "sha256": "2c76d209b3f069c0ae5a0ee34b7439caa09e34f4a53df91533b9d727e75a0297"
+        },
+        {
+          "line": 63,
+          "source": "      anchor-timeout | anchor-brokenpipe) grep -q '^codex-aspects: anchor readiness timed out' \"${TMP_DIR}/setup.log\" || exit 1 ;;",
+          "sha256": "5741e1dadb49f4617156aad8cd668fb6f42159685d950ce4b15799aec7a26879"
+        },
+        {
+          "line": 70,
+          "source": "        sleep 0.1",
+          "sha256": "b2fee552e02f11f7763801471037acb51eb4bb38ad4614a3bfe601aa31de287c"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/codex-launch-cancel.bash",
+      "disposition": "recorded",
+      "assessment": "Retain 0.1 s launch-registration polling with fixed liveness bound.",
+      "sites": [
+        {
+          "line": 13,
+          "source": "        sleep 0.1",
+          "sha256": "b2fee552e02f11f7763801471037acb51eb4bb38ad4614a3bfe601aa31de287c"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/codex-signal-probe.bash",
+      "disposition": "recorded",
+      "assessment": "Retain 0.01 s signal-state polling with fixed liveness bound.",
+      "sites": [
+        {
+          "line": 84,
+          "source": "      sleep 0.01",
+          "sha256": "1746da4a862982eeafdedea73237cb06968b75d91ed5616bef0d940677183fe0"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/codex-stub",
+      "disposition": "recorded",
+      "assessment": "Retain 10 s concurrency barrier, 0.1 s handlers, 1 s publication and late-child delays, 300 s cancellation targets. Race setup still uses real scheduling.",
+      "sites": [
+        {
+          "line": 103,
+          "source": "    sleep 0.1",
+          "sha256": "e5b561506484746fb7fc61a8a027b96b3a3ead9e4064b9ff22683f92920979ff"
+        },
+        {
+          "line": 196,
+          "source": "      sleep 300 &",
+          "sha256": "3dacc83b93195ec35b792aecd2e0c13e3feb5c1454f8c9c9ce9f9eb88c34f52f"
+        },
+        {
+          "line": 205,
+          "source": "        sleep 300 > /dev/null 2>&1 & # error-output-allow: fixture child is a silent cancellation target",
+          "sha256": "e845040559ec77190ed923f56960902f003063bc9a97f201da25db049a66c921"
+        },
+        {
+          "line": 211,
+          "source": "        sleep 300 > /dev/null 2>&1 & # error-output-allow: fixture child is a silent cancellation target",
+          "sha256": "e845040559ec77190ed923f56960902f003063bc9a97f201da25db049a66c921"
+        },
+        {
+          "line": 216,
+          "source": "      while true; do sleep 0.1; done",
+          "sha256": "d221ac9299568f71c3784cfbbb987de4795a378d20759f7d6fa3229d867c3301"
+        },
+        {
+          "line": 221,
+          "source": "        trap 'sleep 0.1; exit 0' TERM",
+          "sha256": "d6ee08290a0e89e8c145f92a6543b811b90558cf9f3b4dfd7f026e03a2389058"
+        },
+        {
+          "line": 222,
+          "source": "        sleep 1",
+          "sha256": "d5b420b6b5fa8d19bc7649cc449331106ba503c5ad60a6c187120f861c4bf28a"
+        },
+        {
+          "line": 226,
+          "source": "        sleep 300",
+          "sha256": "07d4fa720d74274c3cc340dd07d5585769c01c3fcfd38dba33e41949cd50599a"
+        },
+        {
+          "line": 235,
+          "source": "        sleep 1",
+          "sha256": "d5b420b6b5fa8d19bc7649cc449331106ba503c5ad60a6c187120f861c4bf28a"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/codex-wait-cancel.bash",
+      "disposition": "recorded",
+      "assessment": "Retain 0.1 s cancellation-readiness polling with fixed liveness bound.",
+      "sites": [
+        {
+          "line": 14,
+          "source": "    sleep 0.1",
+          "sha256": "e5b561506484746fb7fc61a8a027b96b3a3ead9e4064b9ff22683f92920979ff"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/create-unix-socket",
+      "disposition": "recorded",
+      "assessment": "Persistent Ruby/Perl sleeps keep owned fixture servers alive; lifecycle targets rather than timing assertions.",
+      "sites": [
+        {
+          "line": 42,
+          "source": "        sleep",
+          "sha256": "04d378f69a1cff8efc8639aebf25b4fc4783f7ba95c8de14025aa2e070c24d07"
+        },
+        {
+          "line": 72,
+          "source": "        sleep 1 while 1;",
+          "sha256": "68287f5931d7d0b2e28ed06fd9b36e721199a05a648ee73aec844d1fd6975d2a"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/curl-stub",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 19,
+          "source": "# ZenHub reports a permission or timeout problem on part of a lookup.",
+          "sha256": "e085abe6c6e6964066e820e949999e8e04640f1502e772b4bc08eb3f042f9023"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/directory-lock-stub",
+      "disposition": "recorded",
+      "assessment": "Production retry sleeps are replaced with immediate stub success; no real wait introduced.",
+      "sites": [
+        {
+          "line": 17,
+          "source": "  sleep) exit 0 ;;",
+          "sha256": "684e8fa7d1fd39c784784e0d8ca58db8e208639b8dcb7da432dfb245238719aa"
+        },
+        {
+          "line": 47,
+          "source": "    echo 'install this fixture as mkdir, sleep, rm and rmdir' >&2",
+          "sha256": "9b08997c1a6f0549925b4b629618b42be0e7911b51a5cf7f89b2b616cb56e737"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/launch-sleep-stub",
+      "disposition": "recorded",
+      "assessment": "State barrier precedes real timeout tick; existing fixture prior art for readiness-controlled notification ticks.",
+      "sites": [
+        {
+          "line": 8,
+          "source": "      /bin/sleep 0.01",
+          "sha256": "e8a70b519a952eef453ff1ac3beca61a35d061bd89f21fb4b6e750beeff09ce0"
+        },
+        {
+          "line": 11,
+          "source": "  /bin/sleep \"$@\"",
+          "sha256": "6f1cadc7c3632607d31f1d380dba4a9caa95afb014162146378f511ce8336b8e"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/notification-clock.bash",
+      "disposition": "fixed",
+      "assessment": "Injected ticks advance only after backend readiness. A 120 s real liveness bound and 0.02 s yield remain; no elapsed-time assertion depends on them.",
+      "sites": [
+        {
+          "line": 62,
+          "source": "function sleep() {",
+          "sha256": "716a402ca2404e4ad645410d24666f4006722c966e526b1a34b8c41572f43493"
+        },
+        {
+          "line": 68,
+          "source": "  local deadline=$((SECONDS + 120))",
+          "sha256": "9461bf9892bb46722acbd04d6d1f5407642c04f08bbf5c2ce338146f513bebf7"
+        },
+        {
+          "line": 70,
+          "source": "    if ((SECONDS >= deadline)); then",
+          "sha256": "a12439ad62e10b0d7c4bbb8c3591f82e772b5fe305e436fb0417f97d354a342a"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/notify-rollout/claim-boundary.bash",
+      "disposition": "recorded",
+      "assessment": "Retain 30 s reader-release FIFO liveness bound; no elapsed-time assertion.",
+      "sites": [
+        {
+          "line": 15,
+          "source": "    IFS= read -r -t 30 release < \"${ROLLOUT_CLAIM_BARRIER}/${ROLLOUT_READER}\"",
+          "sha256": "3c4243d8a4e99e7065a96c8ebb4cad83700dd37e3947be3394c7aaae132fbe71"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/notify-rollout/owner-boundary.bash",
+      "disposition": "recorded",
+      "assessment": "Retain 0.02 s state-barrier polling; caller supplies liveness containment.",
+      "sites": [
+        {
+          "line": 13,
+          "source": "        /bin/sleep 0.02",
+          "sha256": "fcb5f679ff82ac1fb6f0964b2ead851b0cb3f2e76744121abcfaa40fa387287c"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/notify-rollout/sleep",
+      "disposition": "recorded",
+      "assessment": "Follow-loop sleep is stubbed; other sleeps delegate to the real clock.",
+      "sites": [
+        {
+          "line": 4,
+          "source": "exec /bin/sleep \"$@\"",
+          "sha256": "0e65bbd458ed423474b8fa1ee70f2de4d0f75f1e48359a003c5742b85f69f6c6"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/notify-rollout/wc",
+      "disposition": "recorded",
+      "assessment": "Retain 0.02 s state-barrier polling; caller supplies liveness containment.",
+      "sites": [
+        {
+          "line": 9,
+          "source": "    /bin/sleep 0.02",
+          "sha256": "b0a1d2b90e32243d6d5cb5737043480c59c3ea128999fa3973a638c0e8f3f8d6"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/owner-lock-probe",
+      "disposition": "recorded",
+      "assessment": "Retain 500 x 0.02 s marker liveness; contention itself is state driven.",
+      "sites": [
+        {
+          "line": 16,
+          "source": "    sleep 0.02",
+          "sha256": "63e462ec99c0e0efb64f8707414db4a2a93223e9765494d401ca55b0c864f0e1"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/resource-claims-interleave",
+      "disposition": "recorded",
+      "assessment": "Retain 160 x 0.05 s marker liveness; stubbed production retries are separate from real barrier waits.",
+      "sites": [
+        {
+          "line": 44,
+          "source": "    sleep 0.05",
+          "sha256": "a55cbbe331a8da5d26eeedfb13115bcfe7aac775798e7440bfb4173ee4ba851a"
+        },
+        {
+          "line": 61,
+          "source": "  CLAIMS_REAL_SLEEP=\"$(command -v sleep)\"",
+          "sha256": "d2eb18e6f550983e133ed75307f1599f61ce9fbeb34369ee362d4ceafbb8cc9f"
+        },
+        {
+          "line": 66,
+          "source": "  cp \"${stub}\" \"${root}/bin/sleep\"",
+          "sha256": "fffab90658e07a8e8eb2504115388da64033e203ef127afa0c4b498a37ec66be"
+        },
+        {
+          "line": 71,
+          "source": "  for tool in git mkdir sleep rm rmdir; do",
+          "sha256": "9ee51107107f0741f237ee5bf52d009c8624fad810d12d7d699010b43b35dc47"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/resource-claims-interleave-stub",
+      "disposition": "recorded",
+      "assessment": "Retain real barrier polling at 0.05 s; action ordering is state driven.",
+      "sites": [
+        {
+          "line": 32,
+          "source": "  sleep)",
+          "sha256": "6cdfaa22ff6d1414e0ed6ab0ca55f7da034a1e4f9fcdc1bf55077fa19b890746"
+        },
+        {
+          "line": 66,
+          "source": "          sleep 0.05",
+          "sha256": "31446ad26fd2f4ea44c1d6f5666f8709e0af0882bdcfa18ac013cdbab273dd6f"
+        },
+        {
+          "line": 80,
+          "source": "    echo 'install this fixture as git, mkdir, sleep, rm and rmdir' >&2",
+          "sha256": "871c6ecedafae4c04f32adcb3e456be2db97d62139dd07e4f1b1451bfdd15cf9"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/scrut-group-probe/ScrutGroupProbe.pm",
+      "disposition": "recorded",
+      "assessment": "30 s holds are owned cancellation/anchor targets; retain real supervision tests.",
+      "sites": [
+        {
+          "line": 49,
+          "source": "            if ($mode eq 'anchor-timeout') { sleep 30; }",
+          "sha256": "08bbb8a41266140f927d084af1bed2c20c32657ada0d1890666012d1832cfaf9"
+        },
+        {
+          "line": 95,
+          "source": "            sleep 30;",
+          "sha256": "358ce107e4b14ebff270368acd9c68d55e8cd425fc688154a8f3960a1242f0cc"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/scrut-stub",
+      "disposition": "recorded",
+      "assessment": "Retain 10 s state barrier, 1 s output reorder delay and 30 s cancellation target.",
+      "sites": [
+        {
+          "line": 23,
+          "source": "      local wait_deadline=$((SECONDS + 10))",
+          "sha256": "364b5f523e953ee1f6b05c760bf129eb527ebb14c77df6a368a42db697416df9"
+        },
+        {
+          "line": 25,
+          "source": "        if ((SECONDS >= wait_deadline)); then",
+          "sha256": "da71d58ebf652296e08df2f133613042158673ad5f34d2624023f618bfba4d8d"
+        },
+        {
+          "line": 29,
+          "source": "        sleep 0.01",
+          "sha256": "d9ec9fcff7b84affd30ab8e6d7c50542f2cc1e640f52569023266382d4192af9"
+        },
+        {
+          "line": 39,
+          "source": "      sleep 1",
+          "sha256": "56fca3b8a4107636220a5b13bf1732381516490586a0d0c828e087fbf6a72ae2"
+        },
+        {
+          "line": 53,
+          "source": "      sleep 30 &",
+          "sha256": "59d9e58d66e27809d576f967bf0f2c483d61241cbed9db6cc93756fb1bfe8961"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/watch-changes-stub",
+      "disposition": "recorded",
+      "assessment": "Fake cadence logs and returns; read-delay mode still sleeps one real second.",
+      "sites": [
+        {
+          "line": 2,
+          "source": "# Stub gh and sleep for offline watch tests; reject unsupported requests.",
+          "sha256": "53611b3923d9aea132fb49740dd9c5a6bd9a5a58ecda98f51d12879a675e7084"
+        },
+        {
+          "line": 121,
+          "source": "  if [[ \"$(basename \"$0\")\" == sleep ]]; then",
+          "sha256": "eaacfce203b41dbbe46c2cbd3909921f9c3773f54b3472e7240731e965a6a1da"
+        },
+        {
+          "line": 130,
+          "source": "    if [[ \"${WATCH_TEST_READ_DELAY:-0}\" == 1 ]]; then /bin/sleep 1; fi",
+          "sha256": "5073049d09ebeafc58ab05e19651bcafc2aa5a832cbbb9196398636773378f71"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/workmux-stub",
+      "disposition": "recorded",
+      "assessment": "Configurable real delay is intentional slow-output input; remains wall-clock scheduled.",
+      "sites": [
+        {
+          "line": 101,
+          "source": "    sleep \"${STUB_WORKMUX_SLEEP}\"",
+          "sha256": "07d3aac85e0b5e1e7ca9b73cad2221814f42a8cbd51eb126bcf1135eff5ddbe5"
+        }
+      ]
+    },
+    {
+      "path": "tests/notification_load_test.py",
+      "disposition": "new-liveness",
+      "assessment": "180 s subprocess containment; launch, timeout and prerequisite I/O failures raise non-assertion exceptions. Assertions observe only specified exits and output.",
+      "sites": [
+        {
+          "line": 41,
+          "source": "                              timeout=PROCESS_LIMIT)",
+          "sha256": "858d0ce2ee52f6818cf1625897041495d23c64a5818b98cbaa8d60e9b1193adb"
+        },
+        {
+          "line": 105,
+          "source": "                                env=self.fixture_environment(), capture_output=True, text=True, timeout=PROCESS_LIMIT)",
+          "sha256": "b7629938a9caf15fa86cb8029b9799407fe801ef4d9d7847b05ae80eb3c4fe45"
+        },
+        {
+          "line": 113,
+          "source": "                                env=self.fixture_environment(), capture_output=True, text=True, timeout=PROCESS_LIMIT)",
+          "sha256": "b7629938a9caf15fa86cb8029b9799407fe801ef4d9d7847b05ae80eb3c4fe45"
+        },
+        {
+          "line": 120,
+          "source": "                                 '-o', 'command='], capture_output=True, text=True, timeout=PROCESS_LIMIT)",
+          "sha256": "2b75afa3a4b5ae950e496feacbe5fd60576d3bb8f5233fbcf808825f5a65ba26"
+        },
+        {
+          "line": 131,
+          "source": "        deadline = time.monotonic() + PROCESS_LIMIT",
+          "sha256": "8a9889d54f5d04da917a76f1fbee1325f690155807859ba2ac9c99bcb7220205"
+        },
+        {
+          "line": 143,
+          "source": "                stdout, stderr = process.communicate(timeout=PROCESS_LIMIT)",
+          "sha256": "e73e42abf5786b10fa479d5bfd2f91c9b0ec26759e3e679fba63af8fa86d108c"
+        },
+        {
+          "line": 145,
+          "source": "            if time.monotonic() >= deadline:",
+          "sha256": "f609cf4e08848bb3cc1bc7ab8e6ce1744f663a39cd5d115c1e13aee55278b1c7"
+        },
+        {
+          "line": 147,
+          "source": "            time.sleep(0.02)",
+          "sha256": "6636cb7144ae76e02c97ecbe78088ef5758b56d66de61f82c187e0644c52c36a"
+        },
+        {
+          "line": 182,
+          "source": "        process.communicate(timeout=PROCESS_LIMIT)",
+          "sha256": "9c907771a1aa255513fb3a89756027d43e0e281fd1f5247ff597af9dff203b11"
+        },
+        {
+          "line": 213,
+          "source": "                stdout, stderr = process.communicate(timeout=PROCESS_LIMIT)",
+          "sha256": "e73e42abf5786b10fa479d5bfd2f91c9b0ec26759e3e679fba63af8fa86d108c"
+        },
+        {
+          "line": 341,
+          "source": "                                            capture_output=True, text=True, timeout=PROCESS_LIMIT)",
+          "sha256": "dd5436b650f7e6ad81ec789bb22bda12f670f78ef96faaec4740f3de3ad80fd2"
+        }
+      ]
+    },
+    {
+      "path": "tests/run_checked_budget.py",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 1,
+          "source": "\"\"\"Enforce the declared document deadline, reserving the shared cleanup margin.\"\"\"",
+          "sha256": "bc7eca2fe0aac1e16b0a240f4c609e4fbcc842656222a9e239e6fe4fc7902785"
+        },
+        {
+          "line": 13,
+          "source": "policy = json.loads((Path(__file__).parent / \"data/checked-timeout-budgets.json\").read_text())",
+          "sha256": "585ea57da5613a88c8a06a97faeda72f97f779dc7e65e3d3a55bb46fe2d9edf8"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/attention-log.md",
+      "disposition": "recorded",
+      "assessment": "Retain 1 s lock interleaving, 1 s delayed transcript, 1.5 s wait readiness and 15 s guard; 30 s sleep is a cancellation target. Fixed ordering assumptions remain.",
+      "sites": [
+        {
+          "line": 232,
+          "source": "> printf '#!/usr/bin/env bash\\n: > \"%s/paused\"\\nuntil [[ -e \"%s/release\" ]]; do sleep 0.1; done\\nprintf \"main\\\\037editor\\\\037@3\\\\n\"\\n' \"${work}\" \"${work}\" > \"${work}/slow-bin/tmux\"",
+          "sha256": "9df16b1b19a491e4f2642cfa83b37aa013e136c29fa9ef7b578490ea0a93a413"
+        },
+        {
+          "line": 237,
+          "source": "> until [[ -e \"${work}/paused\" ]]; do sleep 0.1; done",
+          "sha256": "967524acd8c079bc6f1b22027ad27ef3cbd0e34d5f9f5e3d85bd5c765fe101d5"
+        },
+        {
+          "line": 239,
+          "source": "> sleep 1",
+          "sha256": "cdeac9d55ed59a983bdc3636b8485412e226ae14d3e56d098d9e72c27030ec80"
+        },
+        {
+          "line": 357,
+          "source": "The committed sleep stub accelerates the unchanged bounded retry loop. Each",
+          "sha256": "29e2cda1ffe2514350bb70e69785f30d9f0af9c2d3bfe7fa9b94de5adfd8b26e"
+        },
+        {
+          "line": 363,
+          "source": "> cp \"${DIRECTORY_LOCK_STUB_BIN}\" \"${work}/failure-bin/sleep\"",
+          "sha256": "dc544e47d66bfa4a78ad233b52c37a8f7899499230d694374335f8307b553c55"
+        },
+        {
+          "line": 364,
+          "source": "> test \"$(export PATH=\"${work}/failure-bin:${PATH}\"; command -v sleep)\" = \"${work}/failure-bin/sleep\" || exit 1",
+          "sha256": "d3618137ec34b89a6d1e8963d061e78fc9b999a1e5e55c6bde5c94dceb5d791d"
+        },
+        {
+          "line": 413,
+          "source": "> sleep 30 &",
+          "sha256": "830c5c2e162d0bc9dce1a9af5eda0574fdc31aef7e70953aef9894f71a40fb4a"
+        },
+        {
+          "line": 433,
+          "source": "> cp \"${DIRECTORY_LOCK_STUB_BIN}\" \"${work}/lock-bin/sleep\"",
+          "sha256": "c47246b64a82c4247fb6fd79147d6c5ee4c60056f4ca81428da1a8b35f2616b0"
+        },
+        {
+          "line": 434,
+          "source": "> test \"$(export PATH=\"${work}/lock-bin:${PATH}\"; command -v mkdir)\" = \"${work}/lock-bin/mkdir\" && test \"$(export PATH=\"${work}/lock-bin:${PATH}\"; command -v sleep)\" = \"${work}/lock-bin/sleep\" || exit 1",
+          "sha256": "a36944562af440793f9d17774c7c0f189dc1e7cd84c906333e0d06fef035f32f"
+        },
+        {
+          "line": 448,
+          "source": "> test \"$(export PATH=\"${work}/lock-bin:${PATH}\"; command -v mkdir)\" = \"${work}/lock-bin/mkdir\" && test \"$(export PATH=\"${work}/lock-bin:${PATH}\"; command -v sleep)\" = \"${work}/lock-bin/sleep\" || exit 1",
+          "sha256": "a36944562af440793f9d17774c7c0f189dc1e7cd84c906333e0d06fef035f32f"
+        },
+        {
+          "line": 651,
+          "source": "> (sleep 1 && printf '%s\\n' '{\"type\":\"system\",\"subtype\":\"model_refusal_no_fallback\"}' >> \"${work}/late.jsonl\") &",
+          "sha256": "73e3d4c88697629e0d5bbab59298a851e31df1dd18db4fd83bd1d17cfc063bbd"
+        },
+        {
+          "line": 805,
+          "source": "> (trap 'kill \"${nap}\" 2> /dev/null; exit 0' TERM; sleep 15 & nap=$!; wait \"${nap}\"; kill \"${waiter}\") > /dev/null &",
+          "sha256": "71ef6b63d864489929f08435914cd4012d15ecc3c45e1cd6edd1dc5cc13896f5"
+        },
+        {
+          "line": 807,
+          "source": "> sleep 1.5",
+          "sha256": "5471c65918a3a5627c7bcf052c8e22ffb13de428013eb48b3113ec83be11ca4e"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 54,
+          "source": ">   for tool in mkdir sleep rmdir rm; do",
+          "sha256": "a53072db4f819455370f195f64c4860ed60034316b3d0bb0ce854436911e9789"
+        },
+        {
+          "line": 570,
+          "source": "## A deadline inside the window places a bug in High priority",
+          "sha256": "0c9c3cb23f18f06890debb1a517c1f13119791c611f447de81c88abad2f9caec"
+        },
+        {
+          "line": 705,
+          "source": ">   && cp \"${DIRECTORY_LOCK_STUB_BIN}\" \"${cache}/bin/sleep\" \\",
+          "sha256": "8211321d774f975612f70f694dcfc2f69bcb18d1901666f77d961af5b90fbfac"
+        },
+        {
+          "line": 707,
+          "source": ">   && test \"$(export PATH=\"${cache}/bin:${PATH}\"; command -v sleep)\" = \"${cache}/bin/sleep\" \\",
+          "sha256": "2a026d577a0a5f1b860f622e19db4977695fd28f8ae75733f7d1d6a6cd1ad5c7"
+        },
+        {
+          "line": 901,
+          "source": "## A deadline counts from the day of the sync through the window",
+          "sha256": "6d7622b2e930c0b2ba57dc086f0641ea01f1cbd19ab03627c4d76a5827ee7d96"
+        },
+        {
+          "line": 903,
+          "source": "The sync falls on 2026-10-15 and the window is 14 days. A deadline on the day",
+          "sha256": "e37134d9af45dab141f3e1e7d920e748e1cfe6b0b6b9d64ebb297ea039cf9656"
+        },
+        {
+          "line": 908,
+          "source": "$ for deadline in 2026-10-14 2026-10-15 2026-10-29 2026-10-30; do jq --arg d \"${deadline}\" 'map(if .number == 15 then .deadline = $d else . end)' \"${assessments}\" > \"${work}/deadline.json\" && bugs score \"${work}/config.json\" \"${work}/gather.json\" \"${work}/deadline.json\" \"${work}/deadline-scored.json\" > /dev/null && jq -r --arg d \"${deadline}\" '\"\\($d): \" + ([.tiers | to_entries[] | .key as $t | .value[] | select(.number == 15) | $t] | first)' \"${work}/deadline-scored.json\"; done",
+          "sha256": "88f587be722256d53dfce6859a01d9449b45346584630a76981bd912f06a406e"
+        },
+        {
+          "line": 921,
+          "source": "$ cache=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && jq '. + [{number: 5, updatedAt: \"2026-10-01T12:00:00Z\", environment: \"production\", evidence: \"user-report\", surface: \"signed-in\", impact: \"core-flow\", reach: \"some\", workaround: \"none\", cause: \"known\", timeSensitive: false, deadline: null, mitigated: false, reproduced: null, gist: \"Verify email returns 500.\", nextStep: \"Fix it.\", question: null}]' \"${assessments}\" > \"${work}/with-closed.json\" && bugs XDG_CACHE_HOME=\"${cache}\" save \"${work}/config.json\" \"${work}/gather.json\" \"${work}/with-closed.json\" \"${work}/scored.json\" && for sync in first second; do bugs XDG_CACHE_HOME=\"${cache}\" reuse \"${work}/config.json\" \"${work}/gather.json\" \"${work}/verify-reused.json\" > /dev/null && bugs XDG_CACHE_HOME=\"${cache}\" score \"${work}/config.json\" \"${work}/gather.json\" \"${work}/verify-reused.json\" \"${work}/verify-scored.json\" > /dev/null && bugs XDG_CACHE_HOME=\"${cache}\" save \"${work}/config.json\" \"${work}/gather.json\" \"${work}/verify-reused.json\" \"${work}/verify-scored.json\" && jq -r --arg sync \"${sync}\" '\"\\($sync): \" + (.tiers.fixed | map(\"#\\(.number) verify=\\(.verify)\") | join(\", \"))' \"${work}/verify-scored.json\"; done",
+          "sha256": "f0b18a96a2e648762f290f9a01498f66365487aa8e6c5758d01b564346b432c8"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/checked-timeout-budgets.md",
+      "disposition": "recorded",
+      "assessment": "Retain checked-runner supervision/cleanup timeout contracts, delayed subprocesses and detector allocations. Existing fixed budgets remain scheduler sensitive; not claimed load-proof.",
+      "sites": [
+        {
+          "line": 5,
+          "source": "> uv run --no-project \"${REPO_ROOT}/tests/run_checked_budget.py\" checked-timeout-budgets.md \\",
+          "sha256": "678b15e7ad402ef988cfb070f522aaf940657dd91e410e17cded3aa4d480c30f"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/codex-aspects.md",
+      "disposition": "recorded",
+      "assessment": "Retain 5 s readiness loops, 1.2 s post-cancellation observation and 300 s cancellation targets. Readiness and shutdown observation remain scheduler dependent.",
+      "sites": [
+        {
+          "line": 427,
+          "source": ">   && for attempt in $(seq 50); do [ -s \"${FIXTURE}/early.pid\" ] && break; sleep 0.1; done \\",
+          "sha256": "378900f4ae3e6b2b3640e637b2462313ecf66132a091bb854ddffd11d839515f"
+        },
+        {
+          "line": 472,
+          "source": "before child-side publication, or withholds readiness until timeout. Each case",
+          "sha256": "4d1438ca329e037f8e497d29095c8468da86f1b77f11274b36d1a18c266cee3f"
+        },
+        {
+          "line": 480,
+          "source": "$ for mode in anchor-publish anchor-ready anchor-stopped anchor-timeout anchor-brokenpipe; do",
+          "sha256": "867053fe4d03cb63dadca55fc55dbca0bd32b3dd0707866d67f2fc9a47e897b6"
+        },
+        {
+          "line": 491,
+          "source": "anchor-timeout: setup failed, no exec, anchor stopped",
+          "sha256": "b6701ece14b9df13e3b853126db69483efbb6ab60423f980acf4cefd2bfd8df9"
+        },
+        {
+          "line": 524,
+          "source": ">   && for attempt in $(seq 50); do [ -s \"${FIXTURE}/pids/code.pid\" ] && break; sleep 0.1; done \\",
+          "sha256": "f8caad6f65a8b1a02357f6f5273505809b119559324c60388e3fdb97d4260a5d"
+        },
+        {
+          "line": 529,
+          "source": ">   && sleep 1.2 \\",
+          "sha256": "f98641a122d6efb3cd36e74c4cfabeee8d145af588aaf5ce29ef17822fe4d32d"
+        },
+        {
+          "line": 548,
+          "source": ">   && { sleep 300 & } && unrelated=$! \\",
+          "sha256": "bf8b9be1e04de47fe3728b9ee945a746718718da793b6de45b60fc9040407b94"
+        },
+        {
+          "line": 553,
+          "source": ">   && for attempt in $(seq 50); do [ -s \"${FIXTURE}/family-pids/code.pid\" ] && break; sleep 0.1; done \\",
+          "sha256": "bcd48b4969fbb4e485909ad99a9c5507a6f26e69dd2566f5df125c4642fdaf22"
+        },
+        {
+          "line": 555,
+          "source": ">   && for attempt in $(seq 50); do [ -s \"${FIXTURE}/family-pids/code.late.pid\" ] && break; sleep 0.1; done \\",
+          "sha256": "2a6944856fda5ef892603282895007979fd80151049d904becba155f6e742d3c"
+        },
+        {
+          "line": 582,
+          "source": ">   && { sleep 300 & } && unrelated=$! \\",
+          "sha256": "bf8b9be1e04de47fe3728b9ee945a746718718da793b6de45b60fc9040407b94"
+        },
+        {
+          "line": 588,
+          "source": ">   && for attempt in $(seq 50); do [ -s \"${FIXTURE}/interrupt-pids/code.pid\" ] && break; sleep 0.1; done \\",
+          "sha256": "4309008bfd8499b42ef1da7f300b2256ccefc707bbdad8226fbd24a429f46590"
+        },
+        {
+          "line": 590,
+          "source": ">   && for attempt in $(seq 50); do [ -s \"${FIXTURE}/interrupt-pids/code.late.pid\" ] && break; sleep 0.1; done \\",
+          "sha256": "4806407fa39dd6d8b6eaa6209c0a28a3396e5566f9f6a71242d8f15b18cd7e68"
+        },
+        {
+          "line": 626,
+          "source": ">   && sleep 1.2 \\",
+          "sha256": "f98641a122d6efb3cd36e74c4cfabeee8d145af588aaf5ce29ef17822fe4d32d"
+        },
+        {
+          "line": 650,
+          "source": ">   && { sleep 300 & } && unrelated=$! \\",
+          "sha256": "bf8b9be1e04de47fe3728b9ee945a746718718da793b6de45b60fc9040407b94"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/codex-failure-rollouts.md",
+      "disposition": "recorded",
+      "assessment": "Calls the deliberate missing-arrival contract in check-codex-failures; real 1 s negative liveness condition retained.",
+      "sites": [
+        {
+          "line": 71,
+          "source": "$ \"${CHECK_CODEX_FAILURES_BIN}\" concurrent-timeout",
+          "sha256": "3b2b93f7a3b8adab7b2312144f03d0a2610d7612cb1fa9f0edcc1bdf3bc4a15e"
+        },
+        {
+          "line": 72,
+          "source": "readiness timeout identifies missing reader; both statuses retained",
+          "sha256": "f8b95ca8b5df333bfab7656fbfb9579d085fda90b3a4db8637090d6a032e2e7f"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/launch-workmux.md",
+      "disposition": "recorded",
+      "assessment": "Retain 0.2 s readiness polling and explicit 1 s launcher timeout contracts; the dedicated sleep stub synchronizes output before the first timeout tick.",
+      "sites": [
+        {
+          "line": 85,
+          "source": ">     sleep 0.2",
+          "sha256": "20ece2c7350ad84876fccb83ac2e4c6d9864b9283637d6d9235dbdc4c5cf7260"
+        },
+        {
+          "line": 460,
+          "source": ">     | env -u TMUX PATH=\"${stub_dir}:${PATH}\" STUB_STATE=\"${state}\" bash \"${LAUNCH_WORKMUX_BIN}\" --generated-name \"fix/login-issue-42-timeout\" --issue 42",
+          "sha256": "4b70849f1b3f45c611677878eff8664a63059cb7d0e11b9db8ad7fe05fd9ebf7"
+        },
+        {
+          "line": 461,
+          "source": "Generated branch name: fix/42-login-timeout",
+          "sha256": "efcf67777642d4e3c6b57dfc01a77932e6669ef32e242592e65362aac59ebb91"
+        },
+        {
+          "line": 463,
+          "source": "branch: fix/42-login-timeout",
+          "sha256": "f70abc7f439c175ed852d3dcac8a75deb5d0601a4ddeaf6ca4fcd2eb57b73c29"
+        },
+        {
+          "line": 793,
+          "source": "A harness that stops the launcher's process group on a tool timeout must not",
+          "sha256": "36a7121db07268ee06b7afc930471686ae95dc33e955cb47828858f8550881af"
+        },
+        {
+          "line": 877,
+          "source": "beside the log for the caller to read. Output collected at timeout must be a prefix of the completed log. It can be empty if the child has not written yet.",
+          "sha256": "b4c0326cef0df29a5c39a995d5afdb5c945717fb0e2921e3f41b3d1fb9c999b1"
+        },
+        {
+          "line": 883,
+          "source": ">     | env -u TMUX PATH=\"${stub_dir}:${PATH}\" TMPDIR=\"${launch_tmp}\" STUB_STATE=\"${state}\" STUB_GIT_WORKTREE_PORCELAIN_FILE=\"${state}/porcelain\" STUB_WORKMUX_RELEASE_FIFO=\"${state}/release\" WORKMUX_LAUNCH_TIMEOUT_SECONDS=1 bash \"${LAUNCH_WORKMUX_BIN}\" \"feature/await-timeout\" 2> \"${state}/stderr\" > \"${state}/stdout\"; } || exit_code=$?; cat \"${state}/stderr\"; printf 'exit: %s\\n' \"${exit_code}\" && # error-output-allow: testcase replays the retained launcher diagnostic",
+          "sha256": "2337e70c25c0f67a277cb8c234f37660fa41bd9e157ed678f3bf694bbd286cbf"
+        },
+        {
+          "line": 885,
+          "source": ">   && state_dir=\"$(compgen -G \"${launch_tmp}/workmux-launch-feature-await-timeout.*\")\" \\",
+          "sha256": "e7a8ae09d805d782bb1df24eb14f9ff45b5f1a3eda98d154fb2bdce6061a5b78"
+        },
+        {
+          "line": 888,
+          "source": ">   && grep -c '^branch: feature/await-timeout$' \"${state_dir}/log\" \\",
+          "sha256": "4cd8cb57eec0041f4a99b2683c62316711fd601dfe41343ba6a50ea3af98bc32"
+        },
+        {
+          "line": 894,
+          "source": "launch-workmux: workmux add for feature/await-timeout is still running after 1s; stopped waiting",
+          "sha256": "f3a1e85fdd05a5e0e35f986c67603b541e03fad30fa140ff2fc3c02bf899469f"
+        },
+        {
+          "line": 895,
+          "source": "launch-workmux: no worktree for feature/await-timeout exists yet",
+          "sha256": "7e871206877d058daee35c9600127ecd4df8ef44385b68bb6cb9519e0ec4a357"
+        },
+        {
+          "line": 896,
+          "source": "launch-workmux: its output continues in */workmux-launch-feature-await-timeout.*/log, and it writes its exit status to */workmux-launch-feature-await-timeout.*/status when it exits; remove */workmux-launch-feature-await-timeout.* after reading them (glob)",
+          "sha256": "3c688cef3c8c6828255ff5722953d475f457e22086317ffff0a89515c96bb515"
+        },
+        {
+          "line": 904,
+          "source": "## Ordinary timeout prints available output while the child remains running",
+          "sha256": "f267af913ff37e5040ffe57b96142cd2a5ca3e835c2fc92cde98635e11468f94"
+        },
+        {
+          "line": 906,
+          "source": "The sleep stub holds the first timeout poll until workmux writes its log marker.",
+          "sha256": "c55bd7698cfcf1a95898bd807743e576a39607898f3ac259062ab013c9da912a"
+        },
+        {
+          "line": 907,
+          "source": "The workmux stub then waits for an explicit FIFO release, so the timeout cannot",
+          "sha256": "821c982808c976351e80c41be5648b4708aa03c8ccdc58144fe0d7140a017f8f"
+        },
+        {
+          "line": 912,
+          "source": ">   && cp \"${LAUNCH_SLEEP_STUB_BIN}\" \"${stub_dir}/sleep\" \\",
+          "sha256": "a99f628094436d518360a729ba39bbf1bdffd445f4e8f696e9d6cb6ed6f44e71"
+        },
+        {
+          "line": 913,
+          "source": ">   && chmod +x \"${stub_dir}/sleep\" \\",
+          "sha256": "0240b77ceb3f0e10cc62bef6d4983599f4e421566b3e6769d156e5fb2873f100"
+        },
+        {
+          "line": 914,
+          "source": ">   && [[ \"$(PATH=\"${stub_dir}:${PATH}\" command -v sleep)\" == \"${stub_dir}/sleep\" ]] \\",
+          "sha256": "b945f110fe054e13b408fe8138ac4403fe89b57a74de3cd90f9a94f06f3398c5"
+        },
+        {
+          "line": 917,
+          "source": ">     | env -u TMUX PATH=\"${stub_dir}:${PATH}\" TMPDIR=\"${launch_tmp}\" STUB_STATE=\"${state}\" STUB_GIT_WORKTREE_PORCELAIN_FILE=\"${state}/porcelain\" STUB_WORKMUX_RELEASE_FIFO=\"${state}/release\" WORKMUX_LAUNCH_TIMEOUT_SECONDS=1 bash \"${LAUNCH_WORKMUX_BIN}\" \"feature/await-timeout\" 2> \"${state}/stderr\" > \"${state}/stdout\"; } || exit_code=$?; cat \"${state}/stderr\"; printf 'exit: %s\\n' \"${exit_code}\" && # error-output-allow: testcase replays the retained launcher diagnostic",
+          "sha256": "2337e70c25c0f67a277cb8c234f37660fa41bd9e157ed678f3bf694bbd286cbf"
+        },
+        {
+          "line": 920,
+          "source": ">   && state_dir=\"$(compgen -G \"${launch_tmp}/workmux-launch-feature-await-timeout.*\")\" \\",
+          "sha256": "e7a8ae09d805d782bb1df24eb14f9ff45b5f1a3eda98d154fb2bdce6061a5b78"
+        },
+        {
+          "line": 923,
+          "source": ">   && grep -c '^branch: feature/await-timeout$' \"${state_dir}/log\" \\",
+          "sha256": "4cd8cb57eec0041f4a99b2683c62316711fd601dfe41343ba6a50ea3af98bc32"
+        },
+        {
+          "line": 929,
+          "source": "launch-workmux: workmux add for feature/await-timeout is still running after 1s; stopped waiting",
+          "sha256": "f3a1e85fdd05a5e0e35f986c67603b541e03fad30fa140ff2fc3c02bf899469f"
+        },
+        {
+          "line": 930,
+          "source": "launch-workmux: no worktree for feature/await-timeout exists yet",
+          "sha256": "7e871206877d058daee35c9600127ecd4df8ef44385b68bb6cb9519e0ec4a357"
+        },
+        {
+          "line": 931,
+          "source": "launch-workmux: its output continues in */workmux-launch-feature-await-timeout.*/log, and it writes its exit status to */workmux-launch-feature-await-timeout.*/status when it exits; remove */workmux-launch-feature-await-timeout.* after reading them (glob)",
+          "sha256": "3c688cef3c8c6828255ff5722953d475f457e22086317ffff0a89515c96bb515"
+        },
+        {
+          "line": 942,
+          "source": "When a worktree for the branch already exists, the timeout says so, which",
+          "sha256": "1e50db76cf3d408564fbf2bb2743c2c989a68cf2867f8917ba3ac4e7af76104d"
+        },
+        {
+          "line": 994,
+          "source": "## Await completion rejects a timeout that is not a positive integer",
+          "sha256": "1af58c289ecdb84bb8ba540e86f8dc326a3aebb80362a9cdb08f636cde643821"
+        },
+        {
+          "line": 997,
+          "source": "$ printf '%s\\n' 'Body' | env -u TMUX WORKMUX_LAUNCH_TIMEOUT_SECONDS=0 bash \"${LAUNCH_WORKMUX_BIN}\" \"feature/await-bad-timeout\" --await-completion 2>&1",
+          "sha256": "27239c1ac99950525000c98e7456ce42752d470aec7d80aac9359f2e9a7a323c"
+        },
+        {
+          "line": 1002,
+          "source": "## Ordinary launch rejects a timeout that is not a positive integer",
+          "sha256": "97fa7168bb32ea257bac122aadfa25e8c9a09f5a36b84d43932f822439839c86"
+        },
+        {
+          "line": 1005,
+          "source": "$ printf '%s\\n' 'Body' | env -u TMUX WORKMUX_LAUNCH_TIMEOUT_SECONDS=0 bash \"${LAUNCH_WORKMUX_BIN}\" \"feature/bad-timeout\" 2>&1",
+          "sha256": "5f775fbcb0d0a89e895902ddef7d91f3f7f2998afbac10dd20f71e3ee66afb46"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/manage-resource-claims.md",
+      "disposition": "recorded",
+      "assessment": "Retain state-driven liveness polling; production lock retries are already stubbed.",
+      "sites": [
+        {
+          "line": 56,
+          "source": ">     sleep 0.05",
+          "sha256": "273940d6ef1cd8c033a8fdf3111259b497eb55a8d7afce65432aa2304220183c"
+        },
+        {
+          "line": 90,
+          "source": ">   for tool in mkdir sleep rmdir rm; do",
+          "sha256": "a53072db4f819455370f195f64c4860ed60034316b3d0bb0ce854436911e9789"
+        },
+        {
+          "line": 1063,
+          "source": "Treating every `mkdir` failure as contention costs the full timeout and then reports a held lock, telling the user to remove a directory that does not exist. Contention is specifically the case where the lock directory is there.",
+          "sha256": "68fa8848ae2717b6125c78bde8ddf9a51cc05d6157334fd14cdcbd2b39a7b33e"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/push-notification.md",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 363,
+          "source": "arg: --connect-timeout",
+          "sha256": "07e3726f80bd858d1fe202d914b72391df51704d9fd05cdb20de8cd7b2e93eaf"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/report-board-bugs.md",
+      "disposition": "non-runtime",
+      "assessment": "Fixture data, expected output, documentation or executable installation names. Matching text does not itself impose a runtime window.",
+      "sites": [
+        {
+          "line": 179,
+          "source": "confirms `#13` on production with a wider reach and a deadline, and rewords",
+          "sha256": "d95f47c9f6b76b22dcfcbaf5412d12baeccf631051617e9ff4345067953ad635"
+        },
+        {
+          "line": 189,
+          "source": ">   | (.bugs[] | select(.number == 13) | .assessment) |= (.environment = \"production\" | .evidence = \"user-report\" | .reach = \"many\" | .deadline = \"2026-11-03\")",
+          "sha256": "71841c06474e7ecf65536c7ecbe1247a50eece6ab0cc040b43c372c4a0432c31"
+        },
+        {
+          "line": 199,
+          "source": "- Assessment changed: #13 Partner pages drop campaigns with null flags (environment unknown to production, evidence code-reading to user-report, reach unknown to many, deadline none to 2026-11-03)",
+          "sha256": "45f89b81dca496b54f9487dae7aae9b45be1c7c5ec0604a59ef603dd76d92795"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/review-completion.md",
+      "disposition": "recorded",
+      "assessment": "Retain 15 s/5 s external liveness bounds to detect nontermination during ledger contention.",
+      "sites": [
+        {
+          "line": 153,
+          "source": "$ timeout 15 \"${LEDGER_CONCURRENCY_BIN}\" \"${FIXTURE}\"",
+          "sha256": "4f36816b8c79fed534e9395a4b73d20d54742843d0cbff53cc6b7c37250da2b3"
+        },
+        {
+          "line": 161,
+          "source": "The deadline also detects a loop that treats every error as a collision.",
+          "sha256": "ec0da11321d52cd2dc5212f15fe4c200c1848480057cfcdb31f4720b51346f33"
+        },
+        {
+          "line": 168,
+          "source": ">     timeout 5 \"${SAVE_REVIEW_LEDGER_BIN}\" \"${FIXTURE}/temporary.md\" \"${FIXTURE}/absent\" run \\",
+          "sha256": "30e225a34b7037370e785b9257f471ba8ec929e65e305cdf02d5f20191a977fe"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/run-scrut-documents.md",
+      "disposition": "recorded",
+      "assessment": "Retain 10 s readiness loops, 0.5 s shutdown observations and 1 s reorder input. These fixed windows remain scheduler dependent.",
+      "sites": [
+        {
+          "line": 88,
+          "source": ">   && printf '# A\\n\\n%sscrut\\n$ sleep 1 && echo a\\na\\n%s\\n' \"${fence}\" \"${fence}\" > docs/a.md \\",
+          "sha256": "6de4517728f841f67606613bb417b1442758dcc07e477e35f73eb6efd46a9d5b"
+        },
+        {
+          "line": 383,
+          "source": ">   && for ((attempt = 0; attempt < 100; attempt++)); do [[ -s leader ]] && break; sleep 0.1; done \\",
+          "sha256": "a0449dcf2f97c8ef0083957ab96e121ca81df454fb59d57567a6240967149252"
+        },
+        {
+          "line": 425,
+          "source": ">   && for ((attempt = 0; attempt < 100; attempt++)); do [[ \"$(wc -l < pids || echo 0)\" -ge 2 ]] && break; sleep 0.1; done \\",
+          "sha256": "8f00f1bbe6ff6febbe593804b2537e695f9467e4d585bffba0d3d52031f725d9"
+        },
+        {
+          "line": 427,
+          "source": ">   && sleep 0.5 && still_running=0 && while read -r pid; do kill -0 \"${pid}\" && still_running=$((still_running + 1)); done < pids; echo \"still running: ${still_running}\" \\",
+          "sha256": "b05be45ad13fd4dd758ea8423fca503900e76eb1d3591a136b3588b9e5081db0"
+        },
+        {
+          "line": 442,
+          "source": ">   && for ((attempt = 0; attempt < 100; attempt++)); do [[ -s children ]] && break; sleep 0.1; done \\",
+          "sha256": "97ca9d2471cab864ed767ad969fef5b009801028b75500b856f4b63379d9c020"
+        },
+        {
+          "line": 444,
+          "source": ">   && cat output && sleep 0.5 && still_running=0 \\",
+          "sha256": "9cb1bae57bc6497a00317e9a4da2251ff94e0907799575e5306593190757eed4"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/unix-socket-fixture-perl-lifecycle.md",
+      "disposition": "recorded",
+      "assessment": "Retain bounded 0.01 s cleanup polling; real liveness condition.",
+      "sites": [
+        {
+          "line": 33,
+          "source": ">   && while [[ -e \"${socket_root}/server\" ]] && ((attempts > 0)); do sleep 0.01; attempts=$((attempts - 1)); done \\",
+          "sha256": "ceae8cb3004bdcc74b5cddba334b2412842b23d64f0b11c7d49bfcf6b55d469f"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/unix-socket-fixture-ruby-lifecycle.md",
+      "disposition": "recorded",
+      "assessment": "Retain bounded 0.01 s cleanup polling; real liveness condition.",
+      "sites": [
+        {
+          "line": 33,
+          "source": ">   && while [[ -e \"${socket_root}/server\" ]] && ((attempts > 0)); do sleep 0.01; attempts=$((attempts - 1)); done \\",
+          "sha256": "ceae8cb3004bdcc74b5cddba334b2412842b23d64f0b11c7d49bfcf6b55d469f"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/watch-changes.md",
+      "disposition": "recorded",
+      "assessment": "Retain 1 s blocking lifetime contract and 20 s elapsed-read contract with real read delays; first-read scheduling can exhaust lifetime. Other cadence tests are stubbed.",
+      "sites": [
+        {
+          "line": 6,
+          "source": "can fall through to real GitHub. The sleep fixture records the chosen cadence.",
+          "sha256": "46411fafdd459b5a6c352892e4bc79e432bb735dd626fb54f4ec1e9df9b82282"
+        },
+        {
+          "line": 16,
+          "source": ">   && ln -s \"${WATCH_CHANGES_STUB_BIN}\" \"${work}/bin/sleep\" \\",
+          "sha256": "897bcf2bef280e1c01096f401996aaae7f6482c9ba54a21f964d7233f3e1e556"
+        },
+        {
+          "line": 207,
+          "source": "## Blocking watch clamps sleep to its remaining lifetime",
+          "sha256": "b7b0ccd3af35997e8007a299837a81f802ad3302139be8051e119d03b1c7d016"
+        },
+        {
+          "line": 209,
+          "source": "Use real sleep here; the lifetime must end before a second PR read even when",
+          "sha256": "fdb5f032474aa61b6972c00bff9fb5493b6e326dd86fdb204b447dd2b244a9ea"
+        },
+        {
+          "line": 213,
+          "source": "$ mkdir \"${work}/real-sleep\" && ln -s \"${WATCH_CHANGES_STUB_BIN}\" \"${work}/real-sleep/gh\" \\",
+          "sha256": "a4bed01c740622af1126a5d0b2cdbfac95eb1a695d67ff7c2a33fd6f4d3e701b"
+        },
+        {
+          "line": 215,
+          "source": ">   && PATH=\"${work}/real-sleep:/usr/bin:/bin\" MERGE_FLOW_INTERVAL=10 MERGE_FLOW_LIFETIME=1 \"${MERGE_FLOW_BIN}\" watch-changes acme widgets 7 aaa \"${work}/baseline\" | jq -r '.event' \\",
+          "sha256": "2a6b26439ecdbaf2f0ae960804c103c63434832f1490fc1a15bf9248bb20d3cd"
+        },
+        {
+          "line": 637,
+          "source": "The fixture delays each PR read by one second. Its sleep log must show less",
+          "sha256": "5c144ce432e277ea6b786b8fe55a2cb793c9e9ed24e007455e014a44c5150f6c"
+        }
+      ]
+    }
+  ],
+  "test_tree_sha256": "ccdb6db33444060a110eb6d93d4d71292f8799144ee7f00f1baddf2db8856d5c",
+  "reader_search": "\\|\\s*(?:head\\s|grep[^\\n|]*\\s(?:-m|--max-count)|sed[^\\n|]*[0-9]q\\b)",
+  "reader_files": [
+    {
+      "path": "tests/data/git-review-chain-evals/comparison-evidence.json",
+      "sha256": "c4a53d653d680ce08aa82616a6e57f3df6283c462c3c511dd58013a24d1d6e8c",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 131,
+          "sha256": "e3c3e98c27d2eb38d1591a8a5f6c47a0e3899910fe4bd284d655af72c34341f0",
+          "assessment": "Data-only captured command or output; not executed by this fixture.",
+          "excerpt": "        \"command\": \"/bin/zsh -lc \\\"sed -n '136,171p' .agents/skills/monitor-pr-monitor/SKILL.md; cat .agents/skills/monitor-pr-monitor/references/checkpoint.md; rg --files .agents | head -60\\\"\","
+        },
+        {
+          "line": 1374,
+          "sha256": "b0889b09caa94d0cbd0ce0e9a251a97bce9b528dbd6aa4dbe13e9d84499b1cb7",
+          "assessment": "Data-only captured command or output; not executed by this fixture.",
+          "excerpt": "        \"command\": \"/bin/zsh -lc \\\"cat .agents/skills/use-git-use-git/SKILL.md; sed -n '140,235p' .agents/skills/lint-and-fix-lint-and-fix/SKILL.md; pwd; rg --files -g '\\\"'!'\\\"\\\\\\\\.agents/**' -g '\\\"'!node_modules/**'\\\"' -g '\\\"'!*lock*'\\\"' -"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/attention-log.md",
+      "sha256": "167abd555719764eb386b1789e426fcc1fc69638f2edbe3b89e41271bae5dc09",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 525,
+          "sha256": "41c276c1c62660ee9eb306ca3624c3d1bab47a0ce4cab76baa7942541ecdaa3f",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ ln -s \"${ATTENTION_LOG_BIN}\" \"${work}/linked-attention\" && /bin/bash \"${work}/linked-attention\" --help | head -1"
+        },
+        {
+          "line": 532,
+          "sha256": "c59314157aaca53ee64d0cccccd046a3cd0aee06431e2a44db2585a48dea03cd",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ (cd \"${REPO_ROOT}\" && CDPATH=. /bin/bash plugins/attention-log/scripts/attention-log --help) | head -1"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/bash-empty-lists.md",
+      "sha256": "34d874d841c2411324e0131e274d0a64fc09a5c372dfba9c91f9ca9bc352641c",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 49,
+          "sha256": "370a8813db85b6c65ced9f9411be777867b91cbbdc2058de1a4fef744facbcd1",
+          "assessment": "Subject output and exit status are captured before prefix selection. The subject is no longer a pipeline writer; truncation affects only the later printf.",
+          "source": "$ output=\"$(/bin/bash \"${REPORT_BOARD_BIN}\" 2>&1)\"; result=$?; test \"${result}\" -eq 2 && printf '%s\\n' \"${output}\" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status"
+        },
+        {
+          "line": 56,
+          "sha256": "1a500810ecb53cd0fd06ae74af0d1941d7aeae1fe765fa197e0e3b8772b7896f",
+          "assessment": "Subject output and exit status are captured before prefix selection. The subject is no longer a pipeline writer; truncation affects only the later printf.",
+          "source": "$ output=\"$(/bin/bash \"${REPORT_BOARD_BIN}\" validate 2>&1)\"; result=$?; test \"${result}\" -eq 2 && printf '%s\\n' \"${output}\" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status"
+        },
+        {
+          "line": 61,
+          "sha256": "e2943be5464a784ff41f0a419c8ce67ec8db19b2cedb94dd9460da0828408e22",
+          "assessment": "Subject output and exit status are captured before prefix selection. The subject is no longer a pipeline writer; truncation affects only the later printf.",
+          "source": "$ output=\"$(/bin/bash \"${REPORT_BOARD_BIN}\" render 2>&1)\"; result=$?; test \"${result}\" -eq 2 && printf '%s\\n' \"${output}\" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status"
+        },
+        {
+          "line": 66,
+          "sha256": "026afdad7b6b20af565cf0cfa3d92bffd83a36343c9d2fbe8c25804000e175d0",
+          "assessment": "Subject output and exit status are captured before prefix selection. The subject is no longer a pipeline writer; truncation affects only the later printf.",
+          "source": "$ output=\"$(/bin/bash \"${REPORT_BOARD_BIN}\" extract 2>&1)\"; result=$?; test \"${result}\" -eq 2 && printf '%s\\n' \"${output}\" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status"
+        },
+        {
+          "line": 71,
+          "sha256": "b7b8ed63f2c3a39fee4412b954578c3e3d97b5a0cde1f9adfeef50f38036fd67",
+          "assessment": "Subject output and exit status are captured before prefix selection. The subject is no longer a pipeline writer; truncation affects only the later printf.",
+          "source": "$ output=\"$(/bin/bash \"${REPORT_BOARD_BIN}\" compare 2>&1)\"; result=$?; test \"${result}\" -eq 2 && printf '%s\\n' \"${output}\" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status"
+        },
+        {
+          "line": 76,
+          "sha256": "74b4d1b3afa95f084714cc83fa3dc482afedb033498981e25386f39c3fb252dd",
+          "assessment": "Subject output and exit status are captured before prefix selection. The subject is no longer a pipeline writer; truncation affects only the later printf.",
+          "source": "$ output=\"$(/bin/bash \"${REPORT_BOARD_BIN}\" starter 2>&1)\"; result=$?; test \"${result}\" -eq 2 && printf '%s\\n' \"${output}\" | head -1 # error-output-allow: snapshot asserts the native Bash usage diagnostic and exit status"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/check-cross-references.md",
+      "sha256": "d496c41b8802c287404decc2ddba840add9f23cdfe6b99b1d6a7e1beface2b1e",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 22,
+          "sha256": "b78cefe8a4f1cc3983da51dcea882e46f418ba01bffcdcfe8bf02aeee66cf0cf",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' 'Use `/missing:other`.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Qualified names do not resolve through another plugin"
+        },
+        {
+          "line": 27,
+          "sha256": "e2d479cb5d42535bec5a2da840c26cbae467ca49513ee6cf9645b0222322ec47",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' 'Use the `other:missing` skill.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Qualified names do not resolve through another plugin"
+        },
+        {
+          "line": 58,
+          "sha256": "4d535f1dc27c802d20f0b9c4c261b7d32e89c0a142407e5e09c22e4d2efd28a8",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: A path into this repository that does not resolve is reported"
+        },
+        {
+          "line": 80,
+          "sha256": "fb3c4fef909732f22a5c1c2a2bab23eb4642b4b640418c6cdd8dad3df552ce8f",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' 'Invoke `/setup-ci` to configure CI.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: The regression from issue #356"
+        },
+        {
+          "line": 96,
+          "sha256": "cfd31ae17e68968022a562da13e1c93f33fea93f7a86606165a6cc39ac529174",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' 'See `./references/real.md` and `./references/gone.md`.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: A sibling reference resolves against the skill directory"
+        },
+        {
+          "line": 106,
+          "sha256": "5b1e3e95edd828da5567d04dee651f70075bf2eb841c18ce61492109cc800fb5",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' 'Load ${CLAUDE_PLUGIN_ROOT}/references/gone.md at startup.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: A plugin-root reference resolves against the owning plugin"
+        },
+        {
+          "line": 126,
+          "sha256": "e6b3da635472957a95f3f0134d9b89281b7342c4c30d532b93c29903fedcb1d9",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' '<!-- validate-plugins: repository-paths -->' 'Run `bin/real-tool`, then `bin/nonexistent-tool`.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: An ambiguous prefix is checked only where the file declares its frame"
+        },
+        {
+          "line": 149,
+          "sha256": "85b63a71f70826b77b52fdfd208d7265a0ee0148566771d266bbeb5915893206",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' '<!-- validate-plugins: ignore plugins/other/missing.md -->' 'Nothing references that path any more.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: An ignore entry exempts one reference"
+        },
+        {
+          "line": 156,
+          "sha256": "ed3f7cba0ff7abdc8ba820f0333a9f07f0a0c705c80286319938e05db6aa67a7",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' 'The `setup-linters` skill runs after the `demo` skill.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" plugins/demo/skills/demo/SKILL.md 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: A skill name beside the word \"skill\" must name a plugin"
+        },
+        {
+          "line": 324,
+          "sha256": "b71cf83c0ece909d1bd4e0a1deac219b36aa28a36ac229a7fdffa00d7ed20aea",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && printf '%s\\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && \"${CHECK_CROSS_REFERENCES_BIN}\" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: The default scan discovers the files itself"
+        },
+        {
+          "line": 332,
+          "sha256": "a1ac15ab63bbb5dddc2d92a0af6a36160a975092712f5717f87345bfc372217c",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ cd \"$(\"${CROSS_REFERENCE_FIXTURE_BIN}\")\" && mkdir -p plugins/demo/skills/demo/references/tools && printf '%s\\n' 'See `plugins/other/gone.md`.' > plugins/demo/skills/demo/references/tools/nested.md && \"${CHECK_CROSS_REFERENCES_BIN}\" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: The default scan discovers the files itself"
+        },
+        {
+          "line": 356,
+          "sha256": "288da74bca0c2aa31013619b57b74e6d114b462eb9672a1fc423c9f9e4f97381",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": ">   && \"${CHECK_CROSS_REFERENCES_BIN}\" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: The default scan discovers the files itself"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/codex-aspects.md",
+      "sha256": "5476f01f1baa468961a02c77c70a4b8d5b181c78334c9222cb4110a0a14d8d91",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 47,
+          "sha256": "b9a9c3f95079ee144b2ce486817d473bfbbcd5e27ab17064084be1bc4115780a",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${CODEX_ASPECTS_BIN}\" --help | head -7"
+        },
+        {
+          "line": 60,
+          "sha256": "a48ad6ff80852d2e407a0be9394263a648757ffab18f65f15cf020eff3f7c910",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${CODEX_ASPECTS_BIN}\" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: No command prints the usage and fails"
+        },
+        {
+          "line": 261,
+          "sha256": "8a97266eca44a710eee37ccd2f8e6270eed0917a87db39de81e4db6fee0aaa16",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${CODEX_ASPECTS_BIN}\" prompt --aspect simplify --scope \"${FIXTURE}/scope.json\" | head -2"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/copilot-rounds-report.md",
+      "sha256": "b85f5cce8b838de8f5a6b6442c6f434ffc6ed8f9eec835f81ed945a8bbcec5ab",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 27,
+          "sha256": "5c451d8a14732c4dc89640a697804088d17629c1e9b6151b79cb71a82156d29d",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${COPILOT_ROUNDS_REPORT_BIN}\" --help | head -n 1"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/dependabot-prs.md",
+      "sha256": "c4fe2dbd7bf9f986cb426e4a1e6fb7da90b438fc4e9e04b979ecff7086c571d7",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 10,
+          "sha256": "8557c24437e8409d89262a1bd8fcaf744e059cc63394c729502f1e9f45a2983a",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${DEPENDABOT_PRS_BIN}\" --help | head -n 1"
+        },
+        {
+          "line": 480,
+          "sha256": "4f4bb9cebd97e02138e51b4907445c2fe42b071d58e78d2df72aa2192e2495ec",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${DEPENDABOT_PRS_BIN}\" 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Argument errors"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/manage-resource-claims.md",
+      "sha256": "5269f1b9a2a4b5ea718b8b05cd64655e8ac17a02622286b61869a858087f43c8",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 159,
+          "sha256": "a41532b5fd2904985b97a856e24c5b3b1b663bc2b65fc552b7e487e721c0755c",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ link_dir=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && ln -s \"${MANAGE_RESOURCE_CLAIMS_BIN}\" \"${link_dir}/claims\" && bash \"${link_dir}/claims\" --help | head -1"
+        },
+        {
+          "line": 166,
+          "sha256": "b6c6fabb0d94984c1be5ff9426534c3d37d595eedd1e547d202bdb7e8b9fca48",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ (cd \"${REPO_ROOT}\" && CDPATH=. bash plugins/workmux/scripts/manage-resource-claims --help) | head -1"
+        },
+        {
+          "line": 615,
+          "sha256": "ee488d7c569bdbb1b94acd18b523e65ae6e73a3d34d0d13825d56360f161a81c",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ without_jq --help | head -1"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/merge-flow.md",
+      "sha256": "6e4bd8811193efd32a2536561483f440f55381eaaa26ab39f2b56b50ec30315e",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 34,
+          "sha256": "48f3566b73c3f516c6d2d481a5f6355501d2f4345fd3d9fb32b37d38272ef22c",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${MERGE_FLOW_BIN}\" --help | head -n 1"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/push-notification.md",
+      "sha256": "18b968d8e66126c7fd359b06fd8e01ae7b54b0b8a10c67d03714db4cf20a910b",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 40,
+          "sha256": "b46507579ea33be72fdcf3ff3e82632e2e8ffc6e6e6cfbf24a8995a63051739c",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ pn --help | head -n 1"
+        },
+        {
+          "line": 47,
+          "sha256": "6edc91b975fb2cd5d5537cb7f60a25800d1215bb4af3a6510e9e127cabdf6e8b",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ pn 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: No command is a usage error"
+        },
+        {
+          "line": 184,
+          "sha256": "2bff69d010760ae3e844812d92269b2251af1edc9e1c2f5ea24ef640f3762cd5",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "> pn PUSH_NOTIFICATION_CONFIG=\"${work}/other-config\" check | sed \"s|${work}|WORK|g\" | head -n 1"
+        },
+        {
+          "line": 440,
+          "sha256": "a7404eb1b9642521806fb6baab62ac74bad935fe6c4dd53e5d602397a01ae04f",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ pn NTFY_TOPIC=tk_sample NTFY_TOKEN=tk_sample_private STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='Bearer tk_sample_private for tk_sample' send --title Done 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: A rejected send exits 1, relays the server's answer, and removes the token file"
+        },
+        {
+          "line": 446,
+          "sha256": "7da9d0760fcca39d8a477aeae79a2dba5f1ff8aa31a649145db5457449974145",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ pn NTFY_TOPIC=agent-tk_x-feed NTFY_TOKEN=tk_x STUB_CURL_FAIL=1 STUB_CURL_FAIL_BODY='topic agent-tk_x-feed, Bearer tk_x' send --title Done 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: A rejected send exits 1, relays the server's answer, and removes the token file"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/record-traffic.md",
+      "sha256": "ac8d4cb57c3945ddba55b861453a2dc58fd68ddda3c294b9a89a62def4c50585",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 23,
+          "sha256": "cfcf4d282bb63d810f8ae21bf1b52656bfd7a40f9cb47aef2631c1b119d359ae",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${RECORD_TRAFFIC_BIN}\" --help | head -n 1"
+        },
+        {
+          "line": 156,
+          "sha256": "06216dbf712bd78ab9eff8da629750ff0d84ce6fc85a5d69f114beeaa8534f33",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${RECORD_TRAFFIC_BIN}\" --repo cboone/agent-harness-plugins 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Errors"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/report-board.md",
+      "sha256": "27f7c149344af5050d7f7fcf4d13ade4da971580006316b7f0340932af4da891",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 1615,
+          "sha256": "b810b274f544e51145e354f58e37f56a5aaac3e2cba7838efacbc70ab4e12b06",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${REPORT_BOARD_BIN}\" starter 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Starter usage error"
+        },
+        {
+          "line": 1641,
+          "sha256": "33d64c3efc00662cf349baa988432952bd38bde7621731ed17157e9c0bd0554a",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${REPORT_BOARD_BIN}\" render only-one.json 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Render usage error"
+        },
+        {
+          "line": 1648,
+          "sha256": "29ddd9fc18844fe7f43aa28453ef48070ce0c6e8871426d7c00f43352f003536",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${REPORT_BOARD_BIN}\" compare only-one.json 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Compare usage error"
+        },
+        {
+          "line": 1655,
+          "sha256": "4692993a94e528743e97f4a5e4fd84ba0a0d2a76b959fb45249054f76fd59cf2",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${REPORT_BOARD_BIN}\" --help | head -n 1"
+        },
+        {
+          "line": 1662,
+          "sha256": "6fa4066fbfae488ef53f870abf763a8de516d2402cd5ae58a3595dd7664384b8",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${REPORT_BOARD_BIN}\" 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Missing command"
+        },
+        {
+          "line": 1676,
+          "sha256": "c96e751dc42ab9fbab84ddf098fe445e0c98f7c554e59514946b805f969d5efe",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${REPORT_BOARD_BIN}\" frobnicate 2>&1 | head -n 1 # error-output-allow: testcase asserts retained diagnostics: Unknown command"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/review-corpus.md",
+      "sha256": "de85db108262d423ce352826d61580cb1bbdcc2b441b4c1d5cafb41d41696aa4",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 94,
+          "sha256": "3c207bba818daf85bc2bec46141f7ca3389c0228eebf6e33bd7260952b62a8dd",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ root=\"$(\"${REVIEW_CORPUS_FIXTURE_BIN}\")\" && target=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")/wt\" && \"${MATERIALIZE_CASE_BIN}\" --corpus \"${root}/corpus\" 001-demo-tally-sign \"${target}\" > /dev/null && git -C \"${root}/corpus\" show main:cases/001-demo-tally-sign/defects.yaml | head -1 && ! git -C \"${target}\" rev-parse --verify --quiet main > /dev/null && echo \"unreachable from the worktree\""
+        },
+        {
+          "line": 579,
+          "sha256": "b5ddc947304267e87a6b61b2d6f207cbe50b4d2f4cad9dba7396c7f772f15d7e",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${MATERIALIZE_CASE_BIN}\" --help | head -2"
+        },
+        {
+          "line": 585,
+          "sha256": "733f3efd21f79c7a643d77a284ff348a97709cf9744cbaddb93c4a62cb68b17e",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${VALIDATE_CORPUS_BIN}\" --help | head -1"
+        }
+      ]
+    },
+    {
+      "path": "tests/scrut/review-scope.md",
+      "sha256": "28d3ac2bdb5eb4f276142c667b08bce13445037f738b3fd139bfda6ae2b4d40e",
+      "disposition": "recorded",
+      "sites": [
+        {
+          "line": 122,
+          "sha256": "0f8d01e5a7dfbb7ac6604b39c33e1ef218e0cb77c435101d70e5e01c8ef3e018",
+          "assessment": "Retained early stream consumer outside bugs-gather. Scheduler-independent writer completion is unproved; potential SIGPIPE or discarded producer status is recorded, not claimed fixed.",
+          "source": "$ \"${REVIEW_SCOPE_BIN}\" --nope 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Unknown flag prints the usage text"
+        }
+      ]
+    }
+  ],
+  "fixed_prefix_readers": [
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "line": 104,
+      "source": "$ ln -s \"${BUGS_GATHER_BIN}\" \"${work}/linked-bugs\" && \"${work}/linked-bugs\" --help | sed -n '1,1p'",
+      "sha256": "421309de98140fb1f202f1bde8f2e132d696e1aba5fa709169aac3cd29c3b910",
+      "assessment": "Draining prefix reader; both short and long head forms are planted at this subject."
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "line": 111,
+      "source": "$ (cd \"${REPO_ROOT}\" && CDPATH=. bash plugins/publish-report-board/scripts/bugs-gather --help) | sed -n '1,1p'",
+      "sha256": "fa276172a25c2e471a48d3c35272634a4e5e5958ef8813a2d8e3ed9128f470ad",
+      "assessment": "Draining prefix reader; both short and long head forms are planted at this subject."
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "line": 929,
+      "source": "$ cache=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && mkdir -p \"${cache}/report-boards/bugs/github.com/acme/widgets\" && printf 'not json' > \"${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json\" && bugs XDG_CACHE_HOME=\"${cache}\" reuse \"${work}/config.json\" \"${work}/gather.json\" \"${work}/corrupt-reused.json\" 2>&1 | sed -n '1,2p' | sed -e \"s|${cache}|CACHE|g\" -e \"s|${work}|WORK|g\" # error-output-allow: testcase asserts retained diagnostics: A cache file that cannot be read is named, not taken for a first sync",
+      "sha256": "a2605bd65478652d595500d69cf840ac90778ed3a3f8809cb5660dd69650d752",
+      "assessment": "Draining prefix reader; both short and long head forms are planted at this subject."
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "line": 937,
+      "source": "$ bugs gather \"${work}/config.json\" \"${work}/listed.json\" 2>&1 > /dev/null | sed -n '1,3p' # error-output-allow: testcase asserts retained diagnostics: Bugs ZenHub does not track are listed, and the gather goes on",
+      "sha256": "180d45eb428a94c29bea57baa2bbf004b7767fad4d69419016326aeadb071b21",
+      "assessment": "Draining prefix reader; both short and long head forms are planted at this subject."
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "line": 949,
+      "source": "$ empty=\"$(mktemp -d \"${TMPDIR:-/tmp}/scrut.XXXXXX\")\" && cp \"${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json\" \"${empty}/\" && bugs STUB_CURL_DIR=\"${empty}\" gather \"${work}/config.json\" \"${work}/no-state.json\" 2>&1 | sed -n '1,2p'; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather",
+      "sha256": "18d6f3204419ccd1a8761e2cfce5df35a1e50c9e0d46d4b1207c7877cacfb705",
+      "assessment": "Draining prefix reader; both short and long head forms are planted at this subject."
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "line": 970,
+      "source": "$ bugs STUB_CURL_FAIL=1 gather \"${work}/config.json\" \"${work}/zenhub-down.json\" 2>&1 | sed -n '1,2p'; echo \"exit ${PIPESTATUS[0]}\" # error-output-allow: testcase asserts retained diagnostics: A failed ZenHub request stops the gather",
+      "sha256": "27461228fa79e5a853f6119de01164601b1368ec3332989ce8615cef18bf757d",
+      "assessment": "Draining prefix reader; both short and long head forms are planted at this subject."
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "line": 1079,
+      "source": "$ bugs score \"${work}/config.json\" 2>&1 | sed -n '1,1p' # error-output-allow: testcase asserts retained diagnostics: Usage errors",
+      "sha256": "84a69c65e9ed5668816d15c0ad05338f54a4067959365bfad496e06b33c61958",
+      "assessment": "Draining prefix reader; both short and long head forms are planted at this subject."
+    },
+    {
+      "path": "tests/scrut/bugs-gather.md",
+      "line": 1084,
+      "source": "$ bugs frobnicate 2>&1 | sed -n '1,1p' # error-output-allow: testcase asserts retained diagnostics: Usage errors",
+      "sha256": "7f117950ea9f7567a46e7abbc684663fbed2e1cad802191bd4e9ac604c122eea",
+      "assessment": "Draining prefix reader; both short and long head forms are planted at this subject."
+    }
+  ]
+}

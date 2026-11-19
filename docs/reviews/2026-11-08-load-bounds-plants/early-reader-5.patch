@@ -1,0 +1,11 @@
+--- a/tests/scrut/bugs-gather.md
++++ b/tests/scrut/bugs-gather.md
+@@ -946,7 +946,7 @@
+ board ranked without any ZenHub state would mislead.
+ 
+ ```scrut
+-$ empty="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json" "${empty}/" && bugs STUB_CURL_DIR="${empty}" gather "${work}/config.json" "${work}/no-state.json" 2>&1 | sed -n '1,2p'; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather
++$ empty="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json" "${empty}/" && bugs STUB_CURL_DIR="${empty}" gather "${work}/config.json" "${work}/no-state.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather
+ bugs-gather: ZenHub returned no state for any of the 20 open bugs, so the workspace or the repository is wrong:
+   - #10: Issue not found
+ exit 1

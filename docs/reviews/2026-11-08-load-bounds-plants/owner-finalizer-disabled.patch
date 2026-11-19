@@ -1,0 +1,11 @@
+--- a/tests/fixtures/notification-clock.bash
++++ b/tests/fixtures/notification-clock.bash
+@@ -166,7 +166,7 @@
+   NOTIFY_TEST_PENDING_SIGNAL=0
+   NOTIFY_TEST_STOP_SIGNAL=none
+   NOTIFY_TEST_OBSERVED_EXIT=""
+-  trap 'notification_owner_finish 2>&7' EXIT # error-output-allow: owned descriptor retains probe errors without moving backend ownership into a capture subshell
++  trap - EXIT # error-output-allow: owned descriptor retains probe errors without moving backend ownership into a capture subshell
+   trap 'notification_owner_interrupt 129' HUP
+   trap 'notification_owner_interrupt 143' TERM
+   case "${NOTIFY_TEST_INTERRUPT_BEFORE_REGISTER:-}" in

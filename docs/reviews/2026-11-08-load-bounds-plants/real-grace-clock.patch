@@ -1,0 +1,10 @@
+--- a/tests/fixtures/notification-clock.bash
++++ b/tests/fixtures/notification-clock.bash
+@@ -60,6 +60,7 @@
+ 
+ # Tick only after backend readiness. Other sleeps advance without real delay.
+ function sleep() {
++  "${NOTIFY_TEST_REAL_SLEEP}" "$@"; return
+   [[ "${1}" == 1 && -n "${pid:-}" ]] || return 0
+   if [[ "${NOTIFY_TEST_FAIL_READY:-}" == 1 ]]; then
+     echo 'notification-clock: injected readiness failure' >&7

@@ -101,14 +101,14 @@ $ function bugs() {
 ## Invocation through a symlink loads dependencies beside the real script
 
 ```scrut
-$ ln -s "${BUGS_GATHER_BIN}" "${work}/linked-bugs" && "${work}/linked-bugs" --help | head -1
+$ ln -s "${BUGS_GATHER_BIN}" "${work}/linked-bugs" && "${work}/linked-bugs" --help | sed -n '1,1p'
 Usage:
 ```
 
 ## An exported CDPATH cannot pollute dependency discovery
 
 ```scrut
-$ (cd "${REPO_ROOT}" && CDPATH=. bash plugins/publish-report-board/scripts/bugs-gather --help) | head -1
+$ (cd "${REPO_ROOT}" && CDPATH=. bash plugins/publish-report-board/scripts/bugs-gather --help) | sed -n '1,1p'
 Usage:
 ```
 
@@ -926,7 +926,7 @@ second: #5 verify=true, #6 verify=false
 ## A cache file that cannot be read is named, not taken for a first sync
 
 ```scrut
-$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets" && printf 'not json' > "${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json" && bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/corrupt-reused.json" 2>&1 | head -2 | sed -e "s|${cache}|CACHE|g" -e "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A cache file that cannot be read is named, not taken for a first sync
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets" && printf 'not json' > "${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json" && bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/corrupt-reused.json" 2>&1 | sed -n '1,2p' | sed -e "s|${cache}|CACHE|g" -e "s|${work}|WORK|g" # error-output-allow: testcase asserts retained diagnostics: A cache file that cannot be read is named, not taken for a first sync
 bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/assessments.json: it is unreadable or was written by another version of bugs-gather
 bugs-gather: reused 0 cached assessments in WORK/corrupt-reused.json
 ```
@@ -934,7 +934,7 @@ bugs-gather: reused 0 cached assessments in WORK/corrupt-reused.json
 ## Bugs ZenHub does not track are listed, and the gather goes on
 
 ```scrut
-$ bugs gather "${work}/config.json" "${work}/listed.json" 2>&1 > /dev/null | head -3 # error-output-allow: testcase asserts retained diagnostics: Bugs ZenHub does not track are listed, and the gather goes on
+$ bugs gather "${work}/config.json" "${work}/listed.json" 2>&1 > /dev/null | sed -n '1,3p' # error-output-allow: testcase asserts retained diagnostics: Bugs ZenHub does not track are listed, and the gather goes on
 bugs-gather: these bugs have no ZenHub state, so they carry no pipeline, sprint, or container level:
   - #13: Issue not found
   - #14: Issue not found
@@ -946,7 +946,7 @@ A wrong workspace or repository ID answers every lookup with an error, and a
 board ranked without any ZenHub state would mislead.
 
 ```scrut
-$ empty="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json" "${empty}/" && bugs STUB_CURL_DIR="${empty}" gather "${work}/config.json" "${work}/no-state.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather
+$ empty="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json" "${empty}/" && bugs STUB_CURL_DIR="${empty}" gather "${work}/config.json" "${work}/no-state.json" 2>&1 | sed -n '1,2p'; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: ZenHub returning no state for any bug stops the gather
 bugs-gather: ZenHub returned no state for any of the 20 open bugs, so the workspace or the repository is wrong:
   - #10: Issue not found
 exit 1
@@ -967,7 +967,7 @@ bugs-gather: ZenHub returned errors:
 ## A failed ZenHub request stops the gather
 
 ```scrut
-$ bugs STUB_CURL_FAIL=1 gather "${work}/config.json" "${work}/zenhub-down.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: A failed ZenHub request stops the gather
+$ bugs STUB_CURL_FAIL=1 gather "${work}/config.json" "${work}/zenhub-down.json" 2>&1 | sed -n '1,2p'; echo "exit ${PIPESTATUS[0]}" # error-output-allow: testcase asserts retained diagnostics: A failed ZenHub request stops the gather
 bugs-gather: the ZenHub request failed:
   curl: (22) The requested URL returned error: 500
 exit 1
@@ -1076,12 +1076,12 @@ bugs-gather: GitHub cut short the lists of #26 (linked pull requests and cross-r
 ## Usage errors
 
 ```scrut
-$ bugs score "${work}/config.json" 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Usage errors
+$ bugs score "${work}/config.json" 2>&1 | sed -n '1,1p' # error-output-allow: testcase asserts retained diagnostics: Usage errors
 bugs-gather: score takes a repository, a gather file, an assessments file, and an output path
 ```
 
 ```scrut
-$ bugs frobnicate 2>&1 | head -1 # error-output-allow: testcase asserts retained diagnostics: Usage errors
+$ bugs frobnicate 2>&1 | sed -n '1,1p' # error-output-allow: testcase asserts retained diagnostics: Usage errors
 bugs-gather: unknown command: frobnicate
 ```
 
