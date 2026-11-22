@@ -1,0 +1,62 @@
+[
+  {
+    "path": "/cboone/agent-harness-plugins",
+    "title": "Overview",
+    "count": 7,
+    "uniques": 5
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/tree/main/plugins/write-zsh-scripts/skills/write-zsh-scripts",
+    "title": "/tree/main/plugins/write-zsh-scripts/skills/write-zsh-scripts",
+    "count": 6,
+    "uniques": 1
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/blob/main/README.md",
+    "title": "/blob/main/README.md",
+    "count": 4,
+    "uniques": 2
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/tree/main/plugins",
+    "title": "/tree/main/plugins",
+    "count": 4,
+    "uniques": 2
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/tree/main/plugins/write-zsh-scripts/skills/write-zsh-scripts/references",
+    "title": "/tree/main/plugins/write-zsh-scripts/skills/write-zsh-scripts/references",
+    "count": 4,
+    "uniques": 1
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/tree/main",
+    "title": "/tree/main",
+    "count": 3,
+    "uniques": 3
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/tree/main/plugins/write-zsh-scripts/skills/write-zsh-scripts/references/lint",
+    "title": "/tree/main/plugins/write-zsh-scripts/skills/write-zsh-scripts/references/lint",
+    "count": 3,
+    "uniques": 1
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/blob/main/plugins/block-rm-rf/README.md",
+    "title": "/blob/main/plugins/block-rm-rf/README.md",
+    "count": 2,
+    "uniques": 2
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/blob/main/plugins/handle-secrets/skills/handle-secrets/references/anti-patterns.md",
+    "title": "/blob/main/plugins/handle-secrets/skills/handle-secrets/references/anti-patterns.md",
+    "count": 2,
+    "uniques": 2
+  },
+  {
+    "path": "/cboone/agent-harness-plugins/blob/main/plugins/scaffold-go-library/README.md",
+    "title": "/blob/main/plugins/scaffold-go-library/README.md",
+    "count": 2,
+    "uniques": 2
+  }
+]
