@@ -1,6 +1,7 @@
 # Normalize only durable terminal failures and session identity.
 def text: if type == "string" then gsub("\u0000"; "") else "" end;
-if .type == "session_meta" then
+def shell_text: text | sub("\n+$"; "");
+(if .type == "session_meta" then
   {action: "meta", id: (((.payload.id | text | select(length > 0)) // .payload.session_id) | text),
     subagent: (.payload.source | type == "object" and has("subagent"))}
 elif .type == "event_msg" and .payload.type == "task_complete" then
@@ -13,4 +14,10 @@ elif .type == "event_msg" and .payload.type == "task_complete" then
       kind: (if $refusal then "refusal" else "error" end),
       message: (if $refusal then "Turn ended in a safeguard refusal."
         else ((.error.message | text) | if length > 0 then . else "Turn ended in an API error." end) end)}
-else empty end
+else empty end)
+| .id = ((.id // "") | shell_text)
+| .turn_id = ((.turn_id // "") | shell_text)
+| .message = ((.message // "") | shell_text)
+| [.action, .id, ((.subagent // false) | tostring), .turn_id,
+   (.kind // ""), .message, ([$identity, .turn_id] | tojson)]
+| map("x" + .) | @tsv

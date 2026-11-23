@@ -1,0 +1,446 @@
+#!/usr/bin/env bash
+# Measure only watcher descendants, using sample data and committed tool wrappers.
+set -euo pipefail
+# shellcheck source=bin/lib/git-environment.bash
+source "${REPO_ROOT:?REPO_ROOT is required}/bin/lib/git-environment.bash"
+# shellcheck source=bin/lib/capture-child.bash
+source "${REPO_ROOT}/bin/lib/capture-child.bash"
+owner_pid=""
+watcher_pid=""
+CASE_DIR=""
+TAIL_PID=""
+SUPERVISOR_PID=""
+TIMER_PID=""
+FINAL_PID=""
+READER_DIR=""
+
+function diagnostics() {
+  local file="${CASE_DIR}/diagnostics"
+  [[ -f "${file}" && ! -L "${file}" ]] || return 1
+  "${ROLLOUT_REAL_JQ}" -Rse 'type == "string"' "${file}" > /dev/null || return 1
+  cat "${file}" >&2
+}
+
+function cleanup() {
+  local status=$? pid
+  if ((status != 0)); then diagnostics || true; fi
+  for pid in "${watcher_pid}" "${owner_pid}" "${SUPERVISOR_PID}" "${TAIL_PID}" "${TIMER_PID}" "${FINAL_PID}"; do
+    [[ -n "${pid}" ]] || continue
+    kill "${pid}" 2> /dev/null || true # error-output-allow: owned measurement process may have stopped
+    wait "${pid}" 2> /dev/null || true # error-output-allow: direct children are reaped; recorded descendants may not be children of this shell
+  done
+  if [[ -n "${CASE_DIR}" ]]; then rm -r "${CASE_DIR}"; fi
+}
+
+function wait_watcher() {
+  local target="${1}" status=0 file="${CASE_DIR}/diagnostics"
+  [[ -f "${file}" && ! -L "${file}" ]] || return 2
+  "${ROLLOUT_REAL_JQ}" -Rse 'type == "string"' "${file}" > /dev/null || return 2
+  capture_child "${target}" --wait-log "${file}" "${watcher_pid}" || status=$?
+  watcher_pid=""
+  return "${status}"
+}
+
+function pid_record() {
+  local file="${1}" value
+  [[ -f "${file}" && ! -L "${file}" ]] || return 1
+  value="$(cat "${file}")"
+  [[ "${value}" =~ ^[1-9][0-9]*$ ]] || return 1
+  case "${2:-TAIL_PID}" in
+    TAIL_PID) TAIL_PID="${value}" ;;
+    FINAL_PID) FINAL_PID="${value}" ;;
+    *) return 2 ;;
+  esac
+}
+
+function timer_record() {
+  local file="${1}" timer supervisor
+  [[ -f "${file}" && ! -L "${file}" ]] || return 1
+  IFS=' ' read -r timer supervisor < "${file}" || return 1
+  [[ "${timer}" =~ ^[1-9][0-9]*$ && "${supervisor}" =~ ^[1-9][0-9]*$ ]] || return 1
+  TIMER_PID="${timer}"
+  SUPERVISOR_PID="${supervisor}"
+}
+
+function directory_record() {
+  local file="${1}" value suffix
+  [[ -f "${file}" && ! -L "${file}" ]] || return 1
+  value="$(cat "${file}")"
+  [[ "${value}" == "${CASE_DIR}/runtime/notify-reader."* && -d "${value}" && ! -L "${value}" ]] || return 1
+  suffix="${value##*/notify-reader.}"
+  [[ "${suffix}" != *[![:alnum:]]* && ${#suffix} == 6 ]] || return 1
+  READER_DIR="${value}"
+}
+
+function drain_record() {
+  local file="${1}" value
+  [[ -f "${file}" && ! -L "${file}" ]] || return 1
+  value="$(cat "${file}")"
+  [[ "${value}" == drain-ready ]]
+}
+
+function alert_count() {
+  [[ -f "${ROLLOUT_ALERTS}" && ! -L "${ROLLOUT_ALERTS}" ]] || return 1
+  "${ROLLOUT_REAL_JQ}" -se 'all(.[]; type == "array" and all(.[]; type == "string") and
+    (index("--message") != null and (.[index("--message")+1] | type == "string")))' "${ROLLOUT_ALERTS}" > /dev/null || return 1
+  "${ROLLOUT_REAL_JQ}" -s 'length' "${ROLLOUT_ALERTS}"
+}
+
+function await_alerts() {
+  local expected="${1}" attempt observed
+  for ((attempt = 0; attempt < 300; attempt++)); do
+    if ! observed="$(alert_count)"; then
+      echo 'fixture-invalid alert artifact' >&2
+      return 2
+    fi
+    if [[ "${observed}" == "${expected}" ]]; then return; fi
+    /bin/sleep 0.02
+  done
+  echo 'ASSERT final-drain-delivery' >&2
+  return 1
+}
+
+function final_messages() {
+  [[ "$(alert_count)" == 2 ]] || return 1
+  if ! "${ROLLOUT_REAL_JQ}" -se 'map(.[index("--message")+1]) == ["A multibyte prefix é", "Final drain error"]' "${ROLLOUT_ALERTS}" > /dev/null; then
+    echo 'ASSERT final-drain-delivery' >&2
+    return 1
+  fi
+}
+
+function supervisor_failure() {
+  local attempt status=0 text file="${CASE_DIR}/diagnostics"
+  for ((attempt = 0; attempt < 300; attempt++)); do
+    if ! kill -0 "${watcher_pid}" 2> /dev/null; then break; fi # error-output-allow: wait for the owned watcher's error exit
+    /bin/sleep 0.02
+  done
+  if ((attempt == 300)); then
+    echo 'ASSERT supervisor-exit-observed' >&2
+    return 1
+  fi
+  wait_watcher text || status=$?
+  [[ -f "${file}" && ! -L "${file}" ]] || return 1
+  if [[ "${status}" != 1 || "${text}" != *'fixture timer failed'* ||
+    "${text}" != *'owner supervisor exited with status 1 (owner '* || "${text}" != *'rollout '* ]]; then
+    echo 'ASSERT supervisor-error-diagnostic' >&2
+    return 1
+  fi
+  echo 'timer failure propagated; watcher stopped with owner and rollout context'
+}
+
+function cancel_watcher() {
+  local status=0
+  await_actors
+  kill "${watcher_pid}"
+  wait_watcher - || status=$?
+  [[ "${status}" == 143 ]] || return 1
+  assert_actor_cleanup cancellation
+  kill -0 "${owner_pid}"
+  echo 'watcher canceled; descendants stopped; reader directory removed; owner preserved'
+}
+
+function await_actors() {
+  local attempt pid
+  for ((attempt = 0; attempt < 300; attempt++)); do
+    if pid_record "${CASE_DIR}/tail-pid" && timer_record "${CASE_DIR}/timer" && directory_record "${CASE_DIR}/reader-dir"; then break; fi
+    /bin/sleep 0.02
+  done
+  ((attempt < 300)) || return 1
+  for pid in "${TAIL_PID}" "${SUPERVISOR_PID}" "${TIMER_PID}"; do kill -0 "${pid}"; done
+}
+
+function assert_actor_cleanup() {
+  local label="${1}" pid
+  for pid in "${TAIL_PID}" "${SUPERVISOR_PID}" "${TIMER_PID}" "${FINAL_PID}"; do
+    [[ -n "${pid}" ]] || continue
+    if kill -0 "${pid}" 2> /dev/null; then # error-output-allow: explicit absence check for recorded owned descendants
+      echo "ASSERT ${label}-stops-descendants" >&2
+      return 1
+    fi
+  done
+  if [[ -e "${READER_DIR}" ]]; then
+    echo "ASSERT ${label}-removes-directory" >&2
+    return 1
+  fi
+}
+
+function reader_failure() {
+  local mode="${1}" attempt status=0 text
+  await_actors
+  if [[ "${mode}" == follower-error ]]; then
+    : > "${CASE_DIR}/follow-release"
+  else
+    kill "${owner_pid}"
+    wait "${owner_pid}" 2> /dev/null || true # error-output-allow: final-reader failure follows intentional owned supervisor termination
+    owner_pid=""
+    for ((attempt = 0; attempt < 300; attempt++)); do
+      if drain_record "${CASE_DIR}/drain-ready" && pid_record "${CASE_DIR}/final-pid" FINAL_PID; then break; fi
+      /bin/sleep 0.02
+    done
+    if ((attempt == 300)); then
+      echo 'ASSERT final-reader-fault-boundary' >&2
+      return 1
+    fi
+    kill -0 "${FINAL_PID}"
+    : > "${CASE_DIR}/drain-release"
+  fi
+  for ((attempt = 0; attempt < 300; attempt++)); do
+    if ! kill -0 "${watcher_pid}" 2> /dev/null; then break; fi # error-output-allow: bounded observation of the owned reader-error exit
+    /bin/sleep 0.02
+  done
+  if ((attempt == 300)); then
+    echo "ASSERT ${mode}-propagated" >&2
+    return 1
+  fi
+  wait_watcher text || status=$?
+  if [[ "${status}" != 1 || "${text}" != *'watch-codex-failures:'* ]]; then
+    echo "ASSERT ${mode}-propagated" >&2
+    return 1
+  fi
+  if [[ "${mode}" == follower-error ]]; then
+    [[ "${text}" == *'fixture follower failed'* ]] || return 1
+    kill -0 "${owner_pid}"
+  else
+    [[ "${text}" == *'fixture final reader failed'* ]] || return 1
+  fi
+  assert_actor_cleanup reader-failure
+  echo "${mode} propagated; diagnostics retained; descendants and reader directory removed"
+}
+
+function escaped_message() {
+  local root="${1}"
+  capture_child - --exec-log "${CASE_DIR}/diagnostics" -- /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" \
+    --rollout "${root}/tests/data/codex-failure-rollouts/tsv-message.jsonl" --once --cwd "${CASE_DIR}" \
+    --session-name MONITOR --tmux-session atlas --tmux-window 'w sample' --tier untiered &
+  watcher_pid=$!
+  wait_watcher -
+  await_alerts 1
+  [[ "$(alert_count)" == 1 ]] || return 2
+  if ! "${ROLLOUT_REAL_JQ}" -se 'map(.[index("--message")+1]) == ["Backslash \\n; tab\tcarriage\rline\nnext"]' "${ROLLOUT_ALERTS}" > /dev/null; then
+    echo 'ASSERT tsv-message-roundtrip' >&2
+    return 1
+  fi
+  echo 'TSV message preserves literal backslashes and internal whitespace as exact JSON'
+}
+
+function has_alert_message() {
+  local expected="${1}" status=0
+  [[ -f "${ROLLOUT_ALERTS}" && ! -L "${ROLLOUT_ALERTS}" ]] || return 2
+  alert_count > /dev/null || return 2
+  # shellcheck disable=SC2016 # jq reads the argument variable.
+  "${ROLLOUT_REAL_JQ}" -se --arg expected "${expected}" 'any(.[]; .[index("--message")+1] == $expected)' "${ROLLOUT_ALERTS}" > /dev/null || status=$?
+  case "${status}" in 0 | 1) return "${status}" ;; *) return 2 ;; esac
+}
+
+function startup_messages() {
+  local expected="${1}" assertion="${2}"
+  [[ -f "${ROLLOUT_ALERTS}" && ! -L "${ROLLOUT_ALERTS}" ]] || return 2
+  alert_count > /dev/null || return 2
+  # shellcheck disable=SC2016 # jq reads the argument variable.
+  if ! "${ROLLOUT_REAL_JQ}" -se --arg expected "${expected}" 'map(.[index("--message")+1]) == [$expected]' "${ROLLOUT_ALERTS}" > /dev/null; then
+    echo "ASSERT ${assertion}" >&2
+    return 1
+  fi
+}
+
+function startup_boundary() {
+  local root="${1}" mode="${2}" expected assertion attempt status=0 found=false
+  if [[ "${mode}" == follow ]]; then
+    expected='Final drain error'
+    assertion=startup-snapshot-skips-history
+    cat "${root}/tests/data/codex-failure-rollouts/final-drain-error.jsonl" >> "${CASE_DIR}/rollout.jsonl"
+  else
+    expected='Partial startup error'
+    assertion=startup-partial-record-retained
+    cat "${root}/tests/data/codex-failure-rollouts/partial-startup-suffix.txt" >> "${CASE_DIR}/rollout.jsonl"
+  fi
+  for ((attempt = 0; attempt < 300; attempt++)); do
+    if has_alert_message "${expected}"; then
+      found=true
+      break
+    else
+      status=$?
+      ((status == 1)) || return 2
+    fi
+    if ! kill -0 "${watcher_pid}" 2> /dev/null; then break; fi # error-output-allow: detect the owned watcher's early boundary failure
+    /bin/sleep 0.02
+  done
+  if [[ "${found}" != true ]]; then
+    echo "ASSERT ${assertion}" >&2
+    return 1
+  fi
+  kill "${owner_pid}"
+  wait "${owner_pid}" 2> /dev/null || true # error-output-allow: expected owned supervisor termination
+  owner_pid=""
+  status=0
+  wait_watcher - || status=$?
+  if ((status != 0)); then
+    echo "ASSERT ${assertion}" >&2
+    return 1
+  fi
+  startup_messages "${expected}" "${assertion}"
+  if [[ "${mode}" == follow ]]; then
+    echo 'startup history is skipped before appended delivery'
+  else
+    echo 'partial startup record is retained until newline'
+  fi
+}
+
+function final_drain() {
+  local root="${1}" attempt status=0
+  cat "${root}/tests/data/codex-failure-rollouts/final-drain-prefix.jsonl" >> "${CASE_DIR}/rollout.jsonl"
+  await_alerts 1
+  kill "${owner_pid}"
+  wait "${owner_pid}" 2> /dev/null || true # error-output-allow: expected owned supervisor termination
+  owner_pid=""
+  for ((attempt = 0; attempt < 300; attempt++)); do
+    if drain_record "${CASE_DIR}/drain-ready"; then break; fi
+    /bin/sleep 0.02
+  done
+  if ((attempt == 300)); then
+    echo 'ASSERT final-drain-boundary' >&2
+    return 1
+  fi
+  cat "${root}/tests/data/codex-failure-rollouts/final-drain-error.jsonl" >> "${CASE_DIR}/rollout.jsonl"
+  : > "${CASE_DIR}/drain-release"
+  wait_watcher - || status=$?
+  if ((status != 0)); then
+    echo 'ASSERT final-drain-delivery' >&2
+    return 1
+  fi
+  await_alerts 2
+  final_messages
+  echo 'final drain delivered exactly the prefix and the post-follower failure'
+}
+
+# Only this helper reads launch artifacts; empty logs are valid idle samples.
+function count_launches() {
+  local tool="${1}"
+  [[ -f "${ROLLOUT_LAUNCHES:?}" && ! -L "${ROLLOUT_LAUNCHES}" ]] || return 1
+  awk -v tool="${tool}" '
+    $0 != "jq" && $0 != "sleep" && $0 != "tail" {invalid=1}
+    $0 == tool {n++}
+    END {if (invalid) exit 1; print n+0}
+  ' "${ROLLOUT_LAUNCHES}"
+}
+
+function main() {
+  local root="${REPO_ROOT:?}" mode="${1:-check}" fixture attempt
+  local startup_jq idle_jq idle_sleep idle_tail
+  fixture="${root}/tests/fixtures/notify-rollout"
+  CASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/notify-launches.XXXXXX")"
+  trap cleanup EXIT
+  trap 'exit 143' TERM
+  trap 'exit 130' INT
+  case "${mode}" in check | measure | relative | supervisor-error | cancel | final-drain | follower-error | final-reader-error | escaped-message | follow | partial-startup) ;; *) return 2 ;; esac
+  export ROLLOUT_REAL_JQ
+  ROLLOUT_REAL_JQ="$(command -v jq)"
+  export PATH="${fixture}:${PATH}"
+  local tool
+  for tool in jq sleep tail mktemp alerter tmux; do
+    [[ "$(command -v "${tool}")" == "${fixture}/${tool}" ]]
+  done
+  export ROLLOUT_READY="${CASE_DIR}/ready" ROLLOUT_LAUNCHES="${CASE_DIR}/launches"
+  export XDG_CACHE_HOME="${CASE_DIR}/cache" XDG_CONFIG_HOME="${CASE_DIR}/config"
+  export ROLLOUT_ALERTS="${CASE_DIR}/alerts" ROLLOUT_EXECUTIONS="${CASE_DIR}/executions" ROLLOUT_LOOKUPS="${CASE_DIR}/lookups"
+  unset NOTIFY_TIER NOTIFY_SOUND_SET CLAUDE_PROJECT_DIR CLAUDE_CODE_SESSION_ID
+  unset ROLLOUT_ALERTER_STATUS ROLLOUT_FAIL_TIMER ROLLOUT_TIMER_RECORD ROLLOUT_FOLLOW_PID
+  unset ROLLOUT_READER_DIR_RECORD ROLLOUT_DRAIN_READY ROLLOUT_DRAIN_RELEASE
+  unset ROLLOUT_HOLD_TIMER ROLLOUT_FAIL_FOLLOWER ROLLOUT_FOLLOW_RELEASE ROLLOUT_FAIL_FINAL ROLLOUT_FINAL_PID
+  mkdir "${CASE_DIR}/runtime"
+  : > "${CASE_DIR}/diagnostics"
+  : > "${ROLLOUT_ALERTS}"
+  local rollout_fixture="${root}/tests/data/codex-failure-rollouts/long.jsonl"
+  if [[ "${mode}" == partial-startup ]]; then rollout_fixture="${root}/tests/data/codex-failure-rollouts/partial-startup-prefix.txt"; fi
+  cp "${rollout_fixture}" "${CASE_DIR}/rollout.jsonl"
+  if [[ "${mode}" == relative ]]; then
+    mkdir "${CASE_DIR}/destination"
+    head -n 1 "${CASE_DIR}/rollout.jsonl" > "${CASE_DIR}/metadata.jsonl"
+    if (cd "${CASE_DIR}" && /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout metadata.jsonl --once --cwd destination); then
+      :
+    else
+      echo 'ASSERT relative-rollout-once' >&2
+      return 1
+    fi
+  fi
+  : > "${ROLLOUT_LAUNCHES}"
+  if [[ "${mode}" == escaped-message ]]; then
+    escaped_message "${root}"
+    return
+  fi
+  /bin/sleep 120 &
+  owner_pid=$!
+  if [[ "${mode}" == relative ]]; then
+    (cd "${CASE_DIR}" && TMPDIR="${CASE_DIR}/runtime" capture_child - --exec-log "${CASE_DIR}/diagnostics" -- /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout rollout.jsonl --cwd destination --owner-pid "${owner_pid}") &
+  elif [[ "${mode}" == supervisor-error ]]; then
+    TMPDIR="${CASE_DIR}/runtime" ROLLOUT_FAIL_TIMER=true capture_child - --exec-log "${CASE_DIR}/diagnostics" -- /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout "${CASE_DIR}/rollout.jsonl" --owner-pid "${owner_pid}" &
+  elif [[ "${mode}" == cancel ]]; then
+    TMPDIR="${CASE_DIR}/runtime" ROLLOUT_HOLD_TIMER=true ROLLOUT_TIMER_RECORD="${CASE_DIR}/timer" ROLLOUT_FOLLOW_PID="${CASE_DIR}/tail-pid" ROLLOUT_READER_DIR_RECORD="${CASE_DIR}/reader-dir" capture_child - --exec-log "${CASE_DIR}/diagnostics" -- /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout "${CASE_DIR}/rollout.jsonl" --owner-pid "${owner_pid}" &
+  elif [[ "${mode}" == follower-error ]]; then
+    TMPDIR="${CASE_DIR}/runtime" ROLLOUT_HOLD_TIMER=true ROLLOUT_TIMER_RECORD="${CASE_DIR}/timer" ROLLOUT_FOLLOW_PID="${CASE_DIR}/tail-pid" ROLLOUT_READER_DIR_RECORD="${CASE_DIR}/reader-dir" ROLLOUT_FAIL_FOLLOWER=true ROLLOUT_FOLLOW_RELEASE="${CASE_DIR}/follow-release" capture_child - --exec-log "${CASE_DIR}/diagnostics" -- /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout "${CASE_DIR}/rollout.jsonl" --owner-pid "${owner_pid}" &
+  elif [[ "${mode}" == final-reader-error ]]; then
+    TMPDIR="${CASE_DIR}/runtime" ROLLOUT_TIMER_RECORD="${CASE_DIR}/timer" ROLLOUT_FOLLOW_PID="${CASE_DIR}/tail-pid" ROLLOUT_READER_DIR_RECORD="${CASE_DIR}/reader-dir" ROLLOUT_FINAL_PID="${CASE_DIR}/final-pid" ROLLOUT_FAIL_FINAL=true ROLLOUT_DRAIN_READY="${CASE_DIR}/drain-ready" ROLLOUT_DRAIN_RELEASE="${CASE_DIR}/drain-release" capture_child - --exec-log "${CASE_DIR}/diagnostics" -- /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout "${CASE_DIR}/rollout.jsonl" --owner-pid "${owner_pid}" &
+  elif [[ "${mode}" == final-drain ]]; then
+    TMPDIR="${CASE_DIR}/runtime" ROLLOUT_DRAIN_READY="${CASE_DIR}/drain-ready" ROLLOUT_DRAIN_RELEASE="${CASE_DIR}/drain-release" capture_child - --exec-log "${CASE_DIR}/diagnostics" -- /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout "${CASE_DIR}/rollout.jsonl" --owner-pid "${owner_pid}" --cwd "${CASE_DIR}" --session-name MONITOR --tmux-session atlas --tmux-window 'w sample' --tier untiered &
+  else
+    TMPDIR="${CASE_DIR}/runtime" capture_child - --exec-log "${CASE_DIR}/diagnostics" -- /bin/bash "${CODEX_FAILURE_WATCHER_BIN:?}" --rollout "${CASE_DIR}/rollout.jsonl" --owner-pid "${owner_pid}" &
+  fi
+  watcher_pid=$!
+  if [[ "${mode}" == follower-error || "${mode}" == final-reader-error ]]; then
+    reader_failure "${mode}"
+    return
+  fi
+  if [[ "${mode}" == supervisor-error ]]; then
+    supervisor_failure
+    return
+  fi
+  if [[ "${mode}" == cancel ]]; then
+    cancel_watcher
+    return
+  fi
+  for ((attempt = 0; attempt < 3000; attempt++)); do
+    [[ ! -f "${ROLLOUT_READY}" ]] || break
+    if ! kill -0 "${watcher_pid}" 2> /dev/null; then # error-output-allow: detect an owned watcher that exits before readiness
+      echo 'ASSERT rollout-reader-started' >&2
+      return 1
+    fi
+    /bin/sleep 0.02
+  done
+  [[ -f "${ROLLOUT_READY}" && -f "${ROLLOUT_LAUNCHES}" ]] || return 1
+  if [[ "${mode}" == follow || "${mode}" == partial-startup ]]; then
+    startup_boundary "${root}" "${mode}"
+    return
+  fi
+  if [[ "${mode}" == final-drain ]]; then
+    final_drain "${root}"
+    return
+  fi
+  startup_jq="$(count_launches jq)"
+  # Measure a separate idle window after follower-start readiness.
+  /bin/sleep 0.1
+  : > "${ROLLOUT_LAUNCHES}"
+  /bin/sleep 3
+  idle_jq="$(count_launches jq)"
+  idle_sleep="$(count_launches sleep)"
+  idle_tail="$(count_launches tail)"
+  kill "${owner_pid}"
+  wait "${owner_pid}" 2> /dev/null || true # error-output-allow: expected owned supervisor termination
+  owner_pid=""
+  wait_watcher -
+  printf 'startup_jq=%s idle_seconds=3 idle_jq=%s idle_sleep=%s idle_tail=%s\n' \
+    "${startup_jq}" "${idle_jq}" "${idle_sleep}" "${idle_tail}"
+  if [[ "${mode}" != measure ]]; then
+    if ((idle_sleep > 2 || idle_jq != 0 || idle_tail != 0)); then
+      echo 'ASSERT idle-launch-budget' >&2
+      return 1
+    fi
+    if ((startup_jq > 2)); then
+      echo 'ASSERT startup-launch-budget' >&2
+      return 1
+    fi
+    echo 'launch budgets satisfied'
+  fi
+  if [[ "${mode}" == relative ]]; then echo 'relative rollout modes satisfied'; fi
+}
+
+main "$@"

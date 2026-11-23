@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ -n "${ROLLOUT_LAUNCHES:-}" ]]; then printf 'sleep\n' >> "${ROLLOUT_LAUNCHES}"; fi
 if [[ "${1}" == 0.2 ]]; then : > "${ROLLOUT_READY:?}"; fi
+if [[ "${1}" == 3 ]]; then
+  if [[ "${ROLLOUT_FAIL_TIMER:-}" == true ]]; then
+    echo 'fixture timer failed' >&2
+    exit 1
+  fi
+  if [[ -n "${ROLLOUT_TIMER_RECORD:-}" ]]; then
+    printf '%s %s\n' "$$" "${PPID}" > "${ROLLOUT_TIMER_RECORD}"
+    if [[ "${ROLLOUT_HOLD_TIMER:-}" == true ]]; then
+      # Keep a real timer observable until the controlled failure stops it.
+      exec /bin/sleep 120
+    fi
+  fi
+fi
 exec /bin/sleep "$@"

@@ -1,0 +1,1612 @@
+{
+  "base": "0c91d2cefc254ee02da8dafb31424fc93ca63f3c",
+  "source_head": "f1d1734db36df21b676eda5d5112b3d1f5e063d1",
+  "structural_call": "TOOLING 047b6d00-f7cf-4f6e-af24-b5fa5b8f1203, under CONDUCTOR 22f946fb",
+  "files": {
+    "2026-11-07-notify-watcher-plants.json": {
+      "sha256": "608ffece907f92795650defb70e670fb18f2e7f7ad3fcc8b0bef6a2e411f1ef5",
+      "sites": [
+        {
+          "line": 2,
+          "text": "  \"inputs\": [\"bin/lib/capture-child.bash\", \"docs/reviews/2026-11-07-notify-watcher-plants/cancel-cleanup.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/check.bash\", \"docs/reviews/2026-11-07-notify-watcher-plants/comment-control.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/final-status.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/follower-status.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/history-parse.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/idle-poll.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/preflight.py\", \"docs/reviews/2026-11-07-notify-watcher-plants/relative-path.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/supervisor-error.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/tsv-decoder.patch\", \"plugins/notify/.claude-plugin/plugin.json\", \"plugins/notify/.codex-plugin/plugin.json\", \"plugins/notify/README.md\", \"plugins/notify/assets/claude-code.png\", \"plugins/notify/assets/codex.png\", \"plugins/notify/hooks/codex.hooks.json\", \"plugins/notify/hooks/hooks.json\", \"plugins/notify/scripts/claude-transcript.jq\", \"plugins/notify/scripts/codex-failure.jq\", \"plugins/notify/scripts/notify\", \"plugins/notify/scripts/watch-codex-failures\", \"tests/data/codex-failure-rollouts/final-drain-error.jsonl\", \"tests/data/codex-failure-rollouts/final-drain-prefix.jsonl\", \"tests/data/codex-failure-rollouts/long.jsonl\", \"tests/data/codex-failure-rollouts/tsv-message.jsonl\", \"tests/fixtures/measure-codex-failure-launches\", \"tests/fixtures/notify-rollout/alerter\", \"tests/fixtures/notify-rollout/jq\", \"tests/fixtures/notify-rollout/mktemp\", \"tests/fixtures/notify-rollout/sleep\", \"tests/fixtures/notify-rollout/tail\", \"tests/fixtures/notify-rollout/tmux\"],",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        },
+        {
+          "line": 7,
+          "text": "    \"contains\": [\"launch instrument started\\n\", \"\\nlaunch budgets satisfied\\n\", \"relative rollout modes satisfied\\n\", \"timer failure propagated; watcher stopped with owner and rollout context\\n\", \"watcher canceled; descendants stopped; reader directory removed; owner preserved\\n\", \"final drain delivered exactly the prefix and the post-follower failure\\n\", \"follower-error propagated; diagnostics retained; descendants and reader directory removed\\n\", \"final-reader-error propagated; diagnostics retained; descendants and reader directory removed\\n\", \"TSV message preserves literal backslashes and internal whitespace as exact JSON\\n\"],",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        },
+        {
+          "line": 57,
+          "text": "      \"name\": \"final-drain-byte-offset\",",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        },
+        {
+          "line": 58,
+          "text": "      \"patch\": \"docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch\",",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        },
+        {
+          "line": 61,
+          "text": "        \"contains\": [\"launch instrument started\\n\", \"ASSERT final-drain-delivery\\n\"],",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        }
+      ]
+    },
+    "Makefile": {
+      "sha256": "8ae3f2829959f68653b023b9ef66c6bac382a351d842f2a04b4ae75f1efd890c",
+      "sites": []
+    },
+    "dist/codex/plugins/notify/.claude-plugin/plugin.json": {
+      "sha256": "b7e7fcf4664a3532e4580b6c97738fce3b6f8504e551c86daa385a683d3f3990",
+      "sites": []
+    },
+    "dist/codex/plugins/notify/.codex-plugin/plugin.json": {
+      "sha256": "467d80638fc83d41bfae1f8ce3fd055d85b2ad4c41a17bdf5692a6977af7c04e",
+      "sites": []
+    },
+    "dist/codex/plugins/notify/README.md": {
+      "sha256": "992a77a714e29ac072062d68e6adb745d1c0a45b94ba4451a95b7d0df3fdc6e9",
+      "sites": [
+        {
+          "line": 57,
+          "text": "Follow mode records the startup byte size and reads `session_meta` once. It skips complete records in that snapshot. A persistent `tail` reader starts at the first unread record, retaining an unfinished startup record until its newline arrives. A background supervisor checks the owner every three seconds. When the owner exits, the watcher stops the follower and drains unread records to EOF before stopping. Unexpected reader or supervisor failures return nonzero with diagnostics. The launcher must stop and reap its watcher during cleanup. The file must already exist and contain session metadata. Replacement or truncation requires a new watcher; ephemeral sessions without a rollout cannot be watched. `--once` deliberately processes existing records to EOF instead of following them, and can post historical failure banners. Do not use it to activate live monitoring.",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        },
+        {
+          "line": 75,
+          "text": "  - Completion bodies summarize the agent's final reply. Markdown is removed, and headings, list items and paragraphs read as separate sentences. Fenced code and tables, with or without leading pipes, are dropped, as are status lines (a leading `▸`, or two or more `·` separators) when the reply has prose; a reply without prose uses its status lines, and one with neither uses its first code or table line. An unclosed fence is read as prose. Whole sentences are kept in order. A sentence that no longer fits is cut at a word boundary with `…` when it is the first sentence or at least 40 characters remain; otherwise it and every later sentence are dropped. A reply that is a JSON object with a string `summary` field is summarized from that field.",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        }
+      ]
+    },
+    "dist/codex/plugins/notify/scripts/codex-failure.jq": {
+      "sha256": "3466871155da4b1cdedaf3bd3d462f81d48d2e7944c35e474097cabdcd731451",
+      "sites": []
+    },
+    "dist/codex/plugins/notify/scripts/watch-codex-failures": {
+      "sha256": "8dc193e220f1a016fa431185cac37ad52f0f0a28834e10ec5f2d72e20233e638",
+      "sites": [
+        {
+          "line": 75,
+          "text": "  --once              Process existing records to EOF, then exit",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        },
+        {
+          "line": 154,
+          "text": "  [[ \"${once}\" == false ]] || state=final-drain",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        },
+        {
+          "line": 221,
+          "text": "      if [[ \"${state}\" == final-drain ]]; then",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        },
+        {
+          "line": 222,
+          "text": "        [[ -z \"${partial}\" ]] || die 'incomplete rollout record at EOF'",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        },
+        {
+          "line": 230,
+          "text": "      if kill -0 \"${owner_pid}\" 2> /dev/null; then # error-output-allow: unexpected EOF requires stopping the owned supervisor before waiting",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        },
+        {
+          "line": 247,
+          "text": "      exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        },
+        {
+          "line": 251,
+          "text": "      exec 3< \"${READER_DIR}/records\" # error-output-allow: final drain FIFO; reader stderr remains live",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        },
+        {
+          "line": 252,
+          "text": "      state=final-drain",
+          "kind": "generated mirror",
+          "assessment": "Assessed against canonical intent with the sanctioned README root-link rewrite; the corrected gate uses native rule 16 regeneration/comparison.",
+          "claim_site": false
+        }
+      ]
+    },
+    "docs/plans/todo/2026-11-07-notify-watcher-reader.md": {
+      "sha256": "14258e6dd4e837bbcae1b175b81eb01b907a8297906f9a1ef77bde2be8d4f109",
+      "sites": [
+        {
+          "line": 3,
+          "text": "Replace the Codex failure watcher's repeated EOF polling with a persistent",
+          "kind": "documentation",
+          "assessment": "Task contract preserves complete-record skipping, partial records and owner-exit draining; consistent with the implementation.",
+          "claim_site": true
+        },
+        {
+          "line": 7,
+          "text": "the final drain after the owner exits.",
+          "kind": "documentation",
+          "assessment": "Task contract preserves complete-record skipping, partial records and owner-exit draining; consistent with the implementation.",
+          "claim_site": true
+        }
+      ]
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/cancel-cleanup.patch": {
+      "sha256": "57af85a1bd30bc26ef27af8e1ba95902a32da63d87573a2bb23b6d7dadb7b1ec",
+      "sites": []
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/check.bash": {
+      "sha256": "670c00dbb9b35c5416ccc5717b5ea0f7f839e598ce56f877ee0fc093f074a4ae",
+      "sites": [
+        {
+          "line": 6,
+          "text": "for mode in check relative supervisor-error cancel final-drain follower-error final-reader-error escaped-message; do",
+          "kind": "fixture metadata",
+          "assessment": "Mode/helper identifiers refer to the declared checks; no independent timing claim.",
+          "claim_site": false
+        }
+      ]
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/comment-control.patch": {
+      "sha256": "aa7070609f1e4872534b776efc943373727703c7373108f1a3f199eb4be8fea4",
+      "sites": []
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch": {
+      "sha256": "a273f240d4c48bee80fb1356463a948dae174bb6bd453b155a4805cedeb05d99",
+      "sites": [
+        {
+          "line": 5,
+          "text": "       exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        },
+        {
+          "line": 10,
+          "text": "       exec 3< \"${READER_DIR}/records\" # error-output-allow: final drain FIFO; reader stderr remains live",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        },
+        {
+          "line": 11,
+          "text": "       state=final-drain",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        }
+      ]
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/final-status.patch": {
+      "sha256": "4e68638ca41a6156e7e4f4627b15cb0e42742d942ccd14d2bdfff77118c1da3d",
+      "sites": [
+        {
+          "line": 4,
+          "text": "       if [[ \"${state}\" == final-drain ]]; then",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        },
+        {
+          "line": 5,
+          "text": "         [[ -z \"${partial}\" ]] || die 'incomplete rollout record at EOF'",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        }
+      ]
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/follower-status.patch": {
+      "sha256": "881cd72bd42276d30466c8116f2c07f9762dff384c1026c03afb8e954084428d",
+      "sites": [
+        {
+          "line": 22,
+          "text": "       exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain",
+          "kind": "mutation data",
+          "assessment": "Patch context, labels or expected assertion text; retained with the corresponding subject/test contract.",
+          "claim_site": false
+        }
+      ]
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/history-parse.patch": {
+      "sha256": "1051072aae764d37a3e134550c418e7c1bc318d17ff7bd55457fbd2877c09729",
+      "sites": []
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/idle-poll.patch": {
+      "sha256": "0395faa366f850d5b1b9f0c0ae7c77c5d7b7b0b406f2ef09d2edfebd17cd1774",
+      "sites": []
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/preflight.py": {
+      "sha256": "1a83942652a77554dd02760d44b7af571ecf3f769315d3eea9d14996c16fcb2f",
+      "sites": [
+        {
+          "line": 28,
+          "text": "    for helper in (\"pid_record\", \"timer_record\", \"directory_record\", \"drain_record\", \"alert_count\", \"diagnostics\", \"supervisor_failure\", \"wait_watcher\"):",
+          "kind": "fixture metadata",
+          "assessment": "Mode/helper identifiers refer to the declared checks; no independent timing claim.",
+          "claim_site": false
+        }
+      ]
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/relative-path.patch": {
+      "sha256": "a70c8a8d0707da64e8b3a9637e4f9c4a060ad8c35e61346a405ccb6abcd5beed",
+      "sites": []
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/supervisor-error.patch": {
+      "sha256": "9ea03f80a3146177115bdd9388434a7ed3ecbfea61fd004f3f0c19fcff7d20c8",
+      "sites": []
+    },
+    "docs/reviews/2026-11-07-notify-watcher-plants/tsv-decoder.patch": {
+      "sha256": "9c9ea4cb000a586015329ccebaf27a2a3fa1adf7fe132bfe368deff31f1570ce",
+      "sites": []
+    },
+    "docs/reviews/2026-11-07-notify-watcher-reader.md": {
+      "sha256": "2f620448dbf67c23bf454f9ae617317bd96435a4c3c9119fb3572569f14c82b1",
+      "sites": [
+        {
+          "line": 37,
+          "text": "| suggestion     | Nit: an unreachable duplicate EOF guard adds a redundant condition | Take: remove the guard | No: no behavior change | Uncited: The EOF path repeats an already-enforced startup check. |",
+          "kind": "historical review evidence",
+          "assessment": "Finding descriptions and prior round states, not current synchronization claims; retained.",
+          "claim_site": false
+        },
+        {
+          "line": 39,
+          "text": "The simplification findings concern different mechanisms: intermediate exit-status storage and an unreachable duplicate EOF guard. The path and field-normalization fixes are in the reviewed commit. No recurrence or downgrade was found.",
+          "kind": "historical review evidence",
+          "assessment": "Finding descriptions and prior round states, not current synchronization claims; retained.",
+          "claim_site": false
+        },
+        {
+          "line": 50,
+          "text": "| tests: important          | Important: scheduling can hide a broken final drain                               | Take: append after follower closure at a controlled final-reader boundary, with a multibyte prefix and a plant                       | No for tests alone; the paired runtime fix advances this loop | Uncited: The shutdown test no longer guarantees coverage of final-drain delivery.              |",
+          "kind": "historical review evidence",
+          "assessment": "Finding descriptions and prior round states, not current synchronization claims; retained.",
+          "claim_site": false
+        },
+        {
+          "line": 52,
+          "text": "| comments: suggestion      | Nit: the shutdown description no longer names the actual synchronization point    | Take: describe owner-shutdown coverage separately from the deterministic final-drain case                                            | No: documentation only                                        | Uncited: The shutdown test description claims an EOF synchronization it no longer establishes. |",
+          "kind": "historical review evidence",
+          "assessment": "Finding descriptions and prior round states, not current synchronization claims; retained.",
+          "claim_site": false
+        },
+        {
+          "line": 62,
+          "text": "| tests: important          | Important: new follower and final-reader status boundaries lack regression coverage | Take after the design call: inject both reader failures and plant the status guards          | No for tests alone; reassess if the tests expose a production defect | Uncited: Reader subprocess failures lack regression coverage.           |",
+          "kind": "historical review evidence",
+          "assessment": "Finding descriptions and prior round states, not current synchronization claims; retained.",
+          "claim_site": false
+        },
+        {
+          "line": 64,
+          "text": "| comments: suggestion      | Nit: another fixture comment retains the previously corrected EOF-readiness claim   | Take after the design call: close the readiness-documentation class across the component     | No for documentation alone; recurrence stops this loop               | Uncited: The fixture still claims to synchronize at EOF.                |",
+          "kind": "historical review evidence",
+          "assessment": "Finding descriptions and prior round states, not current synchronization claims; retained.",
+          "claim_site": false
+        },
+        {
+          "line": 66,
+          "text": "The code, errors and types aspects reported no findings. No Important or Critical label is downgraded. The comments finding repeats the stale EOF-synchronization class corrected in the prior focused round's shutdown prose and owner-boundary comment. The remaining instance is in the same helper's synchronization comment.",
+          "kind": "historical review evidence",
+          "assessment": "Finding descriptions and prior round states, not current synchronization claims; retained.",
+          "claim_site": false
+        },
+        {
+          "line": 68,
+          "text": "Under `~/Work/projects/CLAUDE.md`, Review rounds, the loop stops for TOOLING to choose the structural closure. Suggested closure: audit every readiness/EOF claim against the existing tail-start and static-drain boundaries, add a reader-failure coverage matrix and the exact TSV sample, then continue from this round's count under the existing brief. No fixes are applied after this finding.",
+          "kind": "historical review evidence",
+          "assessment": "Finding descriptions and prior round states, not current synchronization claims; retained.",
+          "claim_site": false
+        }
+      ]
+    },
+    "plugins/notify/.claude-plugin/plugin.json": {
+      "sha256": "b7e7fcf4664a3532e4580b6c97738fce3b6f8504e551c86daa385a683d3f3990",
+      "sites": []
+    },
+    "plugins/notify/.codex-plugin/plugin.json": {
+      "sha256": "467d80638fc83d41bfae1f8ce3fd055d85b2ad4c41a17bdf5692a6977af7c04e",
+      "sites": []
+    },
+    "plugins/notify/README.md": {
+      "sha256": "5766ed87752f82262d3df9c94344cac7460fe65cee73e75ace01b1fa2f92c67d",
+      "sites": [
+        {
+          "line": 57,
+          "text": "Follow mode records the startup byte size and reads `session_meta` once. It skips complete records in that snapshot. A persistent `tail` reader starts at the first unread record, retaining an unfinished startup record until its newline arrives. A background supervisor checks the owner every three seconds. When the owner exits, the watcher stops the follower and drains unread records to EOF before stopping. Unexpected reader or supervisor failures return nonzero with diagnostics. The launcher must stop and reap its watcher during cleanup. The file must already exist and contain session metadata. Replacement or truncation requires a new watcher; ephemeral sessions without a rollout cannot be watched. `--once` deliberately processes existing records to EOF instead of following them, and can post historical failure banners. Do not use it to activate live monitoring.",
+          "kind": "documentation",
+          "assessment": "Clarified snapshot record boundary, unfinished-record retention and owner-exit condition; no internal-supervisor-exit guarantee.",
+          "claim_site": true
+        },
+        {
+          "line": 75,
+          "text": "  - Completion bodies summarize the agent's final reply. Markdown is removed, and headings, list items and paragraphs read as separate sentences. Fenced code and tables, with or without leading pipes, are dropped, as are status lines (a leading `▸`, or two or more `·` separators) when the reply has prose; a reply without prose uses its status lines, and one with neither uses its first code or table line. An unclosed fence is read as prose. Whole sentences are kept in order. A sentence that no longer fits is cut at a word boundary with `…` when it is the first sentence or at least 40 characters remain; otherwise it and every later sentence are dropped. A reply that is a JSON object with a string `summary` field is summarized from that field.",
+          "kind": "documentation",
+          "assessment": "Lexical reply-summary boundary, unrelated to reader synchronization; unchanged.",
+          "claim_site": true
+        }
+      ]
+    },
+    "plugins/notify/scripts/codex-failure.jq": {
+      "sha256": "3466871155da4b1cdedaf3bd3d462f81d48d2e7944c35e474097cabdcd731451",
+      "sites": []
+    },
+    "plugins/notify/scripts/watch-codex-failures": {
+      "sha256": "8dc193e220f1a016fa431185cac37ad52f0f0a28834e10ec5f2d72e20233e638",
+      "sites": [
+        {
+          "line": 75,
+          "text": "  --once              Process existing records to EOF, then exit",
+          "kind": "comment or help",
+          "assessment": "Once mode reads the supplied regular file through EOF; unchanged.",
+          "claim_site": true
+        },
+        {
+          "line": 154,
+          "text": "  [[ \"${once}\" == false ]] || state=final-drain",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 221,
+          "text": "      if [[ \"${state}\" == final-drain ]]; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 222,
+          "text": "        [[ -z \"${partial}\" ]] || die 'incomplete rollout record at EOF'",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 230,
+          "text": "      if kill -0 \"${owner_pid}\" 2> /dev/null; then # error-output-allow: unexpected EOF requires stopping the owned supervisor before waiting",
+          "kind": "comment or help",
+          "assessment": "Main read received follower FIFO EOF; stopping/waiting for the supervisor follows that observation.",
+          "claim_site": true
+        },
+        {
+          "line": 247,
+          "text": "      exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain",
+          "kind": "comment or help",
+          "assessment": "Final FIFO/static-reader phase follows follower closure and status collection; unchanged.",
+          "claim_site": true
+        },
+        {
+          "line": 251,
+          "text": "      exec 3< \"${READER_DIR}/records\" # error-output-allow: final drain FIFO; reader stderr remains live",
+          "kind": "comment or help",
+          "assessment": "Final FIFO/static-reader phase follows follower closure and status collection; unchanged.",
+          "claim_site": true
+        },
+        {
+          "line": 252,
+          "text": "      state=final-drain",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        }
+      ]
+    },
+    "tests/data/codex-failure-rollouts/escaped-fields.jsonl": {
+      "sha256": "78f8240f84588f9ca370d8b83c4a61bacfd9c7edc501308e4bd150c5dc27eb0f",
+      "sites": []
+    },
+    "tests/data/codex-failure-rollouts/final-drain-error.jsonl": {
+      "sha256": "70ebe97ce313fd1ced2e64bdbd6b626389b87ee0602dd25258e408871d82ff37",
+      "sites": [
+        {
+          "line": 1,
+          "text": "{\"type\":\"event_msg\",\"payload\":{\"type\":\"task_complete\",\"turn_id\":\"drain-final\",\"error\":{\"codex_error_info\":\"other\",\"message\":\"Final drain error\"}}}",
+          "kind": "sample data",
+          "assessment": "Sample turn identifiers/message text; no synchronization claim.",
+          "claim_site": false
+        }
+      ]
+    },
+    "tests/data/codex-failure-rollouts/final-drain-prefix.jsonl": {
+      "sha256": "5de75b812c3af04f4f3086f40e32e627307e68ccb4f5be943a78d4ba41ae091c",
+      "sites": [
+        {
+          "line": 2,
+          "text": "{\"type\":\"event_msg\",\"payload\":{\"type\":\"task_complete\",\"turn_id\":\"drain-prefix\",\"error\":{\"codex_error_info\":\"other\",\"message\":\"A multibyte prefix é\"}}}",
+          "kind": "sample data",
+          "assessment": "Sample turn identifiers/message text; no synchronization claim.",
+          "claim_site": false
+        }
+      ]
+    },
+    "tests/data/codex-failure-rollouts/follow-shapes.jsonl": {
+      "sha256": "5a1aa9e5d82779e9064b73fab43d05c38b6336c2965bb3f996f144af39a6d14e",
+      "sites": []
+    },
+    "tests/data/codex-failure-rollouts/long.jsonl": {
+      "sha256": "fd2517222b632217561f140a03c072bdc6593e89065862f66f7e4eaf5a8cd568",
+      "sites": []
+    },
+    "tests/data/codex-failure-rollouts/tsv-message.jsonl": {
+      "sha256": "baddcc7e3ed150b962cf0c74772d4ead99c5de34d548de61b63397acf1bf503c",
+      "sites": []
+    },
+    "tests/fixtures/check-codex-failures": {
+      "sha256": "fb3ef32e72b70115bf2bdd3fb0e98a52a16899d2c8af46468e36e71b0cb77c72",
+      "sites": [
+        {
+          "line": 60,
+          "text": "  local stub_dir=\"${1}\" readiness_timeout=\"${2:-30}\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 61,
+          "text": "  local first_status=0 second_status=0 ready_one=\"\" ready_two=\"\" readiness_ok=true",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 65,
+          "text": "  exec 4<> \"${ROLLOUT_CLAIM_BARRIER}/ready\" # error-output-allow: Owned readiness FIFO on descriptor 4; standard streams remain live.",
+          "kind": "comment or help",
+          "assessment": "Claim-barrier readiness FIFO, separate from rollout EOF; unchanged.",
+          "claim_site": true
+        },
+        {
+          "line": 68,
+          "text": "  BASH_ENV=\"${stub_dir}/claim-boundary.bash\" ROLLOUT_READER=one capture_child - --replay-stdout -- run_case error &",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 70,
+          "text": "  BASH_ENV=\"${stub_dir}/claim-boundary.bash\" ROLLOUT_READER=two capture_child - --replay-stdout -- run_case error &",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 72,
+          "text": "  if ! IFS= read -r -t \"${readiness_timeout}\" ready_one <&4; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 73,
+          "text": "    echo 'Concurrent claim readiness failed at first arrival' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 74,
+          "text": "    readiness_ok=false",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 75,
+          "text": "  elif ! IFS= read -r -t \"${readiness_timeout}\" ready_two <&4; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 76,
+          "text": "    echo 'Concurrent claim readiness failed at second arrival' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 77,
+          "text": "    readiness_ok=false",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 79,
+          "text": "    echo 'Concurrent claim readiness returned invalid reader identities' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 80,
+          "text": "    readiness_ok=false",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 90,
+          "text": "  if [[ \"${readiness_ok}\" != true ]] || ((first_status != 0 || second_status != 0)); then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 116,
+          "text": "  unset ROLLOUT_BOUNDARY_READY ROLLOUT_BOUNDARY_RELEASE",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 118,
+          "text": "  unset ROLLOUT_DRAIN_READY ROLLOUT_DRAIN_RELEASE",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 173,
+          "text": "      local readiness_diagnostics readiness_status",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 174,
+          "text": "      if ROLLOUT_SKIP_READY=two capture_child readiness_diagnostics -- run_concurrent \"${stub_dir}\" 1; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 177,
+          "text": "        readiness_status=$?",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 179,
+          "text": "      [[ \"${readiness_status}\" == 1 ]]",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 180,
+          "text": "      [[ \"${readiness_diagnostics}\" == *'Concurrent claim readiness failed at second arrival'* ]]",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 181,
+          "text": "      [[ \"${readiness_diagnostics}\" == *'Reader arrivals: one missing'* ]]",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 182,
+          "text": "      [[ \"${readiness_diagnostics}\" == *'Reader statuses: 0 1'* ]]",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 183,
+          "text": "      echo 'readiness timeout identifies missing reader; both statuses retained'",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 198,
+          "text": "      if BASH_ENV=\"${stub_dir}/claim-boundary.bash\" ROLLOUT_CLAIM_ERROR=true capture_child claim_diagnostics -- run_case error; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 288,
+          "text": "      local boundary_env=\"\" ready=\"${ROLLOUT_READY}\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 295,
+          "text": "        export ROLLOUT_BOUNDARY_READY=\"${CASE_DIR}/boundary-ready\" ROLLOUT_BOUNDARY_RELEASE=\"${CASE_DIR}/boundary-release\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 296,
+          "text": "        ready=\"${ROLLOUT_BOUNDARY_READY}\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 298,
+          "text": "        boundary_env=\"${stub_dir}/owner-boundary.bash\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 305,
+          "text": "      BASH_ENV=\"${boundary_env}\" ROLLOUT_OWNER_PID=\"${OTHER_PID}\" \\",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 309,
+          "text": "      # Wait for follower-start readiness, the captured byte boundary, or the paused owner check before appending.",
+          "kind": "comment or help",
+          "assessment": "Clarifies captured-size pause or follower-start readiness; no historical-record parsing/EOF claim.",
+          "claim_site": true
+        },
+        {
+          "line": 323,
+          "text": "        # Append after the captured byte boundary, before following starts.",
+          "kind": "comment or help",
+          "assessment": "Clarifies captured-size pause or follower-start readiness; no historical-record parsing/EOF claim.",
+          "claim_site": true
+        },
+        {
+          "line": 325,
+          "text": "        : > \"${ROLLOUT_BOUNDARY_RELEASE}\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 329,
+          "text": "        wait \"${OTHER_PID}\" 2> /dev/null || true # error-output-allow: owned supervisor termination status is expected during shutdown synchronization",
+          "kind": "comment or help",
+          "assessment": "The parent explicitly stops and reaps the test owner; this is unrelated to follower EOF.",
+          "claim_site": true
+        },
+        {
+          "line": 341,
+          "text": "        wait \"${OTHER_PID}\" 2> /dev/null || true # error-output-allow: owned supervisor termination status is expected during shutdown synchronization",
+          "kind": "comment or help",
+          "assessment": "The parent explicitly stops and reaps the test owner; this is unrelated to follower EOF.",
+          "claim_site": true
+        }
+      ]
+    },
+    "tests/fixtures/measure-codex-failure-launches": {
+      "sha256": "cb079de37522441051a0c0ad643911540c26f6410e753151b6704e1b54336272",
+      "sites": [
+        {
+          "line": 73,
+          "text": "function drain_record() {",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 77,
+          "text": "  [[ \"${value}\" == drain-ready ]]",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 97,
+          "text": "  echo 'ASSERT final-drain-delivery' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 103,
+          "text": "  if ! \"${ROLLOUT_REAL_JQ}\" -se 'map(.[index(\"--message\")+1]) == [\"A multibyte prefix é\", \"Final drain error\"]' \"${ROLLOUT_ALERTS}\" > /dev/null; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 104,
+          "text": "    echo 'ASSERT final-drain-delivery' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 175,
+          "text": "      if drain_record \"${CASE_DIR}/drain-ready\" && pid_record \"${CASE_DIR}/final-pid\" FINAL_PID; then break; fi",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 179,
+          "text": "      echo 'ASSERT final-reader-fault-boundary' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 183,
+          "text": "    : > \"${CASE_DIR}/drain-release\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 224,
+          "text": "function final_drain() {",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 226,
+          "text": "  cat \"${root}/tests/data/codex-failure-rollouts/final-drain-prefix.jsonl\" >> \"${CASE_DIR}/rollout.jsonl\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 232,
+          "text": "    if drain_record \"${CASE_DIR}/drain-ready\"; then break; fi",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 236,
+          "text": "    echo 'ASSERT final-drain-boundary' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 239,
+          "text": "  cat \"${root}/tests/data/codex-failure-rollouts/final-drain-error.jsonl\" >> \"${CASE_DIR}/rollout.jsonl\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 240,
+          "text": "  : > \"${CASE_DIR}/drain-release\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 243,
+          "text": "    echo 'ASSERT final-drain-delivery' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 248,
+          "text": "  echo 'final drain delivered exactly the prefix and the post-follower failure'",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 270,
+          "text": "  case \"${mode}\" in check | measure | relative | supervisor-error | cancel | final-drain | follower-error | final-reader-error | escaped-message) ;; *) return 2 ;; esac",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 283,
+          "text": "  unset ROLLOUT_READER_DIR_RECORD ROLLOUT_DRAIN_READY ROLLOUT_DRAIN_RELEASE",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 315,
+          "text": "    TMPDIR=\"${CASE_DIR}/runtime\" ROLLOUT_TIMER_RECORD=\"${CASE_DIR}/timer\" ROLLOUT_FOLLOW_PID=\"${CASE_DIR}/tail-pid\" ROLLOUT_READER_DIR_RECORD=\"${CASE_DIR}/reader-dir\" ROLLOUT_FINAL_PID=\"${CASE_DIR}/final-pid\" ROLLOUT_FAIL_FINAL=true ROLLOUT_DRAIN_READY=\"${CASE_DIR}/drain-ready\" ROLLOUT_DRAIN_RELEASE=\"${CASE_DIR}/drain-release\" capture_child - --exec-log \"${CASE_DIR}/diagnostics\" -- /bin/bash \"${CODEX_FAILURE_WATCHER_BIN:?}\" --rollout \"${CASE_DIR}/rollout.jsonl\" --owner-pid \"${owner_pid}\" &",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 316,
+          "text": "  elif [[ \"${mode}\" == final-drain ]]; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 317,
+          "text": "    TMPDIR=\"${CASE_DIR}/runtime\" ROLLOUT_DRAIN_READY=\"${CASE_DIR}/drain-ready\" ROLLOUT_DRAIN_RELEASE=\"${CASE_DIR}/drain-release\" capture_child - --exec-log \"${CASE_DIR}/diagnostics\" -- /bin/bash \"${CODEX_FAILURE_WATCHER_BIN:?}\" --rollout \"${CASE_DIR}/rollout.jsonl\" --owner-pid \"${owner_pid}\" --cwd \"${CASE_DIR}\" --session-name MONITOR --tmux-session atlas --tmux-window 'w sample' --tier untiered &",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 336,
+          "text": "    if ! kill -0 \"${watcher_pid}\" 2> /dev/null; then # error-output-allow: detect an owned watcher that exits before readiness",
+          "kind": "comment or help",
+          "assessment": "Readiness/phase annotation checked against its immediately adjacent protocol; unchanged.",
+          "claim_site": true
+        },
+        {
+          "line": 343,
+          "text": "  if [[ \"${mode}\" == final-drain ]]; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 344,
+          "text": "    final_drain \"${root}\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 348,
+          "text": "  # Measure a separate idle window after follower-start readiness.",
+          "kind": "comment or help",
+          "assessment": "Names the actual pre-exec tail marker used by the fixture.",
+          "claim_site": true
+        }
+      ]
+    },
+    "tests/fixtures/notify-rollout/jq": {
+      "sha256": "6a8db9b8574260110fe58077f50ab9b5cee5684b03010bf2a14cad46407e6cee",
+      "sites": []
+    },
+    "tests/fixtures/notify-rollout/mktemp": {
+      "sha256": "13c1a913f026b8de0ba65a774406ca106c70874eb580e0136a4343ad77564735",
+      "sites": []
+    },
+    "tests/fixtures/notify-rollout/owner-boundary.bash": {
+      "sha256": "2d080b5d4707c88fb51517eefe630f2780c16da8840ec4cc8dee0481f11ced68",
+      "sites": [
+        {
+          "line": 2,
+          "text": "# Pause the supervisor's first follow-mode owner check.",
+          "kind": "comment or documentation",
+          "assessment": "Owner-check callback is the first follow-mode kill predicate, following the initial argument validation; unchanged.",
+          "claim_site": true,
+          "full_file_context": true
+        }
+      ]
+    },
+    "tests/fixtures/notify-rollout/sleep": {
+      "sha256": "749ef0aca998c275ae88a32fd5846ccf1cf8794a6cbe507697c7708a14b601ef",
+      "sites": []
+    },
+    "tests/fixtures/notify-rollout/tail": {
+      "sha256": "fbd51ab6755913e83e9bdf3f03b1cc45910138f3561fa441eb68038752b705a9",
+      "sites": [
+        {
+          "line": 18,
+          "text": "elif [[ \"${1:-}\" == -c && \" $* \" != *' -f '* && -n \"${ROLLOUT_DRAIN_READY:-}\" ]]; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 20,
+          "text": "  printf 'drain-ready\\n' > \"${ROLLOUT_DRAIN_READY}\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 21,
+          "text": "  : \"${ROLLOUT_DRAIN_RELEASE:?}\"",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 23,
+          "text": "    if [[ -f \"${ROLLOUT_DRAIN_RELEASE}\" ]]; then",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        },
+        {
+          "line": 32,
+          "text": "  echo 'fixture final-drain release did not arrive' >&2",
+          "kind": "code or output identifier",
+          "assessment": "State, variable, diagnostic or mode name; no prose synchronization guarantee.",
+          "claim_site": false
+        }
+      ]
+    },
+    "tests/scrut/codex-failure-rollouts.md": {
+      "sha256": "8294bb5e0e3163391fd7100391d5e81c0c955bd2aef396855de6476f6533c0d4",
+      "sites": [
+        {
+          "line": 54,
+          "text": "A committed boundary fixture holds each reader at the exclusive file claim. The parent releases both through separate FIFOs after receiving both ready messages. Child-output capture waits for detached delivery diagnostics to close before the alert count is checked.",
+          "kind": "documentation",
+          "assessment": "Separate claim FIFO barrier, not follower EOF; matching source protocol retained.",
+          "claim_site": true
+        },
+        {
+          "line": 72,
+          "text": "readiness timeout identifies missing reader; both statuses retained",
+          "kind": "documentation",
+          "assessment": "Concurrent claim-FIFO timeout output, unrelated to rollout EOF; unchanged.",
+          "claim_site": true
+        },
+        {
+          "line": 108,
+          "text": "The fixture waits for follower-start readiness before appending a partial record. Follow mode posts after its newline, skips historical failure records and exits when the recorded owner stops.",
+          "kind": "documentation",
+          "assessment": "Anchored to the tail wrapper marker before exec; does not claim EOF.",
+          "claim_site": true
+        },
+        {
+          "line": 135,
+          "text": "## Failure appended after startup byte capture",
+          "kind": "comment or documentation",
+          "assessment": "Startup claim is a captured-size pause before following starts; heading clarified.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 137,
+          "text": "A byte-count stub pauses after capturing the initial size. The fixture appends a failure before following starts, with multibyte text inside the captured history, then releases it.",
+          "kind": "comment or documentation",
+          "assessment": "The wc wrapper reports the initial size before its release; wording names following startup instead of parsing old history.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 153,
+          "text": "The fixture pauses the supervisor's first follow-mode owner check, appends a terminal record and stops the owner before releasing the check. Delivery may occur through the follower or the final drain.",
+          "kind": "documentation",
+          "assessment": "Owner-check pause may deliver through follower or drain; wording makes no EOF guarantee.",
+          "claim_site": true
+        },
+        {
+          "line": 194,
+          "text": "## Error-object metadata boundaries",
+          "kind": "documentation",
+          "assessment": "Error-object typing boundary, not reader readiness; retained.",
+          "claim_site": true
+        },
+        {
+          "line": 259,
+          "text": "## Failure appended after follower closure",
+          "kind": "comment or documentation",
+          "assessment": "The static-reader marker is reached only after follower FIFO EOF and child status collection; unchanged.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 261,
+          "text": "A delivered prefix confirms consumption of multibyte data. The static reader",
+          "kind": "comment or documentation",
+          "assessment": "A prior delivered multibyte prefix advances the consumed byte count before static-reader readiness; unchanged.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 262,
+          "text": "then pauses before opening the rollout, after the persistent follower has",
+          "kind": "comment or documentation",
+          "assessment": "The tail wrapper pauses before its static tail exec opens the rollout; unchanged.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 263,
+          "text": "closed. Only then does the fixture append the final terminal failure.",
+          "kind": "comment or documentation",
+          "assessment": "The fixture appends only after the static-reader marker, after follower closure; unchanged.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 266,
+          "text": "$ \"${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}\" final-drain",
+          "kind": "documentation",
+          "assessment": "Test description/expected output reconciled against the controlled follower-start or static-reader marker; retained.",
+          "claim_site": true
+        },
+        {
+          "line": 267,
+          "text": "final drain delivered exactly the prefix and the post-follower failure",
+          "kind": "documentation",
+          "assessment": "Test description/expected output reconciled against the controlled follower-start or static-reader marker; retained.",
+          "claim_site": true
+        },
+        {
+          "line": 270,
+          "text": "## Follower failure while the owner remains running",
+          "kind": "comment or documentation",
+          "assessment": "Fault is released after running child PIDs and the reader directory are recorded.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 272,
+          "text": "The fixture releases a failing follower after recording the running children and",
+          "kind": "comment or documentation",
+          "assessment": "Follower failure is controlled while the owner remains running; no EOF-readiness assertion.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 280,
+          "text": "## Final-reader failure after owner shutdown",
+          "kind": "comment or documentation",
+          "assessment": "Final reader begins only after owner shutdown and follower closure.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 282,
+          "text": "A controlled static-reader marker follows follower closure. The fixture records",
+          "kind": "comment or documentation",
+          "assessment": "Static fault is released after that reader PID has been recorded.",
+          "claim_site": true,
+          "full_file_context": true
+        },
+        {
+          "line": 283,
+          "text": "that reader's PID before releasing its failure.",
+          "kind": "comment or documentation",
+          "assessment": "The recorded static reader remains running until the explicit fault release.",
+          "claim_site": true,
+          "full_file_context": true
+        }
+      ]
+    }
+  },
+  "whole_diff_search": {
+    "artifact": "/Users/ctm/.local/state/codex-mailboxes/tooling/740-notify-watcher/evidence/readiness-audit.after.diff",
+    "sha256": "78223b7b73e5ced34f92787d13ba12f79eb561a8168411cc527245f9fd350a6f",
+    "matches": [
+      {
+        "line": 8,
+        "text": "+  \"inputs\": [\"bin/lib/capture-child.bash\", \"docs/reviews/2026-11-07-notify-watcher-plants/cancel-cleanup.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/check.bash\", \"docs/reviews/2026-11-07-notify-watcher-plants/comment-control.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/final-status.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/follower-status.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/history-parse.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/idle-poll.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/preflight.py\", \"docs/reviews/2026-11-07-notify-watcher-plants/relative-path.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/supervisor-error.patch\", \"docs/reviews/2026-11-07-notify-watcher-plants/tsv-decoder.patch\", \"plugins/notify/.claude-plugin/plugin.json\", \"plugins/notify/.codex-plugin/plugin.json\", \"plugins/notify/README.md\", \"plugins/notify/assets/claude-code.png\", \"plugins/notify/assets/codex.png\", \"plugins/notify/hooks/codex.hooks.json\", \"plugins/notify/hooks/hooks.json\", \"plugins/notify/scripts/claude-transcript.jq\", \"plugins/notify/scripts/codex-failure.jq\", \"plugins/notify/scripts/notify\", \"plugins/notify/scripts/watch-codex-failures\", \"tests/data/codex-failure-rollouts/final-drain-error.jsonl\", \"tests/data/codex-failure-rollouts/final-drain-prefix.jsonl\", \"tests/data/codex-failure-rollouts/long.jsonl\", \"tests/data/codex-failure-rollouts/tsv-message.jsonl\", \"tests/fixtures/measure-codex-failure-launches\", \"tests/fixtures/notify-rollout/alerter\", \"tests/fixtures/notify-rollout/jq\", \"tests/fixtures/notify-rollout/mktemp\", \"tests/fixtures/notify-rollout/sleep\", \"tests/fixtures/notify-rollout/tail\", \"tests/fixtures/notify-rollout/tmux\"],",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 13,
+        "text": "+    \"contains\": [\"launch instrument started\\n\", \"\\nlaunch budgets satisfied\\n\", \"relative rollout modes satisfied\\n\", \"timer failure propagated; watcher stopped with owner and rollout context\\n\", \"watcher canceled; descendants stopped; reader directory removed; owner preserved\\n\", \"final drain delivered exactly the prefix and the post-follower failure\\n\", \"follower-error propagated; diagnostics retained; descendants and reader directory removed\\n\", \"final-reader-error propagated; diagnostics retained; descendants and reader directory removed\\n\", \"TSV message preserves literal backslashes and internal whitespace as exact JSON\\n\"],",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 63,
+        "text": "+      \"name\": \"final-drain-byte-offset\",",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 64,
+        "text": "+      \"patch\": \"docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch\",",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 67,
+        "text": "+        \"contains\": [\"launch instrument started\\n\", \"ASSERT final-drain-delivery\\n\"],",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 148,
+        "text": "-The watcher verifies `session_meta`, captures an initial byte boundary, skips completions within it, then follows appended newline-terminated records. After observing supervisor exit, it drains remaining records to EOF before stopping. The launcher must stop and reap its watcher during cleanup. The file must already exist and contain session metadata. Replacement or truncation requires a new watcher; ephemeral sessions without a rollout cannot be watched. `--once` deliberately processes existing records to EOF instead of following them, and can post historical failure banners. Do not use it to activate live monitoring.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 149,
+        "text": "+Follow mode records the startup byte size and reads `session_meta` once. It skips complete records in that snapshot. A persistent `tail` reader starts at the first unread record, retaining an unfinished startup record until its newline arrives. A background supervisor checks the owner every three seconds. When the owner exits, the watcher stops the follower and drains unread records to EOF before stopping. Unexpected reader or supervisor failures return nonzero with diagnostics. The launcher must stop and reap its watcher during cleanup. The file must already exist and contain session metadata. Replacement or truncation requires a new watcher; ephemeral sessions without a rollout cannot be watched. `--once` deliberately processes existing records to EOF instead of following them, and can post historical failure banners. Do not use it to activate live monitoring.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 282,
+        "text": "   [[ \"${once}\" == false ]] || state=final-drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 285,
+        "text": "-      if kill -0 \"${owner_pid}\" 2> /dev/null; then # error-output-allow: process-existence predicate selects follow or final-drain state",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 289,
+        "text": "-        state=final-drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 351,
+        "text": "       if [[ \"${state}\" == final-drain ]]; then",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 352,
+        "text": "         [[ -z \"${partial}\" ]] || die 'incomplete rollout record at EOF'",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 361,
+        "text": "+      if kill -0 \"${owner_pid}\" 2> /dev/null; then # error-output-allow: unexpected EOF requires stopping the owned supervisor before waiting",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 378,
+        "text": "+      exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 382,
+        "text": "+      exec 3< \"${READER_DIR}/records\" # error-output-allow: final drain FIFO; reader stderr remains live",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 383,
+        "text": "+      state=final-drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 395,
+        "text": "+Replace the Codex failure watcher's repeated EOF polling with a persistent",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 399,
+        "text": "+the final drain after the owner exits.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 448,
+        "text": "+for mode in check relative supervisor-error cancel final-drain follower-error final-reader-error escaped-message; do",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 467,
+        "text": "diff --git a/docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch b/docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 471,
+        "text": "+++ b/docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 477,
+        "text": "+       exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 482,
+        "text": "+       exec 3< \"${READER_DIR}/records\" # error-output-allow: final drain FIFO; reader stderr remains live",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 483,
+        "text": "+       state=final-drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 552,
+        "text": "+    for helper in (\"pid_record\", \"timer_record\", \"directory_record\", \"drain_record\", \"alert_count\", \"diagnostics\", \"supervisor_failure\", \"wait_watcher\"):",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 671,
+        "text": "+| suggestion     | Nit: an unreachable duplicate EOF guard adds a redundant condition | Take: remove the guard | No: no behavior change | Uncited: The EOF path repeats an already-enforced startup check. |",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 673,
+        "text": "+The simplification findings concern different mechanisms: intermediate exit-status storage and an unreachable duplicate EOF guard. The path and field-normalization fixes are in the reviewed commit. No recurrence or downgrade was found.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 684,
+        "text": "+| tests: important          | Important: scheduling can hide a broken final drain                               | Take: append after follower closure at a controlled final-reader boundary, with a multibyte prefix and a plant                       | No for tests alone; the paired runtime fix advances this loop | Uncited: The shutdown test no longer guarantees coverage of final-drain delivery.              |",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 686,
+        "text": "+| comments: suggestion      | Nit: the shutdown description no longer names the actual synchronization point    | Take: describe owner-shutdown coverage separately from the deterministic final-drain case                                            | No: documentation only                                        | Uncited: The shutdown test description claims an EOF synchronization it no longer establishes. |",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 696,
+        "text": "+| tests: important          | Important: new follower and final-reader status boundaries lack regression coverage | Take after the design call: inject both reader failures and plant the status guards          | No for tests alone; reassess if the tests expose a production defect | Uncited: Reader subprocess failures lack regression coverage.           |",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 698,
+        "text": "+| comments: suggestion      | Nit: another fixture comment retains the previously corrected EOF-readiness claim   | Take after the design call: close the readiness-documentation class across the component     | No for documentation alone; recurrence stops this loop               | Uncited: The fixture still claims to synchronize at EOF.                |",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 700,
+        "text": "+The code, errors and types aspects reported no findings. No Important or Critical label is downgraded. The comments finding repeats the stale EOF-synchronization class corrected in the prior focused round's shutdown prose and owner-boundary comment. The remaining instance is in the same helper's synchronization comment.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 702,
+        "text": "+Under `~/Work/projects/CLAUDE.md`, Review rounds, the loop stops for TOOLING to choose the structural closure. Suggested closure: audit every readiness/EOF claim against the existing tail-start and static-drain boundaries, add a reader-failure coverage matrix and the exact TSV sample, then continue from this round's count under the existing brief. No fixes are applied after this finding.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 735,
+        "text": "-The watcher verifies `session_meta`, captures an initial byte boundary, skips completions within it, then follows appended newline-terminated records. After observing supervisor exit, it drains remaining records to EOF before stopping. The launcher must stop and reap its watcher during cleanup. The file must already exist and contain session metadata. Replacement or truncation requires a new watcher; ephemeral sessions without a rollout cannot be watched. `--once` deliberately processes existing records to EOF instead of following them, and can post historical failure banners. Do not use it to activate live monitoring.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 736,
+        "text": "+Follow mode records the startup byte size and reads `session_meta` once. It skips complete records in that snapshot. A persistent `tail` reader starts at the first unread record, retaining an unfinished startup record until its newline arrives. A background supervisor checks the owner every three seconds. When the owner exits, the watcher stops the follower and drains unread records to EOF before stopping. Unexpected reader or supervisor failures return nonzero with diagnostics. The launcher must stop and reap its watcher during cleanup. The file must already exist and contain session metadata. Replacement or truncation requires a new watcher; ephemeral sessions without a rollout cannot be watched. `--once` deliberately processes existing records to EOF instead of following them, and can post historical failure banners. Do not use it to activate live monitoring.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 869,
+        "text": "   [[ \"${once}\" == false ]] || state=final-drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 872,
+        "text": "-      if kill -0 \"${owner_pid}\" 2> /dev/null; then # error-output-allow: process-existence predicate selects follow or final-drain state",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 876,
+        "text": "-        state=final-drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 938,
+        "text": "       if [[ \"${state}\" == final-drain ]]; then",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 939,
+        "text": "         [[ -z \"${partial}\" ]] || die 'incomplete rollout record at EOF'",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 948,
+        "text": "+      if kill -0 \"${owner_pid}\" 2> /dev/null; then # error-output-allow: unexpected EOF requires stopping the owned supervisor before waiting",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 965,
+        "text": "+      exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 969,
+        "text": "+      exec 3< \"${READER_DIR}/records\" # error-output-allow: final drain FIFO; reader stderr remains live",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 970,
+        "text": "+      state=final-drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 982,
+        "text": "diff --git a/tests/data/codex-failure-rollouts/final-drain-error.jsonl b/tests/data/codex-failure-rollouts/final-drain-error.jsonl",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 986,
+        "text": "+++ b/tests/data/codex-failure-rollouts/final-drain-error.jsonl",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 988,
+        "text": "+{\"type\":\"event_msg\",\"payload\":{\"type\":\"task_complete\",\"turn_id\":\"drain-final\",\"error\":{\"codex_error_info\":\"other\",\"message\":\"Final drain error\"}}}",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 989,
+        "text": "diff --git a/tests/data/codex-failure-rollouts/final-drain-prefix.jsonl b/tests/data/codex-failure-rollouts/final-drain-prefix.jsonl",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 993,
+        "text": "+++ b/tests/data/codex-failure-rollouts/final-drain-prefix.jsonl",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 996,
+        "text": "+{\"type\":\"event_msg\",\"payload\":{\"type\":\"task_complete\",\"turn_id\":\"drain-prefix\",\"error\":{\"codex_error_info\":\"other\",\"message\":\"A multibyte prefix é\"}}}",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1557,
+        "text": "   unset ROLLOUT_BOUNDARY_READY ROLLOUT_BOUNDARY_RELEASE",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1559,
+        "text": "+  unset ROLLOUT_DRAIN_READY ROLLOUT_DRAIN_RELEASE",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1582,
+        "text": "       local boundary_env=\"\" ready=\"${ROLLOUT_READY}\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1589,
+        "text": "         export ROLLOUT_BOUNDARY_READY=\"${CASE_DIR}/boundary-ready\" ROLLOUT_BOUNDARY_RELEASE=\"${CASE_DIR}/boundary-release\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1594,
+        "text": "-      # Synchronize at EOF or the captured byte boundary before appending.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1595,
+        "text": "+      # Wait for follower-start readiness, the captured byte boundary, or the paused owner check before appending.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1603,
+        "text": "-        # Append after the captured boundary, before the watcher reads the old records.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1611,
+        "text": "+        # Append after the captured byte boundary, before following starts.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1613,
+        "text": "         : > \"${ROLLOUT_BOUNDARY_RELEASE}\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1623,
+        "text": "         wait \"${OTHER_PID}\" 2> /dev/null || true # error-output-allow: owned supervisor termination status is expected during shutdown synchronization",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1714,
+        "text": "+function drain_record() {",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1718,
+        "text": "+  [[ \"${value}\" == drain-ready ]]",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1738,
+        "text": "+  echo 'ASSERT final-drain-delivery' >&2",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1744,
+        "text": "+  if ! \"${ROLLOUT_REAL_JQ}\" -se 'map(.[index(\"--message\")+1]) == [\"A multibyte prefix é\", \"Final drain error\"]' \"${ROLLOUT_ALERTS}\" > /dev/null; then",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1745,
+        "text": "+    echo 'ASSERT final-drain-delivery' >&2",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1816,
+        "text": "+      if drain_record \"${CASE_DIR}/drain-ready\" && pid_record \"${CASE_DIR}/final-pid\" FINAL_PID; then break; fi",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1820,
+        "text": "+      echo 'ASSERT final-reader-fault-boundary' >&2",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1824,
+        "text": "+    : > \"${CASE_DIR}/drain-release\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1865,
+        "text": "+function final_drain() {",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1867,
+        "text": "+  cat \"${root}/tests/data/codex-failure-rollouts/final-drain-prefix.jsonl\" >> \"${CASE_DIR}/rollout.jsonl\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1873,
+        "text": "+    if drain_record \"${CASE_DIR}/drain-ready\"; then break; fi",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1877,
+        "text": "+    echo 'ASSERT final-drain-boundary' >&2",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1880,
+        "text": "+  cat \"${root}/tests/data/codex-failure-rollouts/final-drain-error.jsonl\" >> \"${CASE_DIR}/rollout.jsonl\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1881,
+        "text": "+  : > \"${CASE_DIR}/drain-release\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1884,
+        "text": "+    echo 'ASSERT final-drain-delivery' >&2",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1889,
+        "text": "+  echo 'final drain delivered exactly the prefix and the post-follower failure'",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1911,
+        "text": "+  case \"${mode}\" in check | measure | relative | supervisor-error | cancel | final-drain | follower-error | final-reader-error | escaped-message) ;; *) return 2 ;; esac",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1924,
+        "text": "+  unset ROLLOUT_READER_DIR_RECORD ROLLOUT_DRAIN_READY ROLLOUT_DRAIN_RELEASE",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1956,
+        "text": "+    TMPDIR=\"${CASE_DIR}/runtime\" ROLLOUT_TIMER_RECORD=\"${CASE_DIR}/timer\" ROLLOUT_FOLLOW_PID=\"${CASE_DIR}/tail-pid\" ROLLOUT_READER_DIR_RECORD=\"${CASE_DIR}/reader-dir\" ROLLOUT_FINAL_PID=\"${CASE_DIR}/final-pid\" ROLLOUT_FAIL_FINAL=true ROLLOUT_DRAIN_READY=\"${CASE_DIR}/drain-ready\" ROLLOUT_DRAIN_RELEASE=\"${CASE_DIR}/drain-release\" capture_child - --exec-log \"${CASE_DIR}/diagnostics\" -- /bin/bash \"${CODEX_FAILURE_WATCHER_BIN:?}\" --rollout \"${CASE_DIR}/rollout.jsonl\" --owner-pid \"${owner_pid}\" &",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1957,
+        "text": "+  elif [[ \"${mode}\" == final-drain ]]; then",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1958,
+        "text": "+    TMPDIR=\"${CASE_DIR}/runtime\" ROLLOUT_DRAIN_READY=\"${CASE_DIR}/drain-ready\" ROLLOUT_DRAIN_RELEASE=\"${CASE_DIR}/drain-release\" capture_child - --exec-log \"${CASE_DIR}/diagnostics\" -- /bin/bash \"${CODEX_FAILURE_WATCHER_BIN:?}\" --rollout \"${CASE_DIR}/rollout.jsonl\" --owner-pid \"${owner_pid}\" --cwd \"${CASE_DIR}\" --session-name MONITOR --tmux-session atlas --tmux-window 'w sample' --tier untiered &",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1977,
+        "text": "+    if ! kill -0 \"${watcher_pid}\" 2> /dev/null; then # error-output-allow: detect an owned watcher that exits before readiness",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1984,
+        "text": "+  if [[ \"${mode}\" == final-drain ]]; then",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1985,
+        "text": "+    final_drain \"${root}\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 1989,
+        "text": "+  # Measure a separate idle window after follower-start readiness.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2042,
+        "text": "diff --git a/tests/fixtures/notify-rollout/owner-boundary.bash b/tests/fixtures/notify-rollout/owner-boundary.bash",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2044,
+        "text": "--- a/tests/fixtures/notify-rollout/owner-boundary.bash",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2045,
+        "text": "+++ b/tests/fixtures/notify-rollout/owner-boundary.bash",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2048,
+        "text": "-# Pause the watcher's second owner check, after its first EOF observation.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2099,
+        "text": "+elif [[ \"${1:-}\" == -c && \" $* \" != *' -f '* && -n \"${ROLLOUT_DRAIN_READY:-}\" ]]; then",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2101,
+        "text": "+  printf 'drain-ready\\n' > \"${ROLLOUT_DRAIN_READY}\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2102,
+        "text": "+  : \"${ROLLOUT_DRAIN_RELEASE:?}\"",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2104,
+        "text": "+    if [[ -f \"${ROLLOUT_DRAIN_RELEASE}\" ]]; then",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2113,
+        "text": "+  echo 'fixture final-drain release did not arrive' >&2",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2125,
+        "text": "-Follow mode reaches EOF before appending a partial record, posts after its newline, skips historical failure records, and exits when the recorded supervisor stops.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2126,
+        "text": "+The fixture waits for follower-start readiness before appending a partial record. Follow mode posts after its newline, skips historical failure records and exits when the recorded owner stops.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2158,
+        "text": "-## Final record appended between EOF and owner-exit observation",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2161,
+        "text": "-The capture-only owner check pauses after the initial EOF. The fixture appends the terminal record and stops the supervisor before allowing that check to finish.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2162,
+        "text": "+The fixture pauses the supervisor's first follow-mode owner check, appends a terminal record and stops the owner before releasing the check. Delivery may occur through the follower or the final drain.",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2234,
+        "text": "+$ \"${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}\" final-drain",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      },
+      {
+        "line": 2235,
+        "text": "+final drain delivered exactly the prefix and the post-follower failure",
+        "assessment": "Current/addition sites are assessed in the file inventory; removed lines are historical diff evidence."
+      }
+    ]
+  }
+}

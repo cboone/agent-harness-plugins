@@ -57,6 +57,7 @@ SCRUT_ENV := \
 	VERSION_AUDIT_STUB_BIN="$(CURDIR)/tests/fixtures/version-audit-stub" \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
 	CODEX_FAILURE_WATCHER_BIN="$(CURDIR)/plugins/notify/scripts/watch-codex-failures" \
+	MEASURE_CODEX_FAILURE_LAUNCHES_BIN="$(CURDIR)/tests/fixtures/measure-codex-failure-launches" \
 	CHECK_CODEX_FAILURES_BIN="$(CURDIR)/tests/fixtures/check-codex-failures" \
 	ATTENTION_LOG_BIN="$(CURDIR)/plugins/attention-log/scripts/attention-log" \
 	CHECK_NOTIFICATIONS_BIN="$(CURDIR)/tests/fixtures/check-notifications" \

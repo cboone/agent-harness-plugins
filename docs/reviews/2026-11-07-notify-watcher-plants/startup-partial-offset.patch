@@ -1,0 +1,11 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -140,7 +140,7 @@
+     startup_suffix="${startup_suffix%.}"
+     if [[ "${startup_suffix}" != *$'\n' ]]; then
+       count_bytes "${startup_suffix}"
+-      initial_bytes=$((initial_bytes - BYTE_COUNT))
++      : # Skip the entire snapshot, including its unfinished record.
+     fi
+   fi
+   cd -- "${cwd}"

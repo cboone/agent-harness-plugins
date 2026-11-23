@@ -1,0 +1,13 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -38,7 +38,9 @@
+     kill "${timer_pid}" 2> /dev/null || true # error-output-allow: owned timer may have stopped
+     wait "${timer_pid}" 2> /dev/null || true # error-output-allow: intentional owned timer termination
+   fi
+-  kill "${reader_pid}" 2> /dev/null || true # error-output-allow: owned follower may have stopped
++  if ((status == 0)); then
++    kill "${reader_pid}" 2> /dev/null || true # error-output-allow: planted missing error-path reader shutdown
++  fi
+   exit "${status}"
+ }
+ 

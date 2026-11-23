@@ -137,6 +137,96 @@
       "legacy_verdict": true
     },
     {
+      "manifest": "2026-11-07-notify-watcher-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["launch instrument started\n", "\nlaunch budgets satisfied\n", "relative rollout modes satisfied\n", "timer failure propagated; watcher stopped with owner and rollout context\n", "watcher canceled; descendants stopped; reader directory removed; owner preserved\n", "final drain delivered exactly the prefix and the post-follower failure\n", "follower-error propagated; diagnostics retained; descendants and reader directory removed\n", "final-reader-error propagated; diagnostics retained; descendants and reader directory removed\n", "TSV message preserves literal backslashes and internal whitespace as exact JSON\n"],
+        "excludes": ["ASSERT"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "launch instrument started\nstartup_jq=1 idle_seconds=3 idle_jq=0 idle_sleep=1 idle_tail=0\nlaunch budgets satisfied\nstartup_jq=1 idle_seconds=3 idle_jq=0 idle_sleep=1 idle_tail=0\nlaunch budgets satisfied\nrelative rollout modes satisfied\ntimer failure propagated; watcher stopped with owner and rollout context\nwatcher canceled; descendants stopped; reader directory removed; owner preserved\nfinal drain delivered exactly the prefix and the post-follower failure\nfollower-error propagated; diagnostics retained; descendants and reader directory removed\nfinal-reader-error propagated; diagnostics retained; descendants and reader directory removed\nTSV message preserves literal backslashes and internal whitespace as exact JSON\n",
+        "stderr": "fixture timer failed\nwatch-codex-failures: owner supervisor exited with status 1 (owner <pid>, rollout <fixture>/rollout.jsonl; reader status 143)\nfixture follower failed\nwatch-codex-failures: owner supervisor exited with status 143 (owner <pid>, rollout <fixture>/rollout.jsonl; reader status 1)\nfixture final reader failed\nwatch-codex-failures: rollout reader failed\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-notify-watcher-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["launch instrument started\n", "ASSERT idle-launch-budget\n"],
+        "excludes": ["launch budgets satisfied"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "launch instrument started\nstartup_jq=1 idle_seconds=3 idle_jq=0 idle_sleep=14 idle_tail=0\n",
+        "stderr": "ASSERT idle-launch-budget\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-notify-watcher-plants.json",
+      "phase": "green",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["launch instrument started\n", "\nlaunch budgets satisfied\n", "relative rollout modes satisfied\n", "timer failure propagated; watcher stopped with owner and rollout context\n", "watcher canceled; descendants stopped; reader directory removed; owner preserved\n", "final drain delivered exactly the prefix and the post-follower failure\n", "follower-error propagated; diagnostics retained; descendants and reader directory removed\n", "final-reader-error propagated; diagnostics retained; descendants and reader directory removed\n", "TSV message preserves literal backslashes and internal whitespace as exact JSON\n"],
+        "excludes": ["ASSERT"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "launch instrument started\nstartup_jq=1 idle_seconds=3 idle_jq=0 idle_sleep=2 idle_tail=0\nlaunch budgets satisfied\nstartup_jq=1 idle_seconds=3 idle_jq=0 idle_sleep=1 idle_tail=0\nlaunch budgets satisfied\nrelative rollout modes satisfied\ntimer failure propagated; watcher stopped with owner and rollout context\nwatcher canceled; descendants stopped; reader directory removed; owner preserved\nfinal drain delivered exactly the prefix and the post-follower failure\nfollower-error propagated; diagnostics retained; descendants and reader directory removed\nfinal-reader-error propagated; diagnostics retained; descendants and reader directory removed\nTSV message preserves literal backslashes and internal whitespace as exact JSON\n",
+        "stderr": "fixture timer failed\nwatch-codex-failures: owner supervisor exited with status 1 (owner <pid>, rollout <fixture>/rollout.jsonl; reader status 143)\nfixture follower failed\nwatch-codex-failures: owner supervisor exited with status 143 (owner <pid>, rollout <fixture>/rollout.jsonl; reader status 1)\nfixture final reader failed\nwatch-codex-failures: rollout reader failed\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-notify-watcher-startup-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["startup boundary instrument started\n", "startup history is skipped before appended delivery\n", "partial startup record is retained until newline\n"],
+        "excludes": ["ASSERT", "fixture-invalid", "Traceback (most recent call last)", "command not found"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "startup boundary instrument started\nstartup history is skipped before appended delivery\npartial startup record is retained until newline\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-notify-watcher-startup-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["startup boundary instrument started\n", "ASSERT startup-snapshot-skips-history\n"],
+        "excludes": ["fixture-invalid", "Traceback (most recent call last)", "command not found"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "startup boundary instrument started\n",
+        "stderr": "ASSERT startup-snapshot-skips-history\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-07-notify-watcher-startup-plants.json",
+      "phase": "green",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["startup boundary instrument started\n", "startup history is skipped before appended delivery\n", "partial startup record is retained until newline\n"],
+        "excludes": ["ASSERT", "fixture-invalid", "Traceback (most recent call last)", "command not found"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "startup boundary instrument started\nstartup history is skipped before appended delivery\npartial startup record is retained until newline\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
       "manifest": "2026-11-07-reviewer-confirmation-plants.json",
       "phase": "baseline",
       "wanted": {

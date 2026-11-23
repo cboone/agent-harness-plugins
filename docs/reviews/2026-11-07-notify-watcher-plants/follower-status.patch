@@ -1,0 +1,23 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -237,12 +237,14 @@
+       supervisor_status=0
+       wait "${WATCHDOG_PID}" || supervisor_status=$?
+       WATCHDOG_PID=""
+-      if ((supervisor_status != 0)); then
+-        die "owner supervisor exited with status ${supervisor_status} (owner ${owner_pid}, rollout ${rollout}; reader status ${reader_status})"
+-      fi
+-      [[ "${owner_running}" == false ]] || die 'rollout reader stopped before its owner'
+-      if ((reader_status != 0 && reader_status != 143)); then
+-        die "rollout reader exited with status ${reader_status} (rollout ${rollout})"
++      if ((reader_status != 1)); then
++        if ((supervisor_status != 0)); then
++          die "owner supervisor exited with status ${supervisor_status} (owner ${owner_pid}, rollout ${rollout}; reader status ${reader_status})"
++        fi
++        [[ "${owner_running}" == false ]] || die 'rollout reader stopped before its owner'
++        if ((reader_status != 0 && reader_status != 143)); then
++          die "rollout reader exited with status ${reader_status} (rollout ${rollout})"
++        fi
+       fi
+       exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain
+       partial=""

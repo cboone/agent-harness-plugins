@@ -1,0 +1,10 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -120,7 +120,6 @@
+       *) die "unknown option: ${option}" ;;
+     esac
+   done
+-  if [[ "${rollout}" != /* ]]; then rollout="${PWD}/${rollout}"; fi
+   [[ -n "${rollout}" && -f "${rollout}" && -r "${rollout}" ]] || die 'a readable rollout file is required'
+   if [[ "${once}" == true ]]; then
+     [[ -z "${owner_pid}" ]] || die '--once and --owner-pid are mutually exclusive'

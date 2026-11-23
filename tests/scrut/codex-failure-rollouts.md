@@ -105,7 +105,7 @@ Error: thread-sample | sample-repo · unknown | API limit reached | Funk
 
 ## Appended partial records and supervisor shutdown
 
-Follow mode reaches EOF before appending a partial record, posts after its newline, skips historical failure records, and exits when the recorded supervisor stops.
+The fixture waits for follower-start readiness before appending a partial record. Follow mode posts after its newline, skips historical failure records and exits when the recorded owner stops.
 
 ```scrut
 $ "${CHECK_CODEX_FAILURES_BIN}" follow
@@ -120,9 +120,21 @@ watch-codex-failures: rollout does not match --thread-id
 [1]
 ```
 
-## Failure appended during startup catch-up
+## Follow-mode launch budgets
 
-A byte-count stub pauses after capturing the initial size. The fixture appends a failure before the watcher reads history, including multibyte text, then releases it.
+The committed jq and sleep wrappers count watcher launches after startup on a
+sample rollout with a long history. The idle window excludes fixture-controller
+launches. Both wrappers must resolve to the committed test doubles.
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" check
+startup_jq=1 idle_seconds=3 idle_jq=0 idle_sleep=* idle_tail=0 (glob)
+launch budgets satisfied
+```
+
+## Failure appended after startup byte capture
+
+A byte-count stub pauses after capturing the initial size. The captured history contains multibyte text. Before following starts, the fixture appends a failure, then releases the stub.
 
 ```scrut
 $ "${CHECK_CODEX_FAILURES_BIN}" startup
@@ -136,9 +148,9 @@ $ "${CHECK_CODEX_FAILURES_BIN}" directory
 Error: MONITOR | atlas: w sample | API limit reached | Funk
 ```
 
-## Final record appended between EOF and owner-exit observation
+## Record appended during owner shutdown
 
-The capture-only owner check pauses after the initial EOF. The fixture appends the terminal record and stops the supervisor before allowing that check to finish.
+The fixture pauses the supervisor's first follow-mode owner check, appends a terminal record and stops the owner before releasing the check. Delivery may occur through the follower or the final drain.
 
 ```scrut
 $ "${CHECK_CODEX_FAILURES_BIN}" shutdown
@@ -186,4 +198,111 @@ Missing, null and empty metadata remain silent. A typed object-valued connection
 ```scrut
 $ "${CHECK_CODEX_FAILURES_BIN}" metadata
 Error: MONITOR | atlas: w sample | Connection failed | Funk
+```
+
+## Every supported failure shape while following
+
+```scrut
+$ "${CHECK_CODEX_FAILURES_BIN}" follow-shapes
+Error: MONITOR | atlas: w sample | API limit reached | Funk
+Error: MONITOR | atlas: w sample | Connection failed | Funk
+Error: MONITOR | atlas: w sample | Turn ended in an API error. | Funk
+Refusal: MONITOR | atlas: w sample | Turn ended in a safeguard refusal. | Funk
+Refusal: MONITOR | atlas: w sample | Turn ended in a safeguard refusal. | Funk
+Refusal: MONITOR | atlas: w sample | Turn ended in a safeguard refusal. | Funk
+```
+
+## Record already partial at startup
+
+```scrut
+$ "${CHECK_CODEX_FAILURES_BIN}" partial-startup
+Error: MONITOR | atlas: w sample | Partial startup error | Funk
+```
+
+## Relative rollout with a different notification directory
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" relative
+startup_jq=1 idle_seconds=3 idle_jq=0 idle_sleep=* idle_tail=0 (glob)
+launch budgets satisfied
+relative rollout modes satisfied
+```
+
+## Extracted fields retain command-substitution compatibility
+
+Trailing newlines in identity, turn and message fields are removed as before. Replaying the same normalized turn does not deliver twice.
+
+```scrut
+$ "${CHECK_CODEX_FAILURES_BIN}" escaped-fields
+Error: MONITOR | atlas: w sample | API limit reached | Funk
+```
+
+## Supervisor timer failure propagates
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" supervisor-error
+timer failure propagated; watcher stopped with owner and rollout context
+```
+
+## Cancellation closes owned readers and timers
+
+The fixture records the follower, supervisor and timer PIDs, plus the private
+reader directory, before stopping the watcher while its owner remains running.
+A real extended timer makes descendant cleanup observable.
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" cancel
+watcher canceled; descendants stopped; reader directory removed; owner preserved
+```
+
+## Failure appended after follower closure
+
+A delivered prefix confirms consumption of multibyte data. After the persistent follower closes, the static reader pauses before opening the rollout. Only then does the fixture append the final terminal failure.
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" final-drain
+final drain delivered exactly the prefix and the post-follower failure
+```
+
+## Follower failure while the owner remains running
+
+The fixture releases a failing follower after recording the running children and
+reader directory. The owner remains running while the watcher reports failure.
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" follower-error
+follower-error propagated; diagnostics retained; descendants and reader directory removed
+```
+
+## Final-reader failure after owner shutdown
+
+A controlled static-reader marker follows follower closure. The fixture records
+that reader's PID before releasing its failure.
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" final-reader-error
+final-reader-error propagated; diagnostics retained; descendants and reader directory removed
+```
+
+## Exact TSV message round trip
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" escaped-message
+TSV message preserves literal backslashes and internal whitespace as exact JSON
+```
+
+## Startup history offset and partial-record retention
+
+The history case waits for a newly appended failure before stopping the owner,
+then checks that no historical banner was delivered. The partial case starts
+with an unfinished record and appends only its suffix and newline.
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" follow
+startup history is skipped before appended delivery
+```
+
+```scrut
+$ "${MEASURE_CODEX_FAILURE_LAUNCHES_BIN}" partial-startup
+partial startup record is retained until newline
 ```

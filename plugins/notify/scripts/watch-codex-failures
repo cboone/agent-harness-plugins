@@ -2,10 +2,63 @@
 # watch-codex-failures -- Follow one owned Codex rollout for terminal failures.
 set -euo pipefail
 
-# Count bytes without changing the locale used by notification tier rules.
-function byte_count() {
+READER_PID=""
+READER_DIR=""
+WATCHDOG_PID=""
+
+function stop_reader() {
+  if [[ -n "${READER_PID}" ]]; then
+    kill "${READER_PID}" 2> /dev/null || true # error-output-allow: owned reader may already have exited
+    wait "${READER_PID}" 2> /dev/null || true # error-output-allow: stopping the owned follower intentionally produces a signal exit
+    READER_PID=""
+  fi
+}
+
+# Sets BYTE_COUNT without launching a subprocess or changing notification locales.
+function count_bytes() {
   local LC_ALL=C
-  printf '%s\n' "${#1}"
+  BYTE_COUNT=${#1}
+}
+
+function cleanup() {
+  if [[ -n "${WATCHDOG_PID}" ]]; then
+    kill "${WATCHDOG_PID}" 2> /dev/null || true # error-output-allow: owned supervisor may have exited
+    wait "${WATCHDOG_PID}" 2> /dev/null || true # error-output-allow: intentional owned supervisor termination
+  fi
+  stop_reader
+  if [[ -n "${READER_DIR}" ]]; then rm -r "${READER_DIR}"; fi
+}
+
+# Preserve the supervisor's status while closing the follower on every exit.
+function stop_owner_watch() {
+  local timer_pid="${1}" reader_pid="${2}" status="${3}"
+  trap - EXIT
+  trap '' TERM INT
+  if [[ -n "${timer_pid}" ]]; then
+    kill "${timer_pid}" 2> /dev/null || true # error-output-allow: owned timer may have stopped
+    wait "${timer_pid}" 2> /dev/null || true # error-output-allow: intentional owned timer termination
+  fi
+  kill "${reader_pid}" 2> /dev/null || true # error-output-allow: owned follower may have stopped
+  exit "${status}"
+}
+
+function watch_owner() {
+  local owner_pid="${1}" reader_pid="${2}" sleeper="" status
+  trap 'stop_owner_watch "${sleeper}" "${reader_pid}" "$?"' EXIT
+  trap 'exit 143' TERM
+  trap 'exit 130' INT
+  while kill -0 "${owner_pid}" 2> /dev/null; do # error-output-allow: explicit owner-existence predicate
+    sleep 3 &
+    sleeper=$!
+    if wait "${sleeper}"; then
+      sleeper=""
+    else
+      status=$?
+      sleeper=""
+      exit "${status}"
+    fi
+  done
+  exit 0
 }
 
 function usage() {
@@ -67,6 +120,7 @@ function main() {
       *) die "unknown option: ${option}" ;;
     esac
   done
+  if [[ "${rollout}" != /* ]]; then rollout="${PWD}/${rollout}"; fi
   [[ -n "${rollout}" && -f "${rollout}" && -r "${rollout}" ]] || die 'a readable rollout file is required'
   if [[ "${once}" == true ]]; then
     [[ -z "${owner_pid}" ]] || die '--once and --owner-pid are mutually exclusive'
@@ -79,49 +133,69 @@ function main() {
     *) die 'invalid tier' ;;
   esac
   script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-  exec 3< "${rollout}" # error-output-allow: retain the rollout reader on descriptor 3; open errors remain on stderr under strict mode
-  local initial_bytes bytes_read=0
+  local initial_bytes bytes_read=0 BYTE_COUNT=0 startup_suffix
   initial_bytes="$(LC_ALL=C wc -c < "${rollout}")"
+  if [[ "${once}" == false ]]; then
+    startup_suffix="$(head -c "${initial_bytes}" "${rollout}" | tail -n 1 && printf '.')"
+    startup_suffix="${startup_suffix%.}"
+    if [[ "${startup_suffix}" != *$'\n' ]]; then
+      count_bytes "${startup_suffix}"
+      initial_bytes=$((initial_bytes - BYTE_COUNT))
+    fi
+  fi
   cd -- "${cwd}"
+  trap cleanup EXIT
+  trap 'exit 143' TERM
+  trap 'exit 130' INT
 
-  local line line_bytes partial="" record identity="" subagent=false state=startup action turn kind message key marker payload alerter_path claim_error
+  local line line_bytes partial="" record identity="" subagent=false state=startup action turn kind message key marker payload alerter_path claim_error key_json
+  local record_subagent supervisor_status reader_status owner_running
+  exec 3< "${rollout}" # error-output-allow: retained rollout descriptor; open errors remain live
   [[ "${once}" == false ]] || state=final-drain
   while true; do
-    if [[ "${state}" == owner-exit ]]; then
-      if kill -0 "${owner_pid}" 2> /dev/null; then # error-output-allow: process-existence predicate selects follow or final-drain state
-        state=following
-        sleep 0.2
-      else
-        state=final-drain
-      fi
-      continue
-    fi
     line=""
     if IFS= read -r line <&3; then
       line="${partial}${line}"
       partial=""
-      line_bytes="$(byte_count "${line}")"
+      count_bytes "${line}"
+      line_bytes=${BYTE_COUNT}
       bytes_read=$((bytes_read + line_bytes + 1))
-      if [[ "${state}" == startup ]] && ((bytes_read > initial_bytes)); then state=following; fi
-      record="$(printf '%s' "${line}" | jq -c -f "${script_dir}/codex-failure.jq")" || die 'invalid rollout record'
+      record="$(printf '%s' "${line}" | jq -r --arg identity "${identity}" -f "${script_dir}/codex-failure.jq")" || die 'invalid rollout record'
       [[ -n "${record}" ]] || continue
-      action="$(printf '%s' "${record}" | jq -r '.action')"
+      IFS=$'\t' read -r action value record_subagent turn kind message key_json <<< "${record}"
+      # jq's TSV encoding escapes only backslashes, tabs, CR and LF. Prefixes
+      # keep empty fields intact through Bash's whitespace-delimited read.
+      printf -v action '%b' "${action:1}"
+      printf -v value '%b' "${value:1}"
+      printf -v record_subagent '%b' "${record_subagent:1}"
+      printf -v turn '%b' "${turn:1}"
+      printf -v kind '%b' "${kind:1}"
+      printf -v message '%b' "${message:1}"
+      printf -v key_json '%b' "${key_json:1}"
       if [[ "${action}" == meta ]]; then
-        value="$(printf '%s' "${record}" | jq -r '.id')"
         [[ -n "${value}" ]] || value="${expected}"
         [[ -n "${value}" ]] || die 'session_meta has no thread identity'
         [[ -z "${identity}" || "${identity}" == "${value}" ]] || die 'rollout thread identity changed'
         [[ -z "${expected}" || "${expected}" == "${value}" ]] || die 'rollout does not match --thread-id'
         identity="${value}"
-        subagent="$(printf '%s' "${record}" | jq -r '.subagent')"
+        subagent="${record_subagent}"
+        if [[ "${state}" == startup ]]; then
+          bytes_read=${initial_bytes}
+          exec 3<&- # error-output-allow: close owned metadata reader before starting the persistent follower
+          READER_DIR="$(mktemp -d "${TMPDIR:-/tmp}/notify-reader.XXXXXX")"
+          mkfifo "${READER_DIR}/records"
+          tail -c "+$((initial_bytes + 1))" -f "${rollout}" > "${READER_DIR}/records" &
+          READER_PID=$!
+          exec 3< "${READER_DIR}/records" # error-output-allow: persistent follower FIFO; errors remain on stderr
+          watch_owner "${owner_pid}" "${READER_PID}" &
+          WATCHDOG_PID=$!
+          state=following
+        fi
         continue
       fi
       [[ -n "${identity}" ]] || die 'terminal record precedes session_meta'
       [[ "${state}" != startup && "${subagent}" == false ]] || continue
-      turn="$(printf '%s' "${record}" | jq -r '.turn_id')"
-      kind="$(printf '%s' "${record}" | jq -r '.kind')"
-      message="$(printf '%s' "${record}" | jq -r '.message')"
-      key="$(jq -nc --arg id "${identity}" --arg turn "${turn}" '[$id,$turn]' | shasum -a 256 | cut -d ' ' -f 1)"
+      key="$(printf '%s\n' "${key_json}" | shasum -a 256 | cut -d ' ' -f 1)"
       marker="${XDG_CACHE_HOME:-${HOME}/.cache}/agent-harness-notify/codex-failures/${key}"
       [[ ! -e "${marker}" && ! -L "${marker}" ]] || continue
       if ! alerter_path="$(command -v alerter)" || [[ ! -f "${alerter_path}" || ! -x "${alerter_path}" ]]; then
@@ -146,9 +220,36 @@ function main() {
       [[ -n "${identity}" ]] || die 'rollout has no session_meta'
       if [[ "${state}" == final-drain ]]; then
         [[ -z "${partial}" ]] || die 'incomplete rollout record at EOF'
+        if [[ -n "${READER_PID}" ]]; then
+          wait "${READER_PID}" || die 'rollout reader failed'
+          READER_PID=""
+        fi
         break
       fi
-      state=owner-exit
+      owner_running=false
+      if kill -0 "${owner_pid}" 2> /dev/null; then # error-output-allow: unexpected EOF requires stopping the owned supervisor before waiting
+        owner_running=true
+        kill "${WATCHDOG_PID}" 2> /dev/null || true # error-output-allow: supervisor may already be exiting after closing the follower
+      fi
+      reader_status=0
+      wait "${READER_PID}" || reader_status=$?
+      READER_PID=""
+      supervisor_status=0
+      wait "${WATCHDOG_PID}" || supervisor_status=$?
+      WATCHDOG_PID=""
+      if ((supervisor_status != 0)); then
+        die "owner supervisor exited with status ${supervisor_status} (owner ${owner_pid}, rollout ${rollout}; reader status ${reader_status})"
+      fi
+      [[ "${owner_running}" == false ]] || die 'rollout reader stopped before its owner'
+      if ((reader_status != 0 && reader_status != 143)); then
+        die "rollout reader exited with status ${reader_status} (rollout ${rollout})"
+      fi
+      exec 3<&- # error-output-allow: close owned follower FIFO before the final byte-offset drain
+      partial=""
+      tail -c "+$((bytes_read + 1))" "${rollout}" > "${READER_DIR}/records" &
+      READER_PID=$!
+      exec 3< "${READER_DIR}/records" # error-output-allow: final drain FIFO; reader stderr remains live
+      state=final-drain
     fi
   done
 }

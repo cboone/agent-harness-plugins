@@ -1,0 +1,36 @@
+{
+  "inputs": ["bin/lib/capture-child.bash", "bin/lib/git-environment.bash", "docs/reviews/2026-11-07-notify-watcher-plants/cancel-cleanup.patch", "docs/reviews/2026-11-07-notify-watcher-plants/check.bash", "docs/reviews/2026-11-07-notify-watcher-plants/comment-control.patch", "docs/reviews/2026-11-07-notify-watcher-plants/detector.py", "docs/reviews/2026-11-07-notify-watcher-plants/drain-offset.patch", "docs/reviews/2026-11-07-notify-watcher-plants/final-status.patch", "docs/reviews/2026-11-07-notify-watcher-plants/follower-status.patch", "docs/reviews/2026-11-07-notify-watcher-plants/history-parse.patch", "docs/reviews/2026-11-07-notify-watcher-plants/idle-poll.patch", "docs/reviews/2026-11-07-notify-watcher-plants/preflight.py", "docs/reviews/2026-11-07-notify-watcher-plants/relative-path.patch", "docs/reviews/2026-11-07-notify-watcher-plants/startup-check.bash", "docs/reviews/2026-11-07-notify-watcher-plants/startup-history-offset.patch", "docs/reviews/2026-11-07-notify-watcher-plants/startup-partial-offset.patch", "docs/reviews/2026-11-07-notify-watcher-plants/supervisor-error.patch", "docs/reviews/2026-11-07-notify-watcher-plants/tsv-decoder.patch", "plugins/notify/.claude-plugin/plugin.json", "plugins/notify/.codex-plugin/plugin.json", "plugins/notify/README.md", "plugins/notify/assets/claude-code.png", "plugins/notify/assets/codex.png", "plugins/notify/hooks/codex.hooks.json", "plugins/notify/hooks/hooks.json", "plugins/notify/scripts/claude-transcript.jq", "plugins/notify/scripts/codex-failure.jq", "plugins/notify/scripts/notify", "plugins/notify/scripts/watch-codex-failures", "plugins/plant-defects/scripts/checked_core.py", "tests/data/codex-failure-rollouts/final-drain-error.jsonl", "tests/data/codex-failure-rollouts/final-drain-prefix.jsonl", "tests/data/codex-failure-rollouts/long.jsonl", "tests/data/codex-failure-rollouts/partial-startup-prefix.txt", "tests/data/codex-failure-rollouts/partial-startup-suffix.txt", "tests/data/codex-failure-rollouts/tsv-message.jsonl", "tests/fixtures/measure-codex-failure-launches", "tests/fixtures/notify-rollout/alerter", "tests/fixtures/notify-rollout/jq", "tests/fixtures/notify-rollout/mktemp", "tests/fixtures/notify-rollout/sleep", "tests/fixtures/notify-rollout/tail", "tests/fixtures/notify-rollout/tmux"],
+  "check": "docs/reviews/2026-11-07-notify-watcher-plants/startup-check.bash",
+  "timeout": 180,
+  "green": {
+    "exit_code": 0,
+    "contains": ["startup boundary instrument started\n", "startup history is skipped before appended delivery\n", "partial startup record is retained until newline\n"],
+    "excludes": ["ASSERT", "fixture-invalid", "Traceback (most recent call last)", "command not found"]
+  },
+  "variants": [
+    {
+      "name": "startup-history-offset",
+      "patch": "docs/reviews/2026-11-07-notify-watcher-plants/startup-history-offset.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["startup boundary instrument started\n", "ASSERT startup-snapshot-skips-history\n"],
+        "excludes": ["fixture-invalid", "Traceback (most recent call last)", "command not found"]
+      }
+    },
+    {
+      "name": "startup-partial-offset",
+      "patch": "docs/reviews/2026-11-07-notify-watcher-plants/startup-partial-offset.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["startup boundary instrument started\n", "ASSERT startup-partial-record-retained\n"],
+        "excludes": ["fixture-invalid", "Traceback (most recent call last)", "command not found"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "comment-only",
+      "patch": "docs/reviews/2026-11-07-notify-watcher-plants/comment-control.patch"
+    }
+  ]
+}

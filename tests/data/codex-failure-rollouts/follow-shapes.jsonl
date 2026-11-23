@@ -1,0 +1,6 @@
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-sample","error":{"codex_error_info":"other","message":"API limit reached"}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"typed-object","error":{"message":"Connection failed","codex_error_info":{"http_connection_failed":{"http_status_code":503}}}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"cyber_policy","error":{"codex_error_info":"cyber_policy","message":"Private refusal text must not be shown"}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"bio_policy","error":{"codex_error_info":"bio_policy","message":"Private refusal text must not be shown"}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"misalignment_policy_violation","error":{"codex_error_info":"misalignment_policy_violation","message":"Private refusal text must not be shown"}}}
+{"type":"event_msg","payload":{"type":"task_complete","turn_id":"empty-message","error":{"codex_error_info":"other","message":""}}}

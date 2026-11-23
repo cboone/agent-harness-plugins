@@ -1,0 +1,11 @@
+--- a/plugins/notify/scripts/watch-codex-failures
++++ b/plugins/notify/scripts/watch-codex-failures
+@@ -221,7 +221,7 @@
+       if [[ "${state}" == final-drain ]]; then
+         [[ -z "${partial}" ]] || die 'incomplete rollout record at EOF'
+         if [[ -n "${READER_PID}" ]]; then
+-          wait "${READER_PID}" || die 'rollout reader failed'
++          wait "${READER_PID}" || true
+           READER_PID=""
+         fi
+         break
