@@ -355,6 +355,7 @@ Must include language-specific entries appropriate for the detected project type
 - `MD013` is set to `false` (Prettier handles line length)
 - `MD033` is set to `false` (allow inline HTML)
 - `MD034` is set to `false` (allow bare URLs)
+- `MD060` is explicitly `false` when Prettier formats every Markdown file covered by the config; otherwise it is `{ "style": "aligned" }`. The Pandoc-academic preset always uses `false`. Flag the default or any setting that disagrees with that coverage. Use the coverage procedure in `set-up-linters`' `references/tools/markdownlint.md`.
 - Ignores list includes `CHANGELOG.md`
 - Scrut projects: `MD014` is set to `false` (allow dollar signs before commands)
 
