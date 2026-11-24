@@ -68,11 +68,26 @@ leaders. Records retain allocated deadlines, phase expirations, EPERM causes and
 possibly live groups. An unconfirmed group or lost supervisor fails the run.
 Group records support observation only; they never authorize signaling a group
 whose leader is no longer held.
-Leader records retain start time and command. A later different start time
-identifies a reused PGID; matching start time and command identifies a survivor.
-Unreadable identities and changed commands with the same start time remain
-unknown and red. Defer TERM received during cleanup until cleanup and its records finish,
-then propagate it.
+Leader records retain a platform-tagged kernel start time. A different start
+time in the same format identifies a reused PGID. Matching start times identify
+a survivor. Unreadable or older identities require a fresh group snapshot to
+confirm absence. Defer TERM received during cleanup until cleanup and its records
+finish, then propagate it.
+
+Process inspection trusts Darwin's LP64 kernel `KERN_PROC` records and Linux's
+kernel procfs at its standard mount point with visibility into the caller's PID namespace.
+The supervisor runs the native reader in an isolated Python child with a fixed
+environment and closed terminal input. A timeout, unsuccessful exit, stderr or
+invalid JSON output leaves departure unconfirmed.
+On Linux, a mount with `hidepid` enabled cannot establish group absence. The
+reader checks record structure and discards a racing Linux PID only when the
+kernel also reports that PID gone. A process counts as departed on Linux when
+its task directory is gone or every task's stat reports `Z`, `X` or `x`.
+An unreadable task directory or task stat counts as live. Darwin counts
+zombies and processes with the exit flag as departed. Darwin start times
+use seconds and microseconds.
+Linux start times use clock ticks since boot. All comparisons occur within the
+same supervision run.
 
 `setup` is optional. It must return zero, including compilation and other
 prerequisites that must succeed before the check can assert the named property.
@@ -89,9 +104,10 @@ the script author's responsibility.
 
 Route every process launch through `checked_core.launch`. It prepares launch
 options, checks the active phase deadline, then dispatches immediately. Command
-execution, pipeline stages and synchronous process inspection use this same
-boundary. The launch AST guard rejects launch API references outside it,
-including imported aliases.
+execution and pipeline stages use this boundary. The launch AST guard rejects
+launch API references outside it, including imported aliases. Process inspection
+reads the operating system directly and checks the active deadline before
+accepting a result.
 
 Input fingerprints include SHA-256 content digests and permission modes. Private
 and restored copies preserve those modes so supporting executables run.

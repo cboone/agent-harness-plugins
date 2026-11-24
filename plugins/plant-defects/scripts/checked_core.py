@@ -1,6 +1,7 @@
 """Shared bounded execution, regular-file IO and evidence publication."""
 
 from contextlib import contextmanager, ExitStack
+import ctypes
 import errno
 import hashlib
 import base64
@@ -15,11 +16,13 @@ import re
 import selectors
 import signal
 import stat
+import struct
 import subprocess
 import sys
 import threading
 import tempfile
 import time
+from typing import NamedTuple
 
 OUTPUT_LIMIT = 1024 * 1024
 CLEANUP_MARGIN = 15
@@ -142,72 +145,226 @@ def terminate_group(pid, requested_signal=signal.SIGKILL):
         pass
 
 
-def launch(argv, *, deadline=None, synchronous=False, **options):
+def launch(argv, *, deadline=None, **options):
     active = ACTIVE_DEADLINE.get()
     if active is not None:
         deadline = active if deadline is None else min(deadline, active)
     require(deadline is not None, "process launch requires an active deadline")
     token = ACTIVE_DEADLINE.set(deadline)
     try:
-        operation = subprocess.run if synchronous else subprocess.Popen
-        if synchronous:
-            options.update(timeout=remaining(deadline, "process inspection"))
         remaining(ACTIVE_DEADLINE.get(), "process launch")
-        return operation(argv, **options)
+        return subprocess.Popen(argv, **options)
     finally:
         ACTIVE_DEADLINE.reset(token)
 
 
-def is_live_state(state):
-    if not re.fullmatch(r"[DIRSTtUWXZ][<>+AELNsVWXl]*", state):
+class ProcessRow(NamedTuple):
+    pid: int
+    group: int
+    live: bool
+    start: str
+
+
+# Darwin's LP64 kinfo_proc ABI (sys/sysctl.h and sys/proc.h).
+DARWIN_ROW_SIZE = 648
+DARWIN_SZOMB = 5
+DARWIN_P_WEXIT = 0x2000
+
+
+def darwin_rows(data):
+    require(len(data) % DARWIN_ROW_SIZE == 0, "incomplete Darwin process table")
+    for offset in range(0, len(data), DARWIN_ROW_SIZE):
+        seconds, micros = struct.unpack_from("=qi", data, offset)
+        flags, state, pid = struct.unpack_from("=IB3xi", data, offset + 32)
+        (group,) = struct.unpack_from("=i", data, offset + 564)
+        require(pid >= 0 and group >= 0 and seconds > 0 and 0 <= micros < 1000000,
+                "invalid Darwin process row")
+        yield ProcessRow(pid, group, state != DARWIN_SZOMB and not flags & DARWIN_P_WEXIT,
+                         f"darwin:{seconds}.{micros:06d}")
+
+
+def darwin_snapshot(deadline, *, group, pid):
+    require(ctypes.sizeof(ctypes.c_void_p) == 8, "Darwin process inspection requires LP64")
+    # CTL_KERN, KERN_PROC, then KERN_PROC_PID, KERN_PROC_PGRP or KERN_PROC_ALL.
+    selector, value = 0, 0
+    if pid is not None:
+        selector, value = 1, pid
+    elif group is not None:
+        selector, value = 2, group
+    mib = (ctypes.c_int * 4)(1, 14, selector, value)
+    sysctl = ctypes.CDLL(None, use_errno=True).sysctl
+    sysctl.argtypes = (ctypes.POINTER(ctypes.c_int), ctypes.c_uint, ctypes.c_void_p,
+                       ctypes.POINTER(ctypes.c_size_t), ctypes.c_void_p, ctypes.c_size_t)
+    while True:
+        remaining(deadline, "Darwin process table sizing")
+        size = ctypes.c_size_t()
+        if sysctl(mib, len(mib), None, ctypes.byref(size), None, 0):
+            code = ctypes.get_errno()
+            raise OSError(code, "Darwin process table sizing: " + os.strerror(code))
+        buffer = ctypes.create_string_buffer(max(1, size.value))
+        remaining(deadline, "Darwin process table read")
+        if not sysctl(mib, len(mib), buffer, ctypes.byref(size), None, 0):
+            require(size.value <= len(buffer), "oversized Darwin process table result")
+            return list(darwin_rows(buffer.raw[:size.value]))
+        code = ctypes.get_errno()
+        if code != errno.ENOMEM:
+            raise OSError(code, "Darwin process table read: " + os.strerror(code))
+        # The table can grow between sizing and reading.
+
+
+LINUX_DEPARTED_STATES = (b"Z", b"X", b"x")
+
+
+def linux_stat(data, pid):
+    # The parenthesized comm can contain spaces, newlines and right parentheses.
+    prefix, end, tail = data.rpartition(b") ")
+    fields = tail.split()
+    require(end and data.endswith(b"\n") and prefix.startswith(str(pid).encode("ascii") + b" (")
+            and len(fields) >= 20 and len(fields[0]) == 1, "invalid Linux process stat")
+    group, ticks = int(fields[2]), int(fields[19])
+    require(min(group, ticks) >= 0, "invalid Linux process stat fields")
+    return fields[0], group, ticks
+
+
+def linux_tasks_live(task_dir, proc, deadline):
+    # A thread swapping TIDs through execve during this scan is a known
+    # snapshot race shared with ps, like the /proc enumeration race.
+    try:
+        tasks = list(task_dir.iterdir())
+    except FileNotFoundError:
+        return False
+    except OSError:
         return True
-    return state[0] != "Z" and "E" not in state[1:]
+    for task in tasks:
+        remaining(deadline, "Linux task stat read")
+        try:
+            data, _ = read_regular(task / "stat", root=proc)
+            state, _, _ = linux_stat(data, int(task.name))
+        except (OSError, ValueError):
+            return True
+        if state not in LINUX_DEPARTED_STATES:
+            return True
+    return False
 
 
-def process_rows(stdout):
-    # Trust ps to emit documented rows, including nonnegative IDs and flag order.
-    # Reject rows that cannot be split into fields or parsed as IDs.
-    for line in stdout.splitlines():
-        member, group, state = line.split()
-        yield int(member), int(group), state
+def linux_row(entry, proc, deadline):
+    pid = int(entry.name)
+    data, _ = read_regular(entry / "stat", root=proc)
+    _, group, ticks = linux_stat(data, pid)
+    live = linux_tasks_live(entry / "task", proc, deadline)
+    return ProcessRow(pid, group, live, f"linux:{ticks}")
 
 
-def ps_environment(**overrides):
-    return dict(os.environ, COLUMNS="10000", LINES="1000", **overrides)
+def linux_snapshot(deadline, *, pid):
+    proc = Path("/proc")
+    own_pid = str(os.getpid())
+    require(os.readlink(proc / "self") == own_pid, "procfs PID namespace mismatch")
+    if pid is not None:
+        return [linux_row(proc / str(pid), proc, deadline)]
+
+    # A procfs mount that hides PIDs cannot establish group absence.
+    proc_mounts = []
+    mounts, _ = read_regular(proc / own_pid / "mountinfo", root=proc)
+    for line in mounts.splitlines():
+        prefix, _, suffix = line.partition(b" - ")
+        if prefix.split()[4:5] == [b"/proc"]:
+            proc_mounts.append(suffix.split())
+    require(len(proc_mounts) == 1, "procfs process visibility is unverified")
+    mount = proc_mounts[0]
+    require(len(mount) == 3 and mount[0] == b"proc"
+            and all(not option.startswith(b"hidepid=") or option in (b"hidepid=0", b"hidepid=off")
+                    for option in mount[2].split(b",")), "procfs process visibility is unverified")
+    rows = []
+    for entry in proc.iterdir():
+        if not entry.name.isdigit():
+            continue
+        remaining(deadline, "Linux process table read")
+        member = int(entry.name)
+        try:
+            rows.append(linux_row(entry, proc, deadline))
+        except (FileNotFoundError, ProcessLookupError):
+            # Skip a racing row only if the kernel also reports the PID gone.
+            try:
+                os.getpgid(member)
+            except ProcessLookupError:
+                continue
+            raise
+    return rows
+
+
+def native_process_snapshot(deadline, *, group, pid):
+    if sys.platform == "darwin":
+        return darwin_snapshot(deadline, group=group, pid=pid)
+    if sys.platform == "linux":
+        return linux_snapshot(deadline, pid=pid)
+    raise ValueError(f"process inspection is unavailable on {sys.platform}")
+
+
+def read_process_snapshot(deadline, *, group, pid):
+    budget = remaining(deadline, "process inspection")
+    read_deadline = deadline - min(0.05, budget / 10)
+    argv = [sys.executable, "-I", "-B", str(Path(__file__).resolve()), "process-reader",
+            str(read_deadline), "" if group is None else str(group), "" if pid is None else str(pid)]
+    process = launch(argv, deadline=read_deadline, env={}, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        stdout, stderr = process.communicate(timeout=remaining(read_deadline, "process reader"))
+    finally:
+        process.stdout.close()
+        process.stderr.close()
+        if process.returncode is None:
+            process.kill()
+            try:
+                process.wait(timeout=remaining(deadline, "process reader reap"))
+            except (TimeoutError, subprocess.TimeoutExpired):
+                # A kernel wait can also delay SIGKILL. Reap without holding the supervisor.
+                threading.Thread(target=process.wait, daemon=True).start()
+    if process.returncode or stderr:
+        raise subprocess.CalledProcessError(process.returncode, argv, output=stdout, stderr=stderr)
+    data = parse_json(stdout)
+    require(isinstance(data, list), "invalid process reader output")
+    rows = []
+    for row in data:
+        require(isinstance(row, list) and len(row) == 4
+                and all(type(number) is int and number >= 0 for number in row[:2])
+                and type(row[2]) is bool and isinstance(row[3], str)
+                and PROCESS_START.fullmatch(row[3]), "invalid process reader row")
+        rows.append(ProcessRow(*row))
+    return rows
+
+
+def process_snapshot(deadline, *, group=None, pid=None):
+    active = ACTIVE_DEADLINE.get()
+    if active is not None:
+        deadline = min(deadline, active)
+    remaining(deadline, "process inspection")
+    rows = read_process_snapshot(deadline, group=group, pid=pid)
+    remaining(deadline, "process inspection")
+    if pid is None and (group is None or group == os.getpgrp()):
+        require(any(row.pid == os.getpid() and row.group == os.getpgrp() for row in rows),
+                "process table omitted the inspecting process")
+    return rows
 
 
 def live_group(pid, deadline):
-    """List live group members. Unknown or malformed member states count as live."""
-    listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
-                     env=ps_environment(), stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True)
-    require(not listing.stderr, "group inspection failed: " + listing.stderr)
-    return [member for member, group, state in process_rows(listing.stdout)
-            if group == pid and is_live_state(state)]
+    return [row.pid for row in process_snapshot(deadline, group=pid) if row.group == pid and row.live]
 
 
 def leader_identity(pid, deadline):
-    result = launch(["ps", "-o", "lstart=", "-o", "command=", "-p", str(pid)], deadline=deadline, synchronous=True,
-                    env=ps_environment(LC_ALL="C", TZ="UTC"), stdin=subprocess.DEVNULL,
-                    capture_output=True, text=True, check=True)
-    require(not result.stderr, "group leader inspection failed: " + result.stderr)
-    # Require the documented ps fields and a parseable date. Trust ps to supply the correct weekday.
-    fields = result.stdout.strip().split(maxsplit=5)
-    require(len(fields) == 6 and fields[-1], "unreadable group leader identity")
-    start = " ".join(fields[:5])
-    try:
-        time.strptime(start, "%a %b %d %H:%M:%S %Y")
-    except ValueError as error:
-        raise ValueError("unreadable group leader start time") from error
-    return dict(start=start, command=fields[-1])
+    rows = process_snapshot(deadline, pid=pid)
+    require(len(rows) == 1 and rows[0].pid == pid, "unreadable group leader identity")
+    return dict(start=rows[0].start)
+
+
+PROCESS_START = re.compile(r"darwin:[1-9][0-9]*\.[0-9]{6}|linux:(0|[1-9][0-9]*)")
 
 
 def classify_leader(recorded, current):
-    if not all(isinstance(value, dict) and all(isinstance(value.get(key), str) and value[key]
-                                             for key in ("start", "command")) for value in (recorded, current)):
+    starts = [value.get("start") if isinstance(value, dict) else None for value in (recorded, current)]
+    if not all(isinstance(start, str) and PROCESS_START.fullmatch(start)
+               for start in starts) or starts[0].split(":")[0] != starts[1].split(":")[0]:
         return "unknown"
-    if recorded["start"] != current["start"]:
-        return "reused"
-    return "survivor" if recorded["command"] == current["command"] else "unknown"
+    return "survivor" if starts[0] == starts[1] else "reused"
 
 
 def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
@@ -749,13 +906,10 @@ class SupervisionRuntime:
         if not pending:
             return
         deadline = deadline_after(IO_LIMIT)
-        listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
-                         env=ps_environment(), stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True)
-        require(not listing.stderr, "group inspection failed: " + listing.stderr)
-        live = {group for _, group, state in process_rows(listing.stdout) if is_live_state(state)}
+        live = {row.group for row in process_snapshot(deadline) if row.live}
         for scope, row in self.states().items():
             if type(row.get("pgid")) is int and row["pgid"] in pending and row["pgid"] not in live:
-                self.record(scope, "absent", gone=True, confirmed_by="ps absence; no signal sent")
+                self.record(scope, "absent", gone=True, confirmed_by="process table absence; no signal sent")
             elif type(row.get("pgid")) is int and row["pgid"] in pending:
                 try:
                     current = leader_identity(row["pgid"], deadline)
@@ -767,7 +921,7 @@ class SupervisionRuntime:
                                     replacement_leader=current)
                         continue
                 if not live_group(row["pgid"], deadline):
-                    self.record(scope, "absent", gone=True, confirmed_by="ps absence after identity read; no signal sent")
+                    self.record(scope, "absent", gone=True, confirmed_by="process table absence after identity read; no signal sent")
 
     def finish(self):
         try:
@@ -1368,6 +1522,11 @@ def pipeline_command(stages, root, timeout, *, journal=None, target=None, step=N
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 5 and sys.argv[1] == "process-reader":
+        deadline, group, pid = sys.argv[2:]
+        rows = native_process_snapshot(float(deadline), group=int(group) if group else None, pid=int(pid) if pid else None)
+        print(encode_json(rows))
+        raise SystemExit(0)
     if len(sys.argv) != 4 or sys.argv[1] != "pipeline-worker":
         print("Internal pipeline worker arguments required", file=sys.stderr)
         raise SystemExit(2)
