@@ -580,6 +580,38 @@ class RunnerTests(unittest.TestCase):
         huge = core.failure_cause(subprocess.CalledProcessError(2, ["ps"], stderr="x" * (core.OUTPUT_LIMIT + 1)))
         self.assertNotIn("x" * (core.OUTPUT_LIMIT + 1), huge)
 
+    def test_live_group_parses_state_and_flags_in_their_own_positions(self):
+        cases = [
+            ("SE", False), ("UE", False), ("Z", False), ("Z+", False),
+            ("S+", True), ("Ss", True), ("R", True), ("U", True), ("T", True),
+            # Synthetic states distinguish a leading letter from a trailing flag.
+            ("E", True), ("SZ", True),
+        ]
+        for state, live in cases:
+            with self.subTest(state=state):
+                listing = subprocess.CompletedProcess([], 0, f"123 123 {state}\n124 124 R\n", "")
+                with mock.patch.object(core.subprocess, "run", return_value=listing):
+                    self.assertEqual(core.live_group(123, self.deadline), [123] if live else [])
+
+    def test_stop_group_skips_signals_for_departed_members(self):
+        listing = subprocess.CompletedProcess([], 0, "123 123 SE\n124 123 Z+\n", "")
+        listings = [listing, listing, AssertionError("polled again after the group departed")]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings) as ps, mock.patch.object(
+                core.os, "killpg") as killpg:
+            self.assertEqual(core.stop_group(123, self.deadline), ([], None))
+        self.assertEqual(ps.call_count, 1)
+        killpg.assert_not_called()
+
+    def test_stop_group_polls_until_only_departed_members_remain(self):
+        live = subprocess.CompletedProcess([], 0, "123 123 T\n124 123 SE\n", "")
+        departed = subprocess.CompletedProcess([], 0, "123 123 UE\n124 123 Z\n", "")
+        listings = [live, live, departed, AssertionError("polled again after the group departed")]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings) as ps, mock.patch.object(
+                core.os, "killpg") as killpg, mock.patch.object(core.time, "sleep"):
+            self.assertEqual(core.stop_group(123, self.deadline), ([], None))
+        self.assertEqual(ps.call_count, 3)
+        killpg.assert_called_once_with(123, signal.SIGTERM)
+
     def stop_group_after_denial(self, snapshot, *, stderr="", error_number=errno.EPERM):
         argv = ["ps", "-axo", "pid=,pgid=,stat="]
         listings = [
@@ -643,6 +675,54 @@ class RunnerTests(unittest.TestCase):
                 result = core.stop_group(123, 3, term_deadline=1)
         self.assertEqual(killpg.call_args_list, [mock.call(123, signal.SIGTERM), mock.call(123, signal.SIGKILL)])
         self.assertEqual(result, ([], None))
+
+    def reconciliation_with_recorded_leader(self):
+        journal = core.FactJournal(self.root / "recorded-leader.jsonl", create=True)
+        runtime = core.SupervisionRuntime(journal, "fixture-parent")
+        runtime.record("fixture-group", "reserved", parent=runtime.scope, reserved=True, pgid=123,
+                       leader=dict(start="Thu Nov 5 23:22:01 2026", command="sh -c fixture"))
+        return runtime
+
+    def test_reconcile_clears_exiting_group_in_initial_snapshot(self):
+        runtime = self.reconciliation_with_recorded_leader()
+        listing = subprocess.CompletedProcess([], 0, "123 123 SE\n124 123 Z+\n", "")
+        with mock.patch.object(core.subprocess, "run", return_value=listing) as ps, mock.patch.object(
+                core.os, "killpg") as killpg:
+            runtime.finish()
+        self.assertEqual(ps.call_count, 1)
+        killpg.assert_not_called()
+        self.assertEqual(runtime.pending(), [])
+
+    def reconcile_with_leader_identity(self, runtime, snapshot):
+        listings = [
+            subprocess.CompletedProcess([], 0, "123 123 Ss\n124 123 S\n", ""),
+            subprocess.CompletedProcess([], 0, "Thu Nov 5 23:22:01 2026 (sh)\n", ""),
+            subprocess.CompletedProcess([], 0, snapshot, ""),
+        ]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings) as ps, mock.patch.object(
+                core.os, "killpg") as killpg:
+            try:
+                runtime.finish()
+            finally:
+                killpg.assert_not_called()
+                self.assertEqual(
+                    [call.args[0] for call in ps.call_args_list[:2]],
+                    [["ps", "-axo", "pid=,pgid=,stat="], ["ps", "-o", "lstart=", "-o", "command=", "-p", "123"]],
+                )
+
+    def test_reconcile_clears_exiting_group_after_successful_identity_read(self):
+        runtime = self.reconciliation_with_recorded_leader()
+        try:
+            self.reconcile_with_leader_identity(runtime, "123 123 SE\n124 123 Z+\n")
+        except ValueError as failure:
+            self.fail(str(failure))
+        self.assertEqual(runtime.pending(), [])
+
+    def test_reconcile_refuses_live_group_after_successful_identity_read(self):
+        runtime = self.reconciliation_with_recorded_leader()
+        with self.assertRaisesRegex(ValueError, "unconfirmed possibly live groups"):
+            self.reconcile_with_leader_identity(runtime, "123 123 SE\n124 123 T\n")
+        self.assertEqual(runtime.pending(), [123])
 
     def reconcile_after_leader_exit(self, runtime, snapshot, stderr):
         runtime.record("fixture-group", "reserved", parent=runtime.scope, reserved=True, pgid=123)
