@@ -332,7 +332,7 @@ class BudgetTests(unittest.TestCase):
                 runtime.states = mock.Mock(return_value=states)
                 allocation = runtime.allocate(1)
                 runtime.record(allocation["scope"], "reserved", reserved=True, pgid=123, leader=recorded)
-                listing = subprocess.CompletedProcess([], 0, stdout="" if name == "absent" else "123 123 S\n")
+                listing = subprocess.CompletedProcess([], 0, stdout="" if name == "absent" else "123 123 S\n", stderr="")
                 failure = PermissionError("identity denied") if name == "unreadable" else None
                 with mock.patch.object(core.subprocess, "run", return_value=listing), mock.patch.object(
                         core, "leader_identity", return_value=current, side_effect=failure), mock.patch.object(
