@@ -583,15 +583,32 @@ class RunnerTests(unittest.TestCase):
     def test_live_group_parses_state_and_flags_in_their_own_positions(self):
         cases = [
             ("SE", False), ("UE", False), ("Z", False), ("Z+", False),
-            ("S+", True), ("Ss", True), ("R", True), ("U", True), ("T", True),
-            # Synthetic states distinguish a leading letter from a trailing flag.
-            ("E", True), ("SZ", True),
+            ("S+", True), ("Ss", True), ("R<>+ALNsVWXl", True), ("SX", True),
+            *((state, True) for state in "DIRSTtUWX"),
         ]
         for state, live in cases:
             with self.subTest(state=state):
                 listing = subprocess.CompletedProcess([], 0, f"123 123 {state}\n124 124 R\n", "")
                 with mock.patch.object(core.subprocess, "run", return_value=listing):
                     self.assertEqual(core.live_group(123, self.deadline), [123] if live else [])
+
+    def test_live_group_keeps_unknown_states(self):
+        for state in ("?", "?+", "?E", "E", "SZ", "RS", "S?", "s+", "R1"):
+            with self.subTest(state=state), self.fake_ps((0, f"123 123 {state}\n", "")):
+                self.assertEqual(core.live_group(123, self.deadline), [123])
+        self.assertTrue(core.is_live_state(""))
+
+    def test_live_group_keeps_malformed_zombie_state(self):
+        with self.fake_ps((0, "123 123 Zgarbage\n", "")):
+            self.assertEqual(core.live_group(123, self.deadline), [123])
+
+    def test_live_group_ignores_unrelated_unknown_state(self):
+        with self.fake_ps((0, "123 123 SE\n124 124 ?\n", "")):
+            try:
+                members = core.live_group(123, self.deadline)
+            except ValueError as error:
+                self.fail(f"An unrelated unknown state blocked group inspection: {error}")
+        self.assertEqual(members, [])
 
     def test_stop_group_skips_signals_for_departed_members(self):
         listing = subprocess.CompletedProcess([], 0, "123 123 SE\n124 123 Z+\n", "")
@@ -611,6 +628,43 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(core.stop_group(123, self.deadline), ([], None))
         self.assertEqual(ps.call_count, 3)
         killpg.assert_called_once_with(123, signal.SIGTERM)
+
+    def fake_ps(self, *listings):
+        results = iter(listings)
+
+        def run(argv, *, check=False, **options):
+            self.assertEqual(argv[0], "ps")
+            result = subprocess.CompletedProcess(argv, *next(results))
+            if check:
+                result.check_returncode()
+            return result
+
+        return mock.patch.object(core.subprocess, "run", side_effect=run)
+
+    def test_stop_group_requires_reliable_process_table(self):
+        live = (0, "123 123 T\n", "")
+        cases = [
+            ("stderr", (0, "", "Failure calling sysctl"), "Failure calling sysctl"),
+            ("exit", (2, "", ""), "CalledProcessError"),
+            ("shape", (0, "malformed\n", ""), "ValueError"),
+            ("pid", (0, "invalid 124 Z\n", ""), "ValueError"),
+            ("pgid", (0, "124 invalid Z\n", ""), "ValueError"),
+            ("empty", (0, "", ""), None),
+        ]
+        for phase in ("initial", "poll", "eperm"):
+            for name, listing, error in cases:
+                with self.subTest(phase=phase, listing=name):
+                    prefix = () if phase == "initial" else (live,)
+                    denial = PermissionError(errno.EPERM, "signal denied") if phase == "eperm" else None
+                    with self.fake_ps(*prefix, listing) as ps, mock.patch.object(
+                            core, "terminate_group", side_effect=[denial, None]):
+                        members, cause = core.stop_group(123, self.deadline)
+                    self.assertEqual(ps.call_count, len(prefix) + 1)
+                    if error:
+                        self.assertIn(error, cause or "")
+                        self.assertEqual(members, [123] if prefix else None)
+                    else:
+                        self.assertEqual((members, cause), ([], None))
 
     def stop_group_after_denial(self, snapshot, *, stderr="", error_number=errno.EPERM):
         argv = ["ps", "-axo", "pid=,pgid=,stat="]
@@ -676,12 +730,94 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(killpg.call_args_list, [mock.call(123, signal.SIGTERM), mock.call(123, signal.SIGKILL)])
         self.assertEqual(result, ([], None))
 
-    def reconciliation_with_recorded_leader(self):
-        journal = core.FactJournal(self.root / "recorded-leader.jsonl", create=True)
+    def reconciliation_with_recorded_leader(self, name="recorded-leader"):
+        journal = core.FactJournal(self.root / f"{name}.jsonl", create=True)
         runtime = core.SupervisionRuntime(journal, "fixture-parent")
         runtime.record("fixture-group", "reserved", parent=runtime.scope, reserved=True, pgid=123,
                        leader=dict(start="Thu Nov 5 23:22:01 2026", command="sh -c fixture"))
         return runtime
+
+    def test_reconciliation_requires_reliable_process_table(self):
+        cases = [
+            ("stderr", (0, "", "Failure calling sysctl"), ValueError, "Failure calling sysctl"),
+            ("exit", (2, "", ""), subprocess.CalledProcessError, "returned non-zero exit status"),
+            ("shape", (0, "malformed\n", ""), ValueError, "unpack"),
+            ("pid", (0, "invalid 124 Z\n", ""), ValueError, "invalid literal"),
+            ("pgid", (0, "124 invalid Z\n", ""), ValueError, "invalid literal"),
+            ("empty", (0, "", ""), None, None),
+        ]
+        live = (0, "123 123 T\n", "")
+        identity = (0, "Thu Nov 5 23:22:01 2026 sh -c fixture\n", "")
+        for prefix in ((), (live, identity)):
+            phase = "follow-up" if prefix else "initial"
+            for name, listing, error, cause in cases:
+                with self.subTest(phase=phase, listing=name):
+                    runtime = self.reconciliation_with_recorded_leader(f"{phase}-{name}")
+                    with self.fake_ps(*prefix, listing) as ps:
+                        if error:
+                            with self.assertRaisesRegex(error, cause):
+                                runtime.finish()
+                        else:
+                            runtime.finish()
+                    self.assertEqual(runtime.pending(), [123] if error else [])
+                    self.assertEqual(ps.call_count, len(prefix) + 1)
+
+    def test_reconciliation_requires_reliable_leader_identity_for_reuse(self):
+        live = (0, "123 123 T\n", "")
+        replacement = "Fri Nov 6 00:00:00 2026 sh -c replacement\n"
+        cases = [
+            ("stderr", (0, "", "Failure calling sysctl"), "Failure calling sysctl"),
+            ("stderr-with-data", (0, replacement, "Failure calling sysctl"), "Failure calling sysctl"),
+            ("exit", (2, replacement, ""), "CalledProcessError"),
+            ("empty", (0, "", ""), "unreadable group leader identity"),
+            ("malformed", (0, "this row has no timestamp replacement\n", ""), "unreadable group leader start time"),
+            ("impossible-date", (0, "Fri Nov 99 00:00:00 2026 sh -c fixture\n", ""),
+             "unreadable group leader start time"),
+            ("reuse", (0, replacement, ""), None),
+        ]
+        for name, identity, cause in cases:
+            with self.subTest(listing=name):
+                runtime = self.reconciliation_with_recorded_leader(name)
+                with self.fake_ps(live, identity, live) as ps:
+                    if cause:
+                        with self.assertRaisesRegex(ValueError, cause):
+                            runtime.finish()
+                    else:
+                        runtime.finish()
+                self.assertEqual(runtime.pending(), [123] if cause else [])
+                self.assertEqual(ps.call_count, 3 if cause else 2)
+
+    def test_leader_identity_accepts_space_padded_day(self):
+        with self.fake_ps((0, "Wed Nov  4 00:00:00 2026 sh -c fixture\n", "")):
+            self.assertEqual(core.leader_identity(123, self.deadline),
+                             dict(start="Wed Nov 4 00:00:00 2026", command="sh -c fixture"))
+
+    def test_ps_uses_fixed_dimensions_and_devnull(self):
+        runtime = self.reconciliation_with_recorded_leader()
+        live = (0, "123 123 T\n", "")
+        identity = (0, "Thu Nov 5 23:22:01 2026 sh -c fixture\n", "")
+        departed = (0, "", "")
+        caller = dict(LINES="1", COLUMNS="1", LC_ALL="en_US.UTF-8", TZ="America/New_York")
+        with mock.patch.dict(os.environ, caller), self.fake_ps(live, identity, departed) as ps:
+            runtime.finish()
+            self.assertEqual({key: os.environ[key] for key in caller}, caller)
+            self.assertEqual(ps.call_count, 3)
+            sites = ("reconcile", "leader_identity", "live_group")
+            for site, call in zip(sites, ps.call_args_list):
+                with self.subTest(site=site):
+                    environment = call.kwargs.get("env", os.environ)
+                    self.assertEqual(environment.get("COLUMNS"), "10000", "ps column count")
+                    self.assertEqual(environment.get("LINES"), "1000", "ps line count")
+                    self.assertEqual(call.kwargs.get("stdin"), subprocess.DEVNULL, "ps stdin")
+                    self.assertEqual(environment["LC_ALL"], "C" if site == "leader_identity" else caller["LC_ALL"])
+                    self.assertEqual(environment["TZ"], "UTC" if site == "leader_identity" else caller["TZ"])
+
+    def test_leader_command_matches_across_caller_display_dimensions(self):
+        with mock.patch.dict(os.environ, {"COLUMNS": "1", "LINES": "1"}):
+            recorded = core.leader_identity(os.getpid(), self.deadline)
+        with mock.patch.dict(os.environ, {"COLUMNS": "200", "LINES": "24"}):
+            current = core.leader_identity(os.getpid(), self.deadline)
+        self.assertEqual(core.classify_leader(recorded, current), "survivor")
 
     def test_reconcile_clears_exiting_group_in_initial_snapshot(self):
         runtime = self.reconciliation_with_recorded_leader()
