@@ -188,12 +188,11 @@ def classify_leader(recorded, current):
 
 
 def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
-    remaining, error = None, None
+    members, error = None, None
     phase_expirations = phase_expirations if phase_expirations is not None else []
     term_deadline = term_deadline if term_deadline is not None else phase_deadline(deadline, 2)
     try:
         members = live_group(pid, phase_deadline(term_deadline, 2))
-        remaining = members
         if not members:
             return members, None
         for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):
@@ -201,6 +200,7 @@ def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
                 terminate_group(pid, requested_signal)
             except PermissionError as failure:
                 if failure.errno == errno.EPERM and not live_group(pid, signal_deadline, ignore_exiting=True):
+                    remaining(signal_deadline, "signal observation")
                     return [], None
                 raise
             while True:
@@ -208,14 +208,14 @@ def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
                     phase_expirations.append(dict(phase=requested_signal.name, cause="signal observation deadline exceeded"))
                     break
                 try:
-                    remaining = live_group(pid, signal_deadline)
+                    members = live_group(pid, signal_deadline)
                 except (subprocess.TimeoutExpired, TimeoutError) as failure:
                     phase_expirations.append(dict(phase=requested_signal.name, cause=failure_cause(failure)))
                     if requested_signal != signal.SIGTERM:
                         raise
                     break
-                if not remaining:
-                    return remaining, None
+                if not members:
+                    return members, None
                 time.sleep(min(0.01, max(0, signal_deadline - time.monotonic())))
         error = "group shutdown deadline exceeded after SIGKILL"
     except (OSError, ValueError, subprocess.SubprocessError) as failure:
@@ -224,7 +224,7 @@ def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
             terminate_group(pid)
         except OSError as failure:
             error += "; cleanup: " + failure_cause(failure)
-    return remaining, error
+    return members, error
 
 
 def observe(journal, kind, target, **data):

@@ -613,6 +613,37 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(members, [123, 124])
         self.assertIn("signal denied", cause)
 
+    def test_eperm_refuses_snapshot_after_signal_deadline(self):
+        with mock.patch.object(core.time, "monotonic", return_value=0) as clock:
+            def parse_snapshot():
+                clock.return_value = 2
+                return ["123 123 SEs"]
+
+            snapshot = mock.Mock()
+            snapshot.splitlines.side_effect = parse_snapshot
+            members, cause = self.stop_group_after_denial(snapshot)
+
+        self.assertEqual(members, [123, 124])
+        self.assertIn("TimeoutError: signal observation deadline exceeded", cause)
+
+    def test_eperm_confirms_exiting_group_after_sigkill(self):
+        listings = [
+            subprocess.CompletedProcess([], 0, "123 123 Ss\n124 123 S\n", ""),
+            subprocess.CompletedProcess([], 0, "124 123 SE\n", ""),
+        ]
+        with mock.patch.object(core.time, "monotonic", return_value=0) as clock:
+            def send_signal(pid, requested_signal):
+                if requested_signal == signal.SIGTERM:
+                    clock.return_value = 1
+                else:
+                    raise PermissionError(errno.EPERM, "signal denied")
+
+            with mock.patch.object(core.subprocess, "run", side_effect=listings), mock.patch.object(
+                    core.os, "killpg", side_effect=send_signal) as killpg:
+                result = core.stop_group(123, 3, term_deadline=1)
+        self.assertEqual(killpg.call_args_list, [mock.call(123, signal.SIGTERM), mock.call(123, signal.SIGKILL)])
+        self.assertEqual(result, ([], None))
+
     def test_closed_stdio_parent_timeout_writes_failure(self):
         parents = self.root / "parents"
         (self.root / "setup.sh").write_text('echo $$ >> "${CHECKED_PLANT_PARENT_PIDS}"\nexec >/dev/null 2>&1\nsleep 60\n')
