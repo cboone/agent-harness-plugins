@@ -1,6 +1,7 @@
 """Shared bounded execution, regular-file IO and evidence publication."""
 
 from contextlib import contextmanager, ExitStack
+import errno
 import hashlib
 import base64
 import fcntl
@@ -156,13 +157,15 @@ def launch(argv, *, deadline=None, synchronous=False, **options):
         ACTIVE_DEADLINE.reset(token)
 
 
-def live_group(pid, deadline):
+def live_group(pid, deadline, *, ignore_exiting=False):
     listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
                      capture_output=True, text=True, check=True)
+    if ignore_exiting:
+        require(not listing.stderr, "group inspection failed: " + listing.stderr)
     members = []
     for line in listing.stdout.splitlines():
         member, group, state = line.split()
-        if int(group) == pid and not state.startswith("Z"):
+        if int(group) == pid and not state.startswith("Z") and not (ignore_exiting and "E" in state):
             members.append(int(member))
     return members
 
@@ -194,7 +197,12 @@ def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
         if not members:
             return members, None
         for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):
-            terminate_group(pid, requested_signal)
+            try:
+                terminate_group(pid, requested_signal)
+            except PermissionError as failure:
+                if failure.errno == errno.EPERM and not live_group(pid, signal_deadline, ignore_exiting=True):
+                    return [], None
+                raise
             while True:
                 if time.monotonic() >= signal_deadline:
                     phase_expirations.append(dict(phase=requested_signal.name, cause="signal observation deadline exceeded"))

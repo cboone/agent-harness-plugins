@@ -4,6 +4,7 @@ import contextlib
 import ast
 import copy
 import difflib
+import errno
 import importlib.machinery
 import importlib.util
 import io
@@ -518,6 +519,8 @@ class RunnerTests(unittest.TestCase):
                     parent = parents[node]
                     if isinstance(parent, ast.Raise) and parent.cause is node:
                         continue
+                    if isinstance(parent, ast.Attribute) and parent.attr == "errno":
+                        continue
                     self.assertIsInstance(parent, ast.Call, "cause recording bypasses shared formatter")
                     self.assertIsInstance(parent.func, ast.Name)
                     self.assertIn(parent.func.id, ("failure_cause", "isinstance"))
@@ -576,6 +579,39 @@ class RunnerTests(unittest.TestCase):
                               else "inspection timed out", cause)
         huge = core.failure_cause(subprocess.CalledProcessError(2, ["ps"], stderr="x" * (core.OUTPUT_LIMIT + 1)))
         self.assertNotIn("x" * (core.OUTPUT_LIMIT + 1), huge)
+
+    def stop_group_after_denial(self, snapshot, *, stderr="", error_number=errno.EPERM):
+        argv = ["ps", "-axo", "pid=,pgid=,stat="]
+        listings = [
+            subprocess.CompletedProcess(argv, 0, "123 123 Ss\n124 123 S\n", ""),
+            subprocess.CompletedProcess(argv, 0, snapshot, stderr),
+        ]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings), mock.patch.object(
+                core.os, "killpg", side_effect=PermissionError(error_number, "signal denied")):
+            return core.stop_group(123, self.deadline)
+
+    def test_eperm_confirms_exiting_group(self):
+        for snapshot in ("123 123 SEs\n124 123 RE\n125 125 R\n", "125 125 R\n"):
+            with self.subTest(snapshot=snapshot):
+                self.assertEqual(self.stop_group_after_denial(snapshot), ([], None))
+
+    def test_eperm_refuses_live_group_member(self):
+        members, cause = self.stop_group_after_denial("123 123 SEs\n124 123 S\n")
+        self.assertIn(124, members)
+        self.assertIn("PermissionError: [Errno 1] signal denied", cause)
+
+    def test_eperm_confirms_zombie_group(self):
+        self.assertEqual(self.stop_group_after_denial("123 123 Zs\n124 123 Z\n"), ([], None))
+
+    def test_eperm_refuses_unreliable_snapshot(self):
+        members, cause = self.stop_group_after_denial("", stderr="Failure calling sysctl")
+        self.assertEqual(members, [123, 124])
+        self.assertIn("Failure calling sysctl", cause)
+
+    def test_eacces_refuses_even_if_group_has_exited(self):
+        members, cause = self.stop_group_after_denial("123 123 SEs\n", error_number=errno.EACCES)
+        self.assertEqual(members, [123, 124])
+        self.assertIn("signal denied", cause)
 
     def test_closed_stdio_parent_timeout_writes_failure(self):
         parents = self.root / "parents"
