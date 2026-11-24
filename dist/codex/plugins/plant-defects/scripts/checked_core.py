@@ -169,7 +169,6 @@ class ProcessRow(NamedTuple):
 DARWIN_ROW_SIZE = 648
 DARWIN_SZOMB = 5
 DARWIN_P_WEXIT = 0x2000
-LINUX_PF_EXITING = 0x4  # include/linux/sched.h
 
 
 def darwin_rows(data):
@@ -219,11 +218,9 @@ def linux_row(data, pid):
     fields = tail.split()
     require(end and data.endswith(b"\n") and prefix.startswith(str(pid).encode("ascii") + b" (")
             and len(fields) >= 20 and len(fields[0]) == 1, "invalid Linux process stat")
-    group, flags, threads, ticks = (int(fields[index]) for index in (2, 6, 17, 19))
-    require(min(group, flags, threads, ticks) >= 0, "invalid Linux process stat fields")
-    # These are thread-leader flags. Other threads can outlive the leader.
-    departed = fields[0] in (b"Z", b"X", b"x") or flags & LINUX_PF_EXITING
-    return ProcessRow(pid, group, threads > 1 or not departed, f"linux:{ticks}")
+    group, ticks = int(fields[2]), int(fields[19])
+    require(min(group, ticks) >= 0, "invalid Linux process stat fields")
+    return ProcessRow(pid, group, fields[0] not in (b"Z", b"X", b"x"), f"linux:{ticks}")
 
 
 def linux_snapshot(deadline, *, pid):

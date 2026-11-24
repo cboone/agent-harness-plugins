@@ -582,9 +582,9 @@ class RunnerTests(unittest.TestCase):
         return bytes(record)
 
     @staticmethod
-    def linux_record(state=b"R", flags=0, *, pid=123, group=123, threads=1, ticks=7123):
-        fields = [state, b"1", str(group).encode(), b"0", b"0", b"0", str(flags).encode()]
-        fields += [b"0"] * 10 + [str(threads).encode(), b"0", str(ticks).encode()]
+    def linux_record(state=b"R", *, pid=123, group=123, ticks=7123):
+        fields = [state, b"1", str(group).encode(), b"0", b"0", b"0", b"4"]
+        fields += [b"0"] * 10 + [b"1", b"0", str(ticks).encode()]
         return str(pid).encode() + b" (sample ) command\n) " + b" ".join(fields) + b"\n"
 
     def test_darwin_process_states(self):
@@ -597,16 +597,12 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(row, core.ProcessRow(123, 123, live, "darwin:10.123456"))
 
     def test_linux_process_states(self):
-        for name, state, flags, live in (
-                ("zombie", b"Z", 0, False), ("dead", b"X", 0, False), ("legacy dead", b"x", 0, False),
-                ("exiting", b"S", 4, False), ("live", b"R", 8, True),
-                ("unknown", b"?", 0, True), ("unknown but exiting", b"?", 4, False)):
+        for name, state, live in (
+                ("zombie", b"Z", False), ("dead", b"X", False), ("legacy dead", b"x", False),
+                ("sleeping", b"S", True), ("live", b"R", True), ("unknown", b"?", True)):
             with self.subTest(state=name):
-                row = core.linux_row(self.linux_record(state, flags), 123)
+                row = core.linux_row(self.linux_record(state), 123)
                 self.assertEqual(row, core.ProcessRow(123, 123, live, "linux:7123"))
-        for state in (b"Z", b"X", b"S"):
-            with self.subTest(leader_state=state):
-                self.assertTrue(core.linux_row(self.linux_record(state, 4, threads=2), 123).live)
 
     def test_darwin_rejects_invalid_process_rows(self):
         for data in (self.darwin_record()[:-1], self.darwin_record(group=-1),
@@ -618,7 +614,7 @@ class RunnerTests(unittest.TestCase):
     def test_linux_rejects_invalid_process_rows(self):
         for data in (b"123 (short) Z 0 0", self.linux_record(pid=124),
                      self.linux_record(state=b"Zjunk"), self.linux_record(group=-1),
-                     self.linux_record(ticks=-1), self.linux_record(flags=-1), self.linux_record()[:-1]):
+                     self.linux_record(ticks=-1), self.linux_record()[:-1]):
             with self.subTest(data=data):
                 with self.assertRaisesRegex(ValueError, "Linux process stat"):
                     core.linux_row(data, 123)
@@ -661,8 +657,15 @@ class RunnerTests(unittest.TestCase):
         stat_file = member / "stat"
         mount = "10 1 0:4 / /proc rw - proc proc rw"
         mounts.write_text(mount + ",hidepid=invisible\n")
+        readlink = os.readlink
+
+        def proc_readlink(path, *args, **kwargs):
+            if path == proc / "self":
+                return "456"
+            return readlink(path, *args, **kwargs)
+
         with mock.patch.object(core, "Path", return_value=proc), mock.patch.object(
-                core.os, "readlink", return_value="456"), mock.patch.object(core.os, "getpid", return_value=456):
+                core.os, "readlink", side_effect=proc_readlink), mock.patch.object(core.os, "getpid", return_value=456):
             with self.assertRaisesRegex(ValueError, "visibility is unverified"):
                 core.linux_snapshot(self.deadline, pid=None)
             mounts.write_text(mount + "\n")
