@@ -212,7 +212,10 @@ def darwin_snapshot(deadline, *, group, pid):
         # The table can grow between sizing and reading.
 
 
-def linux_row(data, pid):
+LINUX_DEPARTED_STATES = (b"Z", b"X", b"x")
+
+
+def linux_stat(data, pid):
     # The parenthesized comm can contain spaces, newlines and right parentheses.
     prefix, end, tail = data.rpartition(b") ")
     fields = tail.split()
@@ -220,7 +223,34 @@ def linux_row(data, pid):
             and len(fields) >= 20 and len(fields[0]) == 1, "invalid Linux process stat")
     group, ticks = int(fields[2]), int(fields[19])
     require(min(group, ticks) >= 0, "invalid Linux process stat fields")
-    return ProcessRow(pid, group, fields[0] not in (b"Z", b"X", b"x"), f"linux:{ticks}")
+    return fields[0], group, ticks
+
+
+def linux_tasks_live(task_dir, proc, deadline):
+    try:
+        tasks = list(task_dir.iterdir())
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    for task in tasks:
+        remaining(deadline, "Linux task stat read")
+        try:
+            data, _ = read_regular(task / "stat", root=proc)
+            state, _, _ = linux_stat(data, int(task.name))
+        except (OSError, ValueError):
+            return True
+        if state not in LINUX_DEPARTED_STATES:
+            return True
+    return False
+
+
+def linux_row(entry, proc, deadline):
+    pid = int(entry.name)
+    data, _ = read_regular(entry / "stat", root=proc)
+    _, group, ticks = linux_stat(data, pid)
+    live = linux_tasks_live(entry / "task", proc, deadline)
+    return ProcessRow(pid, group, live, f"linux:{ticks}")
 
 
 def linux_snapshot(deadline, *, pid):
@@ -228,8 +258,7 @@ def linux_snapshot(deadline, *, pid):
     own_pid = str(os.getpid())
     require(os.readlink(proc / "self") == own_pid, "procfs PID namespace mismatch")
     if pid is not None:
-        data, _ = read_regular(proc / str(pid) / "stat", root=proc)
-        return [linux_row(data, pid)]
+        return [linux_row(proc / str(pid), proc, deadline)]
 
     # A procfs mount that hides PIDs cannot establish group absence.
     proc_mounts = []
@@ -250,7 +279,7 @@ def linux_snapshot(deadline, *, pid):
         remaining(deadline, "Linux process table read")
         member = int(entry.name)
         try:
-            data, _ = read_regular(entry / "stat", root=proc)
+            rows.append(linux_row(entry, proc, deadline))
         except (FileNotFoundError, ProcessLookupError):
             # Skip a racing row only if the kernel also reports the PID gone.
             try:
@@ -258,7 +287,6 @@ def linux_snapshot(deadline, *, pid):
             except ProcessLookupError:
                 continue
             raise
-        rows.append(linux_row(data, member))
     return rows
 
 

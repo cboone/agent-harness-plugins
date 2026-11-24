@@ -81,9 +81,11 @@ environment and closed terminal input. A timeout, unsuccessful exit, stderr or
 invalid JSON output leaves departure unconfirmed.
 On Linux, a mount with `hidepid` enabled cannot establish group absence. The
 reader checks record structure and discards a racing Linux PID only when the
-kernel also reports that PID gone. Only the `Z`, `X` and `x` states count as
-departed on Linux. Darwin counts zombies and processes with the exit flag as
-departed. Darwin start times use seconds and microseconds.
+kernel also reports that PID gone. A process counts as departed on Linux when
+its task directory is gone or every task's stat reports `Z`, `X` or `x`.
+An unreadable task directory or task stat counts as live. Darwin counts
+zombies and processes with the exit flag as departed. Darwin start times
+use seconds and microseconds.
 Linux start times use clock ticks since boot. All comparisons occur within the
 same supervision run.
 

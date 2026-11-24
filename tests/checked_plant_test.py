@@ -49,6 +49,21 @@ SUPPLEMENTAL_DETECTORS = {
     "manifest-empty": ["test_unnormalized_inputs_refuse_before_materialization"],
 }
 
+THREAD_EXIT_CHILD = """
+import ctypes, threading, time
+
+def worker():
+    while True:
+        time.sleep(0.1)
+        print('worker', flush=True)
+
+threading.Thread(target=worker).start()
+pthread_exit = ctypes.CDLL(None).pthread_exit
+pthread_exit.argtypes = (ctypes.c_void_p,)
+print('exiting main', flush=True)
+pthread_exit(None)
+"""
+
 
 def guard_methods(name, marker):
     return [marker.removeprefix("FAIL: "), *SUPPLEMENTAL_DETECTORS.get(name, [])]
@@ -597,12 +612,52 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(row, core.ProcessRow(123, 123, live, "darwin:10.123456"))
 
     def test_linux_process_states(self):
-        for name, state, live in (
-                ("zombie", b"Z", False), ("dead", b"X", False), ("legacy dead", b"x", False),
-                ("sleeping", b"S", True), ("live", b"R", True), ("unknown", b"?", True)):
-            with self.subTest(state=name):
-                row = core.linux_row(self.linux_record(state), 123)
+        proc = self.root / "proc"
+        process = proc / "123"
+        leader = process / "task" / "123"
+        worker = process / "task" / "124"
+        leader.mkdir(parents=True)
+        worker.mkdir()
+        (process / "stat").write_bytes(self.linux_record(b"Z"))
+        (leader / "stat").write_bytes(self.linux_record(b"Z"))
+        for state, live in ((b"Z", False), (b"X", False), (b"x", False),
+                            (b"S", True), (b"R", True), (b"?", True)):
+            with self.subTest(worker_state=state):
+                (worker / "stat").write_bytes(self.linux_record(state, pid=124))
+                row = core.linux_row(process, proc, self.deadline)
                 self.assertEqual(row, core.ProcessRow(123, 123, live, "linux:7123"))
+
+    def test_linux_task_read_failures(self):
+        proc = self.root / "proc"
+        process = proc / "123"
+        process.mkdir(parents=True)
+        (process / "stat").write_bytes(self.linux_record(b"Z"))
+        self.assertFalse(core.linux_row(process, proc, self.deadline).live)
+        with mock.patch.object(Path, "iterdir", side_effect=PermissionError):
+            self.assertTrue(core.linux_row(process, proc, self.deadline).live)
+        (process / "task" / "123").mkdir(parents=True)
+        self.assertTrue(core.linux_row(process, proc, self.deadline).live)
+
+    @unittest.skipUnless(sys.platform == "linux", "requires Linux procfs")
+    def test_live_group_with_departed_linux_leader(self):
+        with subprocess.Popen([sys.executable, "-B", "-c", THREAD_EXIT_CHILD],
+                              start_new_session=True, stdout=subprocess.DEVNULL) as child:
+            try:
+                process = Path("/proc") / str(child.pid)
+                deadline = self.deadline
+                while True:
+                    state = (process / "stat").read_bytes().rsplit(b") ", 1)[1].split()[0]
+                    if state == b"Z" or time.monotonic() >= deadline:
+                        break
+                    time.sleep(0.01)
+                self.assertEqual(state, b"Z", "pthread_exit must leave a zombie leader")
+                self.assertTrue(any(
+                    (task / "stat").read_bytes().rsplit(b") ", 1)[1].split()[0] not in (b"Z", b"X", b"x")
+                    for task in (process / "task").iterdir() if int(task.name) != child.pid
+                ), "a worker must remain live after the leader exits")
+                self.assertIn(child.pid, core.live_group(child.pid, self.deadline))
+            finally:
+                child.kill()
 
     def test_darwin_rejects_invalid_process_rows(self):
         for data in (self.darwin_record()[:-1], self.darwin_record(group=-1),
@@ -617,7 +672,7 @@ class RunnerTests(unittest.TestCase):
                      self.linux_record(ticks=-1), self.linux_record()[:-1]):
             with self.subTest(data=data):
                 with self.assertRaisesRegex(ValueError, "Linux process stat"):
-                    core.linux_row(data, 123)
+                    core.linux_stat(data, 123)
 
     def test_darwin_process_queries_retry_growth_and_refuse_read_failure(self):
         record = self.darwin_record()
@@ -649,8 +704,9 @@ class RunnerTests(unittest.TestCase):
     def test_linux_process_queries_refuse_read_failure(self):
         proc = self.root / "proc"
         own = proc / "456"
-        own.mkdir(parents=True)
+        (own / "task" / "456").mkdir(parents=True)
         (own / "stat").write_bytes(self.linux_record(pid=456))
+        (own / "task" / "456" / "stat").write_bytes(self.linux_record(pid=456))
         mounts = own / "mountinfo"
         member = proc / "123"
         member.mkdir()
@@ -678,6 +734,8 @@ class RunnerTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 core.linux_snapshot(self.deadline, pid=123)
             stat_file.write_bytes(self.linux_record())
+            (member / "task" / "123").mkdir(parents=True)
+            (member / "task" / "123" / "stat").write_bytes(self.linux_record())
             self.assertEqual(core.linux_snapshot(self.deadline, pid=123),
                              [core.ProcessRow(123, 123, True, "linux:7123")])
 
