@@ -644,6 +644,41 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(killpg.call_args_list, [mock.call(123, signal.SIGTERM), mock.call(123, signal.SIGKILL)])
         self.assertEqual(result, ([], None))
 
+    def reconcile_after_leader_exit(self, runtime, snapshot, stderr):
+        runtime.record("fixture-group", "reserved", parent=runtime.scope, reserved=True, pgid=123)
+        listings = [
+            subprocess.CompletedProcess([], 0, "123 123 Ss\n124 123 S\n", ""),
+            subprocess.CalledProcessError(1, ["ps", "-p", "123"]),
+            subprocess.CompletedProcess([], 0, snapshot, stderr),
+        ]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings), mock.patch.object(core.os, "killpg") as killpg:
+            try:
+                runtime.finish()
+            finally:
+                killpg.assert_not_called()
+
+    def test_reconcile_clears_exiting_group_after_leader_exit(self):
+        journal = core.FactJournal(self.root / "reconcile.jsonl", create=True)
+        runtime = core.SupervisionRuntime(journal, "fixture-parent")
+        try:
+            self.reconcile_after_leader_exit(runtime, "124 123 SE\n125 123 Z\n", "")
+        except ValueError as failure:
+            self.fail(str(failure))
+        self.assertEqual(runtime.pending(), [])
+
+    def test_reconcile_refuses_unconfirmed_group_after_leader_exit(self):
+        cases = [
+            ("124 123 SE\n125 123 S\n", "", "unconfirmed possibly live groups"),
+            ("124 123 SE\n", "Failure calling sysctl", "Failure calling sysctl"),
+        ]
+        for number, (snapshot, stderr, cause) in enumerate(cases):
+            with self.subTest(snapshot=snapshot, stderr=stderr):
+                journal = core.FactJournal(self.root / f"reconcile-{number}.jsonl", create=True)
+                runtime = core.SupervisionRuntime(journal, "fixture-parent")
+                with self.assertRaisesRegex(ValueError, cause):
+                    self.reconcile_after_leader_exit(runtime, snapshot, stderr)
+                self.assertEqual(runtime.pending(), [123])
+
     def test_closed_stdio_parent_timeout_writes_failure(self):
         parents = self.root / "parents"
         (self.root / "setup.sh").write_text('echo $$ >> "${CHECKED_PLANT_PARENT_PIDS}"\nexec >/dev/null 2>&1\nsleep 60\n')

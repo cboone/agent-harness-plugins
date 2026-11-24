@@ -738,7 +738,7 @@ class SupervisionRuntime:
                     current = leader_identity(row["pgid"], deadline)
                 except (OSError, ValueError, subprocess.SubprocessError) as error:
                     self.record(scope, "identity-unavailable", identity_error=failure_cause(error))
-                    if not live_group(row["pgid"], deadline):
+                    if not live_group(row["pgid"], deadline, ignore_exiting=True):
                         self.record(scope, "absent", gone=True, confirmed_by="ps absence after identity read; no signal sent")
                     continue
                 if classify_leader(row.get("leader"), current) == "reused":
