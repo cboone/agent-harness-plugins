@@ -51,11 +51,18 @@ place, so this branch does not close that issue.
 - Group member selection, leader identity lookup and start-time comparison,
   and reconciliation's initial and follow-up snapshots.
 
-## Round 1 review
+## Known Linux snapshot limits
 
-- **Finding 1, Nit.** The Linux process snapshot can miss a child forked
+- **Round 1 finding 1, Nit.** The Linux process snapshot can miss a child forked
   during enumeration, as could the previous `ps` snapshot. Whenever cleanup
   signals, `killpg` still targets the whole group. Accepted as a known limit.
+- **`review-774-r3` finding 1, below Important by impact.** Kernel-source
+  inspection identified a microsecond window in which a non-leader thread
+  can swap TIDs through `execve` during the task scan. The same snapshot
+  race affects `ps`, and no fixture execs from a non-leader thread mid-scan.
+
+## Round 1 review
+
 - **Finding 2, fixed.** Linux classifies departure from the state field alone.
   The test's live-state records detect any return to flag-based departure.
 - **Finding 3, fixed.** The supervisor runs the native reader through
@@ -195,6 +202,11 @@ in the round 2 directory.
 bin/run-heavy-suite uv run --no-project --offline --python 3.13 python -B \
   -m unittest discover -s tests -p '*_test.py' -v
 ```
+
+## Round 3 disposition
+
+CONDUCTOR accepted the exec TID swap as a known limit and called the loop
+**clean at Important**. The Scrut repair no longer depends on this change.
 
 ## Initial sandbox proof
 

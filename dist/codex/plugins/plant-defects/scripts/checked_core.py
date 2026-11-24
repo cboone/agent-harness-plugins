@@ -227,6 +227,8 @@ def linux_stat(data, pid):
 
 
 def linux_tasks_live(task_dir, proc, deadline):
+    # A thread swapping TIDs through execve during this scan is a known
+    # snapshot race shared with ps, like the /proc enumeration race.
     try:
         tasks = list(task_dir.iterdir())
     except FileNotFoundError:
