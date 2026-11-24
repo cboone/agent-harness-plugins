@@ -165,22 +165,21 @@ def is_live_state(state):
 
 
 def process_rows(stdout):
+    # Trust ps to emit documented rows, including nonnegative IDs and flag order.
+    # Reject rows that cannot be split into fields or parsed as IDs.
     for line in stdout.splitlines():
         member, group, state = line.split()
         yield int(member), int(group), state
 
 
 def ps_environment(**overrides):
-    environment = dict(os.environ, **overrides)
-    environment.pop("LINES", None)
-    environment.pop("COLUMNS", None)
-    return environment
+    return dict(os.environ, COLUMNS="10000", LINES="1000", **overrides)
 
 
 def live_group(pid, deadline):
     """List live group members. Unknown or malformed member states count as live."""
     listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
-                     env=ps_environment(), capture_output=True, text=True, check=True)
+                     env=ps_environment(), stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True)
     require(not listing.stderr, "group inspection failed: " + listing.stderr)
     return [member for member, group, state in process_rows(listing.stdout)
             if group == pid and is_live_state(state)]
@@ -188,8 +187,10 @@ def live_group(pid, deadline):
 
 def leader_identity(pid, deadline):
     result = launch(["ps", "-o", "lstart=", "-o", "command=", "-p", str(pid)], deadline=deadline, synchronous=True,
-                    env=ps_environment(LC_ALL="C", TZ="UTC"), capture_output=True, text=True, check=True)
+                    env=ps_environment(LC_ALL="C", TZ="UTC"), stdin=subprocess.DEVNULL,
+                    capture_output=True, text=True, check=True)
     require(not result.stderr, "group leader inspection failed: " + result.stderr)
+    # Require the documented ps fields and a parseable date. Trust ps to supply the correct weekday.
     fields = result.stdout.strip().split(maxsplit=5)
     require(len(fields) == 6 and fields[-1], "unreadable group leader identity")
     start = " ".join(fields[:5])
@@ -749,7 +750,7 @@ class SupervisionRuntime:
             return
         deadline = deadline_after(IO_LIMIT)
         listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
-                         env=ps_environment(), capture_output=True, text=True, check=True)
+                         env=ps_environment(), stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True)
         require(not listing.stderr, "group inspection failed: " + listing.stderr)
         live = {group for _, group, state in process_rows(listing.stdout) if is_live_state(state)}
         for scope, row in self.states().items():

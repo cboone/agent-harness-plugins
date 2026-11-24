@@ -792,22 +792,32 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(core.leader_identity(123, self.deadline),
                              dict(start="Wed Nov 4 00:00:00 2026", command="sh -c fixture"))
 
-    def test_ps_does_not_inherit_display_dimensions(self):
+    def test_ps_uses_fixed_dimensions_and_devnull(self):
         runtime = self.reconciliation_with_recorded_leader()
         live = (0, "123 123 T\n", "")
         identity = (0, "Thu Nov 5 23:22:01 2026 sh -c fixture\n", "")
         departed = (0, "", "")
-        caller = dict(LINES="1", COLUMNS="10", LC_ALL="en_US.UTF-8", TZ="America/New_York")
+        caller = dict(LINES="1", COLUMNS="1", LC_ALL="en_US.UTF-8", TZ="America/New_York")
         with mock.patch.dict(os.environ, caller), self.fake_ps(live, identity, departed) as ps:
             runtime.finish()
             self.assertEqual({key: os.environ[key] for key in caller}, caller)
             self.assertEqual(ps.call_count, 3)
-            for index, call in enumerate(ps.call_args_list):
-                with self.subTest(call=index):
+            sites = ("reconcile", "leader_identity", "live_group")
+            for site, call in zip(sites, ps.call_args_list):
+                with self.subTest(site=site):
                     environment = call.kwargs.get("env", os.environ)
-                    self.assertEqual({key for key in ("LINES", "COLUMNS") if key in environment}, set())
-                    self.assertEqual(environment["LC_ALL"], "C" if index == 1 else caller["LC_ALL"])
-                    self.assertEqual(environment["TZ"], "UTC" if index == 1 else caller["TZ"])
+                    self.assertEqual(environment.get("COLUMNS"), "10000", "ps column count")
+                    self.assertEqual(environment.get("LINES"), "1000", "ps line count")
+                    self.assertEqual(call.kwargs.get("stdin"), subprocess.DEVNULL, "ps stdin")
+                    self.assertEqual(environment["LC_ALL"], "C" if site == "leader_identity" else caller["LC_ALL"])
+                    self.assertEqual(environment["TZ"], "UTC" if site == "leader_identity" else caller["TZ"])
+
+    def test_leader_command_matches_across_caller_display_dimensions(self):
+        with mock.patch.dict(os.environ, {"COLUMNS": "1", "LINES": "1"}):
+            recorded = core.leader_identity(os.getpid(), self.deadline)
+        with mock.patch.dict(os.environ, {"COLUMNS": "200", "LINES": "24"}):
+            current = core.leader_identity(os.getpid(), self.deadline)
+        self.assertEqual(core.classify_leader(recorded, current), "survivor")
 
     def test_reconcile_clears_exiting_group_in_initial_snapshot(self):
         runtime = self.reconciliation_with_recorded_leader()
