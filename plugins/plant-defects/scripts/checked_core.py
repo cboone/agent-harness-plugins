@@ -159,13 +159,14 @@ def launch(argv, *, deadline=None, synchronous=False, **options):
 
 
 def is_live_state(state):
+    if not re.fullmatch(r"[DIRSTtUWXZ][<>+AELNsVWXl]*", state):
+        return True
     return state[0] != "Z" and "E" not in state[1:]
 
 
 def process_rows(stdout):
     for line in stdout.splitlines():
         member, group, state = line.split()
-        require(re.fullmatch(r"[DIRSTtUWXZ][<>+AELNsVWXl]*", state), "unreadable process state: " + state)
         yield int(member), int(group), state
 
 
@@ -177,7 +178,7 @@ def ps_environment(**overrides):
 
 
 def live_group(pid, deadline):
-    """List live group members. Even a member held in E for a long time counts as departed."""
+    """List live group members. Unknown or malformed member states count as live."""
     listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
                      env=ps_environment(), capture_output=True, text=True, check=True)
     require(not listing.stderr, "group inspection failed: " + listing.stderr)

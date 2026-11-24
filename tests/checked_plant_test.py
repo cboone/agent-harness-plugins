@@ -592,11 +592,23 @@ class RunnerTests(unittest.TestCase):
                 with mock.patch.object(core.subprocess, "run", return_value=listing):
                     self.assertEqual(core.live_group(123, self.deadline), [123] if live else [])
 
-    def test_live_group_rejects_malformed_states(self):
-        for state in ("Zgarbage", "E", "SZ", "RS", "S?", "s+", "R1"):
+    def test_live_group_keeps_unknown_states(self):
+        for state in ("?", "?+", "?E", "E", "SZ", "RS", "S?", "s+", "R1"):
             with self.subTest(state=state), self.fake_ps((0, f"123 123 {state}\n", "")):
-                with self.assertRaisesRegex(ValueError, "unreadable process state"):
-                    core.live_group(123, self.deadline)
+                self.assertEqual(core.live_group(123, self.deadline), [123])
+        self.assertTrue(core.is_live_state(""))
+
+    def test_live_group_keeps_malformed_zombie_state(self):
+        with self.fake_ps((0, "123 123 Zgarbage\n", "")):
+            self.assertEqual(core.live_group(123, self.deadline), [123])
+
+    def test_live_group_ignores_unrelated_unknown_state(self):
+        with self.fake_ps((0, "123 123 SE\n124 124 ?\n", "")):
+            try:
+                members = core.live_group(123, self.deadline)
+            except ValueError as error:
+                self.fail(f"An unrelated unknown state blocked group inspection: {error}")
+        self.assertEqual(members, [])
 
     def test_stop_group_skips_signals_for_departed_members(self):
         listing = subprocess.CompletedProcess([], 0, "123 123 SE\n124 123 Z+\n", "")
@@ -732,7 +744,6 @@ class RunnerTests(unittest.TestCase):
             ("shape", (0, "malformed\n", ""), ValueError, "unpack"),
             ("pid", (0, "invalid 124 Z\n", ""), ValueError, "invalid literal"),
             ("pgid", (0, "124 invalid Z\n", ""), ValueError, "invalid literal"),
-            ("state", (0, "123 123 Zgarbage\n", ""), ValueError, "unreadable process state"),
             ("empty", (0, "", ""), None, None),
         ]
         live = (0, "123 123 T\n", "")
