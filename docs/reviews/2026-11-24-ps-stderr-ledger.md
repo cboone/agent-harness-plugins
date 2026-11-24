@@ -6,8 +6,8 @@ unparseable row invalidates its listing before it can establish departure.
 
 | Site                               | Disposition and coverage                                                                                                                                                                                                                                               |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `is_live_state`                    | Preserves the existing status interpretation. `test_live_group_parses_state_and_flags_in_their_own_positions` covers leading zombie states and trailing exit flags.                                                                                                    |
-| `process_rows`                     | Parses both numeric columns for every row before either caller can accept absence. The stop and reconciliation process table tests cover missing columns and malformed PID and PGID values.                                                                            |
+| `is_live_state`                    | Confirms departure only for a well-formed zombie or exiting state. The live group tests cover recognized states, unknown macOS states and malformed zombie states.                                                                                                     |
+| `process_rows`                     | Requires three fields and parses both numeric columns. The stop and reconciliation tests cover missing columns and malformed integers. `test_live_group_ignores_unrelated_unknown_state` covers accepting an unrelated row with an unknown state.                      |
 | `live_group` table `ps`            | Requires clean stderr and zero exit. The stop and reconciliation process table tests cover failure and clean departure.                                                                                                                                                |
 | `leader_identity` PID `ps`         | Requires clean stderr, zero exit, and a parseable start time and command. `test_reconciliation_requires_reliable_leader_identity_for_reuse` covers empty and malformed identities, diagnostics with and without a replacement identity, nonzero exit, and clean reuse. |
 | `command` leader registration      | Uses the same identity check and existing registration error handling. Registration supplies identity for later reconciliation.                                                                                                                                        |
@@ -120,3 +120,23 @@ plant inherit-display-dimensions: named assertion reached; red exit 1; restored;
 Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/771-ps-stderr/node_modules/.771-round1-plants.dRkCz2/run/results.json`.
 
 <!-- checked-plants:end -->
+
+## Review round 1 part 2
+
+Stock macOS emits `?`, `?+` and `?E`. Rejecting these states while parsing the
+system-wide listing prevented valid checks from completing. `process_rows`
+requires three fields and integer PID and PGID fields. `is_live_state` treats an
+unknown or malformed state as live. It confirms departure only for a state
+matching `[DIRSTtUWXZ][<>+AELNsVWXl]*` with a leading `Z` or a trailing `E` flag.
+`live_group` checks liveness for target-group rows, so unrelated unknown rows
+leave its result intact. Reconciliation shares the same state interpretation.
+
+### Part 2 verified plants
+
+plant drop-well-formed-state-check: named assertion reached; red exit 1; restored; green exit 0.
+
+Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/771-ps-stderr/node_modules/.771-round1-part2.gbdmLh/drop-well-formed-state-check/results.json`.
+
+plant restore-row-state-rejection: named assertion reached; red exit 1; restored; green exit 0.
+
+Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/771-ps-stderr/node_modules/.771-round1-part2.gbdmLh/restore-row-state-rejection/results.json`.
