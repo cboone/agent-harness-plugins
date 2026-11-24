@@ -312,11 +312,11 @@ class BudgetTests(unittest.TestCase):
             spawn.assert_not_called()
 
     def test_reconciliation_refuses_survivors_and_unknown_identities(self):
-        recorded = dict(start="Thu Nov 5 23:22:01 2026", command="fixture")
+        recorded = dict(start="linux:7123")
         cases = [("absent", None, True),
-                 ("reused", dict(recorded, start="Thu Nov 5 23:22:51 2026"), True),
+                 ("reused", dict(start="linux:7124"), True),
                  ("survivor", dict(recorded), False),
-                 ("exec-changed", dict(recorded, command="replacement"), False),
+                 ("incomparable", dict(start="darwin:10.123456"), False),
                  ("unreadable", None, False)]
         with core.root_supervision() as parent, tempfile.TemporaryDirectory(prefix="checked-reconcile-") as directory:
             for name, current, clears in cases:
@@ -332,9 +332,9 @@ class BudgetTests(unittest.TestCase):
                 runtime.states = mock.Mock(return_value=states)
                 allocation = runtime.allocate(1)
                 runtime.record(allocation["scope"], "reserved", reserved=True, pgid=123, leader=recorded)
-                listing = subprocess.CompletedProcess([], 0, stdout="" if name == "absent" else "123 123 S\n", stderr="")
+                listing = [] if name == "absent" else [core.ProcessRow(123, 123, True, recorded["start"])]
                 failure = PermissionError("identity denied") if name == "unreadable" else None
-                with mock.patch.object(core.subprocess, "run", return_value=listing), mock.patch.object(
+                with mock.patch.object(core, "process_snapshot", return_value=listing), mock.patch.object(
                         core, "leader_identity", return_value=current, side_effect=failure), mock.patch.object(
                         core, "live_group", return_value=[123]), mock.patch.object(core, "terminate_group") as signals:
                     if clears:
@@ -352,12 +352,12 @@ class BudgetTests(unittest.TestCase):
                     signals.assert_not_called()
 
     def test_group_identity_classifies_reuse_survival_and_unknown(self):
-        recorded = dict(start="Thu Nov 5 23:22:01 2026", command="fixture")
+        recorded = dict(start="linux:7123")
         self.assertEqual(core.classify_leader(recorded, dict(recorded)), "survivor")
-        self.assertEqual(core.classify_leader(recorded, dict(recorded, start="Thu Nov 5 23:22:51 2026")),
+        self.assertEqual(core.classify_leader(recorded, dict(start="linux:7124")),
                          "reused", "reused group was treated as surviving work")
-        self.assertEqual(core.classify_leader(recorded, dict(recorded, command="exec-replacement")),
-                         "unknown", "exec-changed command was treated as PID reuse")
+        self.assertEqual(core.classify_leader(recorded, dict(start="darwin:10.123456")),
+                         "unknown", "incomparable start time was treated as PID reuse")
         self.assertEqual(core.classify_leader(recorded, None), "unknown")
         self.assertEqual(core.classify_leader(None, recorded), "unknown")
 
