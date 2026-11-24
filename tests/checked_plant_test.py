@@ -694,18 +694,53 @@ class RunnerTests(unittest.TestCase):
 
     def test_process_snapshot_dispatch_checks_visibility_and_deadline(self):
         own = self.member(os.getpid(), os.getpgrp())
-        for platform in ("darwin", "linux"):
-            with self.subTest(platform=platform), mock.patch.object(core.sys, "platform", platform), mock.patch.object(
-                    core, platform + "_snapshot", side_effect=[[own], [], [own]]) as reader:
-                with mock.patch.object(core.time, "monotonic", return_value=0) as clock:
-                    self.assertEqual(core.process_snapshot(2), [own])
-                    with self.assertRaisesRegex(ValueError, "omitted the inspecting process"):
-                        core.process_snapshot(2)
-                    clock.side_effect = [0, 2]
-                    with self.assertRaisesRegex(TimeoutError, "process inspection deadline exceeded"):
-                        core.process_snapshot(2)
-                options = {"group": None, "pid": None} if platform == "darwin" else {"pid": None}
-                self.assertEqual(reader.call_args_list, [mock.call(2, **options)] * 3)
+        with mock.patch.object(core, "read_process_snapshot", side_effect=[[own], [], [own]]) as reader:
+            with mock.patch.object(core.time, "monotonic", return_value=0) as clock:
+                self.assertEqual(core.process_snapshot(2), [own])
+                with self.assertRaisesRegex(ValueError, "omitted the inspecting process"):
+                    core.process_snapshot(2)
+                clock.side_effect = [0, 2]
+                with self.assertRaisesRegex(TimeoutError, "process inspection deadline exceeded"):
+                    core.process_snapshot(2)
+            self.assertEqual(reader.call_args_list, [mock.call(2, group=None, pid=None)] * 3)
+
+    def test_process_reader_rejects_failed_or_invalid_output(self):
+        for code, stdout, stderr, error in (
+                (1, b"[]", b"", subprocess.CalledProcessError),
+                (0, b"[]", b"warning", subprocess.CalledProcessError),
+                (0, b"[", b"", ValueError),
+                (0, b"{}", b"", ValueError),
+                (0, b'[[123, 123, 0, "linux:1"]]', b"", ValueError)):
+            with self.subTest(code=code, stdout=stdout, stderr=stderr):
+                with mock.patch.object(core, "launch") as launch:
+                    launch.return_value.returncode = code
+                    launch.return_value.communicate.return_value = stdout, stderr
+                    with self.assertRaises(error):
+                        core.live_group(123, self.deadline)
+                    self.assertEqual(launch.call_args.args[0][:4], [sys.executable, "-I", "-B", str(CORE.resolve())])
+                    self.assertEqual(launch.call_args.kwargs["env"], {})
+                    self.assertEqual(launch.call_args.kwargs["stdin"], subprocess.DEVNULL)
+
+    def test_process_reader_timeout_fails_closed(self):
+        launch = core.launch
+        children = []
+
+        def launch_blocked_reader(argv, **options):
+            child = launch([*argv[:3], "-c", "import time; time.sleep(30)"], **options)
+            children.append(child)
+            return child
+
+        with mock.patch.object(core, "launch", side_effect=launch_blocked_reader), mock.patch.object(
+                core, "native_process_snapshot", return_value=[]), mock.patch.object(core, "terminate_group") as stop:
+            deadline = core.deadline_after(1)
+            self.assertNotEqual(123, os.getpgrp())
+            members, cause = core.stop_group(123, deadline)
+            self.assertIsNone(members)
+            self.assertIn("TimeoutExpired", cause)
+            self.assertLess(time.monotonic(), deadline)
+        stop.assert_called_once_with(123)
+        self.assertEqual(len(children), 1)
+        self.assertEqual(children[0].wait(timeout=1), -signal.SIGKILL)
 
     def test_stop_group_skips_signals_for_departed_members(self):
         departed = [self.member(live=False), self.member(124, live=False)]

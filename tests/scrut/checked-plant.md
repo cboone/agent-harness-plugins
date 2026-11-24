@@ -8,7 +8,7 @@ $ source "${REPO_ROOT}/bin/lib/git-environment.bash"
 > uv run --no-project "${REPO_ROOT}/tests/run_checked_budget.py" checked-plant.md \
 >   "${CHECKED_PLANT_TESTS_BIN}" -q
 ----------------------------------------------------------------------
-Ran 68 tests in *s (glob)
+Ran 70 tests in *s (glob)
 
 OK
 ```

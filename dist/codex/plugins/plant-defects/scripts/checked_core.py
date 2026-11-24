@@ -262,17 +262,53 @@ def linux_snapshot(deadline, *, pid):
     return rows
 
 
+def native_process_snapshot(deadline, *, group, pid):
+    if sys.platform == "darwin":
+        return darwin_snapshot(deadline, group=group, pid=pid)
+    if sys.platform == "linux":
+        return linux_snapshot(deadline, pid=pid)
+    raise ValueError(f"process inspection is unavailable on {sys.platform}")
+
+
+def read_process_snapshot(deadline, *, group, pid):
+    budget = remaining(deadline, "process inspection")
+    read_deadline = deadline - min(0.05, budget / 10)
+    argv = [sys.executable, "-I", "-B", str(Path(__file__).resolve()), "process-reader",
+            str(read_deadline), "" if group is None else str(group), "" if pid is None else str(pid)]
+    process = launch(argv, deadline=read_deadline, env={}, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        stdout, stderr = process.communicate(timeout=remaining(read_deadline, "process reader"))
+    finally:
+        process.stdout.close()
+        process.stderr.close()
+        if process.returncode is None:
+            process.kill()
+            try:
+                process.wait(timeout=remaining(deadline, "process reader reap"))
+            except (TimeoutError, subprocess.TimeoutExpired):
+                # A kernel wait can also delay SIGKILL. Reap without holding the supervisor.
+                threading.Thread(target=process.wait, daemon=True).start()
+    if process.returncode or stderr:
+        raise subprocess.CalledProcessError(process.returncode, argv, output=stdout, stderr=stderr)
+    data = parse_json(stdout)
+    require(isinstance(data, list), "invalid process reader output")
+    rows = []
+    for row in data:
+        require(isinstance(row, list) and len(row) == 4
+                and all(type(number) is int and number >= 0 for number in row[:2])
+                and type(row[2]) is bool and isinstance(row[3], str)
+                and PROCESS_START.fullmatch(row[3]), "invalid process reader row")
+        rows.append(ProcessRow(*row))
+    return rows
+
+
 def process_snapshot(deadline, *, group=None, pid=None):
     active = ACTIVE_DEADLINE.get()
     if active is not None:
         deadline = min(deadline, active)
     remaining(deadline, "process inspection")
-    if sys.platform == "darwin":
-        rows = darwin_snapshot(deadline, group=group, pid=pid)
-    elif sys.platform == "linux":
-        rows = linux_snapshot(deadline, pid=pid)
-    else:
-        raise ValueError(f"process inspection is unavailable on {sys.platform}")
+    rows = read_process_snapshot(deadline, group=group, pid=pid)
     remaining(deadline, "process inspection")
     if pid is None and (group is None or group == os.getpgrp()):
         require(any(row.pid == os.getpid() and row.group == os.getpgrp() for row in rows),
@@ -290,9 +326,12 @@ def leader_identity(pid, deadline):
     return dict(start=rows[0].start)
 
 
+PROCESS_START = re.compile(r"darwin:[1-9][0-9]*\.[0-9]{6}|linux:(0|[1-9][0-9]*)")
+
+
 def classify_leader(recorded, current):
     starts = [value.get("start") if isinstance(value, dict) else None for value in (recorded, current)]
-    if not all(isinstance(start, str) and re.fullmatch(r"darwin:[1-9][0-9]*\.[0-9]{6}|linux:(0|[1-9][0-9]*)", start)
+    if not all(isinstance(start, str) and PROCESS_START.fullmatch(start)
                for start in starts) or starts[0].split(":")[0] != starts[1].split(":")[0]:
         return "unknown"
     return "survivor" if starts[0] == starts[1] else "reused"
@@ -1453,6 +1492,11 @@ def pipeline_command(stages, root, timeout, *, journal=None, target=None, step=N
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 5 and sys.argv[1] == "process-reader":
+        deadline, group, pid = sys.argv[2:]
+        rows = native_process_snapshot(float(deadline), group=int(group) if group else None, pid=int(pid) if pid else None)
+        print(encode_json(rows))
+        raise SystemExit(0)
     if len(sys.argv) != 4 or sys.argv[1] != "pipeline-worker":
         print("Internal pipeline worker arguments required", file=sys.stderr)
         raise SystemExit(2)

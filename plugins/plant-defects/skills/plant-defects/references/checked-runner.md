@@ -76,12 +76,14 @@ finish, then propagate it.
 
 Process inspection trusts Darwin's LP64 kernel `KERN_PROC` records and Linux's
 kernel procfs at its standard mount point with visibility into the caller's PID namespace.
+The supervisor runs the native reader in an isolated Python child with a fixed
+environment and closed terminal input. A timeout, unsuccessful exit, stderr or
+invalid JSON output leaves departure unconfirmed.
 On Linux, a mount with `hidepid` enabled cannot establish group absence. The
 reader checks record structure and discards a racing Linux PID only when the
-kernel also reports that PID gone. A failed read cannot prove departure. A
-zombie or exiting member counts as departed, with the exception of Linux
-thread leaders whose process still has other threads. Unknown states without an
-exiting flag count as live. Darwin start times use seconds and microseconds.
+kernel also reports that PID gone. Only the `Z`, `X` and `x` states count as
+departed on Linux. Darwin counts zombies and processes with the exit flag as
+departed. Darwin start times use seconds and microseconds.
 Linux start times use clock ticks since boot. All comparisons occur within the
 same supervision run.
 
