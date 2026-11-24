@@ -794,8 +794,7 @@ class RunnerTests(unittest.TestCase):
             for index, call in enumerate(ps.call_args_list):
                 with self.subTest(call=index):
                     environment = call.kwargs.get("env", os.environ)
-                    self.assertNotIn("LINES", environment)
-                    self.assertNotIn("COLUMNS", environment)
+                    self.assertEqual({key for key in ("LINES", "COLUMNS") if key in environment}, set())
                     self.assertEqual(environment["LC_ALL"], "C" if index == 1 else caller["LC_ALL"])
                     self.assertEqual(environment["TZ"], "UTC" if index == 1 else caller["TZ"])
 
