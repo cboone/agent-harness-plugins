@@ -781,6 +781,24 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(core.leader_identity(123, self.deadline),
                              dict(start="Wed Nov 4 00:00:00 2026", command="sh -c fixture"))
 
+    def test_ps_does_not_inherit_display_dimensions(self):
+        runtime = self.reconciliation_with_recorded_leader()
+        live = (0, "123 123 T\n", "")
+        identity = (0, "Thu Nov 5 23:22:01 2026 sh -c fixture\n", "")
+        departed = (0, "", "")
+        caller = dict(LINES="1", COLUMNS="10", LC_ALL="en_US.UTF-8", TZ="America/New_York")
+        with mock.patch.dict(os.environ, caller), self.fake_ps(live, identity, departed) as ps:
+            runtime.finish()
+            self.assertEqual({key: os.environ[key] for key in caller}, caller)
+            self.assertEqual(ps.call_count, 3)
+            for index, call in enumerate(ps.call_args_list):
+                with self.subTest(call=index):
+                    environment = call.kwargs.get("env", os.environ)
+                    self.assertNotIn("LINES", environment)
+                    self.assertNotIn("COLUMNS", environment)
+                    self.assertEqual(environment["LC_ALL"], "C" if index == 1 else caller["LC_ALL"])
+                    self.assertEqual(environment["TZ"], "UTC" if index == 1 else caller["TZ"])
+
     def test_reconcile_clears_exiting_group_in_initial_snapshot(self):
         runtime = self.reconciliation_with_recorded_leader()
         listing = subprocess.CompletedProcess([], 0, "123 123 SE\n124 123 Z+\n", "")

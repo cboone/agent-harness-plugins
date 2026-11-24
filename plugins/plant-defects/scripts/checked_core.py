@@ -169,10 +169,17 @@ def process_rows(stdout):
         yield int(member), int(group), state
 
 
+def ps_environment(**overrides):
+    environment = dict(os.environ, **overrides)
+    environment.pop("LINES", None)
+    environment.pop("COLUMNS", None)
+    return environment
+
+
 def live_group(pid, deadline):
     """List live group members. Even a member held in E for a long time counts as departed."""
     listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
-                     capture_output=True, text=True, check=True)
+                     env=ps_environment(), capture_output=True, text=True, check=True)
     require(not listing.stderr, "group inspection failed: " + listing.stderr)
     return [member for member, group, state in process_rows(listing.stdout)
             if group == pid and is_live_state(state)]
@@ -180,7 +187,7 @@ def live_group(pid, deadline):
 
 def leader_identity(pid, deadline):
     result = launch(["ps", "-o", "lstart=", "-o", "command=", "-p", str(pid)], deadline=deadline, synchronous=True,
-                    env=dict(os.environ, LC_ALL="C", TZ="UTC"), capture_output=True, text=True, check=True)
+                    env=ps_environment(LC_ALL="C", TZ="UTC"), capture_output=True, text=True, check=True)
     require(not result.stderr, "group leader inspection failed: " + result.stderr)
     fields = result.stdout.strip().split(maxsplit=5)
     require(len(fields) == 6 and fields[-1], "unreadable group leader identity")
@@ -741,7 +748,7 @@ class SupervisionRuntime:
             return
         deadline = deadline_after(IO_LIMIT)
         listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
-                         capture_output=True, text=True, check=True)
+                         env=ps_environment(), capture_output=True, text=True, check=True)
         require(not listing.stderr, "group inspection failed: " + listing.stderr)
         live = {group for _, group, state in process_rows(listing.stdout) if is_live_state(state)}
         for scope, row in self.states().items():
