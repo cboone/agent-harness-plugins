@@ -31,9 +31,7 @@ errno, or an unreliable snapshot still rejects cleanup.
 - `uv run --script plugins/plant-defects/scripts/checked-plant` subcommands `run` and `render` each exited 0. The JSON records baseline exit 0 for each row.
 - Scrut was not run. Direct checked-plant coverage is in `checked-plant.md`, `checked-plant-guards-{1..15}.md`, `checked-python.md` and `checked-timeout-budgets.md`. The `checked-gate-plants*.md` documents use checked-plant to test gate guard mutations.
 
-<!-- checked-plants:start -->
-
-## Verified plants and controls
+## Original verified plants
 
 plant drop-eperm-recheck: named assertion reached; red exit 1; restored; green exit 0.
 
@@ -42,5 +40,35 @@ plant accept-eperm-blindly: named assertion reached; red exit 1; restored; green
 plant ignore-ps-diagnostics: named assertion reached; red exit 1; restored; green exit 0.
 
 Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/770-killpg-eperm/.workmux/770/plant-run/results.json`.
+
+## Review round 1
+
+One local review, the Nit round. The review reported three Important findings. Finding 1, about potentially incomplete process listings, remains open by instruction.
+
+- Finding 2. `stop_group` checks the active signal deadline after parsing the EPERM recheck and before confirming departure. The test advances the clock while parsing the snapshot. A separate test verifies that EPERM after SIGKILL accepts a timely exiting-only snapshot.
+- Finding 3. After the leader identity lookup fails, reconciliation applies the same `ignore_exiting` rule. The tests confirm departure for exiting and zombie members and keep the group pending for either a live member or a `ps` diagnostic.
+
+### Round 1 plant detectors
+
+- Remove the post-parse deadline check. `test_eperm_refuses_snapshot_after_signal_deadline` detects the false departure.
+- Remove `ignore_exiting` from the follow-up reconciliation snapshot. `test_reconcile_clears_exiting_group_after_leader_exit` detects the false pending group.
+
+### Round 1 local checks
+
+- `make build`, `make lint` and `make validate` each exited 0.
+- `uv run --no-project tests/checked_plant_test.py -q -k eperm -k reconcile` exited 0 with 8 tests.
+- Python unittest discovery via `uv run --no-project python` initially exited 1. The manifest inventory was the sole failure among 140 tests because it scanned local plant evidence under `.workmux`. All 140 tests exited 0 in a copy of the tracked tree with the fixes applied, using the default guard partitions. The round 1 evidence now lives under the inventory's existing `node_modules` exclusion.
+- `uv run --script plugins/plant-defects/scripts/checked-plant` subcommands `run` and `render` each exited 0.
+- The Scrut snapshot count increased from 50 to 54, verified against the Python behavior test list. Scrut was not run. The Python run excludes the scheduler test that invokes the Scrut wrapper with a stub.
+
+<!-- checked-plants:start -->
+
+## Verified plants and controls
+
+plant accept-late-eperm-snapshot: named assertion reached; red exit 1; restored; green exit 0.
+
+plant count-exiting-reconciliation-members: named assertion reached; red exit 1; restored; green exit 0.
+
+Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/770-killpg-eperm/node_modules/.770-round1.9Ep95E/plant-run-final/results.json`.
 
 <!-- checked-plants:end -->
