@@ -26,8 +26,8 @@ Base `a9bad10d`. The [sandbox issue][issue] follows the
   fields on both supported platforms. [psutil process reference][psutil].
 - **Linux procfs.** The stat reader takes group, state and start ticks. The
   parser splits after the final closing delimiter because the process name can
-  contain parentheses and newlines. Only `Z`, `X` and legacy `x` count as
-  departed. [Linux procfs stat][linux-stat].
+  contain parentheses and newlines. The reader checks task states for departure.
+  [Linux procfs stat][linux-stat].
 
 The trust boundary is in the checked runner reference. Registration and
 reconciliation both use the same platform-tagged start time. Legacy records
@@ -113,6 +113,88 @@ bin/run-heavy-suite uv run --no-project --offline --python 3.13 python -B \
 
 The final Python run exited 0 with 157 tests. On macOS, the Linux reader
 checks used fixture procfs records.
+
+## Round 2 Linux thread liveness audit
+
+The review of `7a482da9` recorded one Important finding and zero Critical
+findings. These are the 14 sites checked in the reader and its callers.
+
+1. `darwin_rows` keeps the process-level `SZOMB` and `P_WEXIT` rules.
+1. `linux_tasks_live` now requires a missing task directory or only
+   `Z`, `X` or `x` tasks to confirm departure. An unreadable directory
+   or task stat counts as live.
+1. `linux_snapshot` uses that rule for each row in a table scan. It
+   still drops an unreadable process stat only on confirmed PID disappearance.
+1. The PID-specific `linux_snapshot` uses the same row reader and still
+   requires the process stat for the PID's identity and group.
+1. `live_group` filters by group and the reader's liveness result.
+1. `stop_group` skips signals only when its initial group read returns no
+   live members.
+1. The issue 770 `EPERM` recheck after either signal requires a fresh,
+   empty live-group read within the signal deadline.
+1. Polling after either signal returns success when the live-group read is
+   empty.
+1. Reconciliation's initial snapshot marks a group absent only when it
+   contains no live rows for that group.
+1. `leader_identity` supplies the start time for registration and
+   reconciliation from the row's identity fields.
+1. Reconciliation's reused-PGID branch records the original group gone
+   after a different comparable start time.
+1. Matching or incomparable identities and unavailable identities all
+   proceed to the fresh group read.
+1. Reconciliation's fresh group read records absence only when it returns
+   no live members.
+1. Command finalization records a group gone only after successful group
+   cleanup and leader reap. Its separate spawn-error branch uses launch
+   failure as evidence.
+
+The Darwin probe ran the test's Python child with libc `pthread_exit`.
+During worker heartbeats, three `KERN_PROC_PID` reads returned `p_stat=2`
+(`SRUN`) and `p_flag=0x4004`, with `P_WEXIT` clear. The probe exited 0,
+and the child exited -9 after cleanup.
+
+### Round 2 plants and sandbox
+
+- Removing the live-task state check made `test_linux_process_states`
+  fail on live worker states, exit 1. Restoring it passed, exit 0.
+  `test_linux_task_read_failures` covers a missing or unreadable task
+  directory and a missing task stat.
+- Accepting the leader's `Z` state alone made
+  `test_live_group_with_departed_linux_leader` fail on the group assertion,
+  exit 1. Its zombie-leader and live-worker assertions passed first.
+  Restoring the task check passed, exit 0. This test and plant require Linux
+  procfs. The test runs in the checked-plant Scrut document on Ubuntu CI.
+
+Both plants ran in disposable copies on Colima Linux `6.8.0-117-generic`
+with its installed Python 3.12.3. Logs are in
+`.workmux/issue-774/round2.z2tgHkd3/linux-plants.log`.
+
+```bash
+uv run --no-project --offline --python 3.13 python -B \
+  .workmux/issue-774/round2.z2tgHkd3/prove_sandbox.py
+```
+
+The SL-VF profile generator and path identity helper matched `0e5c007fbc55`.
+The replay exited 0. The subprocess exits were 71 for
+`/bin/ps` and 0 each for the isolated reader, snapshot and identity probe,
+and end-to-end `checked-plant`. The replay retained `sandbox-results.json`
+in the round 2 directory.
+
+### Round 2 local checks
+
+- `make build`, `make lint` and `make validate` each exited 0.
+- `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant.md` exited 0
+  with 72 behavior tests. The procfs case was skipped on Darwin and passed
+  separately on Linux.
+- The first full Python discovery exited 1 because its fixture environment
+  was unset. With `CHECKED_PLANT_BIN`, `CHECKED_GATE_BIN` and
+  `CHECKED_PLANT_DETACHED_BIN` set to the copied tree's files, the rerun
+  exited 0 with 159 tests and one Linux-only skip.
+
+```bash
+bin/run-heavy-suite uv run --no-project --offline --python 3.13 python -B \
+  -m unittest discover -s tests -p '*_test.py' -v
+```
 
 ## Initial sandbox proof
 
