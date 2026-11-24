@@ -1,6 +1,7 @@
 """Shared bounded execution, regular-file IO and evidence publication."""
 
 from contextlib import contextmanager, ExitStack
+import errno
 import hashlib
 import base64
 import fcntl
@@ -156,13 +157,20 @@ def launch(argv, *, deadline=None, synchronous=False, **options):
         ACTIVE_DEADLINE.reset(token)
 
 
-def live_group(pid, deadline):
+def is_live_state(state):
+    return state[0] != "Z" and "E" not in state[1:]
+
+
+def live_group(pid, deadline, *, require_clean_stderr=False):
+    """List live group members. Even a member held in E for a long time counts as departed."""
     listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
                      capture_output=True, text=True, check=True)
+    if require_clean_stderr:
+        require(not listing.stderr, "group inspection failed: " + listing.stderr)
     members = []
     for line in listing.stdout.splitlines():
         member, group, state = line.split()
-        if int(group) == pid and not state.startswith("Z"):
+        if int(group) == pid and is_live_state(state):
             members.append(int(member))
     return members
 
@@ -185,29 +193,34 @@ def classify_leader(recorded, current):
 
 
 def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
-    remaining, error = None, None
+    members, error = None, None
     phase_expirations = phase_expirations if phase_expirations is not None else []
     term_deadline = term_deadline if term_deadline is not None else phase_deadline(deadline, 2)
     try:
         members = live_group(pid, phase_deadline(term_deadline, 2))
-        remaining = members
         if not members:
             return members, None
         for requested_signal, signal_deadline in ((signal.SIGTERM, term_deadline), (signal.SIGKILL, deadline)):
-            terminate_group(pid, requested_signal)
+            try:
+                terminate_group(pid, requested_signal)
+            except PermissionError as failure:
+                if failure.errno == errno.EPERM and not live_group(pid, signal_deadline, require_clean_stderr=True):
+                    remaining(signal_deadline, "signal observation")
+                    return [], None
+                raise
             while True:
                 if time.monotonic() >= signal_deadline:
                     phase_expirations.append(dict(phase=requested_signal.name, cause="signal observation deadline exceeded"))
                     break
                 try:
-                    remaining = live_group(pid, signal_deadline)
+                    members = live_group(pid, signal_deadline)
                 except (subprocess.TimeoutExpired, TimeoutError) as failure:
                     phase_expirations.append(dict(phase=requested_signal.name, cause=failure_cause(failure)))
                     if requested_signal != signal.SIGTERM:
                         raise
                     break
-                if not remaining:
-                    return remaining, None
+                if not members:
+                    return members, None
                 time.sleep(min(0.01, max(0, signal_deadline - time.monotonic())))
         error = "group shutdown deadline exceeded after SIGKILL"
     except (OSError, ValueError, subprocess.SubprocessError) as failure:
@@ -216,7 +229,7 @@ def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
             terminate_group(pid)
         except OSError as failure:
             error += "; cleanup: " + failure_cause(failure)
-    return remaining, error
+    return members, error
 
 
 def observe(journal, kind, target, **data):
@@ -721,7 +734,7 @@ class SupervisionRuntime:
         listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
                          capture_output=True, text=True, check=True)
         live = {int(group) for _, group, state in (line.split() for line in listing.stdout.splitlines())
-                if not state.startswith("Z")}
+                if is_live_state(state)}
         for scope, row in self.states().items():
             if type(row.get("pgid")) is int and row["pgid"] in pending and row["pgid"] not in live:
                 self.record(scope, "absent", gone=True, confirmed_by="ps absence; no signal sent")
@@ -730,12 +743,13 @@ class SupervisionRuntime:
                     current = leader_identity(row["pgid"], deadline)
                 except (OSError, ValueError, subprocess.SubprocessError) as error:
                     self.record(scope, "identity-unavailable", identity_error=failure_cause(error))
-                    if not live_group(row["pgid"], deadline):
-                        self.record(scope, "absent", gone=True, confirmed_by="ps absence after identity read; no signal sent")
-                    continue
-                if classify_leader(row.get("leader"), current) == "reused":
-                    self.record(scope, "reused", gone=True, confirmed_by="different leader start time; no signal sent",
-                                replacement_leader=current)
+                else:
+                    if classify_leader(row.get("leader"), current) == "reused":
+                        self.record(scope, "reused", gone=True, confirmed_by="different leader start time; no signal sent",
+                                    replacement_leader=current)
+                        continue
+                if not live_group(row["pgid"], deadline, require_clean_stderr=True):
+                    self.record(scope, "absent", gone=True, confirmed_by="ps absence after identity read; no signal sent")
 
     def finish(self):
         try:

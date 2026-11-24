@@ -4,6 +4,7 @@ import contextlib
 import ast
 import copy
 import difflib
+import errno
 import importlib.machinery
 import importlib.util
 import io
@@ -518,6 +519,8 @@ class RunnerTests(unittest.TestCase):
                     parent = parents[node]
                     if isinstance(parent, ast.Raise) and parent.cause is node:
                         continue
+                    if isinstance(parent, ast.Attribute) and parent.attr == "errno":
+                        continue
                     self.assertIsInstance(parent, ast.Call, "cause recording bypasses shared formatter")
                     self.assertIsInstance(parent.func, ast.Name)
                     self.assertIn(parent.func.id, ("failure_cause", "isinstance"))
@@ -576,6 +579,185 @@ class RunnerTests(unittest.TestCase):
                               else "inspection timed out", cause)
         huge = core.failure_cause(subprocess.CalledProcessError(2, ["ps"], stderr="x" * (core.OUTPUT_LIMIT + 1)))
         self.assertNotIn("x" * (core.OUTPUT_LIMIT + 1), huge)
+
+    def test_live_group_parses_state_and_flags_in_their_own_positions(self):
+        cases = [
+            ("SE", False), ("UE", False), ("Z", False), ("Z+", False),
+            ("S+", True), ("Ss", True), ("R", True), ("U", True), ("T", True),
+            # Synthetic states distinguish a leading letter from a trailing flag.
+            ("E", True), ("SZ", True),
+        ]
+        for state, live in cases:
+            with self.subTest(state=state):
+                listing = subprocess.CompletedProcess([], 0, f"123 123 {state}\n124 124 R\n", "")
+                with mock.patch.object(core.subprocess, "run", return_value=listing):
+                    self.assertEqual(core.live_group(123, self.deadline), [123] if live else [])
+
+    def test_stop_group_skips_signals_for_departed_members(self):
+        listing = subprocess.CompletedProcess([], 0, "123 123 SE\n124 123 Z+\n", "")
+        listings = [listing, listing, AssertionError("polled again after the group departed")]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings) as ps, mock.patch.object(
+                core.os, "killpg") as killpg:
+            self.assertEqual(core.stop_group(123, self.deadline), ([], None))
+        self.assertEqual(ps.call_count, 1)
+        killpg.assert_not_called()
+
+    def test_stop_group_polls_until_only_departed_members_remain(self):
+        live = subprocess.CompletedProcess([], 0, "123 123 T\n124 123 SE\n", "")
+        departed = subprocess.CompletedProcess([], 0, "123 123 UE\n124 123 Z\n", "")
+        listings = [live, live, departed, AssertionError("polled again after the group departed")]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings) as ps, mock.patch.object(
+                core.os, "killpg") as killpg, mock.patch.object(core.time, "sleep"):
+            self.assertEqual(core.stop_group(123, self.deadline), ([], None))
+        self.assertEqual(ps.call_count, 3)
+        killpg.assert_called_once_with(123, signal.SIGTERM)
+
+    def stop_group_after_denial(self, snapshot, *, stderr="", error_number=errno.EPERM):
+        argv = ["ps", "-axo", "pid=,pgid=,stat="]
+        listings = [
+            subprocess.CompletedProcess(argv, 0, "123 123 Ss\n124 123 S\n", ""),
+            subprocess.CompletedProcess(argv, 0, snapshot, stderr),
+        ]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings), mock.patch.object(
+                core.os, "killpg", side_effect=PermissionError(error_number, "signal denied")):
+            return core.stop_group(123, self.deadline)
+
+    def test_eperm_confirms_exiting_group(self):
+        for snapshot in ("123 123 SEs\n124 123 RE\n125 125 R\n", "125 125 R\n"):
+            with self.subTest(snapshot=snapshot):
+                self.assertEqual(self.stop_group_after_denial(snapshot), ([], None))
+
+    def test_eperm_refuses_live_group_member(self):
+        members, cause = self.stop_group_after_denial("123 123 SEs\n124 123 S\n")
+        self.assertIn(124, members)
+        self.assertIn("PermissionError: [Errno 1] signal denied", cause)
+
+    def test_eperm_confirms_zombie_group(self):
+        self.assertEqual(self.stop_group_after_denial("123 123 Zs\n124 123 Z\n"), ([], None))
+
+    def test_eperm_refuses_unreliable_snapshot(self):
+        members, cause = self.stop_group_after_denial("", stderr="Failure calling sysctl")
+        self.assertEqual(members, [123, 124])
+        self.assertIn("Failure calling sysctl", cause)
+
+    def test_eacces_refuses_even_if_group_has_exited(self):
+        members, cause = self.stop_group_after_denial("123 123 SEs\n", error_number=errno.EACCES)
+        self.assertEqual(members, [123, 124])
+        self.assertIn("signal denied", cause)
+
+    def test_eperm_refuses_snapshot_after_signal_deadline(self):
+        with mock.patch.object(core.time, "monotonic", return_value=0) as clock:
+            def parse_snapshot():
+                clock.return_value = 2
+                return ["123 123 SEs"]
+
+            snapshot = mock.Mock()
+            snapshot.splitlines.side_effect = parse_snapshot
+            members, cause = self.stop_group_after_denial(snapshot)
+
+        self.assertEqual(members, [123, 124])
+        self.assertIn("TimeoutError: signal observation deadline exceeded", cause)
+
+    def test_eperm_confirms_exiting_group_after_sigkill(self):
+        listings = [
+            subprocess.CompletedProcess([], 0, "123 123 Ss\n124 123 S\n", ""),
+            subprocess.CompletedProcess([], 0, "124 123 SE\n", ""),
+        ]
+        with mock.patch.object(core.time, "monotonic", return_value=0) as clock:
+            def send_signal(pid, requested_signal):
+                if requested_signal == signal.SIGTERM:
+                    clock.return_value = 1
+                else:
+                    raise PermissionError(errno.EPERM, "signal denied")
+
+            with mock.patch.object(core.subprocess, "run", side_effect=listings), mock.patch.object(
+                    core.os, "killpg", side_effect=send_signal) as killpg:
+                result = core.stop_group(123, 3, term_deadline=1)
+        self.assertEqual(killpg.call_args_list, [mock.call(123, signal.SIGTERM), mock.call(123, signal.SIGKILL)])
+        self.assertEqual(result, ([], None))
+
+    def reconciliation_with_recorded_leader(self):
+        journal = core.FactJournal(self.root / "recorded-leader.jsonl", create=True)
+        runtime = core.SupervisionRuntime(journal, "fixture-parent")
+        runtime.record("fixture-group", "reserved", parent=runtime.scope, reserved=True, pgid=123,
+                       leader=dict(start="Thu Nov 5 23:22:01 2026", command="sh -c fixture"))
+        return runtime
+
+    def test_reconcile_clears_exiting_group_in_initial_snapshot(self):
+        runtime = self.reconciliation_with_recorded_leader()
+        listing = subprocess.CompletedProcess([], 0, "123 123 SE\n124 123 Z+\n", "")
+        with mock.patch.object(core.subprocess, "run", return_value=listing) as ps, mock.patch.object(
+                core.os, "killpg") as killpg:
+            runtime.finish()
+        self.assertEqual(ps.call_count, 1)
+        killpg.assert_not_called()
+        self.assertEqual(runtime.pending(), [])
+
+    def reconcile_with_leader_identity(self, runtime, snapshot):
+        listings = [
+            subprocess.CompletedProcess([], 0, "123 123 Ss\n124 123 S\n", ""),
+            subprocess.CompletedProcess([], 0, "Thu Nov 5 23:22:01 2026 (sh)\n", ""),
+            subprocess.CompletedProcess([], 0, snapshot, ""),
+        ]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings) as ps, mock.patch.object(
+                core.os, "killpg") as killpg:
+            try:
+                runtime.finish()
+            finally:
+                killpg.assert_not_called()
+                self.assertEqual(
+                    [call.args[0] for call in ps.call_args_list[:2]],
+                    [["ps", "-axo", "pid=,pgid=,stat="], ["ps", "-o", "lstart=", "-o", "command=", "-p", "123"]],
+                )
+
+    def test_reconcile_clears_exiting_group_after_successful_identity_read(self):
+        runtime = self.reconciliation_with_recorded_leader()
+        try:
+            self.reconcile_with_leader_identity(runtime, "123 123 SE\n124 123 Z+\n")
+        except ValueError as failure:
+            self.fail(str(failure))
+        self.assertEqual(runtime.pending(), [])
+
+    def test_reconcile_refuses_live_group_after_successful_identity_read(self):
+        runtime = self.reconciliation_with_recorded_leader()
+        with self.assertRaisesRegex(ValueError, "unconfirmed possibly live groups"):
+            self.reconcile_with_leader_identity(runtime, "123 123 SE\n124 123 T\n")
+        self.assertEqual(runtime.pending(), [123])
+
+    def reconcile_after_leader_exit(self, runtime, snapshot, stderr):
+        runtime.record("fixture-group", "reserved", parent=runtime.scope, reserved=True, pgid=123)
+        listings = [
+            subprocess.CompletedProcess([], 0, "123 123 Ss\n124 123 S\n", ""),
+            subprocess.CalledProcessError(1, ["ps", "-p", "123"]),
+            subprocess.CompletedProcess([], 0, snapshot, stderr),
+        ]
+        with mock.patch.object(core.subprocess, "run", side_effect=listings), mock.patch.object(core.os, "killpg") as killpg:
+            try:
+                runtime.finish()
+            finally:
+                killpg.assert_not_called()
+
+    def test_reconcile_clears_exiting_group_after_leader_exit(self):
+        journal = core.FactJournal(self.root / "reconcile.jsonl", create=True)
+        runtime = core.SupervisionRuntime(journal, "fixture-parent")
+        try:
+            self.reconcile_after_leader_exit(runtime, "124 123 SE\n125 123 Z\n", "")
+        except ValueError as failure:
+            self.fail(str(failure))
+        self.assertEqual(runtime.pending(), [])
+
+    def test_reconcile_refuses_unconfirmed_group_after_leader_exit(self):
+        cases = [
+            ("124 123 SE\n125 123 S\n", "", "unconfirmed possibly live groups"),
+            ("124 123 SE\n", "Failure calling sysctl", "Failure calling sysctl"),
+        ]
+        for number, (snapshot, stderr, cause) in enumerate(cases):
+            with self.subTest(snapshot=snapshot, stderr=stderr):
+                journal = core.FactJournal(self.root / f"reconcile-{number}.jsonl", create=True)
+                runtime = core.SupervisionRuntime(journal, "fixture-parent")
+                with self.assertRaisesRegex(ValueError, cause):
+                    self.reconcile_after_leader_exit(runtime, snapshot, stderr)
+                self.assertEqual(runtime.pending(), [123])
 
     def test_closed_stdio_parent_timeout_writes_failure(self):
         parents = self.root / "parents"
