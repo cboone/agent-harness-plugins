@@ -165,6 +165,7 @@ def is_live_state(state):
 def process_rows(stdout):
     for line in stdout.splitlines():
         member, group, state = line.split()
+        require(re.fullmatch(r"[DIRSTtUWXZ][<>+AELNsVWXl]*", state), "unreadable process state: " + state)
         yield int(member), int(group), state
 
 
@@ -184,10 +185,10 @@ def leader_identity(pid, deadline):
     fields = result.stdout.strip().split(maxsplit=5)
     require(len(fields) == 6 and fields[-1], "unreadable group leader identity")
     start = " ".join(fields[:5])
-    require(re.fullmatch(r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) "
-                         r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) "
-                         r"[0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}", start),
-            "unreadable group leader start time")
+    try:
+        time.strptime(start, "%a %b %d %H:%M:%S %Y")
+    except ValueError as error:
+        raise ValueError("unreadable group leader start time") from error
     return dict(start=start, command=fields[-1])
 
 

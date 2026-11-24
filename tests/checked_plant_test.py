@@ -583,15 +583,20 @@ class RunnerTests(unittest.TestCase):
     def test_live_group_parses_state_and_flags_in_their_own_positions(self):
         cases = [
             ("SE", False), ("UE", False), ("Z", False), ("Z+", False),
-            ("S+", True), ("Ss", True), ("R", True), ("U", True), ("T", True),
-            # Synthetic states distinguish a leading letter from a trailing flag.
-            ("E", True), ("SZ", True),
+            ("S+", True), ("Ss", True), ("R<>+ALNsVWXl", True), ("SX", True),
+            *((state, True) for state in "DIRSTtUWX"),
         ]
         for state, live in cases:
             with self.subTest(state=state):
                 listing = subprocess.CompletedProcess([], 0, f"123 123 {state}\n124 124 R\n", "")
                 with mock.patch.object(core.subprocess, "run", return_value=listing):
                     self.assertEqual(core.live_group(123, self.deadline), [123] if live else [])
+
+    def test_live_group_rejects_malformed_states(self):
+        for state in ("Zgarbage", "E", "SZ", "RS", "S?", "s+", "R1"):
+            with self.subTest(state=state), self.fake_ps((0, f"123 123 {state}\n", "")):
+                with self.assertRaisesRegex(ValueError, "unreadable process state"):
+                    core.live_group(123, self.deadline)
 
     def test_stop_group_skips_signals_for_departed_members(self):
         listing = subprocess.CompletedProcess([], 0, "123 123 SE\n124 123 Z+\n", "")
@@ -727,6 +732,7 @@ class RunnerTests(unittest.TestCase):
             ("shape", (0, "malformed\n", ""), ValueError, "unpack"),
             ("pid", (0, "invalid 124 Z\n", ""), ValueError, "invalid literal"),
             ("pgid", (0, "124 invalid Z\n", ""), ValueError, "invalid literal"),
+            ("state", (0, "123 123 Zgarbage\n", ""), ValueError, "unreadable process state"),
             ("empty", (0, "", ""), None, None),
         ]
         live = (0, "123 123 T\n", "")
@@ -754,6 +760,8 @@ class RunnerTests(unittest.TestCase):
             ("exit", (2, replacement, ""), "CalledProcessError"),
             ("empty", (0, "", ""), "unreadable group leader identity"),
             ("malformed", (0, "this row has no timestamp replacement\n", ""), "unreadable group leader start time"),
+            ("impossible-date", (0, "Fri Nov 99 00:00:00 2026 sh -c fixture\n", ""),
+             "unreadable group leader start time"),
             ("reuse", (0, replacement, ""), None),
         ]
         for name, identity, cause in cases:
@@ -767,6 +775,11 @@ class RunnerTests(unittest.TestCase):
                         runtime.finish()
                 self.assertEqual(runtime.pending(), [123] if cause else [])
                 self.assertEqual(ps.call_count, 3 if cause else 2)
+
+    def test_leader_identity_accepts_space_padded_day(self):
+        with self.fake_ps((0, "Wed Nov  4 00:00:00 2026 sh -c fixture\n", "")):
+            self.assertEqual(core.leader_identity(123, self.deadline),
+                             dict(start="Wed Nov 4 00:00:00 2026", command="sh -c fixture"))
 
     def test_reconcile_clears_exiting_group_in_initial_snapshot(self):
         runtime = self.reconciliation_with_recorded_leader()
