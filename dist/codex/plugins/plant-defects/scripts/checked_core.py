@@ -11,6 +11,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import selectors
 import signal
 import stat
@@ -161,26 +162,33 @@ def is_live_state(state):
     return state[0] != "Z" and "E" not in state[1:]
 
 
-def live_group(pid, deadline, *, require_clean_stderr=False):
+def process_rows(stdout):
+    for line in stdout.splitlines():
+        member, group, state = line.split()
+        yield int(member), int(group), state
+
+
+def live_group(pid, deadline):
     """List live group members. Even a member held in E for a long time counts as departed."""
     listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
                      capture_output=True, text=True, check=True)
-    if require_clean_stderr:
-        require(not listing.stderr, "group inspection failed: " + listing.stderr)
-    members = []
-    for line in listing.stdout.splitlines():
-        member, group, state = line.split()
-        if int(group) == pid and is_live_state(state):
-            members.append(int(member))
-    return members
+    require(not listing.stderr, "group inspection failed: " + listing.stderr)
+    return [member for member, group, state in process_rows(listing.stdout)
+            if group == pid and is_live_state(state)]
 
 
 def leader_identity(pid, deadline):
     result = launch(["ps", "-o", "lstart=", "-o", "command=", "-p", str(pid)], deadline=deadline, synchronous=True,
                     env=dict(os.environ, LC_ALL="C", TZ="UTC"), capture_output=True, text=True, check=True)
+    require(not result.stderr, "group leader inspection failed: " + result.stderr)
     fields = result.stdout.strip().split(maxsplit=5)
     require(len(fields) == 6 and fields[-1], "unreadable group leader identity")
-    return dict(start=" ".join(fields[:5]), command=fields[-1])
+    start = " ".join(fields[:5])
+    require(re.fullmatch(r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) "
+                         r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) "
+                         r"[0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}", start),
+            "unreadable group leader start time")
+    return dict(start=start, command=fields[-1])
 
 
 def classify_leader(recorded, current):
@@ -204,7 +212,7 @@ def stop_group(pid, deadline, *, phase_expirations=None, term_deadline=None):
             try:
                 terminate_group(pid, requested_signal)
             except PermissionError as failure:
-                if failure.errno == errno.EPERM and not live_group(pid, signal_deadline, require_clean_stderr=True):
+                if failure.errno == errno.EPERM and not live_group(pid, signal_deadline):
                     remaining(signal_deadline, "signal observation")
                     return [], None
                 raise
@@ -733,8 +741,8 @@ class SupervisionRuntime:
         deadline = deadline_after(IO_LIMIT)
         listing = launch(["ps", "-axo", "pid=,pgid=,stat="], deadline=deadline, synchronous=True,
                          capture_output=True, text=True, check=True)
-        live = {int(group) for _, group, state in (line.split() for line in listing.stdout.splitlines())
-                if is_live_state(state)}
+        require(not listing.stderr, "group inspection failed: " + listing.stderr)
+        live = {group for _, group, state in process_rows(listing.stdout) if is_live_state(state)}
         for scope, row in self.states().items():
             if type(row.get("pgid")) is int and row["pgid"] in pending and row["pgid"] not in live:
                 self.record(scope, "absent", gone=True, confirmed_by="ps absence; no signal sent")
@@ -748,7 +756,7 @@ class SupervisionRuntime:
                         self.record(scope, "reused", gone=True, confirmed_by="different leader start time; no signal sent",
                                     replacement_leader=current)
                         continue
-                if not live_group(row["pgid"], deadline, require_clean_stderr=True):
+                if not live_group(row["pgid"], deadline):
                     self.record(scope, "absent", gone=True, confirmed_by="ps absence after identity read; no signal sent")
 
     def finish(self):

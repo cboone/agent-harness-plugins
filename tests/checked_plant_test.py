@@ -612,6 +612,43 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(ps.call_count, 3)
         killpg.assert_called_once_with(123, signal.SIGTERM)
 
+    def fake_ps(self, *listings):
+        results = iter(listings)
+
+        def run(argv, *, check=False, **options):
+            self.assertEqual(argv[0], "ps")
+            result = subprocess.CompletedProcess(argv, *next(results))
+            if check:
+                result.check_returncode()
+            return result
+
+        return mock.patch.object(core.subprocess, "run", side_effect=run)
+
+    def test_stop_group_requires_reliable_process_table(self):
+        live = (0, "123 123 T\n", "")
+        cases = [
+            ("stderr", (0, "", "Failure calling sysctl"), "Failure calling sysctl"),
+            ("exit", (2, "", ""), "CalledProcessError"),
+            ("shape", (0, "malformed\n", ""), "ValueError"),
+            ("pid", (0, "invalid 124 Z\n", ""), "ValueError"),
+            ("pgid", (0, "124 invalid Z\n", ""), "ValueError"),
+            ("empty", (0, "", ""), None),
+        ]
+        for phase in ("initial", "poll", "eperm"):
+            for name, listing, error in cases:
+                with self.subTest(phase=phase, listing=name):
+                    prefix = () if phase == "initial" else (live,)
+                    denial = PermissionError(errno.EPERM, "signal denied") if phase == "eperm" else None
+                    with self.fake_ps(*prefix, listing) as ps, mock.patch.object(
+                            core, "terminate_group", side_effect=[denial, None]):
+                        members, cause = core.stop_group(123, self.deadline)
+                    self.assertEqual(ps.call_count, len(prefix) + 1)
+                    if error:
+                        self.assertIn(error, cause or "")
+                        self.assertEqual(members, [123] if prefix else None)
+                    else:
+                        self.assertEqual((members, cause), ([], None))
+
     def stop_group_after_denial(self, snapshot, *, stderr="", error_number=errno.EPERM):
         argv = ["ps", "-axo", "pid=,pgid=,stat="]
         listings = [
@@ -676,12 +713,60 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(killpg.call_args_list, [mock.call(123, signal.SIGTERM), mock.call(123, signal.SIGKILL)])
         self.assertEqual(result, ([], None))
 
-    def reconciliation_with_recorded_leader(self):
-        journal = core.FactJournal(self.root / "recorded-leader.jsonl", create=True)
+    def reconciliation_with_recorded_leader(self, name="recorded-leader"):
+        journal = core.FactJournal(self.root / f"{name}.jsonl", create=True)
         runtime = core.SupervisionRuntime(journal, "fixture-parent")
         runtime.record("fixture-group", "reserved", parent=runtime.scope, reserved=True, pgid=123,
                        leader=dict(start="Thu Nov 5 23:22:01 2026", command="sh -c fixture"))
         return runtime
+
+    def test_reconciliation_requires_reliable_process_table(self):
+        cases = [
+            ("stderr", (0, "", "Failure calling sysctl"), ValueError, "Failure calling sysctl"),
+            ("exit", (2, "", ""), subprocess.CalledProcessError, "returned non-zero exit status"),
+            ("shape", (0, "malformed\n", ""), ValueError, "unpack"),
+            ("pid", (0, "invalid 124 Z\n", ""), ValueError, "invalid literal"),
+            ("pgid", (0, "124 invalid Z\n", ""), ValueError, "invalid literal"),
+            ("empty", (0, "", ""), None, None),
+        ]
+        live = (0, "123 123 T\n", "")
+        identity = (0, "Thu Nov 5 23:22:01 2026 sh -c fixture\n", "")
+        for prefix in ((), (live, identity)):
+            phase = "follow-up" if prefix else "initial"
+            for name, listing, error, cause in cases:
+                with self.subTest(phase=phase, listing=name):
+                    runtime = self.reconciliation_with_recorded_leader(f"{phase}-{name}")
+                    with self.fake_ps(*prefix, listing) as ps:
+                        if error:
+                            with self.assertRaisesRegex(error, cause):
+                                runtime.finish()
+                        else:
+                            runtime.finish()
+                    self.assertEqual(runtime.pending(), [123] if error else [])
+                    self.assertEqual(ps.call_count, len(prefix) + 1)
+
+    def test_reconciliation_requires_reliable_leader_identity_for_reuse(self):
+        live = (0, "123 123 T\n", "")
+        replacement = "Fri Nov 6 00:00:00 2026 sh -c replacement\n"
+        cases = [
+            ("stderr", (0, "", "Failure calling sysctl"), "Failure calling sysctl"),
+            ("stderr-with-data", (0, replacement, "Failure calling sysctl"), "Failure calling sysctl"),
+            ("exit", (2, replacement, ""), "CalledProcessError"),
+            ("empty", (0, "", ""), "unreadable group leader identity"),
+            ("malformed", (0, "this row has no timestamp replacement\n", ""), "unreadable group leader start time"),
+            ("reuse", (0, replacement, ""), None),
+        ]
+        for name, identity, cause in cases:
+            with self.subTest(listing=name):
+                runtime = self.reconciliation_with_recorded_leader(name)
+                with self.fake_ps(live, identity, live) as ps:
+                    if cause:
+                        with self.assertRaisesRegex(ValueError, cause):
+                            runtime.finish()
+                    else:
+                        runtime.finish()
+                self.assertEqual(runtime.pending(), [123] if cause else [])
+                self.assertEqual(ps.call_count, 3 if cause else 2)
 
     def test_reconcile_clears_exiting_group_in_initial_snapshot(self):
         runtime = self.reconciliation_with_recorded_leader()
