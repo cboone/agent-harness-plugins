@@ -24,20 +24,17 @@ Base `a9bad10d`. The [sandbox issue][issue] follows the
 - **psutil.** The package exposes process status and creation time, and would
   add a native dependency. The kernel sources directly supply the needed
   fields on both supported platforms. [psutil process reference][psutil].
-- **Linux procfs.** `/proc/<pid>/stat` includes group, state, flags, thread
-  count and start ticks. The parser splits after the final closing delimiter
-  because the process name can contain parentheses and newlines. It treats
-  `Z`, `X`, legacy `x` and `PF_EXITING` as departed when no other threads
-  remain. The kernel reports these fields for the thread-group leader, which
-  can exit before the other threads. [Linux procfs stat][linux-stat] and
-  [Linux flags][linux-flags].
+- **Linux procfs.** The stat reader takes group, state and start ticks. The
+  parser splits after the final closing delimiter because the process name can
+  contain parentheses and newlines. Only `Z`, `X` and legacy `x` count as
+  departed. [Linux procfs stat][linux-stat].
 
 The trust boundary is in the checked runner reference. Registration and
 reconciliation both use the same platform-tagged start time. Legacy records
 without that format cannot establish reuse. Reconciliation still confirms
 group absence through a fresh read when leader identity is unavailable.
 
-The new reader removes the subprocess scan described by the
+The native reader replaces the external process listing described by the
 [checked-gate load issue][gate-issue] from the same cleanup path.
 The original load case and cleanup-error test in that issue were not replayed.
 The existing cleanup error handling and fixed fingerprint budget remain in
@@ -47,13 +44,77 @@ place, so this branch does not close that issue.
 
 - Darwin record layout, zombie state, exit flag, unknown state and failed
   syscall, including `ENOMEM` retry.
-- Linux stat layout, zombie and dead states, exit flag, live threads, unknown
-  state, unreadable stat, hidden procfs and confirmed PID disappearance.
-- Snapshot dispatch, visibility check and deadline enforcement.
+- Linux stat layout, zombie and dead states, live and unknown states,
+  unreadable stat, hidden procfs and confirmed PID disappearance.
+- Isolated reader launch, output validation, visibility check and deadline
+  enforcement.
 - Group member selection, leader identity lookup and start-time comparison,
   and reconciliation's initial and follow-up snapshots.
 
-## Sandbox proof
+## Round 1 review
+
+- **Finding 1, Nit.** The Linux process snapshot can miss a child forked
+  during enumeration, as could the previous `ps` snapshot. Whenever cleanup
+  signals, `killpg` still targets the whole group. Accepted as a known limit.
+- **Finding 2, fixed.** Linux classifies departure from the state field alone.
+  The test's live-state records detect any return to flag-based departure.
+- **Finding 3, fixed.** The supervisor runs the native reader through
+  `launch()` with null stdin, an empty environment and a deadline. A hanging
+  reader leaves membership unknown and cleanup still signals the group.
+  A nonzero exit, stderr or invalid JSON also leaves membership unconfirmed.
+
+### Round 1 sandbox proof
+
+The replay used the same SL-VF profile generator and path identity helper
+from `0e5c007fbc55`. The probe copy retained the original commands and added
+a direct invocation of the isolated reader. The artifacts are in
+`.workmux/issue-774/round1.DDkhcQ6I/`.
+
+```bash
+uv run --no-project --offline --python 3.13 python -B \
+  .workmux/issue-774/round1.DDkhcQ6I/prove_sandbox.py
+```
+
+The probe exited 0. Under the generated sandbox profile, `/bin/ps` exited 71,
+the reader child and its snapshot and identity probe each exited 0, and the
+end-to-end `checked-plant` run exited 0. The retained receipt is
+`sandbox-results.json`.
+
+### Round 1 plants
+
+Both `checked-plant run` and `checked-plant render` exited 0 for each variant.
+The receipts are at `plants-checked/<variant>/run/results.json` under the round 1
+artifact directory.
+
+- `linux-flag-departure` made `test_linux_process_states` fail with exit 1.
+  Restoring the source passed with exit 0.
+- `in-process-reader` made `test_process_reader_timeout_fails_closed` fail
+  with exit 1. Restoring the source passed with exit 0.
+
+### Round 1 local checks
+
+The first targeted Scrut invocation exited 2. The fake procfs readlink had
+intercepted symlink resolution for the temporary directory, and the manifest
+inventory included retained artifacts from earlier runs. The fixture now
+intercepts only the procfs self link. Python and Scrut use a copy of the
+tracked files, which excludes the retained artifacts.
+
+The first two full Python invocations exited 1. The deadline guard required
+the reader reap to call `remaining()`. The second Scrut invocation exited 2
+because the reader could emit a resource warning if its reap budget elapsed.
+The reader now delegates a delayed reap after signaling the child. The final
+targeted Scrut invocation exited 0 with 70 behavior tests. `make build`,
+`make lint` and `make validate` each exited 0.
+
+```bash
+bin/run-heavy-suite uv run --no-project --offline --python 3.13 python -B \
+  -m unittest discover -s tests -p '*_test.py' -v
+```
+
+The final Python run exited 0 with 157 tests. On macOS, the Linux reader
+checks used fixture procfs records.
+
+## Initial sandbox proof
 
 The remote-tracking ref and remote branch were absent. The local SL-VF branch
 `fix/3-scrut-guard-writes` resolved to `0e5c007fbc55`. The probe compared the
@@ -79,7 +140,7 @@ The probe exited 0. Its subprocesses each ran under the generated
    the probe removed. The receipt is retained at
    `.workmux/issue-774/sandbox-results.json`.
 
-## Local checks
+## Initial local checks
 
 - `make build` and `make lint` exited 0. The version audit exited 0 and confirmed
   the canonical and generated manifests at 1.3.3, up from 1.3.2 on the base.
@@ -98,9 +159,11 @@ The probe exited 0. Its subprocesses each ran under the generated
   fixtures were removed between discovery and validation. The final
   `make validate` ran after the suite and exited 0.
 
-## Defect plants
+## Initial defect plants
 
-Each variant used `uv run --offline --python <interpreter> --script <checked-plant> run`
+These receipts record the initial implementation. The round 1 Linux plant
+replaces the initial exit-flag and thread-count checks.
+Each initial variant used `uv run --offline --python <interpreter> --script <checked-plant> run`
 followed by `render`. All 21 run and render commands exited 0. Each variant's
 manifest, patch, check, and `run/results.json` are under
 `.workmux/issue-774/plants-final/<variant>/`.
@@ -160,4 +223,3 @@ plant skip-fresh-reconciliation-snapshot: named assertion reached; red exit 1; r
 [libproc]: https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/proc_info.c
 [psutil]: https://psutil.readthedocs.io/stable/#process-class
 [linux-stat]: https://github.com/torvalds/linux/blob/v6.12/fs/proc/array.c
-[linux-flags]: https://github.com/torvalds/linux/blob/v6.12/include/linux/sched.h
