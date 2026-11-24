@@ -140,3 +140,89 @@ Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/771-ps-stderr/
 plant restore-row-state-rejection: named assertion reached; red exit 1; restored; green exit 0.
 
 Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/771-ps-stderr/node_modules/.771-round1-part2.gbdmLh/restore-row-state-rejection/results.json`.
+
+## Review round 2
+
+`checked_core` trusts the system `ps` to emit its documented row format.
+Rows must split into the expected fields. PID, PGID and start time fields must
+parse. Both parsers rely on `ps` for semantic details such as status flag order,
+ID signs and the weekday. Round 1's checks still apply.
+
+- Finding 1, Nit. The reported flag order `S+E` is outside the output of the
+  system formatters. Apple emits `E` before `+`, and procps has no `E` suffix.
+- Finding 2, Nit. The negative PGID in the sample is outside the process table
+  format for `pgid=`.
+- Finding 3, Nit. The weekday and date in a real `lstart` field come from the
+  same timestamp. The contradictory weekday requires fabricated output.
+- Finding 4, Important, fixed. Runtime `ps` calls use `COLUMNS=10000`,
+  `LINES=1000` and `stdin=subprocess.DEVNULL`. `launch` forwards `stdin` to
+  `subprocess.run`. Procps 4.0.4 can still check `/dev/tty` when it has a
+  controlling terminal. It applies the fixed dimensions before checking for a
+  screen-size warning. [Procps screen sizing](https://github.com/procps-ng/procps/blob/v4.0.4/src/ps/global.c#L235-L278).
+
+Width can change where `ps` truncates `command=`. Registration and
+reconciliation both call `leader_identity` with the same fixed width and
+`LC_ALL=C` and `TZ=UTC`. The width therefore applies equally to both sides of
+`classify_leader`. A macOS probe returned matching 1,135-character commands
+with different inherited dimensions, including a marker at the end of the
+argument. [Procps column formatting](https://github.com/procps-ng/procps/blob/v4.0.4/src/ps/output.c#L2066-L2095).
+
+### Environment warning audit
+
+Six executable source sites were audited, three changed. The three changed
+sites also appear in the generated Codex copy. Both the stacked-base diff and
+the additional files in the `origin/main` merge-base diff were inspected.
+
+| Site                                                                                                             | Verdict                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `checked_core.py`, `live_group` table                                                                            | Fixed dimensions and null stdin. Covers initial, polling and EPERM cleanup and the reconciliation follow-up. |
+| `checked_core.py`, `leader_identity` PID                                                                         | Fixed dimensions and null stdin. Registration and reconciliation share this lookup.                          |
+| `checked_core.py`, `reconcile` initial table                                                                     | Fixed dimensions and null stdin before any pending group is classified.                                      |
+| Codex `checked_core.py`, `live_group` table                                                                      | Regenerated from the same checked source launch.                                                             |
+| Codex `checked_core.py`, `leader_identity` PID                                                                   | Regenerated from the same checked source launch.                                                             |
+| Codex `checked_core.py`, `reconcile` initial table                                                               | Regenerated from the same checked source launch.                                                             |
+| `tests/checked_plant_test.py`, PID probe in `test_normally_exiting_step_stops_its_group`                         | Test-only teardown probe. Its output cannot affect the runtime's group records.                              |
+| `tests/checked_plant_test.py`, PID probe in `test_term_ignoring_group_is_stopped`                                | Test-only teardown probe. Its output cannot affect the runtime's group records.                              |
+| `tests/checked_plant_test.py`, delayed process table in `test_inspection_failure_retains_subprocess_diagnostics` | Passes the runtime options through to the process that execs `ps`. The fixture needs no separate options.    |
+
+`checked-plant` delegates through `checked_core` and contains no direct `ps`
+launch. The `ps` string in `tests/checked_timeout_budget_test.py` only feeds
+source analysis. The other touched files contain no `ps` launches.
+
+`test_ps_uses_fixed_dimensions_and_devnull` observes all three runtime sites
+with both caller dimensions set to one. At each site, the plants independently
+drop `COLUMNS`, `LINES` and null stdin.
+
+### Round 2 local checks
+
+- `make build` and `make lint` exited 0. The first `make validate` exited 2
+  because the interactive width probe wrote a bytecode file in the plugin
+  scripts directory. Removing that file and its empty directory restored
+  `make validate` to exit 0.
+- `uv run --no-project -m unittest discover -s tests -p '*_test.py' -q`
+  exited 0 with 156 tests in five tracked modules using the default guard
+  partitions. The scheduler case used the fixture stub. The Scrut suite was
+  deferred to the full gate. The behavior snapshot expects 69 tests.
+- Checked-plant `run` and `render` each exited 0.
+
+### Round 2 verified plants
+
+plant drop-live-group-columns: named assertion reached; red exit 1; restored; green exit 0.
+
+plant drop-live-group-lines: named assertion reached; red exit 1; restored; green exit 0.
+
+plant drop-live-group-stdin: named assertion reached; red exit 1; restored; green exit 0.
+
+plant drop-leader-identity-columns: named assertion reached; red exit 1; restored; green exit 0.
+
+plant drop-leader-identity-lines: named assertion reached; red exit 1; restored; green exit 0.
+
+plant drop-leader-identity-stdin: named assertion reached; red exit 1; restored; green exit 0.
+
+plant drop-reconcile-columns: named assertion reached; red exit 1; restored; green exit 0.
+
+plant drop-reconcile-lines: named assertion reached; red exit 1; restored; green exit 0.
+
+plant drop-reconcile-stdin: named assertion reached; red exit 1; restored; green exit 0.
+
+Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/771-ps-stderr/node_modules/.771-round2.4OMWGp/run/results.json`.
