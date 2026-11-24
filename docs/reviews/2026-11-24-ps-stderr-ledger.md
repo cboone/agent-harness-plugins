@@ -41,9 +41,7 @@ contains a `ps` source string and performs no inspection.
 - Scrut was excluded, including the Python scheduler case that invokes it
   with a stub.
 
-<!-- checked-plants:start -->
-
-## Verified plants and controls
+## Initial verified plants and controls
 
 plant ignore-live-group-stderr: named assertion reached; red exit 1; restored; green exit 0.
 
@@ -66,5 +64,59 @@ plant ignore-malformed-table-row: named assertion reached; red exit 1; restored;
 plant ignore-malformed-leader-time: named assertion reached; red exit 1; restored; green exit 0.
 
 Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/771-ps-stderr/node_modules/.771-plants.3B5Ecs/run/results.json`.
+
+## Review round 1
+
+The review of `2e03f8fc` found three Important issues. All three fixes change
+behavior. The macOS state codes observed in local checks need a design decision
+before confirmation review.
+
+- `process_rows` rejects malformed state fields before either group reader can
+  conclude that a process group has departed. The test covers the exact
+  leading letters, allowed suffixes and malformed states including `Zgarbage`.
+  The accepted state letters come from both manuals. The requested suffixes
+  exclude Apple's legacy FIFO page replacement flag `S`, which the current
+  Apple formatter does not emit. [Apple ps(1)][apple-ps], [procps ps(1)][linux-ps],
+  [Apple state formatter][apple-state].
+- `leader_identity` parses the five `lstart` fields with `time.strptime`. The
+  reconciliation test keeps the group pending for `Nov 99`, and a direct test
+  accepts the space-padded day in `Nov  4`.
+- `ps_environment` removes `LINES` and `COLUMNS` for all three `ps` calls while
+  retaining `LC_ALL=C` and `TZ=UTC` for the leader lookup. The fake observes
+  the initial table, leader and follow-up table environments with both display
+  settings present in the caller.
+
+### Round 1 local checks
+
+- `make build`, `make lint`, and `make validate` each exited 0.
+- Seven focused Python tests exited 0. The behavior snapshot now counts 66
+  cases.
+- The tracked-tree Python run exited 1 across 152 tests. The suite reported
+  `ValueError: unreadable process state: ?` in live group inspection and
+  reconciliation. Across 60 separate snapshots, stock macOS `ps` returned
+  two `?` rows and one `?+` row. A subsequent isolated run of
+  `test_good_action_runs_once` exited 1 after a `?E` row invalidated the group
+  listing. The required allowlist rejects all three forms. Scrut and the
+  Python scheduler case that invokes its stub were skipped.
+- The initial checked-plant run exited 1 because the environment assertion
+  printed the subprocess mapping, which tripped a verdict exclusion. The
+  assertion now reports only the display variable names. The rerun and
+  `checked-plant render` each exited 0.
+
+[apple-ps]: https://github.com/apple-oss-distributions/adv_cmds/blob/main/ps/ps.1
+[linux-ps]: https://man7.org/linux/man-pages/man1/ps.1.html#PROCESS_STATE_CODES
+[apple-state]: https://github.com/apple-oss-distributions/adv_cmds/blob/main/ps/print.c
+
+<!-- checked-plants:start -->
+
+## Verified plants and controls
+
+plant accept-malformed-state: named assertion reached; red exit 1; restored; green exit 0.
+
+plant accept-impossible-leader-date: named assertion reached; red exit 1; restored; green exit 0.
+
+plant inherit-display-dimensions: named assertion reached; red exit 1; restored; green exit 0.
+
+Evidence: `/Users/ctm/Work/projects/tooling/agent-harness-plugins/771-ps-stderr/node_modules/.771-round1-plants.dRkCz2/run/results.json`.
 
 <!-- checked-plants:end -->
