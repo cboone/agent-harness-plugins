@@ -9,7 +9,7 @@ whose source no longer exists.
 ## Copies each source and removes orphaned copies
 
 ```scrut
-$ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && "${BUILD_REVIEW_CHECKLISTS_BIN}" && ls plugins/set-up-review-config/skills/set-up-review-config/references/checklists
+$ source "${REPO_ROOT}/bin/lib/git-environment.bash" && cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && "${BUILD_REVIEW_CHECKLISTS_BIN}" && ls plugins/set-up-review-config/skills/set-up-review-config/references/checklists
 Review checklists: 2 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (2 written, 1 removed).
 write-alpha.md
 write-beta.md

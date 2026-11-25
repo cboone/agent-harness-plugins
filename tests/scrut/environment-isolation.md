@@ -384,9 +384,6 @@ All Git consumers reset their fixture environment.
 
 ```scrut
 $ set -o pipefail && "${ENVIRONMENT_ISOLATION_BIN}" guard-copy-execution | sort
-bin/build-review-checklists: source bin/lib/git-environment.bash before Git consumers
 bin/build-shared-references: source bin/lib/git-environment.bash before Git consumers
-bin/validate-plugins: source bin/lib/git-environment.bash before Git consumers
-tests/scrut/build-review-checklists.md: source bin/lib/git-environment.bash before Git consumers
 [1]
 ```

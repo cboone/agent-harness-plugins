@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Reset fixture Git and budget inputs before applying intentional test settings.
+# Reset fixture Git, budget and helper context before intentional test settings.
 
 function reset_fixture_git_environment() {
   local variable
   while IFS= read -r variable; do
     case "${variable}" in
-      GIT_* | CODEX_REFERENCE_CONTEXT_WINDOW | CODEX_ENABLED_SKILL_PERCENT | CODEX_OTHER_SKILL_RESERVE_TOKENS)
+      GIT_* | CODEX_REFERENCE_CONTEXT_WINDOW | CODEX_ENABLED_SKILL_PERCENT | CODEX_OTHER_SKILL_RESERVE_TOKENS | HELPER_BUNDLE_IDENTITY | HELPER_SNAPSHOT_PATH | HELPER_SNAPSHOT_HASH)
         unset "${variable}"
         ;;
       *) ;;

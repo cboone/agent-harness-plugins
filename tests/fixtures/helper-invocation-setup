@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# shellcheck source=bin/lib/git-environment.bash
+source bin/lib/git-environment.bash
+
+# The plant runner copies regular files; restore repository instruction aliases.
+[[ ! -e .git ]]
+while IFS= read -r instruction; do
+  alias_path="${instruction%/*}/CLAUDE.md"
+  if [[ -e "${alias_path}" || -L "${alias_path}" ]]; then
+    [[ -L "${alias_path}" && "$(readlink "${alias_path}")" == AGENTS.md ]]
+  else
+    ln -s AGENTS.md "${alias_path}"
+  fi
+done < <(find plugins bin docs -type f -name AGENTS.md -print)

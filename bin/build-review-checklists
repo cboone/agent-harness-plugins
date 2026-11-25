@@ -21,6 +21,9 @@
 # the repository root.
 set -euo pipefail
 
+# shellcheck source=bin/lib/git-environment.bash
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git-environment.bash"
+
 # Glob expansion and sort order must not depend on the caller's locale, or two
 # machines would disagree about the output.
 export LC_ALL=C
