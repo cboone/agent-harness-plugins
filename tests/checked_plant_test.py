@@ -1072,8 +1072,18 @@ class RunnerTests(unittest.TestCase):
 
     def test_present_manifests_preserve_normal_verdicts(self):
         fixtures = json.loads((ROOT / "tests/data/checked-verdict-compatibility.json").read_text())
+        listed = {row["manifest"] for row in fixtures["rows"]}
+        present = {name for name in listed if (ROOT / name).is_file()}
+        for name in sorted(present):
+            with self.subTest(manifest=name):
+                try:
+                    manifest = json.loads((ROOT / name).read_text(encoding="utf-8"))
+                except (UnicodeError, ValueError) as error:
+                    self.fail(f"Invalid plant manifest: {name}: {error}")
+                self.assertTrue(isinstance(manifest, dict) and {"green", "check", "variants"} <= manifest.keys(),
+                                f"Invalid plant manifest: {name}")
         for row in fixtures["rows"]:
-            if not (ROOT / row["manifest"]).is_file():
+            if row["manifest"] not in present:
                 continue
             with self.subTest(manifest=row["manifest"], phase=row["phase"]), mock.patch.object(
                     runner, "valid_step", return_value=True):

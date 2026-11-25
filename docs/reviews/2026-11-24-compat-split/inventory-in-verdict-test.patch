@@ -1,10 +1,8 @@
 --- a/tests/checked_plant_test.py
 +++ b/tests/checked_plant_test.py
-@@ -1073,4 +1073,7 @@
-     def test_present_manifests_preserve_normal_verdicts(self):
-         fixtures = json.loads((ROOT / "tests/data/checked-verdict-compatibility.json").read_text())
-+        listed = {row["manifest"] for row in fixtures["rows"]}
-+        present = {name for name in listed if (ROOT / name).is_file()}
+@@ -1075,4 +1075,5 @@
+         listed = {row["manifest"] for row in fixtures["rows"]}
+         present = {name for name in listed if (ROOT / name).is_file()}
 +        self.assertEqual(present, listed, "verdict test requires the whole inventory")
-         for row in fixtures["rows"]:
-             if not (ROOT / row["manifest"]).is_file():
+         for name in sorted(present):
+             with self.subTest(manifest=name):

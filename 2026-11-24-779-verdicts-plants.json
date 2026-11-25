@@ -1,5 +1,5 @@
 {
-  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/checked_plant_test.py", "tests/checked_test_diagnostics.py", "tests/fixtures/checked-plant-detached.py", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py", "docs/reviews/2026-11-24-compat-split/check-verdicts.sh", "docs/reviews/2026-11-24-compat-split/inventory-in-verdict-test.patch", "docs/reviews/2026-11-24-compat-split/changed-legacy-verdict.patch"],
+  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/checked_plant_test.py", "tests/checked_test_diagnostics.py", "tests/fixtures/checked-plant-detached.py", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py", "docs/reviews/2026-11-24-compat-split/check-verdicts.sh", "docs/reviews/2026-11-24-compat-split/inventory-in-verdict-test.patch", "docs/reviews/2026-11-24-compat-split/changed-legacy-verdict.patch", "docs/reviews/2026-11-24-compat-split/invalid-manifest.patch"],
   "check": "docs/reviews/2026-11-24-compat-split/check-verdicts.sh",
   "timeout": 5,
   "git_timeout": 5,
@@ -24,6 +24,15 @@
       "red": {
         "exit_code": 1,
         "contains": ["manifest='review-scope-plants.json', phase='baseline'", "FAILED (failures=3)"],
+        "excludes": ["ERROR:", "skipped"]
+      }
+    },
+    {
+      "name": "invalid-manifest",
+      "patch": "docs/reviews/2026-11-24-compat-split/invalid-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Invalid plant manifest: review-scope-plants.json", "FAILED (failures=1)"],
         "excludes": ["ERROR:", "skipped"]
       }
     }

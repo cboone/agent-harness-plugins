@@ -1,0 +1,8 @@
+--- a/docs/reviews/2026-11-24-compat-split/check-inventory.sh
++++ b/docs/reviews/2026-11-24-compat-split/check-inventory.sh
+@@ -13,4 +13,5 @@
+     tests/data/checked-verdict-compatibility.json > "${checkout}/tests/data/checked-verdict-compatibility.json"
+   cp review-scope-plants.json "${checkout}/"
++  cp review-scope-plants.json "${checkout}/other-manifest.json"
+   git -C "${checkout}" init --quiet --template=
+   git -C "${checkout}" add -- .

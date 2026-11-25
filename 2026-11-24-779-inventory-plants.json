@@ -1,5 +1,5 @@
 {
-  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/check_plant_inventory.py", "bin/lib/git-environment.bash", "docs/reviews/2026-11-24-compat-split/check-inventory.sh", "docs/reviews/2026-11-24-compat-split/unlisted-manifest.patch"],
+  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/check_plant_inventory.py", "bin/lib/git-environment.bash", "docs/reviews/2026-11-24-compat-split/check-inventory.sh", "docs/reviews/2026-11-24-compat-split/unlisted-manifest.patch", "docs/reviews/2026-11-24-compat-split/other-manifest.patch"],
   "check": "docs/reviews/2026-11-24-compat-split/check-inventory.sh",
   "timeout": 5,
   "git_timeout": 5,
@@ -15,6 +15,15 @@
       "red": {
         "exit_code": 1,
         "contains": ["Unlisted plant manifest: unlisted-plants.json"],
+        "excludes": ["ERROR:", "skipped"]
+      }
+    },
+    {
+      "name": "other-manifest",
+      "patch": "docs/reviews/2026-11-24-compat-split/other-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Unlisted plant manifest: other-manifest.json"],
         "excludes": ["ERROR:", "skipped"]
       }
     }
