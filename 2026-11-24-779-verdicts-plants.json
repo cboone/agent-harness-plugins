@@ -1,0 +1,31 @@
+{
+  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/checked_plant_test.py", "tests/checked_test_diagnostics.py", "tests/fixtures/checked-plant-detached.py", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py", "docs/reviews/2026-11-24-compat-split/check-verdicts.sh", "docs/reviews/2026-11-24-compat-split/inventory-in-verdict-test.patch", "docs/reviews/2026-11-24-compat-split/changed-legacy-verdict.patch"],
+  "check": "docs/reviews/2026-11-24-compat-split/check-verdicts.sh",
+  "timeout": 5,
+  "git_timeout": 5,
+  "green": {
+    "exit_code": 0,
+    "contains": ["Ran 1 test", "\nOK\n"],
+    "excludes": ["ERROR:", "skipped"]
+  },
+  "variants": [
+    {
+      "name": "inventory-in-verdict-test",
+      "patch": "docs/reviews/2026-11-24-compat-split/inventory-in-verdict-test.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_present_manifests_preserve_normal_verdicts", "verdict test requires the whole inventory", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped"]
+      }
+    },
+    {
+      "name": "changed-legacy-verdict",
+      "patch": "docs/reviews/2026-11-24-compat-split/changed-legacy-verdict.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["manifest='review-scope-plants.json', phase='baseline'", "FAILED (failures=3)"],
+        "excludes": ["ERROR:", "skipped"]
+      }
+    }
+  ]
+}
