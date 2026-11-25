@@ -1,5 +1,14 @@
 {
   "frameworks": ["unittest", "repository Bash validity fixtures", "scrut"],
+  "historical_records": [
+    "docs/reviews/2026-10-28-error-output-exec-stream-plants.json",
+    "docs/reviews/2026-10-28-error-output-fix-plants.json",
+    "docs/reviews/2026-10-28-error-output-inherited-map-plants.json",
+    "docs/reviews/2026-10-28-error-output-old-regex-plants.json",
+    "docs/reviews/2026-10-29-error-output-parser-exception-plants.json",
+    "docs/reviews/2026-10-29-error-output-rare-plants.json",
+    "docs/reviews/2026-11-02-monitor-pr-client-mode-plants.json"
+  ],
   "rows": [
     {
       "manifest": "2026-11-05-733-load-timeouts-plants.json",
