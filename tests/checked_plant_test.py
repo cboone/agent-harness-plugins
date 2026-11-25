@@ -21,6 +21,7 @@ import tempfile
 import unittest
 from unittest import mock
 
+from checked_manifest_discovery import discover_manifests
 from checked_test_diagnostics import restart_diagnostic
 
 
@@ -1073,15 +1074,8 @@ class RunnerTests(unittest.TestCase):
     def test_present_manifests_preserve_normal_verdicts(self):
         fixtures = json.loads((ROOT / "tests/data/checked-verdict-compatibility.json").read_text())
         listed = {row["manifest"] for row in fixtures["rows"]}
-        present = {name for name in listed if (ROOT / name).is_file()}
-        for name in sorted(present):
-            with self.subTest(manifest=name):
-                try:
-                    manifest = json.loads((ROOT / name).read_text(encoding="utf-8"))
-                except (UnicodeError, ValueError) as error:
-                    self.fail(f"Invalid plant manifest: {name}: {error}")
-                self.assertTrue(isinstance(manifest, dict) and {"green", "check", "variants"} <= manifest.keys(),
-                                f"Invalid plant manifest: {name}")
+        present = discover_manifests(ROOT)
+        self.assertEqual(sorted(present - listed), [], "Discovered plant manifests lack verdict rows")
         for row in fixtures["rows"]:
             if row["manifest"] not in present:
                 continue
