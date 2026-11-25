@@ -42,12 +42,14 @@ content predicate from `origin/main` at `1f87b1c0`. The predicate requires a JSO
 object with `green`, `check` and `variants` keys. Discovery ignores candidate
 decode errors and propagates file-read errors as before.
 
-`make validate` compares the discovered set with the verdict fixture paths.
+The inventory unit test compares the discovered set with the verdict fixture paths.
 It also reads the historical records and requires each to parse as JSON and
 lack the runnable manifest shape. The verdict test requires rows for every
 discovered manifest and checks those rows against the recorded verdicts. Files
 listed only in the fixture can be absent in the verdict test's isolated copies.
-The full inventory check detects them in the repository.
+The full inventory check detects them in the repository. The
+[`checked-inventory.md` Scrut document](../../tests/scrut/checked-inventory.md)
+runs that unit test in the PR matrix.
 
 ## Class audit
 
@@ -77,7 +79,7 @@ the two commands independently. Plant names identify the committed patches
 in [the variant directory](2026-11-24-compat-split/).
 
 - D refers to [`tests/checked_manifest_discovery.py`](../../tests/checked_manifest_discovery.py).
-- I refers to [`tests/check_plant_inventory.py`](../../tests/check_plant_inventory.py).
+- I refers to the inventory script at the reviewed revision.
 - V refers to [`tests/checked_plant_test.py`](../../tests/checked_plant_test.py).
 
 | Old failure mode                                          | Branch site and line | Plant                     | Old verdict | Branch inventory | Branch verdict |

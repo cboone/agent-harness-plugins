@@ -205,7 +205,6 @@ format:
 	@command -v shfmt > /dev/null && shfmt -w $(SHELL_SCRIPTS) || true
 
 validate:
-	PYTHONDONTWRITEBYTECODE=1 uv run --no-project tests/check_plant_inventory.py
 	bin/validate-json
 	bin/check-fixture-environments
 	uv run --script bin/check-review-validity.py

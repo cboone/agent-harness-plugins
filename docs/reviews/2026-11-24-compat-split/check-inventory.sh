@@ -7,6 +7,7 @@ function main() (
   checkout="$(mktemp -d "${TMPDIR:-/tmp}/compat-inventory.XXXXXXXX")"
   trap 'rm -r -- "${checkout}"' EXIT
   mkdir -p "${checkout}/tests/data" "${checkout}/docs/reviews"
+  cp -- tests/checked_plant_inventory_test.py tests/checked_manifest_discovery.py "${checkout}/tests/"
   jq --arg history "${history}" \
     '.historical_records |= map(select(. == $history)) | .rows |= map(select(.manifest == "review-scope-plants.json"))' \
     tests/data/checked-verdict-compatibility.json > "${checkout}/tests/data/checked-verdict-compatibility.json"
@@ -17,10 +18,7 @@ function main() (
   if [[ -f "${history}" ]]; then
     cp -- "${history}" "${checkout}/${history}"
   fi
-  (
-    cd "${checkout}"
-    PYTHONDONTWRITEBYTECODE=1 uv run --no-project "${OLDPWD}/tests/check_plant_inventory.py"
-  )
+  PYTHONDONTWRITEBYTECODE=1 uv run --no-project "${checkout}/tests/checked_plant_inventory_test.py" -q
 )
 
 main "$@"
