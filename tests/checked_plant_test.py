@@ -1348,7 +1348,9 @@ class RunnerTests(unittest.TestCase):
         for name in ("checked_core.py", "checked-gate"):
             (self.root / name).write_text(sources[name])
         (self.root / "regressions.py").write_bytes(Path(__file__).read_bytes())
-        (self.root / "checked_test_diagnostics.py").write_bytes(Path(__file__).with_name("checked_test_diagnostics.py").read_bytes())
+        support = ("checked_manifest_discovery.py", "checked_test_diagnostics.py")
+        for name in support:
+            (self.root / name).write_bytes(Path(__file__).with_name(name).read_bytes())
         (self.root / "detached.py").write_bytes(DETACHED.read_bytes())
         expected_detectors = {
             'test_absent_record_aliases_and_refusal_cleanup',
@@ -1491,7 +1493,7 @@ class RunnerTests(unittest.TestCase):
             variant = dict(name=name, patch=patch,
                            red=dict(exit_code=1, contains=required, excludes=["\nERROR:", ", skipped="]))
             self.manifest = dict(
-                inputs=["candidate", "checked_core.py", "checked-gate", "regressions.py", "checked_test_diagnostics.py", "contracts.sh", "detached.py", "budgets.json", patch],
+                inputs=["candidate", "checked_core.py", "checked-gate", "regressions.py", *support, "contracts.sh", "detached.py", "budgets.json", patch],
                 check="contracts.sh", timeout=budgets["checks"][name], git_timeout=budgets["git_timeout"],
                 green=dict(exit_code=0, contains=[f"Ran {len(methods)} test", "\nOK\n"],
                            excludes=["skipped", "SKIP", "ERROR:"]), variants=[variant])
