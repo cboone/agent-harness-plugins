@@ -1,0 +1,56 @@
+diff --git a/tests/data/checked-verdict-compatibility.json b/tests/data/checked-verdict-compatibility.json
+index 26bee8b..651e6a8 100644
+--- a/tests/data/checked-verdict-compatibility.json
++++ b/tests/data/checked-verdict-compatibility.json
+@@ -47,51 +47,6 @@
+       },
+       "legacy_verdict": true
+     },
+-    {
+-      "manifest": "review-scope-plants.json",
+-      "phase": "baseline",
+-      "wanted": {
+-        "exit_code": 0,
+-        "contains": ["PASS: base round validity\n", "PASS: head round validity\n", "PASS: merge-base round validity\n", "PASS: rebase round validity\n", "PASS: membership round validity\n", "PASS: base-collection round validity\n", "PASS: merge-base-collection round validity\n", "PASS: alias round validity\n"],
+-        "excludes": ["FAIL:", "unbound variable", "command not found"]
+-      },
+-      "result": {
+-        "exit_code": 0,
+-        "stdout": "PASS: base round validity\nPASS: alias round validity\nPASS: head round validity\nPASS: merge-base round validity\nPASS: rebase round validity\nPASS: membership round validity\nPASS: base-collection round validity\nreview-scope: the index, HEAD or merge base changed while the scope was being read; rerun once it has settled\nPASS: merge-base-collection round validity\n",
+-        "stderr": ""
+-      },
+-      "legacy_verdict": true
+-    },
+-    {
+-      "manifest": "review-scope-plants.json",
+-      "phase": "red",
+-      "wanted": {
+-        "exit_code": 1,
+-        "contains": ["FAIL: unrelated base advance preserves snapshot\n"],
+-        "excludes": ["Unknown case:", "command not found", "unbound variable"]
+-      },
+-      "result": {
+-        "exit_code": 1,
+-        "stdout": "",
+-        "stderr": "FAIL: unrelated base advance preserves snapshot\n"
+-      },
+-      "legacy_verdict": true
+-    },
+-    {
+-      "manifest": "review-scope-plants.json",
+-      "phase": "green",
+-      "wanted": {
+-        "exit_code": 0,
+-        "contains": ["PASS: base round validity\n", "PASS: head round validity\n", "PASS: merge-base round validity\n", "PASS: rebase round validity\n", "PASS: membership round validity\n", "PASS: base-collection round validity\n", "PASS: merge-base-collection round validity\n", "PASS: alias round validity\n"],
+-        "excludes": ["FAIL:", "unbound variable", "command not found"]
+-      },
+-      "result": {
+-        "exit_code": 0,
+-        "stdout": "PASS: base round validity\nPASS: alias round validity\nPASS: head round validity\nPASS: merge-base round validity\nPASS: rebase round validity\nPASS: membership round validity\nPASS: base-collection round validity\nreview-scope: the index, HEAD or merge base changed while the scope was being read; rerun once it has settled\nPASS: merge-base-collection round validity\n",
+-        "stderr": ""
+-      },
+-      "legacy_verdict": true
+-    },
+     {
+       "manifest": "review-validity-policy-plants.json",
+       "phase": "baseline",

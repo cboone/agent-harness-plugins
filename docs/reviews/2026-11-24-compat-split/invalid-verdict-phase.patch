@@ -1,0 +1,13 @@
+diff --git a/tests/data/checked-verdict-compatibility.json b/tests/data/checked-verdict-compatibility.json
+index 26bee8b..e311dc3 100644
+--- a/tests/data/checked-verdict-compatibility.json
++++ b/tests/data/checked-verdict-compatibility.json
+@@ -49,7 +49,7 @@
+     },
+     {
+       "manifest": "review-scope-plants.json",
+-      "phase": "baseline",
++      "invalid_phase": "baseline",
+       "wanted": {
+         "exit_code": 0,
+         "contains": ["PASS: base round validity\n", "PASS: head round validity\n", "PASS: merge-base round validity\n", "PASS: rebase round validity\n", "PASS: membership round validity\n", "PASS: base-collection round validity\n", "PASS: merge-base-collection round validity\n", "PASS: alias round validity\n"],

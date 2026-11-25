@@ -1,8 +1,8 @@
+diff --git a/tests/checked_plant_test.py b/tests/checked_plant_test.py
+index e5a010b..1a90775 100644
 --- a/tests/checked_plant_test.py
 +++ b/tests/checked_plant_test.py
-@@ -1075,4 +1075,5 @@
-         listed = {row["manifest"] for row in fixtures["rows"]}
-         present = {name for name in listed if (ROOT / name).is_file()}
+@@ -1077,2 +1077,3 @@ class RunnerTests(unittest.TestCase):
+         present = discover_manifests(ROOT)
 +        self.assertEqual(present, listed, "verdict test requires the whole inventory")
-         for name in sorted(present):
-             with self.subTest(manifest=name):
+         self.assertEqual(sorted(present - listed), [], "Discovered plant manifests lack verdict rows")

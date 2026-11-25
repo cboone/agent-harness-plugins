@@ -8,7 +8,7 @@ checked-runner manifests' check scripts and test dispatch. The other seven files
 are historical result records without runnable baselines.
 
 - `2026-11-05-733-load-timeouts-plants.json` needs its own manifest and the
-  compatibility data to exercise its three verdict rows. Its baseline passed
+  compatibility data to exercise its three verdict rows. The earlier baseline passed
   in 38.216 s with only the remaining declared inputs and that single manifest.
   The ten other manifests served the inventory. The detector inputs also fed
   the load-timeout baseline's audit of detector waits. The isolated copy no
@@ -36,68 +36,128 @@ the three load-bounds check scripts, and `tests/notification_load_test.py`.
 
 ## Inventory and verdict checks
 
-`make validate` runs the inventory validator in the pull-request CI job. It
-compares tracked JSON objects with `green`, `check` and `variants`, plus all
-tracked `*-plants.json` paths, against verdict fixture paths and the explicit
-historical records. The CI index represents the checked-out commit.
-The existing checked-plant Scrut document runs the verdict test, which evaluates
-recorded phases for the listed manifests present in its checkout and requires
-each to parse as a JSON object with those three keys.
+Both checks call [`discover_manifests`](../../tests/checked_manifest_discovery.py).
+It preserves the filesystem walk, excluded directories, JSON extension and
+content predicate from `origin/main` at `1f87b1c0`. The predicate requires a JSON
+object with `green`, `check` and `variants` keys. Discovery ignores candidate
+decode errors and propagates file-read errors as before.
 
-## Defect proofs
+`make validate` compares the discovered set with the verdict fixture paths.
+It also reads the historical records and requires each to parse as JSON and
+lack the runnable manifest shape. The verdict test requires rows for every
+discovered manifest and checks those rows against the recorded verdicts. Files
+listed only in the fixture can be absent in the verdict test's isolated copies.
+The full inventory check detects them in the repository.
 
-Each phase ran the manifest's check script with
-`bash -euo pipefail -- <check script>` in a disposable copy. The inventory
-script set up a separate miniature Git checkout and staged a new manifest for
-each red phase. The verdict variants copied only `review-scope-plants.json`.
-Each variant used a fresh Python cache and a restored copy for its final green
-phase. These are direct measurements without a heavy lock.
+## Class audit
 
-| Variant                            | Named assertion                               | Baseline exit and time | Red exit and time | Restored exit and time | Variant elapsed |
-| ---------------------------------- | --------------------------------------------- | ---------------------- | ----------------- | ---------------------- | --------------- |
-| Unlisted manifest                  | Validator names `unlisted-plants.json`        | 0 in 0.119 s           | 1 in 0.122 s      | 0 in 0.113 s           | 0.390 s         |
-| Manifest under another filename    | Validator names `other-manifest.json`         | 0 in 0.182 s           | 1 in 0.132 s      | 0 in 0.113 s           | 0.473 s         |
-| Inventory equality in verdict test | Single manifest fails inventory equality      | 0 in 0.236 s           | 1 in 0.236 s      | 0 in 0.239 s           | 0.755 s         |
-| Inverted expected verdict          | Single manifest fails named verdict subtests  | 0 in 0.235 s           | 1 in 0.236 s      | 0 in 0.250 s           | 0.768 s         |
-| Listed manifest replaced with `{}` | Verdict test names `review-scope-plants.json` | 0 in 0.274 s           | 1 in 0.235 s      | 0 in 0.235 s           | 0.791 s         |
+The Nit review at `d9df1411` found one Important inventory defect and two ledger
+Nits. Important round 1 at `77200883` found one recurring Important defect for
+runnable historical records. The baseline audit above covers the two Nits.
+This audit covers the shared discovery mechanism approved after that round.
 
-In a disposable clone, staging `unlisted-plants.json` made `make validate` exit
-2 in 0.03 s with the named path. After removing that specimen from the clone's
-index and checkout, the command exited 0 in 50.03 s.
+The old test loaded its fixture at line 1074, walked and classified candidates
+at lines 1075–1087, compared inventory with row paths at line 1088, and
+evaluated each row at lines 1089–1092. The table groups equivalent failures
+at each operation. A JSON candidate can also fail discovery by changing
+encoding, losing one of the three manifest keys, or moving outside the walk.
+Those changes make a listed manifest missing through the same inventory
+comparison. Fixture shape errors include invalid row collections and missing,
+unhashable or wrongly typed manifest keys. Missing phase, verdict, result or
+expectation fields, and invalid operands inside the matcher, fail during
+verdict evaluation when the old code cannot evaluate the row.
 
-## Proposed gate
+For each row, two fresh `git archive` copies used `1f87b1c0` and `eee9827b`.
+Each copy ran its own test commands with a fresh interpreter and bytecode
+writes disabled, then received the same input change and was restored. The
+triplets are baseline, planted and restored exits. The branch columns report
+the two commands independently. Plant names identify the committed patches
+in [the variant directory](2026-11-24-compat-split/).
 
-[plant-gate.json](2026-11-24-compat-split/plant-gate.json) budgets 21 s for the
-inventory manifest, 39 s for the verdict manifest, and 3 s for the final
-`true` action. The execution reserve leaves one third of each configured limit
-for command execution. The command budget reserves 3 s for launcher and
-supervision overhead plus four times the measured elapsed time for that
-manifest, rounded up to whole seconds before multiplying by three. The action
-takes less than 0.01 s and gets a 1 s execution allowance.
+- D refers to [`tests/checked_manifest_discovery.py`](../../tests/checked_manifest_discovery.py).
+- I refers to [`tests/check_plant_inventory.py`](../../tests/check_plant_inventory.py).
+- V refers to [`tests/checked_plant_test.py`](../../tests/checked_plant_test.py).
 
-The five variants took 3.176 s together. The 36 Git fingerprint commands took
-1.434 s in the original preflight using alternate indexes. With 5 s for runner,
-journal and launcher overhead, the predicted elapsed gate time is about 10 s
-before lock wait. Declared step deadlines sum to 243 s, including the runner's
-36 fixed 5 s Git steps. Schema, Bash syntax, input paths and nested limits were
-validated statically with exit 0.
+| Old failure mode                                          | Branch site and line | Plant                    | Old verdict | Branch inventory | Branch verdict |
+| --------------------------------------------------------- | -------------------- | ------------------------ | ----------- | ---------------- | -------------- |
+| Unlisted manifest with conventional suffix                | I:26, V:1078         | `unlisted-manifest`      | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+| Unlisted manifest under a different JSON name             | I:26, V:1078         | `other-manifest`         | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+| Deleted manifest with rows still present                  | I:28                 | `deleted-manifest`       | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 0 → 0      |
+| Listed path replaced with a non-manifest JSON object      | I:28                 | `invalid-manifest`       | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 0 → 0      |
+| Listed file no longer decodes as JSON                     | D:21, I:28           | `malformed-manifest`     | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 0 → 0      |
+| Historical record replaced with a runnable manifest       | I:23, I:26, V:1078   | `runnable-history`       | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+| All verdict rows removed for a discovered manifest        | I:26, V:1078         | `missing-verdict-rows`   | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+| Matcher reverses the exit-code comparison                 | V:1084               | `changed-legacy-verdict` | 0 → 1 → 0   | 0 → 0 → 0        | 0 → 1 → 0      |
+| Compatibility fixture moved away from its required path   | I:12, V:1075         | `missing-fixture`        | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+| Compatibility fixture contains invalid JSON               | I:12, V:1075         | `malformed-fixture`      | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+| Compatibility fixture lacks the rows collection           | I:13, V:1076         | `invalid-rows`           | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+| Verdict row lacks its manifest key                        | I:13, V:1076         | `invalid-row-manifest`   | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+| Discovered manifest row lacks the phase label             | V:1082               | `invalid-verdict-phase`  | 0 → 1 → 0   | 0 → 0 → 0        | 0 → 1 → 0      |
+| Verdict evaluation raises when captured stdout is missing | V:1083–1084          | `invalid-verdict-input`  | 0 → 1 → 0   | 0 → 0 → 0        | 0 → 1 → 0      |
+| JSON candidate raises an I/O error on read                | D:21, I:14, V:1077   | `unreadable-json`        | 0 → 1 → 0   | 0 → 1 → 0        | 0 → 1 → 0      |
+
+The `malformed-history` variant exercises the new requirement that a historical
+entry parse. The old verdict test stayed at exit 0 in all three phases. The
+`inventory-in-verdict-test` variant reintroduces full inventory equality in
+the isolated verdict test and exercises the partial-checkout contract.
+
+## Declared variants and gate
+
+Each declared variant ran its Bash check directly in a disposable copy of the
+manifest's inputs. The red phase followed successful Git initialization,
+patch validation and application. The restored phase used a fresh copy of
+the input bytes. Every red phase produced its manifest's named diagnostic.
+
+| Variant                     | Baseline exit | Planted exit | Restored exit | Total elapsed |
+| --------------------------- | ------------- | ------------ | ------------- | ------------- |
+| `unlisted-manifest`         | 0             | 1            | 0             | 0.150 s       |
+| `other-manifest`            | 0             | 1            | 0             | 0.152 s       |
+| `deleted-manifest`          | 0             | 1            | 0             | 0.143 s       |
+| `invalid-manifest`          | 0             | 1            | 0             | 0.146 s       |
+| `malformed-manifest`        | 0             | 1            | 0             | 0.146 s       |
+| `runnable-history`          | 0             | 1            | 0             | 0.144 s       |
+| `missing-verdict-rows`      | 0             | 1            | 0             | 0.146 s       |
+| `changed-legacy-verdict`    | 0             | 1            | 0             | 0.237 s       |
+| `missing-fixture`           | 0             | 1            | 0             | 0.235 s       |
+| `malformed-fixture`         | 0             | 1            | 0             | 0.240 s       |
+| `invalid-rows`              | 0             | 1            | 0             | 0.239 s       |
+| `invalid-row-manifest`      | 0             | 1            | 0             | 0.249 s       |
+| `invalid-verdict-phase`     | 0             | 1            | 0             | 0.249 s       |
+| `invalid-verdict-input`     | 0             | 1            | 0             | 0.234 s       |
+| `unreadable-json`           | 0             | 1            | 0             | 0.231 s       |
+| `malformed-history`         | 0             | 1            | 0             | 0.145 s       |
+| `inventory-in-verdict-test` | 0             | 1            | 0             | 0.231 s       |
+
+[plant-gate.json](2026-11-24-compat-split/plant-gate.json) sets deadlines of
+24 s for the inventory manifest, 36 s for the verdict manifest and 3 s for
+the final `true` action. The variant totals were 1.172 s and 2.144 s,
+respectively. Each deadline is three times the sum of the 3 s launcher
+allowance and four times the measured variant total rounded up to a whole
+second. The final action measured 0.003 s and has a 1 s execution allowance.
+
+The predicted elapsed gate time is 9.8 s before any lock wait.
+It combines the direct variant and action measurements, the prior 1.434 s
+measurement for 36 Git fingerprint commands with alternate indexes, and
+5 s allowed for supervision, journaling and launch overhead. The gate's
+declared step deadlines sum to 243 s, including the 36 fixed 5 s fingerprint
+steps. Static validation checked the gate and variant schemas, Bash syntax,
+declared inputs and nested limits. The prediction is based on direct probes.
 
 ## Checks
 
-| Command                                                                                                      | Exit |
-| ------------------------------------------------------------------------------------------------------------ | ---- |
-| `corepack yarn install --immutable`                                                                          | 0    |
-| `make lint`                                                                                                  | 0    |
-| `make validate`                                                                                              | 0    |
-| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant.md`                                                | 0    |
-| `uv run --no-project tests/check_plant_inventory.py`                                                         | 0    |
-| `bash -euo pipefail -- docs/reviews/2026-11-05-733-load-timeouts-plants/check.sh` in the declared-input copy | 0    |
-| `git diff --check` and `git diff --cached --check`                                                           | 0    |
-
-The two focused Python tests exited 0 with the plant runner and detached fixture
-paths exported.
+| Command or probe                                                            | Exit |
+| --------------------------------------------------------------------------- | ---- |
+| `make lint`                                                                 | 0    |
+| `make validate`                                                             | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant.md`               | 0    |
+| `uv run --no-project tests/check_plant_inventory.py`                        | 0    |
+| Focused unit command below, in the checkout and the load-timeout input copy | 0    |
+| Direct paired and declared-variant verification                             | 0    |
+| Static gate, variant and deadline validation                                | 0    |
 
 ```bash
+export CHECKED_PLANT_BIN="${PWD}/plugins/plant-defects/scripts/checked-plant"
+export CHECKED_PLANT_DETACHED_BIN="${PWD}/tests/fixtures/checked-plant-detached.py"
 uv run --no-project --python 3.13 tests/checked_plant_test.py \
   RunnerTests.test_present_manifests_preserve_normal_verdicts \
   RunnerTests.test_verdict_code_matches_main -q

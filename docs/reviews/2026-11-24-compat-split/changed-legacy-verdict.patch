@@ -1,10 +1,9 @@
---- a/tests/checked_plant_test.py
-+++ b/tests/checked_plant_test.py
-@@ -1078,5 +1078,5 @@
-             with self.subTest(manifest=row["manifest"], phase=row["phase"]), mock.patch.object(
-                     runner, "valid_step", return_value=True):
--                self.assertEqual(runner.matches(row["result"], row["wanted"]), row["legacy_verdict"])
-+                self.assertEqual(runner.matches(row["result"], row["wanted"]), not row["legacy_verdict"])
--
-+
-     def test_skipped_unittest_control_refused(self):
+diff --git a/plugins/plant-defects/scripts/checked-plant b/plugins/plant-defects/scripts/checked-plant
+index 1c9bd29..179118e 100755
+--- a/plugins/plant-defects/scripts/checked-plant
++++ b/plugins/plant-defects/scripts/checked-plant
+@@ -135,3 +135,3 @@ def matches(result, wanted):
+     output = result["stdout"] + result["stderr"]
+-    return (valid_step(result) and type(result["exit_code"]) is int and result["exit_code"] == wanted["exit_code"]
++    return (valid_step(result) and type(result["exit_code"]) is int and result["exit_code"] != wanted["exit_code"]
+             and all(s in output for s in wanted["contains"])
