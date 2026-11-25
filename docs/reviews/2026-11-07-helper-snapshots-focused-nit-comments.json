@@ -1,0 +1,26 @@
+{
+  "aspect": "comments",
+  "findings": [
+    {
+      "confidence": 90,
+      "detail": "The workflow still directs the calling shell to source review-git.bash and invoke its functions directly. That library has no snapshot guard. If it changes after the preceding launcher invocation, sourcing it executes changed bundle code without verification. The same instruction appears in plugins/review-until-clean/skills/review-until-clean/references/reviewers.md. This remains an instance of the recorded A3 instruction defect class.",
+      "file": "plugins/review-pr-with-codex/skills/review-pr-with-codex/SKILL.md",
+      "fix": "Replace both sourcing instructions with: \"Load review-git.bash and run its dependent commands inside a shell invoked through the verified launcher's exec command. Source the library from ${snapshot}/bundle inside that child, rather than in the calling shell.\"",
+      "line": 162,
+      "severity": "important",
+      "title": "Uncited: Git policy sourcing still bypasses snapshot verification."
+    },
+    {
+      "confidence": 99,
+      "detail": "The comment describes valid_output as the schema above implemented in jq. The updated schema requires helper_bundle, while valid_output deliberately also accepts legacy replies without that property. The comment hides this compatibility exception and could lead a maintainer to remove supported legacy handling as apparent validator drift.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "Rewrite as: \"Validate current-schema replies and legacy replies without helper_bundle. aspect_status and cmd_gate require matching provenance in snapshot mode. Paths use safe_path rather than the schema pattern.\"",
+      "line": 510,
+      "severity": "suggestion",
+      "title": "Uncited: The validator comment omits its intentional legacy-schema exception."
+    }
+  ],
+  "reviewed": "4fab8779bd6ea0ec49c2f0370e4f170fd157f5ca",
+  "strengths": ["The shared snapshot reference clearly explains pinned manifest hashes, evidence retention and the limits of unsigned local records.", "The documentation distinguishes repository snapshot identity from producing-bundle provenance."],
+  "summary": "Reviewed canonical comments and documentation against the captured changes and applicable checklists. Found one Important recurrence of the A3 instruction defect class and one comment suggestion; runtime checks and plants were not run. stopped: recurring defect."
+}

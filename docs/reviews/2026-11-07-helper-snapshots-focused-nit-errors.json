@@ -1,0 +1,26 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "The verifier's failure relies entirely on errexit. When a helper is sourced inside a condition, such as `if source \"$entry\" --base HEAD; then ...; fi`, Bash disables errexit throughout the sourced code. With snapshot A's inherited context and an external helper B, verification reports rejection but B continues loading its libraries. review-scope can then successfully emit scope data carrying A's identity. Sourced Bash invocation is explicitly supported by the new regression coverage. The same unchecked guard exists in both review-scope files and check-edit-worktree. This is a remaining instance of the recorded A1 executing-identity class.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "Explicitly terminate on verifier failure, for example by appending `|| exit $?`, in all four Bash guards. Cover a rejected external caller sourced inside an if condition.",
+      "line": 6,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: conditional sourcing ignores failed snapshot verification."
+    },
+    {
+      "confidence": 90,
+      "detail": "The wrapped command now includes snapshot verification, but every nonzero status still becomes codex_status and triggers the fallback prescribed at lines 15 and 91. If a snapshot member changes after bootstrap, the launcher refuses before Codex starts; the documented handler nevertheless directs review-anti-patterns and trim consumers to continue through their fallback using that bundle's references. Reporting the log does not prevent this continuation, which conflicts with helper-snapshots.md's requirement to stop after failed verification. This is a remaining instance of the recorded A3 instruction/control-flow class.",
+      "file": "plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md",
+      "fix": "Distinguish launcher verification failures from failures after Codex starts. Make verification refusal terminal, and permit the existing fallback only for backend or reply failures after successful verification; regenerate the trim reference copies.",
+      "line": 29,
+      "severity": "important",
+      "title": "Uncited: Snapshot-verification failures enter the ordinary Codex fallback path."
+    }
+  ],
+  "reviewed": "4fab8779bd6ea0ec49c2f0370e4f170fd157f5ca",
+  "strengths": ["Snapshot refusals preserve stderr diagnostics and return nonzero.", "Evidence consumers explicitly reject missing or mismatched producer provenance.", "Snapshot creation refuses existing destinations rather than silently replacing them."],
+  "summary": "Reviewed the full canonical committed scope against the captured literal base, including both maintained review-scope files. Two Important error-handling problems remain in the recorded executing-identity and instruction/control-flow classes. Runtime checks and plants were not run; stopped: recurring defect."
+}

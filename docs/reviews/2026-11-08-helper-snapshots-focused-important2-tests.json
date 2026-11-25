@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 96,
+      "detail": "Rating 7/10: This test varies reply provenance but always supplies current[\"scope_path\"]. No test exercises the new producer check in require_scope_file with a foreign scope. Removing that check would let bundle A validate replies or grant gate eligibility using bundle B's scope, while the existing tests still pass. Equal repository snapshot IDs deliberately do not establish equal producer identity.",
+      "file": "tests/helper_snapshot_test.py",
+      "fix": "Use the existing two captures to test a foreign scope with an otherwise valid current-bundle reply. Assert rejection during validation and when either gate scope is foreign, retain same-producer controls, and plant removal of the scope-provenance check.",
+      "line": 660,
+      "severity": "important",
+      "title": "Uncited: Cross-bundle scope rejection lacks a regression test."
+    }
+  ],
+  "reviewed": "e69d8cee606ad86c4ae51d9e869eaa1cdb35f794",
+  "strengths": ["Cache deletion and replacement tests synchronize with a running helper and verify subsequent rendering.", "Actual documented launch blocks cover terminal launcher failures across all three consumers.", "Negative cases cover nonce freshness, record privacy, backend status, signal termination and reply evidence.", "Existing integration tests cover aspect failures, cancellation, recursive scope validity and gating."],
+  "summary": "Reviewed all 286 scoped paths and mapped changed behavior to new and existing tests. One Important coverage gap remains in scope-producer rejection. Tests and defect plants were not executed under the read-only restriction."
+}

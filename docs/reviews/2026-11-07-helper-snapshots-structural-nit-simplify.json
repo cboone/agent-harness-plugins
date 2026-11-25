@@ -1,0 +1,26 @@
+{
+  "aspect": "simplify",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "Angles: reuse and simplification. check_invocation() and main()'s check branch repeat the same environment parsing, identity comparison and diagnostic. Maintaining that contract requires checking both the embedded Python entry and the shell-facing CLI path. Skipped because this review is explicitly report-only.",
+      "file": "plugins/plant-defects/scripts/helper-snapshot",
+      "fix": "Extract only the identity comparison and diagnostic into a shared function used by both paths. Preserve both verification calls, their ordering and CLI output.",
+      "line": 140,
+      "severity": "suggestion",
+      "title": "Uncited: The invocation-identity comparison is maintained twice."
+    },
+    {
+      "confidence": 99,
+      "detail": "Angle: simplification. creation_record() already requires a dictionary containing manifest_sha256, helper_bundle and snapshot before returning. create(), test_consumer_bundles_survive_deleted_cache() and release_during_run() immediately repeat subsets of those assertions. These six assertions add reading and maintenance work without checking another property. Skipped because this review is explicitly report-only.",
+      "file": "tests/helper_snapshot_test.py",
+      "fix": "Remove the redundant type and key assertions immediately following creation_record() calls, retaining the parser's complete validation and all behavioral assertions.",
+      "line": 76,
+      "severity": "suggestion",
+      "title": "Uncited: Callers repeat assertions already guaranteed by creation_record()."
+    }
+  ],
+  "reviewed": "8e825769983e6cfd6ace68bc4ad2f91337c79ee3",
+  "strengths": ["Shared snapshot code and instructions have canonical sources with generated consumer copies.", "Separate launcher and entry verification boundaries have an explicit purpose and should remain intact.", "Efficiency and altitude review found no additional worthwhile cleanup proposals."],
+  "summary": "Completed a report-only structural review of canonical changes and relevant consumers in exactly 0c91d2cefc254ee02da8dafb31424fc93ca63f3c..7e252881226823fe95702ea270a2a1fb135b00a0. Reuse, simplification, efficiency and altitude ran inline because delegation was prohibited; no independent reviewers ran. Two deduplicated proposals were skipped, zero fixes were applied, and no repository code or tests were executed."
+}

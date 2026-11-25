@@ -1,0 +1,26 @@
+{
+  "checks": [
+    {
+      "argv": ["make", "lint"],
+      "timeout": 52,
+      "inputs": ["tree"]
+    },
+    {
+      "argv": ["make", "validate"],
+      "timeout": 110,
+      "inputs": ["tree"]
+    },
+    {
+      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-07-installed-checklist-drift-plants.json"],
+      "timeout": 121,
+      "inputs": ["tree", "2026-11-07-installed-checklist-drift-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
+    },
+    {
+      "argv": ["make", "test-all"],
+      "timeout": 2100,
+      "inputs": ["tree"]
+    }
+  ],
+  "action": ["/usr/bin/true"],
+  "action_timeout": 3
+}

@@ -128,6 +128,8 @@ function check_fixture_graph() {
       for (file in consumer) {
         if (!consumer[file]) continue
         if (file ~ /^plugins\// || file == "bin/lib/git-environment.bash") continue
+        # The validator reads caller-provided Codex budget settings.
+        if (file == "bin/validate-plugins") continue
         if (!reset[file] || reset[file] != entry[file]) {
           print file ": source bin/lib/git-environment.bash before Git consumers"
           errors++
