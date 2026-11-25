@@ -847,124 +847,148 @@ source the reset. A's standalone fixtures keep the nine shared-reference
 copies present on main. The added shared-reference sources and corresponding
 19-copy expectations belong to the launcher.
 
-### Direct callers and exact gate dry runs
+### Caller reruns after restoring the reset library
 
-The named Scrut documents ran as
-`make test-scrut SCRUT_TEST_DIR=tests/scrut/<file>.md`. Tests that would run
-`checked-plant`, `checked-gate run` or `make test-all` were held under the
-command limits. This includes the `checked-gate-plants*.md` and
-`checked-plant-guards-*.md` partitions, plus `checked-gate.md`,
-`checked-plant.md`, `checked-python.md` and `heavy-suite-lock.md`.
-The fixture-only `run-scrut-documents.md` run used its absent lock path.
+The named documents ran as
+`make test-scrut SCRUT_TEST_DIR=tests/scrut/<file>.md`.
+`run-scrut-documents.md` used an absent lock path. The temporary copy of
+`heavy-suite-lock.md` used private stubs and omitted the aggregate target
+case that invokes `make test-all`.
 
-The generated-mirror probe first exited 1 because macOS tar lacks its
-comparison mode. The retry ran the CI generator and tracked/untracked
-drift check in a disposable Git checkout and exited 0.
+`checked-gate-plants*.md`, `checked-plant-guards-*.md`,
+`checked-gate.md`, `checked-plant.md` and `checked-python.md` were held
+under the runner exclusions. They have no rerun exits. The load-timeout
+baseline was held for the same reason. The fixture setup has no executable
+consumer in this tree beyond the direct probes, which verified that it
+creates its aliases and accepts an existing correct setup.
 
 | Scrut document                        | Exit | Seconds |
 | ------------------------------------- | ---- | ------- |
-| `anti-pattern-edit-worktree.md`       | 0    | 2.02    |
-| `backlog-gather.md`                   | 0    | 4.87    |
-| `base-resolution.md`                  | 0    | 5.88    |
-| `bash-empty-lists.md`                 | 0    | 0.47    |
-| `bugs-gather.md`                      | 0    | 39.44   |
-| `build-codex-marketplace.md`          | 0    | 1.54    |
-| `build-review-checklists.md`          | 0    | 4.22    |
-| `build-shared-references.md`          | 0    | 1.47    |
-| `chain-adapters.md`                   | 0    | 2.54    |
-| `check-cross-references.md`           | 0    | 3.21    |
-| `checked-inventory.md`                | 0    | 0.14    |
-| `checked-timeout-budgets.md`          | 0    | 29.16   |
-| `claude-validation.md`                | 0    | 5.23    |
-| `codex-aspects.md`                    | 0    | 70.25   |
-| `codex-cleanup.md`                    | 0    | 5.60    |
-| `codex-failure-rollouts.md`           | 0    | 33.04   |
-| `combined-worktrees.md`               | 0    | 4.96    |
-| `copilot-fix-ancestry.md`             | 0    | 4.01    |
-| `copilot-summary-contract.md`         | 0    | 3.12    |
-| `default-branch-fallback.md`          | 0    | 0.31    |
-| `environment-isolation.md`            | 0    | 282.67  |
-| `error-output-guard.md`               | 0    | 124.00  |
-| `git-worktree-stub.md`                | 0    | 0.61    |
-| `launch-workmux.md`                   | 0    | 33.21   |
-| `launch-workmux-options.md`           | 0    | 3.37    |
-| `launch-workmux-remote.md`            | 0    | 3.15    |
-| `launch-workmux-sockets.md`           | 0    | 3.00    |
-| `manage-resource-claims.md`           | 0    | 66.43   |
-| `merge-flow.md`                       | 0    | 4.96    |
-| `monitor-client-policy.md`            | 0    | 12.83   |
-| `monitor-dispatch.md`                 | 0    | 5.61    |
-| `notification-failures.md`            | 0    | 4.19    |
+| `anti-pattern-edit-worktree.md`       | 0    | 2.19    |
+| `backlog-gather.md`                   | 0    | 5.41    |
+| `base-resolution.md`                  | 0    | 4.97    |
+| `bash-empty-lists.md`                 | 0    | 0.49    |
+| `bugs-gather.md`                      | 0    | 38.62   |
+| `build-codex-marketplace.md`          | 0    | 1.17    |
+| `build-review-checklists.md`          | 0    | 2.68    |
+| `build-shared-references.md`          | 0    | 0.81    |
+| `chain-adapters.md`                   | 0    | 2.17    |
+| `check-cross-references.md`           | 0    | 3.43    |
+| `checked-inventory.md`                | 0    | 0.18    |
+| `checked-timeout-budgets.md`          | 0    | 29.42   |
+| `claude-validation.md`                | 0    | 4.69    |
+| `codex-aspects.md`                    | 0    | 69.73   |
+| `codex-cleanup.md`                    | 0    | 5.09    |
+| `codex-failure-rollouts.md`           | 0    | 31.43   |
+| `combined-worktrees.md`               | 0    | 4.11    |
+| `copilot-fix-ancestry.md`             | 0    | 3.00    |
+| `copilot-summary-contract.md`         | 0    | 2.79    |
+| `default-branch-fallback.md`          | 0    | 0.29    |
+| `environment-isolation.md`            | 0    | 278.97  |
+| `error-output-guard.md`               | 0    | 120.08  |
+| `git-worktree-stub.md`                | 0    | 0.46    |
+| `launch-workmux-options.md`           | 0    | 3.23    |
+| `launch-workmux-remote.md`            | 0    | 3.16    |
+| `launch-workmux-sockets.md`           | 0    | 2.96    |
+| `launch-workmux.md`                   | 0    | 32.10   |
+| `manage-resource-claims.md`           | 0    | 61.62   |
+| `merge-flow.md`                       | 0    | 5.30    |
+| `monitor-client-policy.md`            | 0    | 11.64   |
+| `monitor-dispatch.md`                 | 0    | 5.44    |
+| `notification-failures.md`            | 0    | 3.74    |
 | `notification-hooks.md`               | 0    | 0.33    |
-| `notification-load.md`                | 0    | 17.58   |
-| `notification-sounds.md`              | 0    | 18.32   |
-| `notification-tiers.md`               | 0    | 11.79   |
-| `notifications.md`                    | 0    | 60.36   |
-| `owner-call-contract.md`              | 0    | 0.85    |
-| `progress-model.md`                   | 0    | 1.03    |
-| `refusal-classifier-contract.md`      | 0    | 5.44    |
-| `repo-tooling.md`                     | 0    | 5.02    |
-| `report-board.md`                     | 0    | 15.89   |
-| `report-board-bugs.md`                | 0    | 2.48    |
-| `report-board-head-freeing.md`        | 0    | 1.51    |
-| `resolve-copilot-threads.md`          | 0    | 4.26    |
-| `review-corpus.md`                    | 0    | 20.32   |
-| `review-scope.md`                     | 0    | 16.76   |
-| `review-scope-disk-metadata.md`       | 0    | 3.65    |
-| `review-scope-raw.md`                 | 0    | 11.65   |
-| `review-scope-sparse.md`              | 0    | 4.35    |
-| `review-scope-submodule-consumers.md` | 0    | 108.20  |
-| `review-scope-submodules.md`          | 0    | 110.41  |
-| `review-scope-validity.md`            | 0    | 8.58    |
-| `run-scrut-documents.md`              | 0    | 9.28    |
-| `rust-toolchain-audit.md`             | 0    | 1.96    |
-| `validate-plugins-catalog.md`         | 0    | 222.11  |
-| `validate-plugins-codex-exec.md`      | 0    | 70.06   |
-| `validate-plugins-skills.md`          | 0    | 346.24  |
-| `watch-changes.md`                    | 0    | 10.78   |
-| `workmux-sandbox.md`                  | 0    | 89.71   |
+| `notification-load.md`                | 0    | 15.65   |
+| `notification-sounds.md`              | 0    | 18.49   |
+| `notification-tiers.md`               | 0    | 10.25   |
+| `notifications.md`                    | 0    | 44.80   |
+| `owner-call-contract.md`              | 0    | 0.63    |
+| `progress-model.md`                   | 0    | 0.98    |
+| `refusal-classifier-contract.md`      | 0    | 5.42    |
+| `repo-tooling.md`                     | 0    | 4.66    |
+| `report-board-bugs.md`                | 0    | 2.43    |
+| `report-board-head-freeing.md`        | 0    | 1.44    |
+| `report-board.md`                     | 0    | 14.85   |
+| `resolve-copilot-threads.md`          | 0    | 3.81    |
+| `review-corpus.md`                    | 0    | 18.63   |
+| `review-scope-disk-metadata.md`       | 0    | 3.60    |
+| `review-scope-raw.md`                 | 0    | 12.23   |
+| `review-scope-sparse.md`              | 0    | 4.30    |
+| `review-scope-submodule-consumers.md` | 0    | 104.59  |
+| `review-scope-submodules.md`          | 0    | 107.92  |
+| `review-scope-validity.md`            | 0    | 7.45    |
+| `review-scope.md`                     | 0    | 18.06   |
+| `run-scrut-documents.md`              | 0    | 8.88    |
+| `rust-toolchain-audit.md`             | 0    | 1.82    |
+| `validate-plugins-catalog.md`         | 0    | 214.63  |
+| `validate-plugins-codex-exec.md`      | 0    | 74.89   |
+| `validate-plugins-skills.md`          | 0    | 343.78  |
+| `watch-changes.md`                    | 0    | 12.32   |
+| `workmux-sandbox.md`                  | 0    | 81.17   |
+| `heavy-suite-lock.md` (stub cases)    | 0    | 3.438   |
 
-| Direct caller or probe                                                                                                                                | Exit | Seconds |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ------- |
-| `bin/validate-json`                                                                                                                                   | 0    | 1.48    |
-| `bin/check-fixture-environments`                                                                                                                      | 0    | 11.31   |
-| `bin/check-fixture-environments --review-paths`                                                                                                       | 0    | 0.97    |
-| `uv run --script bin/check-review-validity.py`                                                                                                        | 0    | 0.20    |
-| `env -u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT -u CODEX_OTHER_SKILL_RESERVE_TOKENS -u CLAUDE_MARKETPLACE bin/validate-plugins` | 0    | 12.95   |
-| `bin/validate-claude-plugins`                                                                                                                         | 0    | 25.12   |
-| `bin/run-scrut-documents --list`                                                                                                                      | 0    | 0.03    |
-| `bin/list-shell-scripts`                                                                                                                              | 0    | 0.11    |
-| `uv run --no-project tests/checked_plant_inventory_test.py -q`                                                                                        | 0    | 0.05    |
-| Synthetic inherited Git, Codex budget and helper context reset                                                                                        | 0    | 0.02    |
-| `bash -euo pipefail -- tests/fixtures/helper-invocation-setup` (helper-fixture-setup)                                                                 | 0    | 0.01    |
-| `bash -euo pipefail -- tests/fixtures/helper-invocation-setup` (helper-fixture-repeat)                                                                | 0    | 0.01    |
-| CI mirrors probe using tar comparison                                                                                                                 | 1    | 3.00    |
-| CI mirrors probe using Git status in a disposable checkout                                                                                            | 0    | 3.02    |
+| Direct caller or probe  | Exit | Seconds |
+| ----------------------- | ---- | ------- |
+| `reset-probe`           | 0    | 0.039   |
+| `helper-fixture-setup`  | 0    | 0.016   |
+| `helper-fixture-repeat` | 0    | 0.016   |
+| `shell-inventory`       | 0    | 0.125   |
+| `ci-scrut-inventory`    | 0    | 0.043   |
+| `fixture-environments`  | 0    | 11.525  |
+| `fixture-review-paths`  | 0    | 0.98    |
+| `inventory-unit`        | 0    | 0.068   |
+| `ci-mirrors`            | 0    | 2.819   |
 
-Exact gate dry runs used `/Users/ctm/Work/projects/tooling/agent-harness-plugins/729a-git-env-reset`.
+The CI mirror probe generated the checklists and mirrors in a disposable
+Git checkout and checked for drift. The reset probe confirmed that Git and
+budget inputs are cleared and the three inherited helper variables persist.
 
-| Gate dry-run argv      | Exit | Seconds |
-| ---------------------- | ---- | ------- |
-| `["make", "lint"]`     | 0    | 23.36   |
-| `["make", "validate"]` | 0    | 52.326  |
-| `["/usr/bin/true"]`    | 0    | 0.003   |
+The following baseline checks ran directly in copies of their declared
+inputs. All declared output assertions matched.
 
-All 12 plant dispatch dry runs used the gate’s exact Bash argv and directory with an inert `uv` stub. The stub verified the selected manifest and declaration names and returned without starting the runner. Exact argv, exits and partition declarations are in `dry-plant-launches.jsonl` below.
+| Manifest baseline                                                                 | Exit | Seconds |
+| --------------------------------------------------------------------------------- | ---- | ------- |
+| `2026-11-07-installed-checklist-drift-plants.json`                                | 0    | 0.267   |
+| `2026-11-07-repourl-stated-check-plants.json`                                     | 0    | 2.589   |
+| `2026-11-07-reviewer-confirmation-plants.json`                                    | 0    | 0.267   |
+| `2026-11-08-load-bounds-clock-real-grace-clock-plants.json`                       | 0    | 5.116   |
+| `2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json`           | 0    | 6.62    |
+| `2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json` | 0    | 6.66    |
+| `2026-11-08-load-bounds-readers-early-reader-1-plants.json`                       | 0    | 0.208   |
+| `2026-11-08-load-bounds-readers-early-reader-5-plants.json`                       | 0    | 0.213   |
+| `review-scope-plants.json`                                                        | 0    | 6.902   |
+| `review-validity-policy-plants.json`                                              | 0    | 0.338   |
 
 ### Plant scope and direct replay results
 
-The inventory was discovered from the standalone tree. Eleven manifests
-declare a changed file as an input or were edited themselves. Piece B's
-69 new launcher-dependent manifests are absent from piece A. The two
-committed manifests left unclaimed are:
+The content-based inventory found 13 runnable manifests. Scope is the
+intersection of the working tree diff against `origin/main` and each
+manifest's declared inputs or the manifest path itself. One manifest is
+claimed. `2026-11-07-installed-checklist-drift-plants.json` is edited and
+declares the changed `bin/build-review-checklists` as an input.
 
+`bin/lib/git-environment.bash` matches `origin/main`. The other mentions of
+the three helper variables are in historical review records.
+
+The 12 unclaimed runnable manifests are:
+
+- `2026-11-05-733-load-timeouts-plants.json`
+- `2026-11-07-repourl-stated-check-plants.json`
+- `2026-11-07-reviewer-confirmation-plants.json`
+- `2026-11-08-load-bounds-clock-real-grace-clock-plants.json`
+- `2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json`
+- `2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json`
+- `2026-11-08-load-bounds-readers-early-reader-1-plants.json`
+- `2026-11-08-load-bounds-readers-early-reader-5-plants.json`
 - `2026-11-24-779-inventory-plants.json`
 - `2026-11-24-779-verdicts-plants.json`
+- `review-scope-plants.json`
+- `review-validity-policy-plants.json`
 
 There are no new manifests in piece A. The compatibility inventory
 therefore kept its current rows. The inventory unit and Scrut checks
 both passed.
 
+The replay tables below record the checks before restoring the reset library.
 Each completed replay ran the declared check in a copy of only the
 manifest inputs, checked and applied the patch against a private Git
 directory, then rematerialized the original bytes and modes and repeated
@@ -1028,29 +1052,30 @@ red and restored phases remain unverified.
 
 ### Proposed gate
 
-[The gate manifest](2026-11-24-git-environment-reset/gate.json) uses the
-same repository root as its working directory. Static checks validated its
-schema, plan, input paths, plant declarations and Bash syntax. The two
-load-timeouts partitions use the prior combined branch's historical
-models. The remaining plant budgets use each measured red/restored
-cycle and account for a fresh baseline per declaration. `make test-all`
-uses the supplied 1,380-second measurement and a 2,100-second deadline.
-The 733 runtime verdicts and full suite were held. No receipt was produced.
+[The gate manifest](2026-11-24-git-environment-reset/gate.json) retains the
+existing deadlines for lint, validation, the checklist drift plant, the
+full suite and the action. The schema, execution plan, input paths, plant
+declarations and wrapper syntax validated with exit 0. All dry runs used
+the repository root `/Users/ctm/Work/projects/tooling/agent-harness-plugins/729a-git-env-reset` and the declared argv. For the plant
+dispatch probe, an inert `uv` stub checked the target manifest and its
+declaration names.
 
-| Plant step                                                                        | Measured or modeled seconds | Deadline seconds | Dispatch dry-run exit |
-| --------------------------------------------------------------------------------- | --------------------------- | ---------------- | --------------------- |
-| `2026-11-05-733-load-timeouts-plants.json`                                        | 2810/2786                   | 3600/3600        | 0/0                   |
-| `2026-11-07-installed-checklist-drift-plants.json`                                | 1.389                       | 121              | 0                     |
-| `2026-11-07-repourl-stated-check-plants.json`                                     | 23.489                      | 61               | 0                     |
-| `2026-11-07-reviewer-confirmation-plants.json`                                    | 12.28                       | 121              | 0                     |
-| `2026-11-08-load-bounds-clock-real-grace-clock-plants.json`                       | 45.223                      | 601              | 0                     |
-| `2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json`           | 20.251                      | 601              | 0                     |
-| `2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json` | 20.865                      | 601              | 0                     |
-| `2026-11-08-load-bounds-readers-early-reader-1-plants.json`                       | 1.639                       | 601              | 0                     |
-| `2026-11-08-load-bounds-readers-early-reader-5-plants.json`                       | 1.738                       | 601              | 0                     |
-| `review-scope-plants.json`                                                        | 123.252                     | 257              | 0                     |
-| `review-validity-policy-plants.json`                                              | 13.019                      | 61               | 0                     |
+| Gate argv                                | Dry-run exit | Measured or modeled seconds | Deadline seconds |
+| ---------------------------------------- | ------------ | --------------------------- | ---------------- |
+| `["make", "lint"]`                       | 0            | 20.002                      | 52               |
+| `["make", "validate"]`                   | 0            | 48.487                      | 110              |
+| Checklist drift plant (stubbed dispatch) | 0            | 1.389                       | 121              |
+| `["make", "test-all"]`                   | Held         | 1380                        | 2100             |
+| `["/usr/bin/true"]`                      | 0            | 0.002                       | 3                |
 
-The gate totals 13,921 s of deadlines, including 166 fixed fingerprint steps. Its modeled execution and preflight subtotal before fingerprint time or lock wait is 7,314.8 s. The scoped receipt is **unverified** because the load-timeouts runtime verdicts and full suite were held.
+The plant estimate uses its previously measured baseline, patch, red and
+restored phases. The full suite uses the supplied 1,380-second measurement.
+The predicted total is **1,453.8 s** before lock wait, including
+3.956 s for the isolated fingerprint probe. The
+deadline total is **2,666 s**, including
+56 fixed fingerprint steps.
+The scoped checks predict green. The full suite and gate verdict remain
+unverified.
 
-Raw caller searches, command logs and measured result JSON are in `/var/folders/52/k6wl64d16fb3hf60p98djgxc0000gp/T/729a.Io9O0NVJ`.
+Caller logs, exact argv and directories, gate validation and timing data
+are in `/tmp/729a-trim-work`.

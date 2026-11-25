@@ -11,64 +11,9 @@
       "inputs": ["tree"]
     },
     {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-load-timeouts.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nsource=\"$out/source\"\nmkdir -p \"$source\"\ninputs=$(jq -er '.inputs[]' \"$1\")\nwhile IFS= read -r path; do\n  mkdir -p \"$source/$(dirname \"$path\")\"\n  cp -p -- \"$path\" \"$source/$path\"\ndone <<< \"$inputs\"\njq --argjson start \"$2\" --argjson end \"$3\" '\n  .variants |= .[$start:$end] | if $start == 0 then .controls = [] else . end\n' \"$1\" > \"$source/partition.json\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$source/partition.json\" \"$out/results\"\n", "729a", "2026-11-05-733-load-timeouts-plants.json", "0", "24"],
-      "timeout": 3600,
-      "inputs": ["tree", "2026-11-05-733-load-timeouts-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-load-timeouts.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nsource=\"$out/source\"\nmkdir -p \"$source\"\ninputs=$(jq -er '.inputs[]' \"$1\")\nwhile IFS= read -r path; do\n  mkdir -p \"$source/$(dirname \"$path\")\"\n  cp -p -- \"$path\" \"$source/$path\"\ndone <<< \"$inputs\"\njq --argjson start \"$2\" --argjson end \"$3\" '\n  .variants |= .[$start:$end] | if $start == 0 then .controls = [] else . end\n' \"$1\" > \"$source/partition.json\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$source/partition.json\" \"$out/results\"\n", "729a", "2026-11-05-733-load-timeouts-plants.json", "24", "44"],
-      "timeout": 3600,
-      "inputs": ["tree", "2026-11-05-733-load-timeouts-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
       "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-07-installed-checklist-drift-plants.json"],
       "timeout": 121,
       "inputs": ["tree", "2026-11-07-installed-checklist-drift-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-07-repourl-stated-check-plants.json"],
-      "timeout": 61,
-      "inputs": ["tree", "2026-11-07-repourl-stated-check-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-07-reviewer-confirmation-plants.json"],
-      "timeout": 121,
-      "inputs": ["tree", "2026-11-07-reviewer-confirmation-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-08-load-bounds-clock-real-grace-clock-plants.json"],
-      "timeout": 601,
-      "inputs": ["tree", "2026-11-08-load-bounds-clock-real-grace-clock-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json"],
-      "timeout": 601,
-      "inputs": ["tree", "2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json"],
-      "timeout": 601,
-      "inputs": ["tree", "2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-08-load-bounds-readers-early-reader-1-plants.json"],
-      "timeout": 601,
-      "inputs": ["tree", "2026-11-08-load-bounds-readers-early-reader-1-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "2026-11-08-load-bounds-readers-early-reader-5-plants.json"],
-      "timeout": 601,
-      "inputs": ["tree", "2026-11-08-load-bounds-readers-early-reader-5-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "review-scope-plants.json"],
-      "timeout": 257,
-      "inputs": ["tree", "review-scope-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
-    },
-    {
-      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d \"${TMPDIR:-/tmp}/729a-plant.XXXXXXXX\")\nprintf 'Plant results: %s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"\n", "729a", "review-validity-policy-plants.json"],
-      "timeout": 61,
-      "inputs": ["tree", "review-validity-policy-plants.json", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py"]
     },
     {
       "argv": ["make", "test-all"],
