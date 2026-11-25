@@ -21,6 +21,7 @@ import tempfile
 import unittest
 from unittest import mock
 
+from checked_manifest_discovery import discover_manifests
 from checked_test_diagnostics import restart_diagnostic
 
 
@@ -1070,23 +1071,14 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(functions[name], original, "verdict code differs from main")
         self.assertNotIn("framework_summary", functions)
 
-    def test_existing_manifest_normal_verdicts_are_preserved(self):
+    def test_present_manifests_preserve_normal_verdicts(self):
         fixtures = json.loads((ROOT / "tests/data/checked-verdict-compatibility.json").read_text())
-        paths = []
-        for directory, children, files in os.walk(ROOT):
-            children[:] = [name for name in children if name not in ("node_modules", "dist", ".agents", ".git")]
-            for name in files:
-                if not name.endswith(".json"):
-                    continue
-                path = Path(directory) / name
-                try:
-                    manifest = json.loads(path.read_text())
-                except (UnicodeError, ValueError):
-                    continue
-                if isinstance(manifest, dict) and all(key in manifest for key in ("green", "check", "variants")):
-                    paths.append(path.relative_to(ROOT).as_posix())
-        self.assertEqual(sorted(paths), sorted({row["manifest"] for row in fixtures["rows"]}))
+        listed = {row["manifest"] for row in fixtures["rows"]}
+        present = discover_manifests(ROOT)
+        self.assertEqual(sorted(present - listed), [], "Discovered plant manifests lack verdict rows")
         for row in fixtures["rows"]:
+            if row["manifest"] not in present:
+                continue
             with self.subTest(manifest=row["manifest"], phase=row["phase"]), mock.patch.object(
                     runner, "valid_step", return_value=True):
                 self.assertEqual(runner.matches(row["result"], row["wanted"]), row["legacy_verdict"])
@@ -1356,7 +1348,9 @@ class RunnerTests(unittest.TestCase):
         for name in ("checked_core.py", "checked-gate"):
             (self.root / name).write_text(sources[name])
         (self.root / "regressions.py").write_bytes(Path(__file__).read_bytes())
-        (self.root / "checked_test_diagnostics.py").write_bytes(Path(__file__).with_name("checked_test_diagnostics.py").read_bytes())
+        support = ("checked_manifest_discovery.py", "checked_test_diagnostics.py")
+        for name in support:
+            (self.root / name).write_bytes(Path(__file__).with_name(name).read_bytes())
         (self.root / "detached.py").write_bytes(DETACHED.read_bytes())
         expected_detectors = {
             'test_absent_record_aliases_and_refusal_cleanup',
@@ -1499,7 +1493,7 @@ class RunnerTests(unittest.TestCase):
             variant = dict(name=name, patch=patch,
                            red=dict(exit_code=1, contains=required, excludes=["\nERROR:", ", skipped="]))
             self.manifest = dict(
-                inputs=["candidate", "checked_core.py", "checked-gate", "regressions.py", "checked_test_diagnostics.py", "contracts.sh", "detached.py", "budgets.json", patch],
+                inputs=["candidate", "checked_core.py", "checked-gate", "regressions.py", *support, "contracts.sh", "detached.py", "budgets.json", patch],
                 check="contracts.sh", timeout=budgets["checks"][name], git_timeout=budgets["git_timeout"],
                 green=dict(exit_code=0, contains=[f"Ran {len(methods)} test", "\nOK\n"],
                            excludes=["skipped", "SKIP", "ERROR:"]), variants=[variant])

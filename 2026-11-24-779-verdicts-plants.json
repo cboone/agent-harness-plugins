@@ -1,0 +1,112 @@
+{
+  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/checked_manifest_discovery.py", "docs/reviews/2026-11-24-compat-split/check-verdicts.sh", "tests/checked_plant_test.py", "tests/checked_test_diagnostics.py", "tests/fixtures/checked-plant-detached.py", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py", "docs/reviews/2026-11-24-compat-split/changed-legacy-verdict.patch", "docs/reviews/2026-11-24-compat-split/missing-fixture.patch", "docs/reviews/2026-11-24-compat-split/malformed-fixture.patch", "docs/reviews/2026-11-24-compat-split/invalid-rows.patch", "docs/reviews/2026-11-24-compat-split/invalid-row-manifest.patch", "docs/reviews/2026-11-24-compat-split/invalid-verdict-phase.patch", "docs/reviews/2026-11-24-compat-split/invalid-verdict-input.patch", "docs/reviews/2026-11-24-compat-split/unreadable-json.patch", "docs/reviews/2026-11-24-compat-split/inventory-in-verdict-test.patch", "docs/reviews/2026-11-24-compat-split/missing-required-stdout.patch", "docs/reviews/2026-11-24-compat-split/forbidden-stderr.patch"],
+  "check": "docs/reviews/2026-11-24-compat-split/check-verdicts.sh",
+  "timeout": 5,
+  "git_timeout": 5,
+  "green": {
+    "exit_code": 0,
+    "contains": ["Ran 1 test", "\nOK\n"],
+    "excludes": ["ERROR:", "skipped"]
+  },
+  "variants": [
+    {
+      "name": "changed-legacy-verdict",
+      "patch": "docs/reviews/2026-11-24-compat-split/changed-legacy-verdict.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["manifest='review-scope-plants.json', phase='baseline'", "FAILED (failures=3)"],
+        "excludes": ["skipped", "ERROR:"]
+      }
+    },
+    {
+      "name": "missing-fixture",
+      "patch": "docs/reviews/2026-11-24-compat-split/missing-fixture.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FileNotFoundError:", "FAILED (errors=1)", "checked-verdict-compatibility.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "malformed-fixture",
+      "patch": "docs/reviews/2026-11-24-compat-split/malformed-fixture.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["JSONDecodeError:", "FAILED (errors=1)"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "invalid-rows",
+      "patch": "docs/reviews/2026-11-24-compat-split/invalid-rows.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["KeyError: 'rows'", "FAILED (errors=1)"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "invalid-row-manifest",
+      "patch": "docs/reviews/2026-11-24-compat-split/invalid-row-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["KeyError: 'manifest'", "FAILED (errors=1)"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "invalid-verdict-phase",
+      "patch": "docs/reviews/2026-11-24-compat-split/invalid-verdict-phase.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["KeyError: 'phase'", "FAILED (errors=1)"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "invalid-verdict-input",
+      "patch": "docs/reviews/2026-11-24-compat-split/invalid-verdict-input.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["KeyError: 'stdout'", "FAILED (errors=1)"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "unreadable-json",
+      "patch": "docs/reviews/2026-11-24-compat-split/unreadable-json.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FileNotFoundError:", "FAILED (errors=1)", "broken-manifest.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "inventory-in-verdict-test",
+      "patch": "docs/reviews/2026-11-24-compat-split/inventory-in-verdict-test.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["verdict test requires the whole inventory", "FAILED (failures=1)"],
+        "excludes": ["skipped", "ERROR:"]
+      }
+    },
+    {
+      "name": "missing-required-stdout",
+      "patch": "docs/reviews/2026-11-24-compat-split/missing-required-stdout.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["manifest='review-scope-plants.json', phase='baseline'", "FAILED (failures=1)"],
+        "excludes": ["skipped", "ERROR:"]
+      }
+    },
+    {
+      "name": "forbidden-stderr",
+      "patch": "docs/reviews/2026-11-24-compat-split/forbidden-stderr.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["manifest='review-scope-plants.json', phase='baseline'", "FAILED (failures=1)"],
+        "excludes": ["skipped", "ERROR:"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d /tmp/compat-779-gate.XXXXXXXX)\nprintf '%s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"", "compat-779", "2026-11-24-779-inventory-plants.json"],
+      "timeout": 30,
+      "inputs": ["tree", "2026-11-24-779-inventory-plants.json", "plugins/plant-defects/scripts/checked-plant"]
+    },
+    {
+      "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d /tmp/compat-779-gate.XXXXXXXX)\nprintf '%s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"", "compat-779", "2026-11-24-779-verdicts-plants.json"],
+      "timeout": 45,
+      "inputs": ["tree", "2026-11-24-779-verdicts-plants.json", "plugins/plant-defects/scripts/checked-plant"]
+    }
+  ],
+  "action": ["true"],
+  "action_timeout": 3
+}

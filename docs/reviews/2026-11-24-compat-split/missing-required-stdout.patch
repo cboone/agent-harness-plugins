@@ -1,0 +1,11 @@
+--- a/tests/data/checked-verdict-compatibility.json
++++ b/tests/data/checked-verdict-compatibility.json
+@@ -57,7 +57,7 @@
+       },
+       "result": {
+         "exit_code": 0,
+-        "stdout": "PASS: base round validity\nPASS: alias round validity\nPASS: head round validity\nPASS: merge-base round validity\nPASS: rebase round validity\nPASS: membership round validity\nPASS: base-collection round validity\nreview-scope: the index, HEAD or merge base changed while the scope was being read; rerun once it has settled\nPASS: merge-base-collection round validity\n",
++        "stdout": "PASS: alias round validity\nPASS: head round validity\nPASS: merge-base round validity\nPASS: rebase round validity\nPASS: membership round validity\nPASS: base-collection round validity\nreview-scope: the index, HEAD or merge base changed while the scope was being read; rerun once it has settled\nPASS: merge-base-collection round validity\n",
+         "stderr": ""
+       },
+       "legacy_verdict": true

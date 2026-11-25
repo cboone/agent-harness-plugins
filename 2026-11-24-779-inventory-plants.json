@@ -1,0 +1,85 @@
+{
+  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/checked_manifest_discovery.py", "docs/reviews/2026-11-24-compat-split/check-inventory.sh", "docs/reviews/2026-10-28-error-output-fix-plants.json", "tests/checked_plant_inventory_test.py", "docs/reviews/2026-11-24-compat-split/unlisted-manifest.patch", "docs/reviews/2026-11-24-compat-split/other-manifest.patch", "docs/reviews/2026-11-24-compat-split/deleted-manifest.patch", "docs/reviews/2026-11-24-compat-split/invalid-manifest.patch", "docs/reviews/2026-11-24-compat-split/malformed-manifest.patch", "docs/reviews/2026-11-24-compat-split/runnable-history.patch", "docs/reviews/2026-11-24-compat-split/missing-verdict-rows.patch", "docs/reviews/2026-11-24-compat-split/malformed-history.patch"],
+  "check": "docs/reviews/2026-11-24-compat-split/check-inventory.sh",
+  "timeout": 5,
+  "git_timeout": 5,
+  "green": {
+    "exit_code": 0,
+    "contains": ["Ran 1 test", "\nOK\n"],
+    "excludes": ["ERROR:", "skipped"]
+  },
+  "variants": [
+    {
+      "name": "unlisted-manifest",
+      "patch": "docs/reviews/2026-11-24-compat-split/unlisted-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Unlisted plant manifest: unlisted-plants.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "other-manifest",
+      "patch": "docs/reviews/2026-11-24-compat-split/other-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Unlisted plant manifest: other-manifest.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "deleted-manifest",
+      "patch": "docs/reviews/2026-11-24-compat-split/deleted-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Missing plant manifest: review-scope-plants.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "invalid-manifest",
+      "patch": "docs/reviews/2026-11-24-compat-split/invalid-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Missing plant manifest: review-scope-plants.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "malformed-manifest",
+      "patch": "docs/reviews/2026-11-24-compat-split/malformed-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Missing plant manifest: review-scope-plants.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "runnable-history",
+      "patch": "docs/reviews/2026-11-24-compat-split/runnable-history.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Runnable historical record: docs/reviews/2026-10-28-error-output-fix-plants.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "missing-verdict-rows",
+      "patch": "docs/reviews/2026-11-24-compat-split/missing-verdict-rows.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Unlisted plant manifest: review-scope-plants.json"],
+        "excludes": ["skipped"]
+      }
+    },
+    {
+      "name": "malformed-history",
+      "patch": "docs/reviews/2026-11-24-compat-split/malformed-history.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["Invalid historical record: docs/reviews/2026-10-28-error-output-fix-plants.json"],
+        "excludes": ["skipped"]
+      }
+    }
+  ]
+}

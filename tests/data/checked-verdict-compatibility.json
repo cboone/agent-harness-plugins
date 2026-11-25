@@ -1,5 +1,6 @@
 {
   "frameworks": ["unittest", "repository Bash validity fixtures", "scrut"],
+  "historical_records": ["docs/reviews/2026-10-28-error-output-exec-stream-plants.json", "docs/reviews/2026-10-28-error-output-fix-plants.json", "docs/reviews/2026-10-28-error-output-inherited-map-plants.json", "docs/reviews/2026-10-28-error-output-old-regex-plants.json", "docs/reviews/2026-10-29-error-output-parser-exception-plants.json", "docs/reviews/2026-10-29-error-output-rare-plants.json", "docs/reviews/2026-11-02-monitor-pr-client-mode-plants.json"],
   "rows": [
     {
       "manifest": "2026-11-05-733-load-timeouts-plants.json",
@@ -505,6 +506,96 @@
         "exit_code": 0,
         "stdout": "",
         "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.302s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-24-779-inventory-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["Plant inventory matches verdict compatibility data"],
+        "excludes": ["ERROR:", "skipped"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "Plant inventory matches verdict compatibility data\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-24-779-inventory-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["Unlisted plant manifest: unlisted-plants.json"],
+        "excludes": ["ERROR:", "skipped"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "Unlisted plant manifest: unlisted-plants.json\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-24-779-inventory-plants.json",
+      "phase": "restored",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["Plant inventory matches verdict compatibility data"],
+        "excludes": ["ERROR:", "skipped"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "Plant inventory matches verdict compatibility data\n",
+        "stderr": ""
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-24-779-verdicts-plants.json",
+      "phase": "baseline",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["Ran 1 test", "\nOK\n"],
+        "excludes": ["ERROR:", "skipped"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nOK\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-24-779-verdicts-plants.json",
+      "phase": "red",
+      "wanted": {
+        "exit_code": 1,
+        "contains": ["FAIL: test_present_manifests_preserve_normal_verdicts", "verdict test requires the whole inventory", "FAILED (failures=1)"],
+        "excludes": ["ERROR:", "skipped"]
+      },
+      "result": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "======================================================================\nFAIL: test_present_manifests_preserve_normal_verdicts (__main__.RunnerTests.test_present_manifests_preserve_normal_verdicts)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<subject>/tests/checked_plant_test.py\", line 1077, in test_present_manifests_preserve_normal_verdicts\n    self.assertEqual(present, listed, \"verdict test requires the whole inventory\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Items in the second set but not the first:\n'2026-11-08-load-bounds-readers-early-reader-1-plants.json'\n'2026-11-08-load-bounds-lifecycle-registration-diagnostic-suppressed-plants.json'\n'review-validity-policy-plants.json'\n'2026-11-07-repourl-stated-check-plants.json'\n'2026-11-08-load-bounds-lifecycle-owner-finalizer-disabled-plants.json'\n'2026-11-08-load-bounds-readers-early-reader-5-plants.json'\n'2026-11-07-installed-checklist-drift-plants.json'\n'2026-11-07-reviewer-confirmation-plants.json'\n'2026-11-08-load-bounds-clock-real-grace-clock-plants.json'\n'2026-11-05-733-load-timeouts-plants.json' : verdict test requires the whole inventory\n\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nFAILED (failures=1)\n"
+      },
+      "legacy_verdict": true
+    },
+    {
+      "manifest": "2026-11-24-779-verdicts-plants.json",
+      "phase": "restored",
+      "wanted": {
+        "exit_code": 0,
+        "contains": ["Ran 1 test", "\nOK\n"],
+        "excludes": ["ERROR:", "skipped"]
+      },
+      "result": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nOK\n"
       },
       "legacy_verdict": true
     }

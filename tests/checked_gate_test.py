@@ -937,6 +937,7 @@ class PlantTests(unittest.TestCase):
             sources = {'checked-gate': GATE.read_text(), 'checked_core.py': GATE.with_name('checked_core.py').read_text(),
                        'checked-plant': PLANT.read_text(),
                        'plant-regressions.py': (Path(__file__).parent / 'checked_plant_test.py').read_text(),
+                       'checked_manifest_discovery.py': Path(__file__).with_name('checked_manifest_discovery.py').read_text(),
                        'detached.py': (Path(__file__).parent / 'fixtures/checked-plant-detached.py').read_text(),
                        'budgets.json': BUDGETS.read_text(),
                        'checked_test_diagnostics.py': Path(__file__).with_name('checked_test_diagnostics.py').read_text(),

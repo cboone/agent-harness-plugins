@@ -1,0 +1,4 @@
+diff --git a/tests/data/checked-verdict-compatibility.json b/tests/data/checked-verdict-compatibility.disabled
+similarity index 100%
+rename from tests/data/checked-verdict-compatibility.json
+rename to tests/data/checked-verdict-compatibility.disabled
