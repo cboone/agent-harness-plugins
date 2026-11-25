@@ -248,3 +248,179 @@ uv run --no-project --python 3.13 tests/checked_plant_test.py \
   RunnerTests.test_present_manifests_preserve_normal_verdicts \
   RunnerTests.test_verdict_code_matches_main -q
 ```
+
+## Inventory move audit
+
+The caller search started with the 33 paths returned by
+`git diff --name-only origin/main...513f68bd` and searched each name,
+`make validate`, the validation recipe, the inventory script and the shared
+discovery module. It followed the Makefile's fixture variables
+into Scrut, and the unit tests into their nested fixture inputs and the three
+affected manifest checks. The CI validation step runs `make validate`.
+The PR-triggered Scrut matrix lists the new `checked-inventory.md` document
+through `bin/run-scrut-documents --list` and provisions uv for `checked-*`.
+
+At `513f68bd`, `claude-validation.md` exited 2 because its stub uv rejected
+the added inventory command. The supplied `environment-isolation.md` log
+records Scrut exit 50 and Make failure for the three validation cases that
+captured the extra inventory line. The move restores the validation recipe
+to the merge-base version and requires no snapshot edits. An initial
+`make lint` exited 2 on the ledger's old script link. The corrected link in
+the inventory section points to the Scrut document.
+
+An environment-isolation run started before the move and finished with exit 0
+after the recipe changed. The supplied log provides the baseline for that
+document. The queued `uv run --no-project tests/check_plant_inventory.py`
+exited 2 after the file moved. The standalone inventory unit command replaces
+that invocation.
+
+### Moved plants and deadlines
+
+The inventory manifest's eight variants ran its Bash check in disposable
+copies of the declared inputs. Each red result reached
+`InventoryTests.test_plant_inventory_matches_verdict_data` and named the
+expected problem. A separate rename probe reported both the missing original
+path and the unlisted destination. The unchanged verdict plants also ran
+directly to refresh the gate timing.
+
+The updated gate deadlines are 30 s for inventory and 45 s for verdicts.
+The calculation uses three times the sum of a 3 s launcher allowance and four
+times the measured total rounded up. The final action keeps its 3 s deadline
+after an observed exit 0 in 0.004 s. Static validation loaded the gate and plant
+schemas and execution-plan builders, checked input paths and Bash syntax,
+and verified the nested limits. The 39 declared steps total 258 s of deadlines.
+
+| Variant                     | Baseline exit | Planted exit | Restored exit | Seconds |
+| --------------------------- | ------------- | ------------ | ------------- | ------- |
+| `unlisted-manifest`         | 0             | 1            | 0             | 0.239   |
+| `other-manifest`            | 0             | 1            | 0             | 0.231   |
+| `deleted-manifest`          | 0             | 1            | 0             | 0.219   |
+| `invalid-manifest`          | 0             | 1            | 0             | 0.200   |
+| `malformed-manifest`        | 0             | 1            | 0             | 0.214   |
+| `runnable-history`          | 0             | 1            | 0             | 0.204   |
+| `missing-verdict-rows`      | 0             | 1            | 0             | 0.205   |
+| `malformed-history`         | 0             | 1            | 0             | 0.206   |
+| `changed-legacy-verdict`    | 0             | 1            | 0             | 0.274   |
+| `missing-fixture`           | 0             | 1            | 0             | 0.256   |
+| `malformed-fixture`         | 0             | 1            | 0             | 0.252   |
+| `invalid-rows`              | 0             | 1            | 0             | 0.248   |
+| `invalid-row-manifest`      | 0             | 1            | 0             | 0.251   |
+| `invalid-verdict-phase`     | 0             | 1            | 0             | 0.291   |
+| `invalid-verdict-input`     | 0             | 1            | 0             | 0.264   |
+| `unreadable-json`           | 0             | 1            | 0             | 0.278   |
+| `inventory-in-verdict-test` | 0             | 1            | 0             | 0.265   |
+| `missing-required-stdout`   | 0             | 1            | 0             | 0.260   |
+| `forbidden-stderr`          | 0             | 1            | 0             | 0.275   |
+| `renamed-manifest`          | 0             | 1            | 0             | 0.218   |
+
+### Direct caller exits
+
+All 72 distinct Scrut documents below completed with zero skips.
+Each row was invoked as a named document with Make.
+The error-output guard document also exercises the copied Makefile and the
+fixture validator used by the recipe. The heavy-suite lock fixture substitutes
+`echo` for recursive Make, so it does not call the validation recipe.
+The queued draft document path `checked-plant-inventory.md` exited 2 after the rename.
+The final `checked-inventory.md` row records the replacement run.
+
+| Scrut command                                                           | Exit |
+| ----------------------------------------------------------------------- | ---- |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-10.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-11.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-12.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-13.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-14.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-15.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-16.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-17.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-18.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-19.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-2.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-20.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-21.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-22.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-23.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-24.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-25.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-26.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-27.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-28.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-29.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-3.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-30.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-31.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-32.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-33.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-34.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-35.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-36.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-37.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-38.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-39.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-4.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-40.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-41.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-42.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-43.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-44.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-45.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-46.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-47.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-48.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-49.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-5.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-50.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-6.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-7.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-8.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants-9.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate-plants.md`     | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-gate.md`            | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-inventory.md`       | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-1.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-10.md` | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-11.md` | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-12.md` | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-13.md` | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-14.md` | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-15.md` | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-2.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-3.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-4.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-5.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-6.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-7.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-8.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant-guards-9.md`  | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-plant.md`           | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/checked-timeout-budgets.md` | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/claude-validation.md`       | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/environment-isolation.md`   | 0    |
+| `make test-scrut SCRUT_TEST_DIR=tests/scrut/error-output-guard.md`      | 0    |
+
+The unit commands ran with the checked runner, gate, detached and Git delay
+fixture paths set to the checkout, isolated Git configuration, and Python
+bytecode writes disabled. Each manifest baseline used only its declared
+inputs. The guard partitions ran through their Scrut documents as well as the
+direct partition-one calls below.
+
+| Unit or manifest check                                                                                      | Exit |
+| ----------------------------------------------------------------------------------------------------------- | ---- |
+| `PYTHONDONTWRITEBYTECODE=1 uv run --no-project tests/checked_plant_inventory_test.py -q`                    | 0    |
+| `env CHECKED_PLANT_BEHAVIOR_ONLY=1 uv run --no-project tests/checked_plant_test.py -q`                      | 0    |
+| `uv run --no-project tests/checked_gate_test.py GateTests -q`                                               | 0    |
+| `uv run --no-project tests/checked_timeout_budget_test.py -q`                                               | 0    |
+| `uv run --no-project tests/checked_plant_inventory_test.py -q`                                              | 0    |
+| `uv run --no-project tests/checked_plant_test.py RunnerTests.test_runner_guards_detect_their_own_plants -q` | 0    |
+| `uv run --no-project tests/checked_gate_test.py PlantTests -q`                                              | 0    |
+| `bash -euo pipefail -- docs/reviews/2026-11-05-733-load-timeouts-plants/check.sh`                           | 0    |
+| `bash -euo pipefail -- docs/reviews/2026-11-24-compat-split/check-inventory.sh`                             | 0    |
+| `bash -euo pipefail -- docs/reviews/2026-11-24-compat-split/check-verdicts.sh`                              | 0    |
+
+| Other check                                                      | Exit |
+| ---------------------------------------------------------------- | ---- |
+| `make lint`                                                      | 0    |
+| `make validate`                                                  | 0    |
+| `bin/run-scrut-documents --list`                                 | 0    |
+| `static plant-gate schema, plans, input and deadline validation` | 0    |
+| `direct variant probe`                                           | 0    |
