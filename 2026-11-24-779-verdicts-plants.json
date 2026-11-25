@@ -1,5 +1,5 @@
 {
-  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/checked_manifest_discovery.py", "docs/reviews/2026-11-24-compat-split/check-verdicts.sh", "tests/checked_plant_test.py", "tests/checked_test_diagnostics.py", "tests/fixtures/checked-plant-detached.py", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py", "docs/reviews/2026-11-24-compat-split/changed-legacy-verdict.patch", "docs/reviews/2026-11-24-compat-split/missing-fixture.patch", "docs/reviews/2026-11-24-compat-split/malformed-fixture.patch", "docs/reviews/2026-11-24-compat-split/invalid-rows.patch", "docs/reviews/2026-11-24-compat-split/invalid-row-manifest.patch", "docs/reviews/2026-11-24-compat-split/invalid-verdict-phase.patch", "docs/reviews/2026-11-24-compat-split/invalid-verdict-input.patch", "docs/reviews/2026-11-24-compat-split/unreadable-json.patch", "docs/reviews/2026-11-24-compat-split/inventory-in-verdict-test.patch"],
+  "inputs": ["review-scope-plants.json", "tests/data/checked-verdict-compatibility.json", "tests/checked_manifest_discovery.py", "docs/reviews/2026-11-24-compat-split/check-verdicts.sh", "tests/checked_plant_test.py", "tests/checked_test_diagnostics.py", "tests/fixtures/checked-plant-detached.py", "plugins/plant-defects/scripts/checked-plant", "plugins/plant-defects/scripts/checked_core.py", "docs/reviews/2026-11-24-compat-split/changed-legacy-verdict.patch", "docs/reviews/2026-11-24-compat-split/missing-fixture.patch", "docs/reviews/2026-11-24-compat-split/malformed-fixture.patch", "docs/reviews/2026-11-24-compat-split/invalid-rows.patch", "docs/reviews/2026-11-24-compat-split/invalid-row-manifest.patch", "docs/reviews/2026-11-24-compat-split/invalid-verdict-phase.patch", "docs/reviews/2026-11-24-compat-split/invalid-verdict-input.patch", "docs/reviews/2026-11-24-compat-split/unreadable-json.patch", "docs/reviews/2026-11-24-compat-split/inventory-in-verdict-test.patch", "docs/reviews/2026-11-24-compat-split/missing-required-stdout.patch", "docs/reviews/2026-11-24-compat-split/forbidden-stderr.patch"],
   "check": "docs/reviews/2026-11-24-compat-split/check-verdicts.sh",
   "timeout": 5,
   "git_timeout": 5,
@@ -87,6 +87,24 @@
       "red": {
         "exit_code": 1,
         "contains": ["verdict test requires the whole inventory", "FAILED (failures=1)"],
+        "excludes": ["skipped", "ERROR:"]
+      }
+    },
+    {
+      "name": "missing-required-stdout",
+      "patch": "docs/reviews/2026-11-24-compat-split/missing-required-stdout.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["manifest='review-scope-plants.json', phase='baseline'", "FAILED (failures=1)"],
+        "excludes": ["skipped", "ERROR:"]
+      }
+    },
+    {
+      "name": "forbidden-stderr",
+      "patch": "docs/reviews/2026-11-24-compat-split/forbidden-stderr.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["manifest='review-scope-plants.json', phase='baseline'", "FAILED (failures=1)"],
         "excludes": ["skipped", "ERROR:"]
       }
     }

@@ -7,7 +7,7 @@
     },
     {
       "argv": ["bash", "-euo", "pipefail", "-c", "out=$(mktemp -d /tmp/compat-779-gate.XXXXXXXX)\nprintf '%s\\n' \"$out\"\nuv run --script plugins/plant-defects/scripts/checked-plant run \"$1\" \"$out/results\"", "compat-779", "2026-11-24-779-verdicts-plants.json"],
-      "timeout": 36,
+      "timeout": 42,
       "inputs": ["tree", "2026-11-24-779-verdicts-plants.json", "plugins/plant-defects/scripts/checked-plant"]
     }
   ],
