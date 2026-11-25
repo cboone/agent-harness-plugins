@@ -1,0 +1,26 @@
+{
+  "aspect": "code",
+  "findings": [
+    {
+      "confidence": 95,
+      "detail": "The trusted `.github/skills/code-review/write-bash-scripts.md` requires: “A command whose failure matters is checked with `if` or `||` wherever `set -e` does not apply.” When bundle B's helper is sourced inside `if source ...; then`, Bash suppresses errexit throughout the sourced body. Under bundle A's inherited snapshot context, verification refuses B, but this unchecked command allows execution to continue, load B's sibling library and validate A's scope and reply using A's inherited identity. The same guard occurs in both review-scope copies and check-edit-worktree. This is a remaining instance of the recorded A1 executing-identity defect class.",
+      "file": "plugins/review-pr-with-codex/scripts/codex-aspects",
+      "fix": "Explicitly stop on verification failure in every Bash startup guard, independently of errexit. Cover conditional sourcing of another bundle alongside the existing valid sourced-caller control.",
+      "line": 6,
+      "severity": "important",
+      "title": "write-bash-scripts: Checked commands: Conditional sourcing bypasses failed snapshot verification."
+    },
+    {
+      "confidence": 99,
+      "detail": "The trusted `bin/AGENTS.md` states: “Rule 23 requires every scripted `codex exec` run under `../plugins/` to pass `approval_policy=\"never\"` and `web_search=\"disabled\"`.” Moving `codex exec` behind the launcher on this same line makes it invisible to rule 23's anchored CODEX_EXEC_START expression. Removing either required setting from this invocation now produces no rule-23 finding, including in its generated trim consumer copies. The launcher's exec branch only forwards arguments and does not supply these settings.",
+      "file": "plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md",
+      "fix": "Put the literal `codex exec` at the start of a continuation line, as codex-aspects already does, or extend rule 23 to recognize the wrapper. Regenerate consumer copies and cover missing settings in this wrapped invocation.",
+      "line": 29,
+      "severity": "important",
+      "title": "Uncited: The wrapped Codex invocation escapes safety-setting validation."
+    }
+  ],
+  "reviewed": "4fab8779bd6ea0ec49c2f0370e4f170fd157f5ca",
+  "strengths": ["Snapshot code and instructions have canonical sources with generated consumer copies.", "Repository identity remains separate from producer provenance across recursive captures."],
+  "summary": "Reviewed the canonical fixed-base changes and applicable checklists. Two Important findings remain, including the recurring executing-identity class: stopped: recurring defect. Repository code, tests and plants were not executed."
+}

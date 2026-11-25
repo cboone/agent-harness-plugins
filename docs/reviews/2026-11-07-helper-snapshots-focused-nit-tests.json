@@ -1,0 +1,17 @@
+{
+  "aspect": "tests",
+  "findings": [
+    {
+      "confidence": 98,
+      "detail": "Rating 7/10: Cross-bundle evidence rejection is tested only through checked-gate. Existing checked-plant integration tests cover normal run/render behavior, but never render snapshot A's plant results through bundle B. Removing require_helper_bundle(value) from checked-plant.verified() would therefore escape these tests. With B differing only in README or reference contents, existing runner/input fingerprints still match, allowing plant evidence to be published through the wrong producing bundle.",
+      "file": "tests/helper_snapshot_test.py",
+      "fix": "Add a checked-plant snapshot integration case that produces results with A, confirms A can render them, then confirms B with changed reference contents refuses rendering without modifying ledger or status destinations.",
+      "line": 501,
+      "severity": "important",
+      "title": "Uncited: Plant-result producer validation lacks a cross-bundle regression test."
+    }
+  ],
+  "reviewed": "4fab8779bd6ea0ec49c2f0370e4f170fd157f5ca",
+  "strengths": ["Cache deletion and replacement tests synchronize with a running child and check subsequent rendering and verification.", "Negative coverage includes content and mode tampering, symlinks, caller membership, inode replacement and partial context.", "Review-result tests cover missing and incorrect provenance alongside legacy direct-invocation compatibility."],
+  "summary": "Reviewed the canonical fixed-base changes, accompanying tests, plant manifests and relevant existing integration coverage, excluding generated copies. Coverage is substantial, with one Important gap in checked-plant producer validation. Tests and repository code were not executed, as required."
+}

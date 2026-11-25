@@ -1,0 +1,17 @@
+{
+  "aspect": "errors",
+  "findings": [
+    {
+      "confidence": 90,
+      "detail": "If the snapshot launcher disappears or becomes invalid after the initial verification, uv or Python can fail with status 1 or 2 before Codex starts. This handler terminates only for 78, so it prints codex_status and permits the backend fallback despite the snapshot failure. A write-free handler probe confirmed that statuses 1 and 2 reach continuation with exit 0. The log retains diagnostics, but the status misclassifies the failure. The shared trim consumers inherit this behavior, which remains an instance of the recorded verification-failure fallback mechanism.",
+      "file": "plugins/review-anti-patterns/skills/review-anti-patterns/references/codex-exec.md",
+      "fix": "Before permitting fallback after a nonzero launch, reverify the pinned snapshot and terminate if verification fails. Add cases where the launcher disappears or becomes invalid between preverification and exec, then regenerate the trim reference copies.",
+      "line": 46,
+      "severity": "important",
+      "title": "Uncited: Launcher startup failures can still enter the backend fallback."
+    }
+  ],
+  "reviewed": "f8358582889c2ae587fff79104b40c987f70fbe3",
+  "strengths": ["Bash verification guards explicitly stop even when conditional sourcing disables errexit.", "Evidence consumers report missing or mismatched producer provenance.", "Snapshot creation refuses existing destinations and preserves failure diagnostics."],
+  "summary": "Reviewed all 198 membership paths and their committed diffs, including shared copies and evidence fixtures. Inspection and a write-free handler probe identified one Important fallback defect; the full suite was not run. stopped: recurring defect."
+}
