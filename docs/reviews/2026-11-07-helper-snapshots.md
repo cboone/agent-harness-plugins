@@ -225,7 +225,7 @@ Receipt `worker/focused-critical1/validation-gate/receipt.json` verifies complet
 
 ## Comment and prose trims
 
-Both report-only trim runs completed through owned trim-comments 3.0.1 and trim-text 1.3.1 instructions with `gpt-6.1-sol`, low effort, window 872000, read-only sandbox, approval never and web disabled. The completion receipt `worker/trims-1/gate/receipt.json` was verified against clean frozen `92547634` in the same strict call saving the reports and this entry. Exact replies are saved with the trim-comments and trim-text names beside this ledger.
+Both report-only trim runs completed through owned trim-comments 3.0.1 and trim-text 1.3.1 instructions with `gpt-6.1-sol`, low effort, window 872000, read-only sandbox, approval never and web disabled. The completion receipt `worker/trims-1/gate/receipt.json` was verified against clean frozen `92547634` in the same strict call saving the reports and this entry. The trim replies are on `fix/729-helper-snapshots`.
 
 Taken: remove the script count before the invocation examples; delete a README sentence repeating the surrounding permission explanation; rewrite the direct-capture comment; delete the different-producer receipt comment and the restart-selection comment, which repeat the following operations. The overlapping direct-capture proposal uses the comment review's clearer wording. No substantive proposal was declined. Generated shared copies and prose documents were outside the comment profile; shared copies were regenerated from their classified canonical sources. No production behavior changes. Source token preservation and final required checks remain pending.
 
@@ -858,9 +858,9 @@ case that invokes `make test-all`.
 `checked-gate-plants*.md`, `checked-plant-guards-*.md`,
 `checked-gate.md`, `checked-plant.md` and `checked-python.md` were held
 under the runner exclusions. They have no rerun exits. The load-timeout
-baseline was held for the same reason. The fixture setup has no executable
-consumer in this tree beyond the direct probes, which verified that it
-creates its aliases and accepts an existing correct setup.
+baseline was held for the same reason. The fixture setup probes below ran
+before the review removed `tests/fixtures/helper-invocation-setup` from
+piece A. The snapshot plants that use it belong to piece B.
 
 | Scrut document                        | Exit | Seconds |
 | ------------------------------------- | ---- | ------- |
@@ -1050,32 +1050,41 @@ runners through its unit tests. All 44 assertion patches and its one
 control patch passed `git apply --check` in copied inputs. The baseline,
 red and restored phases remain unverified.
 
+### Piece A review round
+
+Applied one Important finding and two Nits from the review of `81f91498`.
+The branch search exited 1 with zero fixture references in the searched
+paths. The `find` status finding follows the fixture to piece B.
+
+Replayed the claimed checklist drift manifest in copies of its declared
+inputs. Its check exited 0 on the baseline, 1
+with `body-comparison-removed` applied and 0 after restoring
+the original inputs. All declared assertions matched. Git initialization,
+patch check and patch application each exited 0.
+
 ### Proposed gate
 
 [The gate manifest](2026-11-24-git-environment-reset/gate.json) retains the
-existing deadlines for lint, validation, the checklist drift plant, the
-full suite and the action. The schema, execution plan, input paths, plant
-declarations and wrapper syntax validated with exit 0. All dry runs used
-the repository root `/Users/ctm/Work/projects/tooling/agent-harness-plugins/729a-git-env-reset` and the declared argv. For the plant
-dispatch probe, an inert `uv` stub checked the target manifest and its
-declaration names.
+existing deadlines. The schema, execution plan, input paths, plant
+declarations and wrapper syntax validated with exit 0. The light checks
+used the exact manifest argv from the repository root. The plant wrapper
+used an inert `uv` stub to check dispatch to the declared manifest and its
+variant names.
 
-| Gate argv                                | Dry-run exit | Measured or modeled seconds | Deadline seconds |
-| ---------------------------------------- | ------------ | --------------------------- | ---------------- |
-| `["make", "lint"]`                       | 0            | 20.002                      | 52               |
-| `["make", "validate"]`                   | 0            | 48.487                      | 110              |
-| Checklist drift plant (stubbed dispatch) | 0            | 1.389                       | 121              |
-| `["make", "test-all"]`                   | Held         | 1380                        | 2100             |
-| `["/usr/bin/true"]`                      | 0            | 0.002                       | 3                |
+| Gate check                         | Dry-run exit | Seconds                   | Deadline seconds |
+| ---------------------------------- | ------------ | ------------------------- | ---------------- |
+| `make lint`                        | 0            | 20.450                    | 52               |
+| `make validate`                    | 0            | 49.872                    | 110              |
+| Checklist drift dispatch (stubbed) | 0            | 0.205                     | 121              |
+| `make test-all`                    | Held         | 1,380 (prior measurement) | 2100             |
+| `/usr/bin/true`                    | 0            | 0.003                     | 3                |
 
-The plant estimate uses its previously measured baseline, patch, red and
-restored phases. The full suite uses the supplied 1,380-second measurement.
-The predicted total is **1,453.8 s** before lock wait, including
-3.956 s for the isolated fingerprint probe. The
-deadline total is **2,666 s**, including
-56 fixed fingerprint steps.
-The scoped checks predict green. The full suite and gate verdict remain
-unverified.
+The predicted total is **1,455.2 s** before lock wait. It uses
+0.869 s for the direct checklist drift replay in place of
+stubbed dispatch time, and 3.956 s from the prior
+isolated fingerprint probe. The deadline total is **2,666 s**,
+including 56 fixed fingerprint steps. The full suite and gate verdict
+remain unverified.
 
-Caller logs, exact argv and directories, gate validation and timing data
-are in `/tmp/729a-trim-work`.
+Historical caller and timing logs are in `/tmp/729a-trim-work`. The review
+round logs, exact argv and measurements are in `/tmp/729a-review.IMrBemc3`.
